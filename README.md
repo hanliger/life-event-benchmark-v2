@@ -395,6 +395,76 @@ data/generated/quality_reports/*.md, *.json
 
 ## 9. 생성 데이터 들여다보기
 
+### 전체 대화 확인
+
+정식 대화 corpus는 `data/generated/sessions/` 아래에 trajectory별 JSONL로 저장됩니다.
+
+```
+data/generated/sessions/sessions_traj_00042.jsonl
+data/generated/sessions/sessions_traj_00043.jsonl
+...
+```
+
+각 파일은 하나의 trajectory에 해당하고, 각 line은 하나의 상담 세션입니다. 즉 전체
+대화를 확인하려면 `sessions_*.jsonl` 파일들을 시간순으로 읽으면 됩니다.
+
+특정 trajectory의 전체 상담 이력을 사람이 읽기 쉬운 형태로 출력:
+
+```bash
+python - <<'EOF'
+import json
+from pathlib import Path
+
+path = Path("data/generated/sessions/sessions_traj_00042.jsonl")
+
+for line in path.read_text(encoding="utf-8").splitlines():
+    s = json.loads(line)
+    print(f"\n[{s['session_id']} / month={s['month_index']} / type={s['session_type']}]")
+    for t in s["turns"]:
+        speaker = "고객" if t["speaker"] == "user" else "상담원"
+        print(f"{speaker}: {t['text']}")
+EOF
+```
+
+모든 trajectory의 전체 상담 이력을 이어서 출력:
+
+```bash
+python - <<'EOF'
+import json
+from pathlib import Path
+
+for path in sorted(Path("data/generated/sessions").glob("sessions_*.jsonl")):
+    print("\n" + "=" * 100)
+    print(path.name)
+    print("=" * 100)
+
+    for line in path.read_text(encoding="utf-8").splitlines():
+        s = json.loads(line)
+        print(f"\n[{s['trajectory_id']} / {s['session_id']} / month={s['month_index']} / type={s['session_type']}]")
+        for t in s["turns"]:
+            speaker = "고객" if t["speaker"] == "user" else "상담원"
+            print(f"{speaker}: {t['text']}")
+EOF
+```
+
+구조적으로는 다음처럼 보면 됩니다.
+
+```
+data/generated/sessions/         # 실제 benchmark 대화 corpus
+  sessions_traj_00042.jsonl      # traj_00042의 전체 상담 이력
+  sessions_traj_00043.jsonl      # traj_00043의 전체 상담 이력
+  ...
+
+data/raw_model_outputs/dialogue/ # LLM 원문 로그와 프롬프트
+  traj_00042_S001_prompt.txt
+  traj_00042_S001.txt
+```
+
+`data/raw_model_outputs/dialogue/`는 디버깅용 원문 로그입니다. 평가와 분석에 사용하는
+canonical 대화 데이터는 `data/generated/sessions/*.jsonl`입니다.
+
+### 개별 산출물 확인
+
 ```bash
 # 한 궤적의 사건 lifecycle 보기
 python - <<'EOF'

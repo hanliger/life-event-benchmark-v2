@@ -126,6 +126,38 @@ class TrajectorySimulator:
                 pending.append((sched_month, instance, status))
             last_start_month = month
 
+        def process_transition(instance: EventInstance, to_status: EventStatus, month: int, age: int, step: TrajectoryStep) -> None:
+            # Re-verify state guards at the OCCURRED transition: an event may
+            # have started validly but been overtaken by a concurrent event
+            # (e.g. 취업/복직 started while unemployed, then employed another
+            # way). Downgrade to CANCELLED rather than ship an inconsistent
+            # occurred event.
+            if to_status == EventStatus.OCCURRED:
+                template = self.templates.get(instance.event_id)
+                if template is not None and not self.fsm.state_guards_pass(template, life_state):
+                    to_status = EventStatus.CANCELLED
+
+            from_status = instance.status
+            instance.status = to_status
+            instance.status_history.append(EventStatusHistoryItem(status=to_status, month_index=month, age=age))
+            if to_status == EventStatus.OCCURRED:
+                instance.occurred_month = month
+                last_end_month[instance.event_id] = month
+                apply_occurred_to_life_state(instance.event_id, life_state, instance.params)
+            elif to_status == EventStatus.CANCELLED:
+                instance.cancelled_month = month
+                last_end_month[instance.event_id] = month
+            step.transitions.append(
+                StatusTransition(
+                    event_instance_id=instance.event_instance_id,
+                    event_id=instance.event_id,
+                    from_status=from_status.value,
+                    to_status=to_status.value,
+                )
+            )
+            step.memory_updates.extend(self.delta_engine.apply_transition(memory, instance, to_status, month, rng))
+            step.action_impacts.extend(self.impact_engine.apply_transition(actions, instance, to_status, month))
+
         for month in range(horizon_months):
             age = start_age + month // 12
             if month > 0 and month % 12 == 0:
@@ -136,31 +168,7 @@ class TrajectorySimulator:
             # 1. process due lifecycle transitions
             due = sorted((p for p in pending if p[0] == month), key=lambda p: p[1].event_instance_id)
             for _, instance, to_status in due:
-                from_status = instance.status
-                instance.status = to_status
-                instance.status_history.append(EventStatusHistoryItem(status=to_status, month_index=month, age=age))
-                if to_status == EventStatus.OCCURRED:
-                    instance.occurred_month = month
-                    last_end_month[instance.event_id] = month
-                    apply_occurred_to_life_state(instance.event_id, life_state, instance.params)
-                elif to_status == EventStatus.CANCELLED:
-                    instance.cancelled_month = month
-                    last_end_month[instance.event_id] = month
-
-                step.transitions.append(
-                    StatusTransition(
-                        event_instance_id=instance.event_instance_id,
-                        event_id=instance.event_id,
-                        from_status=from_status.value,
-                        to_status=to_status.value,
-                    )
-                )
-                step.memory_updates.extend(
-                    self.delta_engine.apply_transition(memory, instance, to_status, month, rng)
-                )
-                step.action_impacts.extend(
-                    self.impact_engine.apply_transition(actions, instance, to_status, month)
-                )
+                process_transition(instance, to_status, month, age, step)
             pending = [p for p in pending if p[0] != month]
 
             active = [i for i in instances if i.status in {EventStatus.WEAK_SIGNAL, EventStatus.UPCOMING}]
@@ -202,25 +210,7 @@ class TrajectorySimulator:
             # 2b. process transitions scheduled for *this* month by a fresh start
             due_now = [p for p in pending if p[0] == month]
             for _, instance, to_status in due_now:
-                from_status = instance.status
-                instance.status = to_status
-                instance.status_history.append(EventStatusHistoryItem(status=to_status, month_index=month, age=age))
-                if to_status == EventStatus.OCCURRED:
-                    instance.occurred_month = month
-                    last_end_month[instance.event_id] = month
-                    apply_occurred_to_life_state(instance.event_id, life_state, instance.params)
-                elif to_status == EventStatus.CANCELLED:
-                    instance.cancelled_month = month
-                step.transitions.append(
-                    StatusTransition(
-                        event_instance_id=instance.event_instance_id,
-                        event_id=instance.event_id,
-                        from_status=from_status.value,
-                        to_status=to_status.value,
-                    )
-                )
-                step.memory_updates.extend(self.delta_engine.apply_transition(memory, instance, to_status, month, rng))
-                step.action_impacts.extend(self.impact_engine.apply_transition(actions, instance, to_status, month))
+                process_transition(instance, to_status, month, age, step)
             pending = [p for p in pending if p[0] != month]
 
             # 3. record step + snapshots on any activity

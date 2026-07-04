@@ -13,6 +13,13 @@ __pycache__/
 Nemotron-Personas-Korea/data/*.parquet
 Nemotron-Personas-Korea/.cache/
 
+# Generated pipeline outputs — NOT tracked. Regenerate from source with the
+# Makefile targets (see README "실행 가이드라인"). Code, configs, prompts and
+# docs are enough to reproduce everything.
+data/generated/
+data/personas/normalized/
+data/raw_model_outputs/
+
 # Local OS/editor noise.
 .DS_Store
 *.swp

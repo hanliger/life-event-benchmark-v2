@@ -7,6 +7,7 @@ occurred at prefix k+3; update_allowed flips accordingly.
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from ..fsm.models import EventStatus
@@ -174,4 +175,29 @@ def export_prefix_gold(trajectory: Trajectory, sessions: list[dict[str, Any]]) -
             )
         )
     _ = action_by_id  # (kept for future per-action gold enrichment)
+
+    # Storage optimization: blank the (large) gold payload on prefixes whose
+    # entire payload repeats the previous prefix. read_prefix_gold() carries it
+    # forward on load. ~96% of prefixes sit between events and repeat.
+    prev_payload: str | None = None
+    for prefix in prefixes:
+        payload = json.dumps(
+            [
+                [e.model_dump(mode="json") for e in prefix.gold_life_events],
+                [u.model_dump(mode="json") for u in prefix.gold_memory_updates],
+                [d.model_dump(mode="json") for d in prefix.gold_action_decisions],
+                prefix.gold_full_memory_state,
+                prefix.gold_full_action_state,
+            ],
+            ensure_ascii=False,
+            sort_keys=True,
+        )
+        if payload == prev_payload:
+            prefix.repeats_previous = True
+            prefix.gold_life_events = []
+            prefix.gold_memory_updates = []
+            prefix.gold_action_decisions = []
+            prefix.gold_full_memory_state = {}
+            prefix.gold_full_action_state = []
+        prev_payload = payload
     return prefixes

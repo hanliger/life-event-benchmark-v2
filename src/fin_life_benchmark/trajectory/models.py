@@ -120,3 +120,9 @@ class PrefixGold(BaseModel):
     gold_action_decisions: list[GoldActionDecision] = Field(default_factory=list)
     gold_full_memory_state: dict[str, Any] = Field(default_factory=dict)
     gold_full_action_state: list[dict[str, Any]] = Field(default_factory=list)
+    # Storage optimization: when the entire gold payload (the five gold_*
+    # fields) is identical to the previous prefix of the same trajectory —
+    # true for ~96% of prefixes, which sit between events — those fields are
+    # blanked on disk and this flag is set. Reload with
+    # gold.loader.read_prefix_gold() to carry them forward. ~20x smaller file.
+    repeats_previous: bool = False

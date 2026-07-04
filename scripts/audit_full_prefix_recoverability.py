@@ -14,6 +14,7 @@ from pathlib import Path
 
 import _bootstrap  # noqa: F401
 
+from fin_life_benchmark.gold.loader import read_prefix_gold
 from fin_life_benchmark.io import read_jsonl
 from fin_life_benchmark.validation.audits import audit_full_prefix_recoverability, write_report
 
@@ -24,7 +25,7 @@ def main() -> int:
     parser.add_argument("--output-dir", default="data/generated/quality_reports")
     args = parser.parse_args()
 
-    prefixes = list(read_jsonl(Path(args.prefix_gold)))
+    prefixes = list(read_prefix_gold(Path(args.prefix_gold)))
     if not prefixes:
         raise SystemExit("empty prefix gold")
 

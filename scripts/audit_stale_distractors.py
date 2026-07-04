@@ -15,6 +15,7 @@ from pathlib import Path
 
 import _bootstrap  # noqa: F401
 
+from fin_life_benchmark.gold.loader import read_prefix_gold
 from fin_life_benchmark.io import read_jsonl
 from fin_life_benchmark.validation.audits import audit_stale_distractors, write_report
 
@@ -27,7 +28,7 @@ def main() -> int:
     args = parser.parse_args()
 
     items = list(read_jsonl(Path(args.items)))
-    prefixes = list(read_jsonl(Path(args.prefix_gold)))
+    prefixes = list(read_prefix_gold(Path(args.prefix_gold)))
 
     report = audit_stale_distractors(items, prefixes)
     out = Path(args.output_dir)

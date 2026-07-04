@@ -49,6 +49,22 @@ class LifeStateMachine:
                 return False
         return True
 
+    def state_guards_pass(self, template: LifeEventTemplate, state: LifeState) -> bool:
+        """Only the required/forbidden state guards (no age/cooldown/active).
+
+        Used to re-verify at the OCCURRED transition: an event may start
+        validly (guard held at weak_signal) but be overtaken by a concurrent
+        event before it occurs (e.g. 취업/복직 started while unemployed, but the
+        person got employed another way in the meantime). Such an event must
+        not occur — it is cancelled instead of shipping an inconsistent state."""
+        for field, allowed in template.state_guards.required.items():
+            if state.guard_value(field) not in allowed:
+                return False
+        for field, blocked in template.state_guards.forbidden.items():
+            if state.guard_value(field) in blocked:
+                return False
+        return True
+
     # -- hazard ---------------------------------------------------------------
     def monthly_hazard(
         self,

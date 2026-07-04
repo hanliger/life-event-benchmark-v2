@@ -90,6 +90,42 @@ def test_end_to_end_mock_pipeline_in_memory():
                 assert decision.must_not_execute
 
 
+def test_prefix_gold_dedup_roundtrips(tmp_path):
+    """Exported gold blanks repeated payloads; read_prefix_gold must restore
+    them so consumers see identical records to a non-deduped read."""
+    import json as _json
+
+    from fin_life_benchmark.gold.loader import read_prefix_gold
+
+    trajectory = _simulate(seed=13, horizon=8)
+    paths = RepoPaths.default()
+    locale = load_locale("ko_KR", paths)
+    templates = load_life_event_templates(paths)
+    planner = EvidencePlanner(templates, locale, paths)
+    generator = DialogueGenerator(mode="mock", paths=paths)
+    plans = planner.build_plans(trajectory, seed=0)
+    sessions = [generator.generate_session(p, trajectory.persona).model_dump(mode="json") for p in plans]
+    prefixes = export_prefix_gold(trajectory, sessions)
+
+    # some prefixes must be deduped (blanked), and a reference (pre-dedup) copy
+    assert any(p.repeats_previous for p in prefixes)
+
+    out = tmp_path / "gold.jsonl"
+    out.write_text("\n".join(_json.dumps(p.model_dump(mode="json"), ensure_ascii=False) for p in prefixes), encoding="utf-8")
+
+    restored = list(read_prefix_gold(out))
+    assert len(restored) == len(prefixes)
+    # carry-forward: no restored record is left blank-because-repeated with an
+    # empty payload when its predecessor had content
+    last_events = None
+    for rec in restored:
+        if rec["gold_life_events"]:
+            last_events = rec["gold_life_events"]
+        # a repeated prefix must have inherited the previous non-empty payload
+        if rec.get("repeats_previous") and last_events is not None:
+            assert rec["gold_life_events"] == last_events
+
+
 def test_episode_forced_events_are_guaranteed_and_impact_actions():
     """Coverage path: forcing a home-purchase episode onto a wolse renter (who
     has rent_autopay) must produce the occurred event AND a post_occurred

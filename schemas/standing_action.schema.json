@@ -1,0 +1,141 @@
+{
+  "$defs": {
+    "ActionStatus": {
+      "enum": [
+        "active",
+        "paused",
+        "pending",
+        "stale",
+        "cancelled",
+        "historical"
+      ],
+      "title": "ActionStatus",
+      "type": "string"
+    }
+  },
+  "properties": {
+    "action_id": {
+      "title": "Action Id",
+      "type": "string"
+    },
+    "type": {
+      "title": "Type",
+      "type": "string"
+    },
+    "label": {
+      "title": "Label",
+      "type": "string"
+    },
+    "status": {
+      "$ref": "#/$defs/ActionStatus",
+      "default": "active"
+    },
+    "source_account": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Source Account"
+    },
+    "destination": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Destination"
+    },
+    "amount": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Amount"
+    },
+    "frequency": {
+      "default": "monthly",
+      "title": "Frequency",
+      "type": "string"
+    },
+    "trigger_rule": {
+      "default": "fixed_day",
+      "title": "Trigger Rule",
+      "type": "string"
+    },
+    "trigger_day": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Trigger Day"
+    },
+    "funds_movement": {
+      "default": true,
+      "title": "Funds Movement",
+      "type": "boolean"
+    },
+    "risk": {
+      "default": "high",
+      "title": "Risk",
+      "type": "string"
+    },
+    "linked_memory_paths": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Linked Memory Paths",
+      "type": "array"
+    },
+    "validity_status": {
+      "default": "valid",
+      "title": "Validity Status",
+      "type": "string"
+    },
+    "last_confirmed_at": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Last Confirmed At"
+    },
+    "history": {
+      "items": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "History",
+      "type": "array"
+    }
+  },
+  "required": [
+    "action_id",
+    "type",
+    "label"
+  ],
+  "title": "StandingAction",
+  "type": "object"
+}

@@ -1,0 +1,108 @@
+{
+  "$defs": {
+    "EventStatus": {
+      "enum": [
+        "no_event",
+        "weak_signal",
+        "upcoming",
+        "occurred",
+        "cancelled"
+      ],
+      "title": "EventStatus",
+      "type": "string"
+    },
+    "EventStatusHistoryItem": {
+      "properties": {
+        "status": {
+          "$ref": "#/$defs/EventStatus"
+        },
+        "month_index": {
+          "title": "Month Index",
+          "type": "integer"
+        },
+        "age": {
+          "title": "Age",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "status",
+        "month_index",
+        "age"
+      ],
+      "title": "EventStatusHistoryItem",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "event_instance_id": {
+      "title": "Event Instance Id",
+      "type": "string"
+    },
+    "event_id": {
+      "title": "Event Id",
+      "type": "string"
+    },
+    "label_ko": {
+      "title": "Label Ko",
+      "type": "string"
+    },
+    "domain": {
+      "title": "Domain",
+      "type": "string"
+    },
+    "status": {
+      "$ref": "#/$defs/EventStatus",
+      "default": "no_event"
+    },
+    "status_history": {
+      "items": {
+        "$ref": "#/$defs/EventStatusHistoryItem"
+      },
+      "title": "Status History",
+      "type": "array"
+    },
+    "start_month": {
+      "default": 0,
+      "title": "Start Month",
+      "type": "integer"
+    },
+    "occurred_month": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Occurred Month"
+    },
+    "cancelled_month": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Cancelled Month"
+    },
+    "params": {
+      "additionalProperties": true,
+      "title": "Params",
+      "type": "object"
+    }
+  },
+  "required": [
+    "event_instance_id",
+    "event_id",
+    "label_ko",
+    "domain"
+  ],
+  "title": "EventInstance",
+  "type": "object"
+}

@@ -1,0 +1,136 @@
+#!/usr/bin/env python
+"""Run the history-necessity filter over MCQ benchmark items.
+
+Example:
+  python scripts/run_history_filter.py \
+    --items data/generated/benchmark_items/stage3_action_mcq.jsonl \
+    --sessions-dir data/generated/sessions \
+    --mode single_session \
+    --validators openai:gpt-4o-mini,anthropic:claude-haiku-4-5 \
+    --max-items 20 --execute
+
+Without --execute (or without API keys) a mock validator is used and the run
+is clearly marked as placeholder.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+from pathlib import Path
+
+import _bootstrap  # noqa: F401
+
+from dotenv import load_dotenv
+
+from fin_life_benchmark.io import read_jsonl, write_jsonl
+from fin_life_benchmark.validation.history_filter import MODES, parse_validators, run_filter
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--items", required=True)
+    parser.add_argument("--sessions-dir", default="data/generated/sessions")
+    parser.add_argument("--mode", choices=MODES, default="single_session")
+    parser.add_argument("--validators", default=None, help="provider:model[,provider:model...]")
+    parser.add_argument("--max-items", type=int, default=None)
+    parser.add_argument("--execute", action="store_true", help="allow real API validators")
+    parser.add_argument("--output", default=None, help="default: <items>.filtered.jsonl")
+    parser.add_argument("--report", default="data/generated/quality_reports/history_filter_report.json")
+    args = parser.parse_args()
+
+    load_dotenv()
+    spec = args.validators or os.environ.get("HISTORY_FILTER_VALIDATORS", "mock:mock-validator")
+    if not args.execute:
+        if not spec.startswith("mock"):
+            print("no --execute: falling back to mock validator (placeholder verdicts, no API calls)")
+        spec = "mock:mock-validator"
+    else:
+        missing = []
+        if "openai:" in spec and not os.environ.get("OPENAI_API_KEY"):
+            missing.append("OPENAI_API_KEY")
+        if "anthropic:" in spec and not os.environ.get("ANTHROPIC_API_KEY"):
+            missing.append("ANTHROPIC_API_KEY")
+        if missing:
+            print(f"API keys missing ({', '.join(missing)}): falling back to mock validator")
+            spec = "mock:mock-validator"
+
+    validators = parse_validators(spec)
+
+    items_path = Path(args.items)
+    items = list(read_jsonl(items_path)) if items_path.exists() else []
+    if args.max_items is not None:
+        items = items[: args.max_items]
+    if not items:
+        # small smoke runs can legitimately produce zero MCQ items
+        output = Path(args.output) if args.output else items_path.with_suffix("").with_suffix(".filtered.jsonl")
+        write_jsonl(output, [])
+        report_path = Path(args.report)
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        report_path.write_text(json.dumps({"items": 0, "mode": args.mode, "by_status": {}}, indent=2), encoding="utf-8")
+        print("no items to filter (0 MCQ items) — wrote empty filtered file and report")
+        return 0
+
+    sessions_by_id: dict[str, dict] = {}
+    for path in sorted(Path(args.sessions_dir).glob("sessions_*.jsonl")):
+        for session in read_jsonl(path):
+            sessions_by_id[session["session_id"]] = session
+
+    results = run_filter(items, sessions_by_id, validators, args.mode)
+
+    output = Path(args.output) if args.output else Path(args.items).with_suffix("").with_suffix(".filtered.jsonl")
+    write_jsonl(output, results)
+
+    by_status: dict[str, int] = {}
+    for r in results:
+        by_status[r["filter_status"]] = by_status.get(r["filter_status"], 0) + 1
+
+    # Aggregate signal (the reliable validity test): a history-free validator's
+    # overall accuracy vs the majority-decision baseline. Per-item leakage flags
+    # over-report when a decision prior happens to match one context's answer;
+    # only aggregate-above-baseline indicates the set is solvable without
+    # history. Baseline = share of the most common gold decision.
+    n = len(results)
+    total_votes = sum(len(r.get("filter_votes", [])) for r in results)
+    correct_votes = sum(1 for r in results for v in r.get("filter_votes", []) if v.get("correct"))
+    overall_acc = round(correct_votes / total_votes, 4) if total_votes else None
+    decision_counts: dict[str, int] = {}
+    for r in results:
+        d = (r.get("gold") or {}).get("expected_decision")
+        if d:
+            decision_counts[d] = decision_counts.get(d, 0) + 1
+    majority_baseline = round(max(decision_counts.values()) / n, 4) if decision_counts and n else None
+    beats_baseline = (
+        overall_acc is not None and majority_baseline is not None and overall_acc > majority_baseline + 0.05
+    )
+
+    report = {
+        "items": n,
+        "mode": args.mode,
+        "validators": [getattr(v, "name", "?") for v in validators],
+        "mock_only": all(getattr(v, "provider", "") == "mock" for v in validators),
+        "by_status": by_status,
+        "overall_history_free_accuracy": overall_acc,
+        "majority_decision_baseline": majority_baseline,
+        "beats_baseline_without_history": beats_baseline,
+        "verdict": (
+            "LEAKAGE: solvable without history"
+            if beats_baseline
+            else "OK: history-free accuracy at or below majority baseline"
+        ),
+    }
+    report_path = Path(args.report)
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    print(f"filtered {n} items: {by_status} -> {output}")
+    if overall_acc is not None:
+        print(f"history-free accuracy {overall_acc:.1%} vs majority baseline {majority_baseline:.1%} -> {report['verdict']}")
+    if report["mock_only"]:
+        print("NOTE: mock validators only — filter_status values are placeholders.")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

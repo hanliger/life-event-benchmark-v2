@@ -1,0 +1,108 @@
+{
+  "$defs": {
+    "CounterfactualOption": {
+      "properties": {
+        "option_id": {
+          "title": "Option Id",
+          "type": "string"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        },
+        "correct": {
+          "default": false,
+          "title": "Correct",
+          "type": "boolean"
+        },
+        "error_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error Type"
+        }
+      },
+      "required": [
+        "option_id",
+        "text"
+      ],
+      "title": "CounterfactualOption",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "item_id": {
+      "title": "Item Id",
+      "type": "string"
+    },
+    "stage": {
+      "title": "Stage",
+      "type": "string"
+    },
+    "trajectory_id": {
+      "title": "Trajectory Id",
+      "type": "string"
+    },
+    "prefix_id": {
+      "title": "Prefix Id",
+      "type": "string"
+    },
+    "visible_sessions": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Visible Sessions",
+      "type": "array"
+    },
+    "question": {
+      "title": "Question",
+      "type": "string"
+    },
+    "options": {
+      "items": {
+        "$ref": "#/$defs/CounterfactualOption"
+      },
+      "title": "Options",
+      "type": "array"
+    },
+    "gold": {
+      "additionalProperties": true,
+      "title": "Gold",
+      "type": "object"
+    },
+    "metadata": {
+      "additionalProperties": true,
+      "title": "Metadata",
+      "type": "object"
+    },
+    "filter_status": {
+      "default": "keep",
+      "title": "Filter Status",
+      "type": "string"
+    },
+    "filter_votes": {
+      "items": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "Filter Votes",
+      "type": "array"
+    }
+  },
+  "required": [
+    "item_id",
+    "stage",
+    "trajectory_id",
+    "prefix_id",
+    "visible_sessions",
+    "question"
+  ],
+  "title": "BenchmarkItem",
+  "type": "object"
+}

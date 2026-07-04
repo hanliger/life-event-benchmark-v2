@@ -1,0 +1,132 @@
+"""Validate generated dialogue sessions against leakage/consistency rules."""
+
+from __future__ import annotations
+
+import re
+from typing import Any
+
+from ..fsm.models import LifeEventTemplate
+from ..fsm.registry import all_event_labels_ko
+
+_ASSISTANT_LEAK_PATTERNS = [
+    "이사하셨군요",
+    "결혼하셨군요",
+    "출산하셨군요",
+    "이직하셨군요",
+    "퇴사하셨군요",
+    "장례 치르셨군요",
+    "신혼이시군요",
+]
+
+_EMOJI_RE = re.compile(
+    "[\U0001F300-\U0001FAFF\U00002600-\U000027BF\U0001F000-\U0001F02F\U0001F900-\U0001F9FF❤️]"
+)
+# 초성체: 2+ consecutive bare jamo (ㅋㅋ, ㅇㅇ, ㄷㄷ ...)
+_CHOSEONG_RE = re.compile(r"[ㄱ-ㅎㅏ-ㅣ]{2,}")
+_FA_CODE_RE = re.compile(r"FA-\d{2}")
+
+_HIGH_RISK_FA = {"FA-07", "FA-08", "FA-09", "FA-10"}
+_EXECUTION_PHRASES = ["바로 실행했습니다", "즉시 변경했습니다", "자동으로 해지했습니다"]
+_CONFIRMATION_PHRASES = ["확인 후", "확인 후에", "동의", "본인 확인"]
+
+
+class DialogueValidator:
+    def __init__(self, templates: dict[str, LifeEventTemplate]):
+        self.templates = templates
+        self.event_labels = all_event_labels_ko(templates)
+
+    def validate_session(self, session: dict[str, Any]) -> list[dict[str, str]]:
+        """Return a list of violations: [{code, detail}]."""
+        violations: list[dict[str, str]] = []
+
+        def flag(code: str, detail: str) -> None:
+            violations.append({"code": code, "detail": detail})
+
+        turns = session.get("turns") or []
+        if not turns:
+            flag("no_turns", "session has no turns")
+            return violations
+
+        # speaker alternation
+        for i in range(1, len(turns)):
+            if turns[i]["speaker"] == turns[i - 1]["speaker"]:
+                flag("speaker_alternation", f"turns {i-1}/{i} same speaker")
+                break
+
+        visible = " ".join(t.get("text", "") for t in turns)
+        assistant_text = " ".join(t.get("text", "") for t in turns if t.get("speaker") == "assistant")
+
+        # leakage: skip labels that are substrings of this session's own
+        # required cues (financial-consequence cues may share words with a
+        # composite label, e.g. '수술비 수납' vs '수술')
+        plan_cues = (session.get("plan") or {}).get("must_include_cues") or []
+        for label in self.event_labels:
+            if any(label in cue for cue in plan_cues):
+                continue
+            if label in visible:
+                flag("event_label_leakage", f"label '{label}' in visible text")
+        if _FA_CODE_RE.search(visible):
+            flag("fa_code_leakage", "FA-XX code in visible text")
+        for phrase in _ASSISTANT_LEAK_PATTERNS:
+            if phrase in assistant_text:
+                flag("assistant_event_summary", f"assistant says '{phrase}'")
+        if _EMOJI_RE.search(visible):
+            flag("emoji", "emoji in visible text")
+        if _CHOSEONG_RE.search(visible):
+            flag("choseongche", "초성체 in visible text")
+
+        # cue annotations must point at user turns
+        for cue in session.get("cue_annotations") or []:
+            idx = cue.get("turn_index", -1)
+            if not (0 <= idx < len(turns)):
+                flag("cue_index_out_of_range", f"cue turn_index {idx}")
+            elif turns[idx]["speaker"] != "user":
+                flag("cue_not_user_turn", f"cue at turn {idx} is not a user turn")
+
+        plan = session.get("plan") or {}
+        status = session.get("event_status_after_session", "no_event")
+        session_type = session.get("session_type", "")
+
+        # required cues present / forbidden absent
+        for cue in plan.get("must_include_cues") or []:
+            if cue and cue not in visible:
+                flag("missing_required_cue", f"cue '{cue}' absent")
+        for term in plan.get("must_not_include_terms") or []:
+            if term and term in visible:
+                flag("forbidden_term", f"term '{term}' present")
+
+        # status consistency
+        if session_type in {"hard_negative", "routine_financial"} and status != "no_event":
+            flag("status_inconsistent", f"{session_type} with status {status}")
+        if status == "occurred" and session_type == "occurred_evidence":
+            if not (session.get("cue_annotations") or []):
+                flag("occurred_without_consequence_cue", "occurred_evidence session has no cue annotation")
+        if status == "cancelled" and "없던 일" not in visible and "취소" not in visible:
+            flag("cancelled_without_cancellation_cue", "no cancellation cue in visible text")
+        if status == "weak_signal":
+            if "확정" in visible and "확정된 건 아닌" not in visible and "확정은 아니" not in visible:
+                flag("weak_signal_overcommitted", "weak_signal session implies confirmation")
+
+        # high-risk execution without confirmation
+        mapped = session.get("mapped_action")
+        if mapped in _HIGH_RISK_FA:
+            for phrase in _EXECUTION_PHRASES:
+                if phrase in assistant_text and not any(c in assistant_text for c in _CONFIRMATION_PHRASES):
+                    flag("high_risk_auto_execution", f"assistant executed without confirmation: '{phrase}'")
+
+        return violations
+
+
+def summarize_report(results: list[dict[str, Any]]) -> dict[str, Any]:
+    total = len(results)
+    failed = [r for r in results if r["violations"]]
+    by_code: dict[str, int] = {}
+    for r in failed:
+        for v in r["violations"]:
+            by_code[v["code"]] = by_code.get(v["code"], 0) + 1
+    return {
+        "total_sessions": total,
+        "sessions_with_violations": len(failed),
+        "pass_rate": round(1 - len(failed) / total, 4) if total else None,
+        "violations_by_code": dict(sorted(by_code.items(), key=lambda kv: -kv[1])),
+    }

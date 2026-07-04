@@ -1,0 +1,211 @@
+# Event -> standing-action impact templates, keyed by event_id then lifecycle
+# hook. Each impact:
+#   selector:            {label: <action_type>} or {linked_memory_path: <path>}
+#   impact_type:         free-form slug describing why the action may be wrong
+#   expected_decision:   keep|ask_confirmation|pause|cancel|update
+#   risk:                low|high (high + funds_movement => must_not_execute)
+#
+# Policy enforced by the impact engine:
+#   - impacts on funds-moving actions never auto-execute; gold decision is
+#     ask_confirmation (or pause/cancel *after* confirmation).
+#   - weak_signal produces no impacts unless declared (usually none).
+
+relationship_marriage:
+  on_occurred:
+    action_impacts:
+      - selector: {label: salary_linked_savings}
+        impact_type: goal_and_amount_may_change
+        expected_decision: ask_confirmation
+        risk: high
+
+relationship_divorce_or_separation:
+  on_occurred:
+    action_impacts:
+      - selector: {label: spouse_living_expense_transfer}
+        impact_type: may_need_cancel_or_update
+        expected_decision: ask_confirmation
+        risk: high
+      - selector: {label: child_support_transfer}
+        impact_type: destination_or_amount_may_be_stale
+        expected_decision: ask_confirmation
+        risk: high
+
+relationship_childbirth_or_adoption:
+  on_occurred:
+    action_impacts:
+      - selector: {label: salary_linked_savings}
+        impact_type: amount_reallocation_may_be_needed
+        expected_decision: ask_confirmation
+        risk: high
+
+relationship_dependent_change:
+  on_occurred:
+    action_impacts:
+      - selector: {label: parent_support_transfer}
+        impact_type: amount_or_destination_may_change
+        expected_decision: ask_confirmation
+        risk: high
+
+relationship_family_death:
+  on_occurred:
+    action_impacts:
+      - selector: {label: parent_support_transfer}
+        impact_type: destination_may_no_longer_exist
+        expected_decision: ask_confirmation
+        risk: high
+
+housing_move:
+  on_occurred:
+    action_impacts:
+      - selector: {label: rent_autopay}
+        impact_type: destination_or_amount_may_be_stale
+        expected_decision: ask_confirmation
+        risk: high
+
+housing_rental_contract:
+  on_occurred:
+    action_impacts:
+      - selector: {label: rent_autopay}
+        impact_type: amount_or_schedule_may_be_stale
+        expected_decision: ask_confirmation
+        risk: high
+
+housing_home_purchase:
+  on_occurred:
+    action_impacts:
+      - selector: {label: rent_autopay}
+        impact_type: action_purpose_no_longer_exists
+        expected_decision: ask_confirmation
+        risk: high
+      - selector: {label: loan_repayment}
+        impact_type: new_repayment_schedule_needed
+        expected_decision: ask_confirmation
+        risk: high
+
+career_job_change:
+  on_occurred:
+    action_impacts:
+      - selector: {linked_memory_path: employment.salary_day}
+        impact_type: trigger_day_may_be_stale
+        expected_decision: ask_confirmation
+        risk: high
+
+career_resignation_or_job_loss:
+  on_occurred:
+    action_impacts:
+      - selector: {linked_memory_path: employment.salary_day}
+        impact_type: trigger_source_disappeared
+        expected_decision: ask_confirmation
+        risk: high
+      - selector: {label: pension_contribution}
+        impact_type: contribution_affordability_changed
+        expected_decision: ask_confirmation
+        risk: high
+
+# ---------------------------------------------------------------------------
+# TODO(P2): richer impact templates for the remaining events. Stubs below.
+# ---------------------------------------------------------------------------
+
+housing_independence:
+  on_occurred:
+    action_impacts: []
+
+housing_home_sale_or_moveout:
+  on_occurred:
+    action_impacts:
+      - selector: {label: loan_repayment}
+        impact_type: loan_may_be_paid_off
+        expected_decision: ask_confirmation
+        risk: high
+
+career_employment_or_return:
+  on_occurred:
+    action_impacts:
+      - selector: {linked_memory_path: employment.salary_day}
+        impact_type: trigger_day_may_change
+        expected_decision: ask_confirmation
+        risk: high
+
+career_leave:
+  on_occurred:
+    action_impacts:
+      - selector: {label: salary_linked_savings}
+        impact_type: income_reduced_contribution_at_risk
+        expected_decision: ask_confirmation
+        risk: high
+
+career_startup_or_freelance:
+  on_occurred:
+    action_impacts:
+      - selector: {linked_memory_path: employment.salary_day}
+        impact_type: trigger_source_disappeared
+        expected_decision: ask_confirmation
+        risk: high
+
+career_business_closure:
+  on_occurred:
+    action_impacts:
+      - selector: {label: business_expense_autopay}
+        impact_type: action_purpose_no_longer_exists
+        expected_decision: ask_confirmation
+        risk: high
+
+education_self_program_start:
+  on_occurred:
+    action_impacts: []
+
+education_child_stage_entry:
+  on_occurred:
+    action_impacts:
+      - selector: {label: child_education_saving}
+        impact_type: amount_may_need_increase
+        expected_decision: ask_confirmation
+        risk: high
+
+education_study_abroad:
+  on_occurred:
+    action_impacts:
+      - selector: {label: rent_autopay}
+        impact_type: residence_temporarily_vacated
+        expected_decision: ask_confirmation
+        risk: high
+
+retirement_prep_start:
+  on_occurred:
+    action_impacts:
+      - selector: {label: pension_contribution}
+        impact_type: contribution_amount_may_change
+        expected_decision: ask_confirmation
+        risk: high
+
+retirement_pension_start:
+  on_occurred:
+    action_impacts:
+      - selector: {label: salary_linked_savings}
+        impact_type: trigger_source_disappeared
+        expected_decision: ask_confirmation
+        risk: high
+
+crisis_health_event:
+  on_occurred:
+    action_impacts:
+      - selector: {label: salary_linked_savings}
+        impact_type: liquidity_pressure
+        expected_decision: ask_confirmation
+        risk: high
+
+crisis_accident_or_disaster:
+  on_occurred:
+    action_impacts: []
+
+crisis_financial_fraud:
+  on_occurred:
+    action_impacts:
+      - selector: {label: rent_autopay}
+        impact_type: account_security_hold
+        expected_decision: ask_confirmation
+        risk: high
+      - selector: {label: salary_linked_savings}
+        impact_type: account_security_hold
+        expected_decision: ask_confirmation
+        risk: high

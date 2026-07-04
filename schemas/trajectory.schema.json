@@ -1,0 +1,1027 @@
+{
+  "$defs": {
+    "ActionDecisionEnum": {
+      "enum": [
+        "keep",
+        "update",
+        "pause",
+        "cancel",
+        "ask_confirmation",
+        "execute",
+        "reject",
+        "no_action"
+      ],
+      "title": "ActionDecisionEnum",
+      "type": "string"
+    },
+    "ActionImpact": {
+      "properties": {
+        "action_id": {
+          "title": "Action Id",
+          "type": "string"
+        },
+        "action_type": {
+          "title": "Action Type",
+          "type": "string"
+        },
+        "impact_type": {
+          "title": "Impact Type",
+          "type": "string"
+        },
+        "expected_decision": {
+          "$ref": "#/$defs/ActionDecisionEnum"
+        },
+        "risk": {
+          "default": "high",
+          "title": "Risk",
+          "type": "string"
+        },
+        "funds_movement": {
+          "default": true,
+          "title": "Funds Movement",
+          "type": "boolean"
+        },
+        "must_not_execute": {
+          "default": true,
+          "title": "Must Not Execute",
+          "type": "boolean"
+        },
+        "month_index": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Month Index"
+        },
+        "source_event_instance_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Event Instance Id"
+        },
+        "event_status": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Event Status"
+        }
+      },
+      "required": [
+        "action_id",
+        "action_type",
+        "impact_type",
+        "expected_decision"
+      ],
+      "title": "ActionImpact",
+      "type": "object"
+    },
+    "ActionStatus": {
+      "enum": [
+        "active",
+        "paused",
+        "pending",
+        "stale",
+        "cancelled",
+        "historical"
+      ],
+      "title": "ActionStatus",
+      "type": "string"
+    },
+    "CellStatus": {
+      "enum": [
+        "current",
+        "historical",
+        "stale",
+        "needs_verification",
+        "pending",
+        "cancelled",
+        "unknown"
+      ],
+      "title": "CellStatus",
+      "type": "string"
+    },
+    "EventInstance": {
+      "properties": {
+        "event_instance_id": {
+          "title": "Event Instance Id",
+          "type": "string"
+        },
+        "event_id": {
+          "title": "Event Id",
+          "type": "string"
+        },
+        "label_ko": {
+          "title": "Label Ko",
+          "type": "string"
+        },
+        "domain": {
+          "title": "Domain",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/EventStatus",
+          "default": "no_event"
+        },
+        "status_history": {
+          "items": {
+            "$ref": "#/$defs/EventStatusHistoryItem"
+          },
+          "title": "Status History",
+          "type": "array"
+        },
+        "start_month": {
+          "default": 0,
+          "title": "Start Month",
+          "type": "integer"
+        },
+        "occurred_month": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Occurred Month"
+        },
+        "cancelled_month": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cancelled Month"
+        },
+        "params": {
+          "additionalProperties": true,
+          "title": "Params",
+          "type": "object"
+        }
+      },
+      "required": [
+        "event_instance_id",
+        "event_id",
+        "label_ko",
+        "domain"
+      ],
+      "title": "EventInstance",
+      "type": "object"
+    },
+    "EventStatus": {
+      "enum": [
+        "no_event",
+        "weak_signal",
+        "upcoming",
+        "occurred",
+        "cancelled"
+      ],
+      "title": "EventStatus",
+      "type": "string"
+    },
+    "EventStatusHistoryItem": {
+      "properties": {
+        "status": {
+          "$ref": "#/$defs/EventStatus"
+        },
+        "month_index": {
+          "title": "Month Index",
+          "type": "integer"
+        },
+        "age": {
+          "title": "Age",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "status",
+        "month_index",
+        "age"
+      ],
+      "title": "EventStatusHistoryItem",
+      "type": "object"
+    },
+    "FinancialMemoryState": {
+      "description": "Maps memory path -> full cell history (oldest first).",
+      "properties": {
+        "cells": {
+          "additionalProperties": {
+            "items": {
+              "$ref": "#/$defs/MemoryCell"
+            },
+            "type": "array"
+          },
+          "title": "Cells",
+          "type": "object"
+        }
+      },
+      "title": "FinancialMemoryState",
+      "type": "object"
+    },
+    "FinancialProfile": {
+      "properties": {
+        "has_loan": {
+          "default": false,
+          "title": "Has Loan",
+          "type": "boolean"
+        },
+        "loan_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Loan Type"
+        },
+        "has_pension_or_irp": {
+          "default": false,
+          "title": "Has Pension Or Irp",
+          "type": "boolean"
+        },
+        "savings_propensity": {
+          "default": "medium",
+          "title": "Savings Propensity",
+          "type": "string"
+        }
+      },
+      "title": "FinancialProfile",
+      "type": "object"
+    },
+    "HouseholdState": {
+      "properties": {
+        "marital_status": {
+          "default": "unknown",
+          "title": "Marital Status",
+          "type": "string"
+        },
+        "family_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Family Type"
+        },
+        "children_ages": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "Children Ages",
+          "type": "array"
+        },
+        "dependents_count": {
+          "default": 0,
+          "title": "Dependents Count",
+          "type": "integer"
+        },
+        "lives_with_parents": {
+          "default": false,
+          "title": "Lives With Parents",
+          "type": "boolean"
+        },
+        "cohabiting_with_spouse": {
+          "default": false,
+          "title": "Cohabiting With Spouse",
+          "type": "boolean"
+        }
+      },
+      "title": "HouseholdState",
+      "type": "object"
+    },
+    "HousingState": {
+      "properties": {
+        "residence_status": {
+          "default": "unknown",
+          "title": "Residence Status",
+          "type": "string"
+        },
+        "housing_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Housing Type"
+        },
+        "region": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Region"
+        }
+      },
+      "title": "HousingState",
+      "type": "object"
+    },
+    "LifeState": {
+      "description": "Hidden life state consulted by FSM guards. Field names are the guard\nvocabulary used in configs/registries/life_events.yaml.",
+      "properties": {
+        "marital_status": {
+          "default": "single",
+          "title": "Marital Status",
+          "type": "string"
+        },
+        "employment_status": {
+          "default": "unemployed",
+          "title": "Employment Status",
+          "type": "string"
+        },
+        "residence_status": {
+          "default": "other",
+          "title": "Residence Status",
+          "type": "string"
+        },
+        "children_ages": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "Children Ages",
+          "type": "array"
+        },
+        "dependents_count": {
+          "default": 0,
+          "title": "Dependents Count",
+          "type": "integer"
+        },
+        "lives_with_parents": {
+          "default": false,
+          "title": "Lives With Parents",
+          "type": "boolean"
+        },
+        "home_owned": {
+          "default": false,
+          "title": "Home Owned",
+          "type": "boolean"
+        },
+        "retirement_prepared": {
+          "default": false,
+          "title": "Retirement Prepared",
+          "type": "boolean"
+        },
+        "pension_receiving": {
+          "default": false,
+          "title": "Pension Receiving",
+          "type": "boolean"
+        },
+        "in_education": {
+          "default": false,
+          "title": "In Education",
+          "type": "boolean"
+        }
+      },
+      "title": "LifeState",
+      "type": "object"
+    },
+    "MemoryCell": {
+      "properties": {
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "value": {
+          "default": null,
+          "title": "Value"
+        },
+        "status": {
+          "$ref": "#/$defs/CellStatus",
+          "default": "unknown"
+        },
+        "confidence": {
+          "default": 1.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "valid_from": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Valid From"
+        },
+        "valid_until": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Valid Until"
+        },
+        "last_confirmed_at": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Last Confirmed At"
+        },
+        "evidence_turns": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Turns",
+          "type": "array"
+        },
+        "source_event_instance_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Event Instance Id"
+        },
+        "provenance": {
+          "default": "initial",
+          "title": "Provenance",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "title": "MemoryCell",
+      "type": "object"
+    },
+    "MemoryOperation": {
+      "enum": [
+        "create",
+        "update",
+        "mark_stale",
+        "archive",
+        "needs_verification",
+        "set_pending",
+        "clear_pending",
+        "reactivate",
+        "no_update"
+      ],
+      "title": "MemoryOperation",
+      "type": "string"
+    },
+    "MemoryUpdate": {
+      "properties": {
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "operation": {
+          "$ref": "#/$defs/MemoryOperation"
+        },
+        "old_value": {
+          "default": null,
+          "title": "Old Value"
+        },
+        "new_value": {
+          "default": null,
+          "title": "New Value"
+        },
+        "month_index": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Month Index"
+        },
+        "source_event_instance_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Event Instance Id"
+        },
+        "event_status": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Event Status"
+        },
+        "evidence_turns": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Turns",
+          "type": "array"
+        },
+        "optional": {
+          "default": false,
+          "title": "Optional",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "path",
+        "operation"
+      ],
+      "title": "MemoryUpdate",
+      "type": "object"
+    },
+    "NormalizedPersona": {
+      "properties": {
+        "persona_id": {
+          "title": "Persona Id",
+          "type": "string"
+        },
+        "persona_source_id": {
+          "title": "Persona Source Id",
+          "type": "string"
+        },
+        "locale": {
+          "title": "Locale",
+          "type": "string"
+        },
+        "age": {
+          "title": "Age",
+          "type": "integer"
+        },
+        "sex": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sex"
+        },
+        "persona_text": {
+          "default": "",
+          "title": "Persona Text",
+          "type": "string"
+        },
+        "occupation_state": {
+          "$ref": "#/$defs/OccupationState"
+        },
+        "household": {
+          "$ref": "#/$defs/HouseholdState"
+        },
+        "housing": {
+          "$ref": "#/$defs/HousingState"
+        },
+        "financial_profile": {
+          "$ref": "#/$defs/FinancialProfile"
+        },
+        "style": {
+          "$ref": "#/$defs/StyleProfile"
+        },
+        "normalization_notes": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Normalization Notes",
+          "type": "array"
+        }
+      },
+      "required": [
+        "persona_id",
+        "persona_source_id",
+        "locale",
+        "age"
+      ],
+      "title": "NormalizedPersona",
+      "type": "object"
+    },
+    "OccupationState": {
+      "properties": {
+        "occupation": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Occupation"
+        },
+        "employment_status": {
+          "default": "unknown",
+          "title": "Employment Status",
+          "type": "string"
+        },
+        "employer": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Employer"
+        },
+        "income_stability": {
+          "default": "unknown",
+          "title": "Income Stability",
+          "type": "string"
+        }
+      },
+      "title": "OccupationState",
+      "type": "object"
+    },
+    "PersonaState": {
+      "description": "LifeState + bookkeeping at a point in time.",
+      "properties": {
+        "month_index": {
+          "default": 0,
+          "title": "Month Index",
+          "type": "integer"
+        },
+        "age": {
+          "default": 0,
+          "title": "Age",
+          "type": "integer"
+        },
+        "life_state": {
+          "$ref": "#/$defs/LifeState"
+        }
+      },
+      "title": "PersonaState",
+      "type": "object"
+    },
+    "StandingAction": {
+      "properties": {
+        "action_id": {
+          "title": "Action Id",
+          "type": "string"
+        },
+        "type": {
+          "title": "Type",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/ActionStatus",
+          "default": "active"
+        },
+        "source_account": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Account"
+        },
+        "destination": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Destination"
+        },
+        "amount": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Amount"
+        },
+        "frequency": {
+          "default": "monthly",
+          "title": "Frequency",
+          "type": "string"
+        },
+        "trigger_rule": {
+          "default": "fixed_day",
+          "title": "Trigger Rule",
+          "type": "string"
+        },
+        "trigger_day": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Trigger Day"
+        },
+        "funds_movement": {
+          "default": true,
+          "title": "Funds Movement",
+          "type": "boolean"
+        },
+        "risk": {
+          "default": "high",
+          "title": "Risk",
+          "type": "string"
+        },
+        "linked_memory_paths": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Linked Memory Paths",
+          "type": "array"
+        },
+        "validity_status": {
+          "default": "valid",
+          "title": "Validity Status",
+          "type": "string"
+        },
+        "last_confirmed_at": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Last Confirmed At"
+        },
+        "history": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "History",
+          "type": "array"
+        }
+      },
+      "required": [
+        "action_id",
+        "type",
+        "label"
+      ],
+      "title": "StandingAction",
+      "type": "object"
+    },
+    "StatusTransition": {
+      "properties": {
+        "event_instance_id": {
+          "title": "Event Instance Id",
+          "type": "string"
+        },
+        "event_id": {
+          "title": "Event Id",
+          "type": "string"
+        },
+        "from_status": {
+          "title": "From Status",
+          "type": "string"
+        },
+        "to_status": {
+          "title": "To Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_instance_id",
+        "event_id",
+        "from_status",
+        "to_status"
+      ],
+      "title": "StatusTransition",
+      "type": "object"
+    },
+    "StyleProfile": {
+      "properties": {
+        "formality": {
+          "default": "casual",
+          "title": "Formality",
+          "type": "string"
+        },
+        "verbosity": {
+          "default": "short",
+          "title": "Verbosity",
+          "type": "string"
+        },
+        "notes": {
+          "default": "",
+          "title": "Notes",
+          "type": "string"
+        }
+      },
+      "title": "StyleProfile",
+      "type": "object"
+    },
+    "TrajectoryStep": {
+      "properties": {
+        "month_index": {
+          "title": "Month Index",
+          "type": "integer"
+        },
+        "age": {
+          "title": "Age",
+          "type": "integer"
+        },
+        "transitions": {
+          "items": {
+            "$ref": "#/$defs/StatusTransition"
+          },
+          "title": "Transitions",
+          "type": "array"
+        },
+        "memory_updates": {
+          "items": {
+            "$ref": "#/$defs/MemoryUpdate"
+          },
+          "title": "Memory Updates",
+          "type": "array"
+        },
+        "action_impacts": {
+          "items": {
+            "$ref": "#/$defs/ActionImpact"
+          },
+          "title": "Action Impacts",
+          "type": "array"
+        }
+      },
+      "required": [
+        "month_index",
+        "age"
+      ],
+      "title": "TrajectoryStep",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "trajectory_id": {
+      "title": "Trajectory Id",
+      "type": "string"
+    },
+    "locale": {
+      "title": "Locale",
+      "type": "string"
+    },
+    "seed": {
+      "title": "Seed",
+      "type": "integer"
+    },
+    "horizon_months": {
+      "title": "Horizon Months",
+      "type": "integer"
+    },
+    "persona": {
+      "$ref": "#/$defs/NormalizedPersona"
+    },
+    "initial_persona_state": {
+      "$ref": "#/$defs/PersonaState"
+    },
+    "initial_financial_memory_state": {
+      "$ref": "#/$defs/FinancialMemoryState"
+    },
+    "initial_standing_actions": {
+      "items": {
+        "$ref": "#/$defs/StandingAction"
+      },
+      "title": "Initial Standing Actions",
+      "type": "array"
+    },
+    "life_event_instances": {
+      "items": {
+        "$ref": "#/$defs/EventInstance"
+      },
+      "title": "Life Event Instances",
+      "type": "array"
+    },
+    "timeline_steps": {
+      "items": {
+        "$ref": "#/$defs/TrajectoryStep"
+      },
+      "title": "Timeline Steps",
+      "type": "array"
+    },
+    "state_snapshots": {
+      "additionalProperties": {
+        "$ref": "#/$defs/PersonaState"
+      },
+      "title": "State Snapshots",
+      "type": "object"
+    },
+    "memory_snapshots": {
+      "additionalProperties": {
+        "$ref": "#/$defs/FinancialMemoryState"
+      },
+      "title": "Memory Snapshots",
+      "type": "object"
+    },
+    "action_snapshots": {
+      "additionalProperties": {
+        "items": {
+          "$ref": "#/$defs/StandingAction"
+        },
+        "type": "array"
+      },
+      "title": "Action Snapshots",
+      "type": "object"
+    },
+    "final_persona_state": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/PersonaState"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "trajectory_id",
+    "locale",
+    "seed",
+    "horizon_months",
+    "persona",
+    "initial_persona_state",
+    "initial_financial_memory_state",
+    "initial_standing_actions"
+  ],
+  "title": "Trajectory",
+  "type": "object"
+}

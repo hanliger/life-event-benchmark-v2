@@ -1,0 +1,50 @@
+# Financial memory schema: domains and cell paths.
+# Every cell carries: value, status (current|historical|stale|needs_verification|
+# pending|cancelled|unknown), confidence, valid_from, valid_until,
+# last_confirmed_at, evidence_turns, source_event_instance_id, provenance.
+domains:
+  profile:
+    paths:
+      - age
+      - locale
+      - region
+  household:
+    paths:
+      - marital_status
+      - spouse_or_partner
+      - children
+      - dependents
+      - child_support_arrangement
+  employment:
+    paths:
+      - employment_status
+      - employer
+      - occupation
+      - income_stability
+      - salary_day
+      - salary_account
+  housing:
+    paths:
+      - residence_status
+      - address
+      - contract_type
+      - rent_amount
+      - rent_payee
+      - maintenance_fee_payee
+      - mortgage_status
+  education:
+    paths:
+      - self_education_status
+      - child_education_stage
+  financial_products:
+    paths:
+      - checking_accounts
+      - savings_accounts
+      - loans
+      - pension_or_irp
+  goals:
+    paths:
+      - emergency_fund
+      - housing_deposit_goal
+      - child_education_goal
+      - retirement_goal

@@ -1,0 +1,96 @@
+# Financial action codebook (extends life_generator's FA table with risk
+# semantics). Risk rule: funds_movement=true => high risk => a standing-action
+# change must NOT be executed without explicit user confirmation.
+FA-01:
+  name: 조회·확인·증빙 발급
+  risk: low
+  funds_movement: false
+  examples:
+    - 거래내역 조회
+    - 대출잔액 조회
+    - 이체확인증 발급
+
+FA-02:
+  name: 알림·일정 설정
+  risk: low
+  funds_movement: false
+  examples:
+    - 급여일 알림
+    - 계약 만기 알림
+    - 환율 알림
+
+FA-03:
+  name: 고객·계좌 정보 등록/변경
+  risk: low
+  funds_movement: false
+  examples:
+    - 주소 변경
+    - 급여계좌 등록
+    - 수취인 등록
+
+FA-04:
+  name: 금융상품·대출 조건 조회
+  risk: low
+  funds_movement: false
+  examples:
+    - 대출 한도조회
+    - 금리 조회
+    - 상환 시뮬레이션
+
+FA-05:
+  name: 계좌·목적 자금공간 개설/분리
+  risk: low
+  funds_movement: false
+  examples:
+    - 생활비 계좌
+    - 모임통장
+    - 외화통장
+
+FA-06:
+  name: 보안·사고 대응
+  risk: low
+  funds_movement: false
+  examples:
+    - 카드 정지
+    - 계좌 지급정지
+    - 사고신고
+
+FA-07:
+  name: 이체·송금·환전
+  risk: high
+  funds_movement: true
+  examples:
+    - 계약금 이체
+    - 병원비 이체
+    - 장례비 이체
+    - 해외송금
+
+FA-08:
+  name: 정기이체·자동납부 관리
+  risk: high
+  funds_movement: true
+  examples:
+    - 월세 정기이체
+    - 생활비 정기송금
+    - 양육비 정기이체
+    - 관리비 자동납부
+
+FA-09:
+  name: 저축·연금 납입/해지/전환
+  risk: high
+  funds_movement: true
+  examples:
+    - 자동저축 설정
+    - 적금 납입
+    - 예적금 해지
+    - IRP 납입
+
+FA-10:
+  name: 대출 실행·상환·상환설정
+  risk: high
+  funds_movement: true
+  examples:
+    - 전세대출 실행
+    - 주담대 실행
+    - 대출 중도상환
+    - 자동상환 계좌 설정

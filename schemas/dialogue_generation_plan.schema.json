@@ -1,0 +1,117 @@
+{
+  "properties": {
+    "session_id": {
+      "default": "",
+      "title": "Session Id",
+      "type": "string"
+    },
+    "trajectory_id": {
+      "title": "Trajectory Id",
+      "type": "string"
+    },
+    "month_index": {
+      "title": "Month Index",
+      "type": "integer"
+    },
+    "age": {
+      "title": "Age",
+      "type": "integer"
+    },
+    "session_type": {
+      "title": "Session Type",
+      "type": "string"
+    },
+    "linked_event_instance_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Linked Event Instance Id"
+    },
+    "event_status_after_session": {
+      "default": "no_event",
+      "title": "Event Status After Session",
+      "type": "string"
+    },
+    "near_miss_event_label": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Near Miss Event Label"
+    },
+    "mapped_action": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Mapped Action"
+    },
+    "financial_task": {
+      "default": "",
+      "title": "Financial Task",
+      "type": "string"
+    },
+    "must_include_cues": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Must Include Cues",
+      "type": "array"
+    },
+    "must_not_include_terms": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Must Not Include Terms",
+      "type": "array"
+    },
+    "target_memory_paths": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Target Memory Paths",
+      "type": "array"
+    },
+    "target_action_ids": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Target Action Ids",
+      "type": "array"
+    },
+    "desired_single_session_recoverability": {
+      "default": "medium",
+      "title": "Desired Single Session Recoverability",
+      "type": "string"
+    },
+    "desired_cumulative_recoverability": {
+      "default": "high",
+      "title": "Desired Cumulative Recoverability",
+      "type": "string"
+    }
+  },
+  "required": [
+    "trajectory_id",
+    "month_index",
+    "age",
+    "session_type"
+  ],
+  "title": "DialogueGenerationPlan",
+  "type": "object"
+}

@@ -1,0 +1,177 @@
+<svg viewBox="0 0 1764 1044" role="img" aria-label="sample life path timeline">
+<rect x="0" y="0" width="100%" height="100%" fill="#f8fafc" />
+<text x="24" y="36" font-size="20" font-weight="700">Sample Life Path Timeline</text>
+<text x="24" y="58" font-size="12" fill="#475569">x-axis: age in years, y-axis: sampled core_subgraph, edge color: sampled core_subgraph</text>
+<line x1="230" y1="200" x2="1714" y2="200" stroke="#cbd5e1" />
+<circle cx="212" cy="200" r="5" fill="#2563eb" />
+<text x="24" y="196" font-size="13" font-weight="700">취업-교육-이직</text>
+<text x="24" y="214" font-size="10" fill="#64748b">early_career_learning_arc</text>
+<line x1="230" y1="324" x2="1714" y2="324" stroke="#cbd5e1" />
+<circle cx="212" cy="324" r="5" fill="#16a34a" />
+<text x="24" y="320" font-size="13" font-weight="700">독립-이사-월세계약</text>
+<text x="24" y="338" font-size="10" fill="#64748b">self_independence_residence_core</text>
+<line x1="230" y1="448" x2="1714" y2="448" stroke="#cbd5e1" />
+<circle cx="212" cy="448" r="5" fill="#9333ea" />
+<text x="24" y="444" font-size="13" font-weight="700">가족 사망</text>
+<text x="24" y="462" font-size="10" fill="#64748b">family_bereavement_core</text>
+<line x1="230" y1="572" x2="1714" y2="572" stroke="#cbd5e1" />
+<circle cx="212" cy="572" r="5" fill="#dc2626" />
+<text x="24" y="568" font-size="13" font-weight="700">임차-자가-매각</text>
+<text x="24" y="586" font-size="10" fill="#64748b">rental_to_homeownership_lifecycle</text>
+<line x1="230" y1="696" x2="1714" y2="696" stroke="#cbd5e1" />
+<circle cx="212" cy="696" r="5" fill="#0891b2" />
+<text x="24" y="692" font-size="13" font-weight="700">은퇴-연금</text>
+<text x="24" y="710" font-size="10" fill="#64748b">retirement_pension_arc</text>
+<line x1="230" y1="820" x2="1714" y2="820" stroke="#cbd5e1" />
+<circle cx="212" cy="820" r="5" fill="#ca8a04" />
+<text x="24" y="816" font-size="13" font-weight="700">결혼</text>
+<text x="24" y="834" font-size="10" fill="#64748b">marriage_only_core</text>
+<line x1="146" y1="82" x2="146" y2="962" stroke="#e2e8f0" />
+<text x="146" y="987" text-anchor="middle" font-size="11" fill="#475569">20</text>
+<line x1="286" y1="82" x2="286" y2="962" stroke="#e2e8f0" />
+<text x="286" y="987" text-anchor="middle" font-size="11" fill="#475569">25</text>
+<line x1="426" y1="82" x2="426" y2="962" stroke="#e2e8f0" />
+<text x="426" y="987" text-anchor="middle" font-size="11" fill="#475569">30</text>
+<line x1="566" y1="82" x2="566" y2="962" stroke="#e2e8f0" />
+<text x="566" y="987" text-anchor="middle" font-size="11" fill="#475569">35</text>
+<line x1="706" y1="82" x2="706" y2="962" stroke="#e2e8f0" />
+<text x="706" y="987" text-anchor="middle" font-size="11" fill="#475569">40</text>
+<line x1="846" y1="82" x2="846" y2="962" stroke="#e2e8f0" />
+<text x="846" y="987" text-anchor="middle" font-size="11" fill="#475569">45</text>
+<line x1="986" y1="82" x2="986" y2="962" stroke="#e2e8f0" />
+<text x="986" y="987" text-anchor="middle" font-size="11" fill="#475569">50</text>
+<line x1="1126" y1="82" x2="1126" y2="962" stroke="#e2e8f0" />
+<text x="1126" y="987" text-anchor="middle" font-size="11" fill="#475569">55</text>
+<line x1="1266" y1="82" x2="1266" y2="962" stroke="#e2e8f0" />
+<text x="1266" y="987" text-anchor="middle" font-size="11" fill="#475569">60</text>
+<line x1="1406" y1="82" x2="1406" y2="962" stroke="#e2e8f0" />
+<text x="1406" y="987" text-anchor="middle" font-size="11" fill="#475569">65</text>
+<line x1="1546" y1="82" x2="1546" y2="962" stroke="#e2e8f0" />
+<text x="1546" y="987" text-anchor="middle" font-size="11" fill="#475569">70</text>
+<line x1="1686" y1="82" x2="1686" y2="962" stroke="#e2e8f0" />
+<text x="1686" y="987" text-anchor="middle" font-size="11" fill="#475569">75</text>
+<line x1="1826" y1="82" x2="1826" y2="962" stroke="#e2e8f0" />
+<text x="1826" y="987" text-anchor="middle" font-size="11" fill="#475569">80</text>
+<line x1="1126" y1="696" x2="1266" y2="696" stroke="#0891b2" stroke-width="2.2" opacity="0.76" />
+<line x1="342" y1="324" x2="342" y2="324" stroke="#16a34a" stroke-width="2.2" opacity="0.76" />
+<line x1="342" y1="324" x2="342" y2="324" stroke="#16a34a" stroke-width="2.2" opacity="0.76" />
+<line x1="734" y1="572" x2="958" y2="572" stroke="#dc2626" stroke-width="2.2" opacity="0.76" />
+<line x1="958" y1="572" x2="986" y2="572" stroke="#dc2626" stroke-width="2.2" opacity="0.76" />
+<line x1="986" y1="572" x2="1658" y2="572" stroke="#dc2626" stroke-width="2.2" opacity="0.76" />
+<line x1="1658" y1="572" x2="1686" y2="572" stroke="#dc2626" stroke-width="2.2" opacity="0.76" />
+<line x1="258" y1="200" x2="286" y2="200" stroke="#2563eb" stroke-width="2.2" opacity="0.76" />
+<line x1="286" y1="200" x2="370" y2="200" stroke="#2563eb" stroke-width="2.2" opacity="0.76" />
+<line x1="370" y1="200" x2="398" y2="200" stroke="#2563eb" stroke-width="2.2" opacity="0.76" />
+
+    <g>
+      <circle cx="258" cy="200" r="4" fill="#2563eb" />
+      <text x="258" y="178" text-anchor="middle" font-size="14" font-weight="700" fill="#111827">취업</text>
+      <text x="258" y="194" text-anchor="middle" font-size="11" fill="#475569">age 24</text>
+    </g>
+    
+
+    <g>
+      <circle cx="286" cy="200" r="4" fill="#2563eb" />
+      <text x="286" y="152" text-anchor="middle" font-size="14" font-weight="700" fill="#111827">교육</text>
+      <text x="286" y="168" text-anchor="middle" font-size="11" fill="#475569">age 25</text>
+    </g>
+    
+
+    <g>
+      <circle cx="342" cy="324" r="4" fill="#16a34a" />
+      <text x="342" y="302" text-anchor="middle" font-size="14" font-weight="700" fill="#111827">독립</text>
+      <text x="342" y="318" text-anchor="middle" font-size="11" fill="#475569">age 27</text>
+    </g>
+    
+
+    <g>
+      <circle cx="342" cy="324" r="4" fill="#16a34a" />
+      <text x="342" y="250" text-anchor="middle" font-size="14" font-weight="700" fill="#111827">이사</text>
+      
+    </g>
+    
+
+    <g>
+      <circle cx="342" cy="324" r="4" fill="#16a34a" />
+      <text x="342" y="276" text-anchor="middle" font-size="14" font-weight="700" fill="#111827">월세계약</text>
+      
+    </g>
+    
+
+    <g>
+      <circle cx="370" cy="200" r="4" fill="#2563eb" />
+      <text x="370" y="178" text-anchor="middle" font-size="14" font-weight="700" fill="#111827">이직</text>
+      <text x="370" y="194" text-anchor="middle" font-size="11" fill="#475569">age 28</text>
+    </g>
+    
+
+    <g>
+      <circle cx="398" cy="200" r="4" fill="#2563eb" />
+      <text x="398" y="152" text-anchor="middle" font-size="14" font-weight="700" fill="#111827">전근</text>
+      <text x="398" y="168" text-anchor="middle" font-size="11" fill="#475569">age 29</text>
+    </g>
+    
+
+    <g>
+      <circle cx="566" cy="448" r="4" fill="#9333ea" />
+      <text x="566" y="426" text-anchor="middle" font-size="14" font-weight="700" fill="#111827">가족 사망</text>
+      <text x="566" y="442" text-anchor="middle" font-size="11" fill="#475569">age 35</text>
+    </g>
+    
+
+    <g>
+      <circle cx="734" cy="572" r="4" fill="#dc2626" />
+      <text x="734" y="550" text-anchor="middle" font-size="14" font-weight="700" fill="#111827">전세계약</text>
+      <text x="734" y="566" text-anchor="middle" font-size="11" fill="#475569">age 41</text>
+    </g>
+    
+
+    <g>
+      <circle cx="958" cy="572" r="4" fill="#dc2626" />
+      <text x="958" y="550" text-anchor="middle" font-size="14" font-weight="700" fill="#111827">주택 구매</text>
+      <text x="958" y="566" text-anchor="middle" font-size="11" fill="#475569">age 49</text>
+    </g>
+    
+
+    <g>
+      <circle cx="986" cy="572" r="4" fill="#dc2626" />
+      <text x="986" y="524" text-anchor="middle" font-size="14" font-weight="700" fill="#111827">이사</text>
+      <text x="986" y="540" text-anchor="middle" font-size="11" fill="#475569">age 50</text>
+    </g>
+    
+
+    <g>
+      <circle cx="1126" cy="696" r="4" fill="#0891b2" />
+      <text x="1126" y="674" text-anchor="middle" font-size="14" font-weight="700" fill="#111827">은퇴 준비 시작</text>
+      <text x="1126" y="690" text-anchor="middle" font-size="11" fill="#475569">age 55</text>
+    </g>
+    
+
+    <g>
+      <circle cx="1266" cy="820" r="4" fill="#ca8a04" />
+      <text x="1266" y="798" text-anchor="middle" font-size="14" font-weight="700" fill="#111827">결혼</text>
+      <text x="1266" y="814" text-anchor="middle" font-size="11" fill="#475569">age 60</text>
+    </g>
+    
+
+    <g>
+      <circle cx="1266" cy="696" r="4" fill="#0891b2" />
+      <text x="1266" y="674" text-anchor="middle" font-size="14" font-weight="700" fill="#111827">연금수령시작</text>
+      <text x="1266" y="690" text-anchor="middle" font-size="11" fill="#475569">age 60</text>
+    </g>
+    
+
+    <g>
+      <circle cx="1658" cy="572" r="4" fill="#dc2626" />
+      <text x="1658" y="550" text-anchor="middle" font-size="14" font-weight="700" fill="#111827">주택 매각</text>
+      <text x="1658" y="566" text-anchor="middle" font-size="11" fill="#475569">age 74</text>
+    </g>
+    
+
+    <g>
+      <circle cx="1686" cy="572" r="4" fill="#dc2626" />
+      <text x="1686" y="524" text-anchor="middle" font-size="14" font-weight="700" fill="#111827">이사</text>
+      <text x="1686" y="540" text-anchor="middle" font-size="11" fill="#475569">age 75</text>
+    </g>
+    
+</svg>

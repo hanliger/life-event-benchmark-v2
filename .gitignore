@@ -1,0 +1,19 @@
+.env
+.venv/
+venv/
+
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Large upstream persona parquet shards. Keep the adapter/configuration in git,
+# but fetch or mount the raw dataset separately.
+Nemotron-Personas-Korea/data/*.parquet
+Nemotron-Personas-Korea/.cache/
+
+# Local OS/editor noise.
+.DS_Store
+*.swp
+*.swo

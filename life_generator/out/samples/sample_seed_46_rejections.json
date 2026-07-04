@@ -1,0 +1,14 @@
+[
+  {
+    "episode_id": "leave_return_reskilling_arc",
+    "reason": "career_leave requires active employment",
+    "conflicted_event_id": "career_leave",
+    "age": 31
+  },
+  {
+    "episode_id": "separation_divorce_core",
+    "reason": "separation requires marital_status married",
+    "conflicted_event_id": "relationship_separation",
+    "age": 35
+  }
+]

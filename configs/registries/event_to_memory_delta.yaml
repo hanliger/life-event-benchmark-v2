@@ -1,0 +1,580 @@
+# Event -> financial-memory delta templates, keyed by event_id then lifecycle
+# hook (on_weak_signal / on_upcoming / on_occurred / on_cancelled).
+#
+# Each memory update item:
+#   path:        memory cell path (see financial_memory_schema.yaml)
+#   operation:   create|update|mark_stale|archive|needs_verification|
+#                set_pending|clear_pending|reactivate|no_update
+#   value_from:  "param:<name>"  -> value from EventInstance.params
+#                "literal:<v>"   -> literal value
+#                (omitted for status-only operations)
+#   optional:    if true, the delta engine may skip it (sampled)
+#
+# Lifecycle policy (enforced by the delta engine regardless of what is
+# declared here):
+#   weak_signal -> only set_pending / needs_verification, all optional
+#   upcoming    -> only set_pending / needs_verification
+#   occurred    -> update / mark_stale / archive / needs_verification / create / reactivate
+#   cancelled   -> only clear_pending / no_update
+
+relationship_marriage:
+  on_weak_signal:
+    memory_updates: []
+    pending_memory:
+      - path: household.marital_status
+        operation: set_pending
+        value_from: "literal:married"
+        optional: true
+  on_upcoming:
+    memory_updates:
+      - path: household.marital_status
+        operation: set_pending
+        value_from: "literal:married"
+      - path: household.spouse_or_partner
+        operation: set_pending
+        value_from: "param:partner_ref"
+  on_occurred:
+    memory_updates:
+      - path: household.marital_status
+        operation: update
+        value_from: "literal:married"
+      - path: household.spouse_or_partner
+        operation: update
+        value_from: "param:partner_ref"
+      - path: goals.housing_deposit_goal
+        operation: needs_verification
+  on_cancelled:
+    memory_updates:
+      - path: household.marital_status
+        operation: clear_pending
+      - path: household.spouse_or_partner
+        operation: clear_pending
+
+relationship_divorce_or_separation:
+  on_weak_signal:
+    memory_updates: []
+    pending_memory:
+      - path: household.child_support_arrangement
+        operation: needs_verification
+        optional: true
+  on_upcoming:
+    memory_updates:
+      - path: household.marital_status
+        operation: needs_verification
+  on_occurred:
+    memory_updates:
+      - path: household.marital_status
+        operation: update
+        value_from: "literal:divorced"
+      - path: household.spouse_or_partner
+        operation: archive
+      - path: household.child_support_arrangement
+        operation: needs_verification
+  on_cancelled:
+    memory_updates:
+      - path: household.marital_status
+        operation: clear_pending
+      - path: household.child_support_arrangement
+        operation: clear_pending
+
+relationship_childbirth_or_adoption:
+  on_weak_signal:
+    memory_updates: []
+    pending_memory:
+      - path: household.children
+        operation: set_pending
+        value_from: "param:children_after"
+        optional: true
+  on_upcoming:
+    memory_updates:
+      - path: household.children
+        operation: set_pending
+        value_from: "param:children_after"
+      - path: goals.child_education_goal
+        operation: needs_verification
+  on_occurred:
+    memory_updates:
+      - path: household.children
+        operation: update
+        value_from: "param:children_after"
+      - path: household.dependents
+        operation: update
+        value_from: "param:dependents_after"
+      - path: goals.child_education_goal
+        operation: needs_verification
+  on_cancelled:
+    memory_updates:
+      - path: household.children
+        operation: clear_pending
+      - path: goals.child_education_goal
+        operation: clear_pending
+
+relationship_dependent_change:
+  on_weak_signal:
+    memory_updates: []
+    pending_memory:
+      - path: household.dependents
+        operation: needs_verification
+        optional: true
+  on_upcoming:
+    memory_updates:
+      - path: household.dependents
+        operation: needs_verification
+  on_occurred:
+    memory_updates:
+      - path: household.dependents
+        operation: update
+        value_from: "param:dependents_after"
+  on_cancelled:
+    memory_updates:
+      - path: household.dependents
+        operation: clear_pending
+
+relationship_family_death:
+  on_weak_signal:
+    memory_updates: []
+    pending_memory: []
+  on_upcoming:
+    memory_updates: []
+  on_occurred:
+    memory_updates:
+      - path: household.dependents
+        operation: update
+        value_from: "param:dependents_after"
+      - path: household.spouse_or_partner
+        operation: needs_verification
+        optional: true
+  on_cancelled:
+    memory_updates: []
+
+housing_move:
+  on_weak_signal:
+    memory_updates: []
+    pending_memory:
+      - path: housing.address
+        operation: set_pending
+        value_from: "param:new_address"
+        optional: true
+  on_upcoming:
+    memory_updates:
+      - path: housing.address
+        operation: set_pending
+        value_from: "param:new_address"
+  on_occurred:
+    memory_updates:
+      - path: housing.address
+        operation: update
+        value_from: "param:new_address"
+      - path: housing.rent_payee
+        operation: needs_verification
+      - path: housing.maintenance_fee_payee
+        operation: needs_verification
+  on_cancelled:
+    memory_updates:
+      - path: housing.address
+        operation: clear_pending
+
+housing_rental_contract:
+  on_weak_signal:
+    memory_updates: []
+    pending_memory:
+      - path: housing.contract_type
+        operation: needs_verification
+        optional: true
+  on_upcoming:
+    memory_updates:
+      - path: housing.rent_amount
+        operation: set_pending
+        value_from: "param:new_rent_amount"
+      - path: housing.contract_type
+        operation: set_pending
+        value_from: "param:new_contract_type"
+  on_occurred:
+    memory_updates:
+      - path: housing.contract_type
+        operation: update
+        value_from: "param:new_contract_type"
+      - path: housing.rent_amount
+        operation: update
+        value_from: "param:new_rent_amount"
+      - path: housing.rent_payee
+        operation: needs_verification
+  on_cancelled:
+    memory_updates:
+      - path: housing.rent_amount
+        operation: clear_pending
+      - path: housing.contract_type
+        operation: clear_pending
+
+housing_home_purchase:
+  on_weak_signal:
+    memory_updates: []
+    pending_memory:
+      - path: housing.mortgage_status
+        operation: needs_verification
+        optional: true
+  on_upcoming:
+    memory_updates:
+      - path: housing.address
+        operation: set_pending
+        value_from: "param:new_address"
+      - path: housing.mortgage_status
+        operation: set_pending
+        value_from: "literal:active"
+  on_occurred:
+    memory_updates:
+      - path: housing.residence_status
+        operation: update
+        value_from: "literal:owner"
+      - path: housing.address
+        operation: update
+        value_from: "param:new_address"
+      - path: housing.contract_type
+        operation: update
+        value_from: "literal:owner"
+      - path: housing.mortgage_status
+        operation: update
+        value_from: "literal:active"
+      - path: housing.rent_amount
+        operation: archive
+      - path: housing.rent_payee
+        operation: archive
+      - path: financial_products.loans
+        operation: update
+        value_from: "param:loans_after"
+  on_cancelled:
+    memory_updates:
+      - path: housing.address
+        operation: clear_pending
+      - path: housing.mortgage_status
+        operation: clear_pending
+
+career_job_change:
+  on_weak_signal:
+    memory_updates: []
+    pending_memory:
+      - path: employment.salary_day
+        operation: needs_verification
+        optional: true
+  on_upcoming:
+    memory_updates:
+      - path: employment.employer
+        operation: needs_verification
+      - path: employment.salary_account
+        operation: needs_verification
+  on_occurred:
+    memory_updates:
+      - path: employment.employer
+        operation: update
+        value_from: "param:new_employer"
+      - path: employment.salary_day
+        operation: needs_verification
+      - path: employment.salary_account
+        operation: needs_verification
+      - path: employment.income_stability
+        operation: update
+        value_from: "literal:stable"
+  on_cancelled:
+    memory_updates:
+      - path: employment.employer
+        operation: clear_pending
+      - path: employment.salary_account
+        operation: clear_pending
+
+career_resignation_or_job_loss:
+  on_weak_signal:
+    memory_updates: []
+    pending_memory:
+      - path: employment.income_stability
+        operation: needs_verification
+        optional: true
+  on_upcoming:
+    memory_updates:
+      - path: employment.employment_status
+        operation: needs_verification
+  on_occurred:
+    memory_updates:
+      - path: employment.employment_status
+        operation: update
+        value_from: "literal:unemployed"
+      - path: employment.employer
+        operation: archive
+      - path: employment.salary_day
+        operation: mark_stale
+      - path: employment.salary_account
+        operation: mark_stale
+      - path: employment.income_stability
+        operation: update
+        value_from: "literal:unstable"
+  on_cancelled:
+    memory_updates:
+      - path: employment.employment_status
+        operation: clear_pending
+
+# ---------------------------------------------------------------------------
+# TODO(P2): full delta templates for the remaining 14 events. Minimal valid
+# stubs below keep the schema/loader happy and mark obvious verification needs.
+# ---------------------------------------------------------------------------
+
+housing_independence:
+  on_weak_signal: {memory_updates: [], pending_memory: []}
+  on_upcoming:
+    memory_updates:
+      - path: housing.address
+        operation: set_pending
+        value_from: "param:new_address"
+  on_occurred:
+    memory_updates:
+      - path: housing.address
+        operation: update
+        value_from: "param:new_address"
+      - path: housing.residence_status
+        operation: update
+        value_from: "literal:wolse"
+      - path: housing.contract_type
+        operation: update
+        value_from: "literal:wolse"
+      - path: housing.rent_amount
+        operation: update
+        value_from: "param:new_rent_amount"
+      - path: housing.rent_payee
+        operation: needs_verification
+  on_cancelled:
+    memory_updates:
+      - path: housing.address
+        operation: clear_pending
+
+housing_home_sale_or_moveout:
+  on_weak_signal: {memory_updates: [], pending_memory: []}
+  on_upcoming:
+    memory_updates:
+      - path: housing.mortgage_status
+        operation: needs_verification
+  on_occurred:
+    memory_updates:
+      - path: housing.residence_status
+        operation: update
+        value_from: "literal:jeonse"
+      - path: housing.mortgage_status
+        operation: update
+        value_from: "literal:closed"
+      - path: financial_products.loans
+        operation: needs_verification
+  on_cancelled:
+    memory_updates: []
+
+career_employment_or_return:
+  on_weak_signal: {memory_updates: [], pending_memory: []}
+  on_upcoming:
+    memory_updates:
+      - path: employment.employer
+        operation: set_pending
+        value_from: "param:new_employer"
+  on_occurred:
+    memory_updates:
+      - path: employment.employment_status
+        operation: update
+        value_from: "literal:employed"
+      - path: employment.employer
+        operation: update
+        value_from: "param:new_employer"
+      - path: employment.salary_day
+        operation: update
+        value_from: "param:new_salary_day"
+      - path: employment.salary_account
+        operation: needs_verification
+      - path: employment.income_stability
+        operation: update
+        value_from: "literal:stable"
+  on_cancelled:
+    memory_updates:
+      - path: employment.employer
+        operation: clear_pending
+
+career_leave:
+  on_weak_signal: {memory_updates: [], pending_memory: []}
+  on_upcoming:
+    memory_updates:
+      - path: employment.income_stability
+        operation: needs_verification
+  on_occurred:
+    memory_updates:
+      - path: employment.employment_status
+        operation: update
+        value_from: "literal:on_leave"
+      - path: employment.income_stability
+        operation: update
+        value_from: "literal:reduced"
+  on_cancelled:
+    memory_updates:
+      - path: employment.income_stability
+        operation: clear_pending
+
+career_startup_or_freelance:
+  on_weak_signal: {memory_updates: [], pending_memory: []}
+  on_upcoming:
+    memory_updates:
+      - path: employment.employment_status
+        operation: needs_verification
+  on_occurred:
+    memory_updates:
+      - path: employment.employment_status
+        operation: update
+        value_from: "literal:self_employed"
+      - path: employment.employer
+        operation: archive
+      - path: employment.salary_day
+        operation: mark_stale
+      - path: employment.income_stability
+        operation: update
+        value_from: "literal:variable"
+  on_cancelled:
+    memory_updates:
+      - path: employment.employment_status
+        operation: clear_pending
+
+career_business_closure:
+  on_weak_signal: {memory_updates: [], pending_memory: []}
+  on_upcoming:
+    memory_updates:
+      - path: employment.income_stability
+        operation: needs_verification
+  on_occurred:
+    memory_updates:
+      - path: employment.employment_status
+        operation: update
+        value_from: "literal:unemployed"
+      - path: employment.income_stability
+        operation: update
+        value_from: "literal:unstable"
+      - path: financial_products.loans
+        operation: needs_verification
+  on_cancelled:
+    memory_updates: []
+
+education_self_program_start:
+  on_weak_signal: {memory_updates: [], pending_memory: []}
+  on_upcoming:
+    memory_updates:
+      - path: education.self_education_status
+        operation: set_pending
+        value_from: "literal:enrolled"
+  on_occurred:
+    memory_updates:
+      - path: education.self_education_status
+        operation: update
+        value_from: "literal:enrolled"
+  on_cancelled:
+    memory_updates:
+      - path: education.self_education_status
+        operation: clear_pending
+
+education_child_stage_entry:
+  on_weak_signal: {memory_updates: [], pending_memory: []}
+  on_upcoming:
+    memory_updates:
+      - path: education.child_education_stage
+        operation: set_pending
+        value_from: "param:new_stage"
+  on_occurred:
+    memory_updates:
+      - path: education.child_education_stage
+        operation: update
+        value_from: "param:new_stage"
+      - path: goals.child_education_goal
+        operation: needs_verification
+  on_cancelled:
+    memory_updates:
+      - path: education.child_education_stage
+        operation: clear_pending
+
+education_study_abroad:
+  on_weak_signal: {memory_updates: [], pending_memory: []}
+  on_upcoming:
+    memory_updates:
+      - path: education.self_education_status
+        operation: set_pending
+        value_from: "literal:study_abroad"
+  on_occurred:
+    memory_updates:
+      - path: education.self_education_status
+        operation: update
+        value_from: "literal:study_abroad"
+      - path: housing.address
+        operation: needs_verification
+  on_cancelled:
+    memory_updates:
+      - path: education.self_education_status
+        operation: clear_pending
+
+retirement_prep_start:
+  on_weak_signal: {memory_updates: [], pending_memory: []}
+  on_upcoming:
+    memory_updates:
+      - path: goals.retirement_goal
+        operation: needs_verification
+  on_occurred:
+    memory_updates:
+      - path: goals.retirement_goal
+        operation: update
+        value_from: "literal:planning"
+      - path: financial_products.pension_or_irp
+        operation: needs_verification
+  on_cancelled:
+    memory_updates:
+      - path: goals.retirement_goal
+        operation: clear_pending
+
+retirement_pension_start:
+  on_weak_signal: {memory_updates: [], pending_memory: []}
+  on_upcoming:
+    memory_updates:
+      - path: financial_products.pension_or_irp
+        operation: needs_verification
+  on_occurred:
+    memory_updates:
+      - path: employment.employment_status
+        operation: update
+        value_from: "literal:retired"
+      - path: financial_products.pension_or_irp
+        operation: update
+        value_from: "literal:receiving"
+      - path: employment.salary_day
+        operation: mark_stale
+  on_cancelled:
+    memory_updates: []
+
+crisis_health_event:
+  on_weak_signal: {memory_updates: [], pending_memory: []}
+  on_upcoming:
+    memory_updates: []
+  on_occurred:
+    memory_updates:
+      - path: goals.emergency_fund
+        operation: needs_verification
+  on_cancelled:
+    memory_updates: []
+
+crisis_accident_or_disaster:
+  on_weak_signal: {memory_updates: [], pending_memory: []}
+  on_upcoming:
+    memory_updates: []
+  on_occurred:
+    memory_updates:
+      - path: goals.emergency_fund
+        operation: needs_verification
+  on_cancelled:
+    memory_updates: []
+
+crisis_financial_fraud:
+  on_weak_signal: {memory_updates: [], pending_memory: []}
+  on_upcoming:
+    memory_updates: []
+  on_occurred:
+    memory_updates:
+      - path: financial_products.checking_accounts
+        operation: needs_verification
+      - path: financial_products.savings_accounts
+        operation: needs_verification
+  on_cancelled:
+    memory_updates: []

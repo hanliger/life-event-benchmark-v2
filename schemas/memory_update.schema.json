@@ -1,0 +1,90 @@
+{
+  "$defs": {
+    "MemoryOperation": {
+      "enum": [
+        "create",
+        "update",
+        "mark_stale",
+        "archive",
+        "needs_verification",
+        "set_pending",
+        "clear_pending",
+        "reactivate",
+        "no_update"
+      ],
+      "title": "MemoryOperation",
+      "type": "string"
+    }
+  },
+  "properties": {
+    "path": {
+      "title": "Path",
+      "type": "string"
+    },
+    "operation": {
+      "$ref": "#/$defs/MemoryOperation"
+    },
+    "old_value": {
+      "default": null,
+      "title": "Old Value"
+    },
+    "new_value": {
+      "default": null,
+      "title": "New Value"
+    },
+    "month_index": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Month Index"
+    },
+    "source_event_instance_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Source Event Instance Id"
+    },
+    "event_status": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Event Status"
+    },
+    "evidence_turns": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Evidence Turns",
+      "type": "array"
+    },
+    "optional": {
+      "default": false,
+      "title": "Optional",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "path",
+    "operation"
+  ],
+  "title": "MemoryUpdate",
+  "type": "object"
+}

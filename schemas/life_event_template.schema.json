@@ -1,0 +1,229 @@
+{
+  "$defs": {
+    "AgeGuard": {
+      "properties": {
+        "min_age": {
+          "default": 0,
+          "title": "Min Age",
+          "type": "integer"
+        },
+        "max_age": {
+          "default": 120,
+          "title": "Max Age",
+          "type": "integer"
+        }
+      },
+      "title": "AgeGuard",
+      "type": "object"
+    },
+    "DiscriminativeCues": {
+      "properties": {
+        "required": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Required",
+          "type": "array"
+        },
+        "forbidden": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Forbidden",
+          "type": "array"
+        }
+      },
+      "title": "DiscriminativeCues",
+      "type": "object"
+    },
+    "LifecycleConfig": {
+      "properties": {
+        "weak_signal_months": {
+          "default": [
+            1,
+            3
+          ],
+          "maxItems": 2,
+          "minItems": 2,
+          "prefixItems": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "title": "Weak Signal Months",
+          "type": "array"
+        },
+        "upcoming_months": {
+          "default": [
+            1,
+            3
+          ],
+          "maxItems": 2,
+          "minItems": 2,
+          "prefixItems": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "title": "Upcoming Months",
+          "type": "array"
+        },
+        "p_skip_weak_signal": {
+          "default": 0.3,
+          "title": "P Skip Weak Signal",
+          "type": "number"
+        },
+        "p_skip_upcoming": {
+          "default": 0.1,
+          "title": "P Skip Upcoming",
+          "type": "number"
+        },
+        "p_cancel_from_weak": {
+          "default": 0.1,
+          "title": "P Cancel From Weak",
+          "type": "number"
+        },
+        "p_cancel_from_upcoming": {
+          "default": 0.05,
+          "title": "P Cancel From Upcoming",
+          "type": "number"
+        }
+      },
+      "title": "LifecycleConfig",
+      "type": "object"
+    },
+    "StateGuard": {
+      "description": "required/forbidden map LifeState field -> allowed/blocked values.",
+      "properties": {
+        "required": {
+          "additionalProperties": {
+            "items": {},
+            "type": "array"
+          },
+          "title": "Required",
+          "type": "object"
+        },
+        "forbidden": {
+          "additionalProperties": {
+            "items": {},
+            "type": "array"
+          },
+          "title": "Forbidden",
+          "type": "object"
+        }
+      },
+      "title": "StateGuard",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "event_id": {
+      "title": "Event Id",
+      "type": "string"
+    },
+    "label_ko": {
+      "title": "Label Ko",
+      "type": "string"
+    },
+    "label_en": {
+      "title": "Label En",
+      "type": "string"
+    },
+    "domain": {
+      "title": "Domain",
+      "type": "string"
+    },
+    "active": {
+      "default": true,
+      "title": "Active",
+      "type": "boolean"
+    },
+    "mvp": {
+      "default": false,
+      "title": "Mvp",
+      "type": "boolean"
+    },
+    "age_guard": {
+      "$ref": "#/$defs/AgeGuard"
+    },
+    "state_guards": {
+      "$ref": "#/$defs/StateGuard"
+    },
+    "cooldown_months": {
+      "default": 12,
+      "title": "Cooldown Months",
+      "type": "integer"
+    },
+    "base_rate_per_year": {
+      "default": 0.05,
+      "title": "Base Rate Per Year",
+      "type": "number"
+    },
+    "age_weights": {
+      "additionalProperties": {
+        "type": "number"
+      },
+      "title": "Age Weights",
+      "type": "object"
+    },
+    "requires_child_entry_age": {
+      "default": false,
+      "title": "Requires Child Entry Age",
+      "type": "boolean"
+    },
+    "lifecycle": {
+      "$ref": "#/$defs/LifecycleConfig"
+    },
+    "mapped_actions_by_status": {
+      "additionalProperties": {
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "title": "Mapped Actions By Status",
+      "type": "object"
+    },
+    "discriminative_cues_ko": {
+      "$ref": "#/$defs/DiscriminativeCues"
+    },
+    "sibling_confusions": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Sibling Confusions",
+      "type": "array"
+    },
+    "memory_delta_template_id": {
+      "default": "",
+      "title": "Memory Delta Template Id",
+      "type": "string"
+    },
+    "action_impact_template_id": {
+      "default": "",
+      "title": "Action Impact Template Id",
+      "type": "string"
+    },
+    "life_generator_node_ids": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Life Generator Node Ids",
+      "type": "array"
+    }
+  },
+  "required": [
+    "event_id",
+    "label_ko",
+    "label_en",
+    "domain"
+  ],
+  "title": "LifeEventTemplate",
+  "type": "object"
+}

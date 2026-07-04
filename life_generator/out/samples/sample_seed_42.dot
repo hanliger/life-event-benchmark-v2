@@ -1,0 +1,33 @@
+digraph sample_life_path {
+  graph [layout=neato, overlap=false, splines=true, outputorder=edgesfirst];
+  node [shape=plain, fontname="Noto Sans CJK KR"];
+  edge [penwidth=2.0];
+  "event_0" [label="이사\n30", pos="0.9,0.0!", fontcolor="#2563eb"];
+  "event_1" [label="전세계약\n30", pos="0.9,0.0!", fontcolor="#2563eb"];
+  "event_2" [label="주거 계약 변경\n34", pos="4.5,0.0!", fontcolor="#2563eb"];
+  "event_3" [label="취업\n35", pos="5.4,-0.8!", fontcolor="#16a34a"];
+  "event_4" [label="퇴거\n37", pos="7.2,0.0!", fontcolor="#2563eb"];
+  "event_5" [label="이사\n37", pos="7.2,0.0!", fontcolor="#2563eb"];
+  "event_6" [label="월세계약\n38", pos="8.1,0.0!", fontcolor="#2563eb"];
+  "event_7" [label="유학\n39", pos="9.0,-0.8!", fontcolor="#16a34a"];
+  "event_8" [label="주거 계약 변경\n40", pos="9.9,0.0!", fontcolor="#2563eb"];
+  "event_9" [label="복직\n41", pos="10.8,-0.8!", fontcolor="#16a34a"];
+  "event_10" [label="교육\n42", pos="11.700000000000001,-0.8!", fontcolor="#16a34a"];
+  "event_11" [label="이직\n45", pos="14.4,-0.8!", fontcolor="#16a34a"];
+  "event_12" [label="결혼\n46", pos="15.3,-1.6!", fontcolor="#9333ea"];
+  "event_13" [label="분가\n56", pos="24.3,-2.4000000000000004!", fontcolor="#dc2626"];
+  "event_14" [label="부양가족 발생\n57", pos="25.2,-3.2!", fontcolor="#0891b2"];
+  "event_15" [label="은퇴 준비 시작\n59", pos="27.0,-4.0!", fontcolor="#ca8a04"];
+  "event_16" [label="연금수령시작\n67", pos="34.2,-4.0!", fontcolor="#ca8a04"];
+  "event_3" -> "event_7" [color="#16a34a"];
+  "event_7" -> "event_9" [color="#16a34a"];
+  "event_9" -> "event_10" [color="#16a34a"];
+  "event_10" -> "event_11" [color="#16a34a"];
+  "event_0" -> "event_1" [color="#2563eb"];
+  "event_1" -> "event_2" [color="#2563eb"];
+  "event_2" -> "event_4" [color="#2563eb"];
+  "event_4" -> "event_5" [color="#2563eb"];
+  "event_5" -> "event_6" [color="#2563eb"];
+  "event_6" -> "event_8" [color="#2563eb"];
+  "event_15" -> "event_16" [color="#ca8a04"];
+}

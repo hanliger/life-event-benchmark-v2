@@ -1,0 +1,14 @@
+[
+  {
+    "episode_id": "marriage_adoption_education_arc",
+    "reason": "already married",
+    "conflicted_event_id": "relationship_marriage",
+    "age": 60
+  },
+  {
+    "episode_id": "employment_to_startup_reentry_arc",
+    "reason": "career_resignation requires active employment",
+    "conflicted_event_id": "career_resignation",
+    "age": 50
+  }
+]

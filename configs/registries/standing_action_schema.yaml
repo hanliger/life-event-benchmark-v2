@@ -1,0 +1,122 @@
+# Standing financial action types. Each concrete action instance carries:
+# action_id, type, label, status (active|paused|pending|stale|cancelled|historical),
+# source_account, destination, amount, frequency, trigger_rule, funds_movement,
+# risk, linked_memory_paths, validity_status, last_confirmed_at.
+action_types:
+  salary_linked_savings:
+    label_ko: 급여 연동 자동저축
+    fa_code: FA-09
+    funds_movement: true
+    risk: high
+    default_frequency: monthly
+    default_trigger_rule: salary_day_plus_1
+    linked_memory_paths:
+      - employment.salary_day
+      - employment.salary_account
+    preconditions:
+      employment_status: [employed, self_employed]
+
+  rent_autopay:
+    label_ko: 월세 정기이체
+    fa_code: FA-08
+    funds_movement: true
+    risk: high
+    default_frequency: monthly
+    default_trigger_rule: fixed_day
+    linked_memory_paths:
+      - housing.rent_amount
+      - housing.rent_payee
+      - housing.contract_type
+    preconditions:
+      residence_status: [wolse]
+
+  parent_support_transfer:
+    label_ko: 부모님 생활비 정기송금
+    fa_code: FA-08
+    funds_movement: true
+    risk: high
+    default_frequency: monthly
+    default_trigger_rule: fixed_day
+    linked_memory_paths:
+      - household.dependents
+    preconditions:
+      min_dependents: 1
+
+  spouse_living_expense_transfer:
+    label_ko: 배우자 생활비 정기이체
+    fa_code: FA-08
+    funds_movement: true
+    risk: high
+    default_frequency: monthly
+    default_trigger_rule: fixed_day
+    linked_memory_paths:
+      - household.marital_status
+      - household.spouse_or_partner
+    preconditions:
+      marital_status: [married]
+
+  child_support_transfer:
+    label_ko: 양육비 정기이체
+    fa_code: FA-08
+    funds_movement: true
+    risk: high
+    default_frequency: monthly
+    default_trigger_rule: fixed_day
+    linked_memory_paths:
+      - household.child_support_arrangement
+      - household.children
+    preconditions:
+      marital_status: [divorced, separated]
+      has_children: true
+
+  loan_repayment:
+    label_ko: 대출 자동상환
+    fa_code: FA-10
+    funds_movement: true
+    risk: high
+    default_frequency: monthly
+    default_trigger_rule: fixed_day
+    linked_memory_paths:
+      - financial_products.loans
+      - housing.mortgage_status
+    preconditions:
+      has_loan: true
+
+  child_education_saving:
+    label_ko: 자녀 교육비 적립
+    fa_code: FA-09
+    funds_movement: true
+    risk: high
+    default_frequency: monthly
+    default_trigger_rule: fixed_day
+    linked_memory_paths:
+      - household.children
+      - goals.child_education_goal
+      - education.child_education_stage
+    preconditions:
+      has_children: true
+
+  pension_contribution:
+    label_ko: 연금/IRP 정기 납입
+    fa_code: FA-09
+    funds_movement: true
+    risk: high
+    default_frequency: monthly
+    default_trigger_rule: fixed_day
+    linked_memory_paths:
+      - financial_products.pension_or_irp
+      - goals.retirement_goal
+    preconditions:
+      has_pension_or_irp: true
+
+  business_expense_autopay:
+    label_ko: 사업 비용 자동납부
+    fa_code: FA-08
+    funds_movement: true
+    risk: high
+    default_frequency: monthly
+    default_trigger_rule: fixed_day
+    linked_memory_paths:
+      - employment.employment_status
+    preconditions:
+      employment_status: [self_employed]

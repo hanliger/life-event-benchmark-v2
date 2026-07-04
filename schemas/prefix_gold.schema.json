@@ -1,0 +1,200 @@
+{
+  "$defs": {
+    "GoldActionDecision": {
+      "properties": {
+        "action_id": {
+          "title": "Action Id",
+          "type": "string"
+        },
+        "impact_type": {
+          "title": "Impact Type",
+          "type": "string"
+        },
+        "funds_movement": {
+          "title": "Funds Movement",
+          "type": "boolean"
+        },
+        "risk": {
+          "title": "Risk",
+          "type": "string"
+        },
+        "expected_decision": {
+          "title": "Expected Decision",
+          "type": "string"
+        },
+        "must_not_execute": {
+          "title": "Must Not Execute",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "action_id",
+        "impact_type",
+        "funds_movement",
+        "risk",
+        "expected_decision",
+        "must_not_execute"
+      ],
+      "title": "GoldActionDecision",
+      "type": "object"
+    },
+    "GoldLifeEvent": {
+      "properties": {
+        "event_instance_id": {
+          "title": "Event Instance Id",
+          "type": "string"
+        },
+        "life_event_label": {
+          "title": "Life Event Label",
+          "type": "string"
+        },
+        "event_status": {
+          "title": "Event Status",
+          "type": "string"
+        },
+        "occurred": {
+          "title": "Occurred",
+          "type": "boolean"
+        },
+        "update_allowed": {
+          "title": "Update Allowed",
+          "type": "boolean"
+        },
+        "first_recoverable_session": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "First Recoverable Session"
+        },
+        "evidence_sessions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Sessions",
+          "type": "array"
+        },
+        "evidence_turns": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Turns",
+          "type": "array"
+        }
+      },
+      "required": [
+        "event_instance_id",
+        "life_event_label",
+        "event_status",
+        "occurred",
+        "update_allowed"
+      ],
+      "title": "GoldLifeEvent",
+      "type": "object"
+    },
+    "GoldMemoryUpdate": {
+      "properties": {
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "operation": {
+          "title": "Operation",
+          "type": "string"
+        },
+        "old_value": {
+          "default": null,
+          "title": "Old Value"
+        },
+        "new_value": {
+          "default": null,
+          "title": "New Value"
+        },
+        "evidence_turns": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Turns",
+          "type": "array"
+        }
+      },
+      "required": [
+        "path",
+        "operation"
+      ],
+      "title": "GoldMemoryUpdate",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "prefix_id": {
+      "title": "Prefix Id",
+      "type": "string"
+    },
+    "trajectory_id": {
+      "title": "Trajectory Id",
+      "type": "string"
+    },
+    "visible_sessions": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Visible Sessions",
+      "type": "array"
+    },
+    "time": {
+      "additionalProperties": {
+        "type": "integer"
+      },
+      "title": "Time",
+      "type": "object"
+    },
+    "gold_life_events": {
+      "items": {
+        "$ref": "#/$defs/GoldLifeEvent"
+      },
+      "title": "Gold Life Events",
+      "type": "array"
+    },
+    "gold_memory_updates": {
+      "items": {
+        "$ref": "#/$defs/GoldMemoryUpdate"
+      },
+      "title": "Gold Memory Updates",
+      "type": "array"
+    },
+    "gold_action_decisions": {
+      "items": {
+        "$ref": "#/$defs/GoldActionDecision"
+      },
+      "title": "Gold Action Decisions",
+      "type": "array"
+    },
+    "gold_full_memory_state": {
+      "additionalProperties": true,
+      "title": "Gold Full Memory State",
+      "type": "object"
+    },
+    "gold_full_action_state": {
+      "items": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "Gold Full Action State",
+      "type": "array"
+    }
+  },
+  "required": [
+    "prefix_id",
+    "trajectory_id",
+    "visible_sessions",
+    "time"
+  ],
+  "title": "PrefixGold",
+  "type": "object"
+}

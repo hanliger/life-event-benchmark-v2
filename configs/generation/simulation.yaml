@@ -1,0 +1,8 @@
+# Trajectory simulation knobs (heuristic; see life_events.yaml disclaimer).
+horizon_years_default: 10
+max_concurrent_active_events: 2
+max_events_per_trajectory: 12
+min_months_between_event_starts: 2
+snapshot_every_transition: true
+# global multiplier applied to every hazard (tune trajectory density)
+global_hazard_scale: 1.0

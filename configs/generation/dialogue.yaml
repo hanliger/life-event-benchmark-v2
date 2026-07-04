@@ -1,0 +1,13 @@
+# Dialogue generation knobs.
+turns_min: 28
+turns_max: 32
+user_turns_min: 14
+user_turns_max: 16
+target_sessions_per_trajectory: 300
+hard_negative_target_ratio: 0.30 # hard-negative plans as share of all sessions when target_sessions_per_trajectory is set
+routine_sessions_per_year: 2     # fallback when target_sessions_per_trajectory is unset
+hard_negative_ratio: 0.25        # fallback: hard-negative plans per evidence plan
+stale_recall_ratio: 0.30         # stale-recall plans per occurred event with archived values
+consequence_session_delay_months: [1, 4]
+drift_event_ratio: 0.30          # fraction of occurred events planned as low single-session recoverability
+cues_per_session: [1, 3]

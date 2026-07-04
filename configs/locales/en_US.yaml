@@ -1,0 +1,38 @@
+# Minimal template for a future US locale. Generation for en_US is NOT
+# implemented yet; this file exists so locale loading / extension paths are
+# exercised from day one. See docs/locale_extension_guide.md.
+locale: en_US
+country: US
+language: en
+currency: USD
+legal_adulthood_age: 18
+typical_retirement_age_range: [62, 70]
+school_ages:
+  primary_entry: 6
+  middle_entry: 11
+  high_entry: 14
+housing_contract_types:
+  - rent
+  - owner
+financial_products:
+  - checking_account
+  - savings_account
+  - recurring_transfer
+  - mortgage
+  - 401k
+  - ira
+  - credit_card
+banking_terms:
+  salary_day: payday
+  salary_account: direct deposit account
+  recurring_transfer: recurring transfer
+  rent_payee: landlord
+  maintenance_fee: HOA fee
+  mortgage: mortgage
+  jeonse_loan: null
+dialogue_style:
+  user_style: short casual utterances, task-focused
+  assistant_style: polite bank agent
+  ban_direct_life_event_mention: true
+  ban_assistant_event_summary: true
+value_pools: {}

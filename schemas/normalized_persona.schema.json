@@ -1,0 +1,243 @@
+{
+  "$defs": {
+    "FinancialProfile": {
+      "properties": {
+        "has_loan": {
+          "default": false,
+          "title": "Has Loan",
+          "type": "boolean"
+        },
+        "loan_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Loan Type"
+        },
+        "has_pension_or_irp": {
+          "default": false,
+          "title": "Has Pension Or Irp",
+          "type": "boolean"
+        },
+        "savings_propensity": {
+          "default": "medium",
+          "title": "Savings Propensity",
+          "type": "string"
+        }
+      },
+      "title": "FinancialProfile",
+      "type": "object"
+    },
+    "HouseholdState": {
+      "properties": {
+        "marital_status": {
+          "default": "unknown",
+          "title": "Marital Status",
+          "type": "string"
+        },
+        "family_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Family Type"
+        },
+        "children_ages": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "Children Ages",
+          "type": "array"
+        },
+        "dependents_count": {
+          "default": 0,
+          "title": "Dependents Count",
+          "type": "integer"
+        },
+        "lives_with_parents": {
+          "default": false,
+          "title": "Lives With Parents",
+          "type": "boolean"
+        },
+        "cohabiting_with_spouse": {
+          "default": false,
+          "title": "Cohabiting With Spouse",
+          "type": "boolean"
+        }
+      },
+      "title": "HouseholdState",
+      "type": "object"
+    },
+    "HousingState": {
+      "properties": {
+        "residence_status": {
+          "default": "unknown",
+          "title": "Residence Status",
+          "type": "string"
+        },
+        "housing_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Housing Type"
+        },
+        "region": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Region"
+        }
+      },
+      "title": "HousingState",
+      "type": "object"
+    },
+    "OccupationState": {
+      "properties": {
+        "occupation": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Occupation"
+        },
+        "employment_status": {
+          "default": "unknown",
+          "title": "Employment Status",
+          "type": "string"
+        },
+        "employer": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Employer"
+        },
+        "income_stability": {
+          "default": "unknown",
+          "title": "Income Stability",
+          "type": "string"
+        }
+      },
+      "title": "OccupationState",
+      "type": "object"
+    },
+    "StyleProfile": {
+      "properties": {
+        "formality": {
+          "default": "casual",
+          "title": "Formality",
+          "type": "string"
+        },
+        "verbosity": {
+          "default": "short",
+          "title": "Verbosity",
+          "type": "string"
+        },
+        "notes": {
+          "default": "",
+          "title": "Notes",
+          "type": "string"
+        }
+      },
+      "title": "StyleProfile",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "persona_id": {
+      "title": "Persona Id",
+      "type": "string"
+    },
+    "persona_source_id": {
+      "title": "Persona Source Id",
+      "type": "string"
+    },
+    "locale": {
+      "title": "Locale",
+      "type": "string"
+    },
+    "age": {
+      "title": "Age",
+      "type": "integer"
+    },
+    "sex": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Sex"
+    },
+    "persona_text": {
+      "default": "",
+      "title": "Persona Text",
+      "type": "string"
+    },
+    "occupation_state": {
+      "$ref": "#/$defs/OccupationState"
+    },
+    "household": {
+      "$ref": "#/$defs/HouseholdState"
+    },
+    "housing": {
+      "$ref": "#/$defs/HousingState"
+    },
+    "financial_profile": {
+      "$ref": "#/$defs/FinancialProfile"
+    },
+    "style": {
+      "$ref": "#/$defs/StyleProfile"
+    },
+    "normalization_notes": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Normalization Notes",
+      "type": "array"
+    }
+  },
+  "required": [
+    "persona_id",
+    "persona_source_id",
+    "locale",
+    "age"
+  ],
+  "title": "NormalizedPersona",
+  "type": "object"
+}

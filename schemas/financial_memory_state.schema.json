@@ -1,0 +1,118 @@
+{
+  "$defs": {
+    "CellStatus": {
+      "enum": [
+        "current",
+        "historical",
+        "stale",
+        "needs_verification",
+        "pending",
+        "cancelled",
+        "unknown"
+      ],
+      "title": "CellStatus",
+      "type": "string"
+    },
+    "MemoryCell": {
+      "properties": {
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "value": {
+          "default": null,
+          "title": "Value"
+        },
+        "status": {
+          "$ref": "#/$defs/CellStatus",
+          "default": "unknown"
+        },
+        "confidence": {
+          "default": 1.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "valid_from": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Valid From"
+        },
+        "valid_until": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Valid Until"
+        },
+        "last_confirmed_at": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Last Confirmed At"
+        },
+        "evidence_turns": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Turns",
+          "type": "array"
+        },
+        "source_event_instance_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Event Instance Id"
+        },
+        "provenance": {
+          "default": "initial",
+          "title": "Provenance",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "title": "MemoryCell",
+      "type": "object"
+    }
+  },
+  "description": "Maps memory path -> full cell history (oldest first).",
+  "properties": {
+    "cells": {
+      "additionalProperties": {
+        "items": {
+          "$ref": "#/$defs/MemoryCell"
+        },
+        "type": "array"
+      },
+      "title": "Cells",
+      "type": "object"
+    }
+  },
+  "title": "FinancialMemoryState",
+  "type": "object"
+}

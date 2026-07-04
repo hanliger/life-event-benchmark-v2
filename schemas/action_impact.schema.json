@@ -1,0 +1,94 @@
+{
+  "$defs": {
+    "ActionDecisionEnum": {
+      "enum": [
+        "keep",
+        "update",
+        "pause",
+        "cancel",
+        "ask_confirmation",
+        "execute",
+        "reject",
+        "no_action"
+      ],
+      "title": "ActionDecisionEnum",
+      "type": "string"
+    }
+  },
+  "properties": {
+    "action_id": {
+      "title": "Action Id",
+      "type": "string"
+    },
+    "action_type": {
+      "title": "Action Type",
+      "type": "string"
+    },
+    "impact_type": {
+      "title": "Impact Type",
+      "type": "string"
+    },
+    "expected_decision": {
+      "$ref": "#/$defs/ActionDecisionEnum"
+    },
+    "risk": {
+      "default": "high",
+      "title": "Risk",
+      "type": "string"
+    },
+    "funds_movement": {
+      "default": true,
+      "title": "Funds Movement",
+      "type": "boolean"
+    },
+    "must_not_execute": {
+      "default": true,
+      "title": "Must Not Execute",
+      "type": "boolean"
+    },
+    "month_index": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Month Index"
+    },
+    "source_event_instance_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Source Event Instance Id"
+    },
+    "event_status": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Event Status"
+    }
+  },
+  "required": [
+    "action_id",
+    "action_type",
+    "impact_type",
+    "expected_decision"
+  ],
+  "title": "ActionImpact",
+  "type": "object"
+}

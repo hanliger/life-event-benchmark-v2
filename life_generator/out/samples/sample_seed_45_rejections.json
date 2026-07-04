@@ -1,0 +1,14 @@
+[
+  {
+    "episode_id": "marriage_only_core",
+    "reason": "already married",
+    "conflicted_event_id": "relationship_marriage",
+    "age": 34
+  },
+  {
+    "episode_id": "marriage_adoption_education_arc",
+    "reason": "already married",
+    "conflicted_event_id": "relationship_marriage",
+    "age": 34
+  }
+]

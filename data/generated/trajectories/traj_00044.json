@@ -1,0 +1,2992 @@
+{
+ "trajectory_id": "traj_00044",
+ "locale": "ko_KR",
+ "seed": 44,
+ "horizon_months": 96,
+ "persona": {
+  "persona_id": "p_89eca80b8828",
+  "persona_source_id": "89eca80b88284888ad94c84f56777680",
+  "locale": "ko_KR",
+  "age": 73,
+  "sex": "남자",
+  "persona_text": "안상식 씨는 목동에서 평생을 성실함과 규칙으로 무장해 온, 꼼꼼한 가계부와 나훈아의 노래가 어울리는 정갈한 노신사입니다.",
+  "occupation_state": {
+   "occupation": "무직",
+   "employment_status": "retired",
+   "employer": null,
+   "income_stability": "unknown"
+  },
+  "household": {
+   "marital_status": "married",
+   "family_type": "배우자와 거주",
+   "children_ages": [],
+   "dependents_count": 0,
+   "lives_with_parents": false,
+   "cohabiting_with_spouse": true
+  },
+  "housing": {
+   "residence_status": "owner",
+   "housing_type": "아파트",
+   "region": "서울 양천구"
+  },
+  "financial_profile": {
+   "has_loan": false,
+   "loan_type": null,
+   "has_pension_or_irp": false,
+   "savings_propensity": "medium"
+  },
+  "style": {
+   "formality": "polite",
+   "verbosity": "short",
+   "notes": "derived from age bracket"
+  },
+  "normalization_notes": [
+   "employment_status inferred 'retired' (no occupation)",
+   "residence_status sampled 'owner' (age heuristic)"
+  ]
+ },
+ "initial_persona_state": {
+  "month_index": 0,
+  "age": 73,
+  "life_state": {
+   "marital_status": "married",
+   "employment_status": "retired",
+   "residence_status": "owner",
+   "children_ages": [],
+   "dependents_count": 0,
+   "lives_with_parents": false,
+   "home_owned": true,
+   "retirement_prepared": true,
+   "pension_receiving": true,
+   "in_education": false
+  }
+ },
+ "initial_financial_memory_state": {
+  "cells": {
+   "profile.age": [
+    {
+     "path": "profile.age",
+     "value": 73,
+     "status": "current",
+     "confidence": 1.0,
+     "valid_from": 0,
+     "valid_until": null,
+     "last_confirmed_at": 0,
+     "evidence_turns": [],
+     "source_event_instance_id": null,
+     "provenance": "initial"
+    }
+   ],
+   "profile.locale": [
+    {
+     "path": "profile.locale",
+     "value": "ko_KR",
+     "status": "current",
+     "confidence": 1.0,
+     "valid_from": 0,
+     "valid_until": null,
+     "last_confirmed_at": 0,
+     "evidence_turns": [],
+     "source_event_instance_id": null,
+     "provenance": "initial"
+    }
+   ],
+   "profile.region": [
+    {
+     "path": "profile.region",
+     "value": "서울 양천구",
+     "status": "current",
+     "confidence": 1.0,
+     "valid_from": 0,
+     "valid_until": null,
+     "last_confirmed_at": 0,
+     "evidence_turns": [],
+     "source_event_instance_id": null,
+     "provenance": "initial"
+    }
+   ],
+   "household.marital_status": [
+    {
+     "path": "household.marital_status",
+     "value": "married",
+     "status": "current",
+     "confidence": 1.0,
+     "valid_from": 0,
+     "valid_until": null,
+     "last_confirmed_at": 0,
+     "evidence_turns": [],
+     "source_event_instance_id": null,
+     "provenance": "initial"
+    }
+   ],
+   "household.spouse_or_partner": [
+    {
+     "path": "household.spouse_or_partner",
+     "value": "spouse",
+     "status": "current",
+     "confidence": 1.0,
+     "valid_from": 0,
+     "valid_until": null,
+     "last_confirmed_at": 0,
+     "evidence_turns": [],
+     "source_event_instance_id": null,
+     "provenance": "initial"
+    }
+   ],
+   "household.children": [
+    {
+     "path": "household.children",
+     "value": [],
+     "status": "current",
+     "confidence": 1.0,
+     "valid_from": 0,
+     "valid_until": null,
+     "last_confirmed_at": 0,
+     "evidence_turns": [],
+     "source_event_instance_id": null,
+     "provenance": "initial"
+    }
+   ],
+   "household.dependents": [
+    {
+     "path": "household.dependents",
+     "value": 0,
+     "status": "current",
+     "confidence": 1.0,
+     "valid_from": 0,
+     "valid_until": null,
+     "last_confirmed_at": 0,
+     "evidence_turns": [],
+     "source_event_instance_id": null,
+     "provenance": "initial"
+    }
+   ],
+   "household.child_support_arrangement": [
+    {
+     "path": "household.child_support_arrangement",
+     "value": null,
+     "status": "unknown",
+     "confidence": 1.0,
+     "valid_from": 0,
+     "valid_until": null,
+     "last_confirmed_at": 0,
+     "evidence_turns": [],
+     "source_event_instance_id": null,
+     "provenance": "initial"
+    }
+   ],
+   "employment.employment_status": [
+    {
+     "path": "employment.employment_status",
+     "value": "retired",
+     "status": "current",
+     "confidence": 1.0,
+     "valid_from": 0,
+     "valid_until": null,
+     "last_confirmed_at": 0,
+     "evidence_turns": [],
+     "source_event_instance_id": null,
+     "provenance": "initial"
+    }
+   ],
+   "employment.occupation": [
+    {
+     "path": "employment.occupation",
+     "value": "무직",
+     "status": "current",
+     "confidence": 1.0,
+     "valid_from": 0,
+     "valid_until": null,
+     "last_confirmed_at": 0,
+     "evidence_turns": [],
+     "source_event_instance_id": null,
+     "provenance": "initial"
+    }
+   ],
+   "employment.income_stability": [
+    {
+     "path": "employment.income_stability",
+     "value": "unknown",
+     "status": "current",
+     "confidence": 1.0,
+     "valid_from": 0,
+     "valid_until": null,
+     "last_confirmed_at": 0,
+     "evidence_turns": [],
+     "source_event_instance_id": null,
+     "provenance": "initial"
+    }
+   ],
+   "employment.employer": [
+    {
+     "path": "employment.employer",
+     "value": null,
+     "status": "unknown",
+     "confidence": 1.0,
+     "valid_from": 0,
+     "valid_until": null,
+     "last_confirmed_at": 0,
+     "evidence_turns": [],
+     "source_event_instance_id": null,
+     "provenance": "initial"
+    }
+   ],
+   "employment.salary_day": [
+    {
+     "path": "employment.salary_day",
+     "value": null,
+     "status": "unknown",
+     "confidence": 1.0,
+     "valid_from": 0,
+     "valid_until": null,
+     "last_confirmed_at": 0,
+     "evidence_turns": [],
+     "source_event_instance_id": null,
+     "provenance": "initial"
+    }
+   ],
+   "employment.salary_account": [
+    {
+     "path": "employment.salary_account",
+     "value": null,
+     "status": "unknown",
+     "confidence": 1.0,
+     "valid_from": 0,
+     "valid_until": null,
+     "last_confirmed_at": 0,
+     "evidence_turns": [],
+     "source_event_instance_id": null,
+     "provenance": "initial"
+    }
+   ],
+   "housing.residence_status": [
+    {
+     "path": "housing.residence_status",
+     "value": "owner",
+     "status": "current",
+     "confidence": 1.0,
+     "valid_from": 0,
+     "valid_until": null,
+     "last_confirmed_at": 0,
+     "evidence_turns": [],
+     "source_event_instance_id": null,
+     "provenance": "initial"
+    }
+   ],
+   "housing.address": [
+    {
+     "path": "housing.address",
+     "value": "서울 양천구",
+     "status": "current",
+     "confidence": 1.0,
+     "valid_from": 0,
+     "valid_until": null,
+     "last_confirmed_at": 0,
+     "evidence_turns": [],
+     "source_event_instance_id": null,
+     "provenance": "initial"
+    }
+   ],
+   "housing.contract_type": [
+    {
+     "path": "housing.contract_type",
+     "value": "owner",
+     "status": "current",
+     "confidence": 1.0,
+     "valid_from": 0,
+     "valid_until": null,
+     "last_confirmed_at": 0,
+     "evidence_turns": [],
+     "source_event_instance_id": null,
+     "provenance": "initial"
+    }
+   ],
+   "housing.rent_amount": [
+    {
+     "path": "housing.rent_amount",
+     "value": null,
+     "status": "unknown",
+     "confidence": 1.0,
+     "valid_from": 0,
+     "valid_until": null,
+     "last_confirmed_at": 0,
+     "evidence_turns": [],
+     "source_event_instance_id": null,
+     "provenance": "initial"
+    }
+   ],
+   "housing.rent_payee": [
+    {
+     "path": "housing.rent_payee",
+     "value": null,
+     "status": "unknown",
+     "confidence": 1.0,
+     "valid_from": 0,
+     "valid_until": null,
+     "last_confirmed_at": 0,
+     "evidence_turns": [],
+     "source_event_instance_id": null,
+     "provenance": "initial"
+    }
+   ],
+   "housing.maintenance_fee_payee": [
+    {
+     "path": "housing.maintenance_fee_payee",
+     "value": "관리사무소",
+     "status": "current",
+     "confidence": 1.0,
+     "valid_from": 0,
+     "valid_until": null,
+     "last_confirmed_at": 0,
+     "evidence_turns": [],
+     "source_event_instance_id": null,
+     "provenance": "initial"
+    }
+   ],
+   "housing.mortgage_status": [
+    {
+     "path": "housing.mortgage_status",
+     "value": "none",
+     "status": "current",
+     "confidence": 1.0,
+     "valid_from": 0,
+     "valid_until": null,
+     "last_confirmed_at": 0,
+     "evidence_turns": [],
+     "source_event_instance_id": null,
+     "provenance": "initial"
+    }
+   ],
+   "education.self_education_status": [
+    {
+     "path": "education.self_education_status",
+     "value": "none",
+     "status": "current",
+     "confidence": 1.0,
+     "valid_from": 0,
+     "valid_until": null,
+     "last_confirmed_at": 0,
+     "evidence_turns": [],
+     "source_event_instance_id": null,
+     "provenance": "initial"
+    }
+   ],
+   "education.child_education_stage": [
+    {
+     "path": "education.child_education_stage",
+     "value": null,
+     "status": "unknown",
+     "confidence": 1.0,
+     "valid_from": 0,
+     "valid_until": null,
+     "last_confirmed_at": 0,
+     "evidence_turns": [],
+     "source_event_instance_id": null,
+     "provenance": "initial"
+    }
+   ],
+   "financial_products.checking_accounts": [
+    {
+     "path": "financial_products.checking_accounts",
+     "value": [
+      "main_checking"
+     ],
+     "status": "current",
+     "confidence": 1.0,
+     "valid_from": 0,
+     "valid_until": null,
+     "last_confirmed_at": 0,
+     "evidence_turns": [],
+     "source_event_instance_id": null,
+     "provenance": "initial"
+    }
+   ],
+   "financial_products.savings_accounts": [
+    {
+     "path": "financial_products.savings_accounts",
+     "value": [
+      "savings_1"
+     ],
+     "status": "current",
+     "confidence": 1.0,
+     "valid_from": 0,
+     "valid_until": null,
+     "last_confirmed_at": 0,
+     "evidence_turns": [],
+     "source_event_instance_id": null,
+     "provenance": "initial"
+    }
+   ],
+   "financial_products.loans": [
+    {
+     "path": "financial_products.loans",
+     "value": [],
+     "status": "current",
+     "confidence": 1.0,
+     "valid_from": 0,
+     "valid_until": null,
+     "last_confirmed_at": 0,
+     "evidence_turns": [],
+     "source_event_instance_id": null,
+     "provenance": "initial"
+    }
+   ],
+   "financial_products.pension_or_irp": [
+    {
+     "path": "financial_products.pension_or_irp",
+     "value": null,
+     "status": "unknown",
+     "confidence": 1.0,
+     "valid_from": 0,
+     "valid_until": null,
+     "last_confirmed_at": 0,
+     "evidence_turns": [],
+     "source_event_instance_id": null,
+     "provenance": "initial"
+    }
+   ],
+   "goals.emergency_fund": [
+    {
+     "path": "goals.emergency_fund",
+     "value": null,
+     "status": "unknown",
+     "confidence": 1.0,
+     "valid_from": 0,
+     "valid_until": null,
+     "last_confirmed_at": 0,
+     "evidence_turns": [],
+     "source_event_instance_id": null,
+     "provenance": "initial"
+    }
+   ],
+   "goals.housing_deposit_goal": [
+    {
+     "path": "goals.housing_deposit_goal",
+     "value": null,
+     "status": "unknown",
+     "confidence": 1.0,
+     "valid_from": 0,
+     "valid_until": null,
+     "last_confirmed_at": 0,
+     "evidence_turns": [],
+     "source_event_instance_id": null,
+     "provenance": "initial"
+    }
+   ],
+   "goals.child_education_goal": [
+    {
+     "path": "goals.child_education_goal",
+     "value": null,
+     "status": "unknown",
+     "confidence": 1.0,
+     "valid_from": 0,
+     "valid_until": null,
+     "last_confirmed_at": 0,
+     "evidence_turns": [],
+     "source_event_instance_id": null,
+     "provenance": "initial"
+    }
+   ],
+   "goals.retirement_goal": [
+    {
+     "path": "goals.retirement_goal",
+     "value": null,
+     "status": "unknown",
+     "confidence": 1.0,
+     "valid_from": 0,
+     "valid_until": null,
+     "last_confirmed_at": 0,
+     "evidence_turns": [],
+     "source_event_instance_id": null,
+     "provenance": "initial"
+    }
+   ]
+  }
+ },
+ "initial_standing_actions": [],
+ "life_event_instances": [
+  {
+   "event_instance_id": "traj_00044_ev001",
+   "event_id": "housing_home_sale_or_moveout",
+   "label_ko": "주택 매각/퇴거",
+   "domain": "housing",
+   "status": "occurred",
+   "status_history": [
+    {
+     "status": "weak_signal",
+     "month_index": 69,
+     "age": 78
+    },
+    {
+     "status": "upcoming",
+     "month_index": 73,
+     "age": 79
+    },
+    {
+     "status": "occurred",
+     "month_index": 76,
+     "age": 79
+    }
+   ],
+   "start_month": 69,
+   "occurred_month": 76,
+   "cancelled_month": null,
+   "params": {}
+  }
+ ],
+ "timeline_steps": [
+  {
+   "month_index": 69,
+   "age": 78,
+   "transitions": [
+    {
+     "event_instance_id": "traj_00044_ev001",
+     "event_id": "housing_home_sale_or_moveout",
+     "from_status": "no_event",
+     "to_status": "weak_signal"
+    }
+   ],
+   "memory_updates": [],
+   "action_impacts": []
+  },
+  {
+   "month_index": 73,
+   "age": 79,
+   "transitions": [
+    {
+     "event_instance_id": "traj_00044_ev001",
+     "event_id": "housing_home_sale_or_moveout",
+     "from_status": "weak_signal",
+     "to_status": "upcoming"
+    }
+   ],
+   "memory_updates": [
+    {
+     "path": "housing.mortgage_status",
+     "operation": "needs_verification",
+     "old_value": "none",
+     "new_value": null,
+     "month_index": 73,
+     "source_event_instance_id": "traj_00044_ev001",
+     "event_status": "upcoming",
+     "evidence_turns": [],
+     "optional": false
+    }
+   ],
+   "action_impacts": []
+  },
+  {
+   "month_index": 76,
+   "age": 79,
+   "transitions": [
+    {
+     "event_instance_id": "traj_00044_ev001",
+     "event_id": "housing_home_sale_or_moveout",
+     "from_status": "upcoming",
+     "to_status": "occurred"
+    }
+   ],
+   "memory_updates": [
+    {
+     "path": "housing.residence_status",
+     "operation": "update",
+     "old_value": "owner",
+     "new_value": "jeonse",
+     "month_index": 76,
+     "source_event_instance_id": "traj_00044_ev001",
+     "event_status": "occurred",
+     "evidence_turns": [],
+     "optional": false
+    },
+    {
+     "path": "housing.mortgage_status",
+     "operation": "update",
+     "old_value": "none",
+     "new_value": "closed",
+     "month_index": 76,
+     "source_event_instance_id": "traj_00044_ev001",
+     "event_status": "occurred",
+     "evidence_turns": [],
+     "optional": false
+    },
+    {
+     "path": "financial_products.loans",
+     "operation": "needs_verification",
+     "old_value": [],
+     "new_value": null,
+     "month_index": 76,
+     "source_event_instance_id": "traj_00044_ev001",
+     "event_status": "occurred",
+     "evidence_turns": [],
+     "optional": false
+    }
+   ],
+   "action_impacts": []
+  }
+ ],
+ "state_snapshots": {
+  "0": {
+   "month_index": 0,
+   "age": 73,
+   "life_state": {
+    "marital_status": "married",
+    "employment_status": "retired",
+    "residence_status": "owner",
+    "children_ages": [],
+    "dependents_count": 0,
+    "lives_with_parents": false,
+    "home_owned": true,
+    "retirement_prepared": true,
+    "pension_receiving": true,
+    "in_education": false
+   }
+  },
+  "69": {
+   "month_index": 69,
+   "age": 78,
+   "life_state": {
+    "marital_status": "married",
+    "employment_status": "retired",
+    "residence_status": "owner",
+    "children_ages": [],
+    "dependents_count": 0,
+    "lives_with_parents": false,
+    "home_owned": true,
+    "retirement_prepared": true,
+    "pension_receiving": true,
+    "in_education": false
+   }
+  },
+  "73": {
+   "month_index": 73,
+   "age": 79,
+   "life_state": {
+    "marital_status": "married",
+    "employment_status": "retired",
+    "residence_status": "owner",
+    "children_ages": [],
+    "dependents_count": 0,
+    "lives_with_parents": false,
+    "home_owned": true,
+    "retirement_prepared": true,
+    "pension_receiving": true,
+    "in_education": false
+   }
+  },
+  "76": {
+   "month_index": 76,
+   "age": 79,
+   "life_state": {
+    "marital_status": "married",
+    "employment_status": "retired",
+    "residence_status": "jeonse",
+    "children_ages": [],
+    "dependents_count": 0,
+    "lives_with_parents": false,
+    "home_owned": false,
+    "retirement_prepared": true,
+    "pension_receiving": true,
+    "in_education": false
+   }
+  },
+  "96": {
+   "month_index": 96,
+   "age": 81,
+   "life_state": {
+    "marital_status": "married",
+    "employment_status": "retired",
+    "residence_status": "jeonse",
+    "children_ages": [],
+    "dependents_count": 0,
+    "lives_with_parents": false,
+    "home_owned": false,
+    "retirement_prepared": true,
+    "pension_receiving": true,
+    "in_education": false
+   }
+  }
+ },
+ "memory_snapshots": {
+  "0": {
+   "cells": {
+    "profile.age": [
+     {
+      "path": "profile.age",
+      "value": 73,
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "profile.locale": [
+     {
+      "path": "profile.locale",
+      "value": "ko_KR",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "profile.region": [
+     {
+      "path": "profile.region",
+      "value": "서울 양천구",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "household.marital_status": [
+     {
+      "path": "household.marital_status",
+      "value": "married",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "household.spouse_or_partner": [
+     {
+      "path": "household.spouse_or_partner",
+      "value": "spouse",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "household.children": [
+     {
+      "path": "household.children",
+      "value": [],
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "household.dependents": [
+     {
+      "path": "household.dependents",
+      "value": 0,
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "household.child_support_arrangement": [
+     {
+      "path": "household.child_support_arrangement",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "employment.employment_status": [
+     {
+      "path": "employment.employment_status",
+      "value": "retired",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "employment.occupation": [
+     {
+      "path": "employment.occupation",
+      "value": "무직",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "employment.income_stability": [
+     {
+      "path": "employment.income_stability",
+      "value": "unknown",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "employment.employer": [
+     {
+      "path": "employment.employer",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "employment.salary_day": [
+     {
+      "path": "employment.salary_day",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "employment.salary_account": [
+     {
+      "path": "employment.salary_account",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "housing.residence_status": [
+     {
+      "path": "housing.residence_status",
+      "value": "owner",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "housing.address": [
+     {
+      "path": "housing.address",
+      "value": "서울 양천구",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "housing.contract_type": [
+     {
+      "path": "housing.contract_type",
+      "value": "owner",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "housing.rent_amount": [
+     {
+      "path": "housing.rent_amount",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "housing.rent_payee": [
+     {
+      "path": "housing.rent_payee",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "housing.maintenance_fee_payee": [
+     {
+      "path": "housing.maintenance_fee_payee",
+      "value": "관리사무소",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "housing.mortgage_status": [
+     {
+      "path": "housing.mortgage_status",
+      "value": "none",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "education.self_education_status": [
+     {
+      "path": "education.self_education_status",
+      "value": "none",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "education.child_education_stage": [
+     {
+      "path": "education.child_education_stage",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "financial_products.checking_accounts": [
+     {
+      "path": "financial_products.checking_accounts",
+      "value": [
+       "main_checking"
+      ],
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "financial_products.savings_accounts": [
+     {
+      "path": "financial_products.savings_accounts",
+      "value": [
+       "savings_1"
+      ],
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "financial_products.loans": [
+     {
+      "path": "financial_products.loans",
+      "value": [],
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "financial_products.pension_or_irp": [
+     {
+      "path": "financial_products.pension_or_irp",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "goals.emergency_fund": [
+     {
+      "path": "goals.emergency_fund",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "goals.housing_deposit_goal": [
+     {
+      "path": "goals.housing_deposit_goal",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "goals.child_education_goal": [
+     {
+      "path": "goals.child_education_goal",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "goals.retirement_goal": [
+     {
+      "path": "goals.retirement_goal",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ]
+   }
+  },
+  "69": {
+   "cells": {
+    "profile.age": [
+     {
+      "path": "profile.age",
+      "value": 73,
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "profile.locale": [
+     {
+      "path": "profile.locale",
+      "value": "ko_KR",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "profile.region": [
+     {
+      "path": "profile.region",
+      "value": "서울 양천구",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "household.marital_status": [
+     {
+      "path": "household.marital_status",
+      "value": "married",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "household.spouse_or_partner": [
+     {
+      "path": "household.spouse_or_partner",
+      "value": "spouse",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "household.children": [
+     {
+      "path": "household.children",
+      "value": [],
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "household.dependents": [
+     {
+      "path": "household.dependents",
+      "value": 0,
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "household.child_support_arrangement": [
+     {
+      "path": "household.child_support_arrangement",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "employment.employment_status": [
+     {
+      "path": "employment.employment_status",
+      "value": "retired",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "employment.occupation": [
+     {
+      "path": "employment.occupation",
+      "value": "무직",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "employment.income_stability": [
+     {
+      "path": "employment.income_stability",
+      "value": "unknown",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "employment.employer": [
+     {
+      "path": "employment.employer",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "employment.salary_day": [
+     {
+      "path": "employment.salary_day",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "employment.salary_account": [
+     {
+      "path": "employment.salary_account",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "housing.residence_status": [
+     {
+      "path": "housing.residence_status",
+      "value": "owner",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "housing.address": [
+     {
+      "path": "housing.address",
+      "value": "서울 양천구",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "housing.contract_type": [
+     {
+      "path": "housing.contract_type",
+      "value": "owner",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "housing.rent_amount": [
+     {
+      "path": "housing.rent_amount",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "housing.rent_payee": [
+     {
+      "path": "housing.rent_payee",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "housing.maintenance_fee_payee": [
+     {
+      "path": "housing.maintenance_fee_payee",
+      "value": "관리사무소",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "housing.mortgage_status": [
+     {
+      "path": "housing.mortgage_status",
+      "value": "none",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "education.self_education_status": [
+     {
+      "path": "education.self_education_status",
+      "value": "none",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "education.child_education_stage": [
+     {
+      "path": "education.child_education_stage",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "financial_products.checking_accounts": [
+     {
+      "path": "financial_products.checking_accounts",
+      "value": [
+       "main_checking"
+      ],
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "financial_products.savings_accounts": [
+     {
+      "path": "financial_products.savings_accounts",
+      "value": [
+       "savings_1"
+      ],
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "financial_products.loans": [
+     {
+      "path": "financial_products.loans",
+      "value": [],
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "financial_products.pension_or_irp": [
+     {
+      "path": "financial_products.pension_or_irp",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "goals.emergency_fund": [
+     {
+      "path": "goals.emergency_fund",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "goals.housing_deposit_goal": [
+     {
+      "path": "goals.housing_deposit_goal",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "goals.child_education_goal": [
+     {
+      "path": "goals.child_education_goal",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "goals.retirement_goal": [
+     {
+      "path": "goals.retirement_goal",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ]
+   }
+  },
+  "73": {
+   "cells": {
+    "profile.age": [
+     {
+      "path": "profile.age",
+      "value": 73,
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "profile.locale": [
+     {
+      "path": "profile.locale",
+      "value": "ko_KR",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "profile.region": [
+     {
+      "path": "profile.region",
+      "value": "서울 양천구",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "household.marital_status": [
+     {
+      "path": "household.marital_status",
+      "value": "married",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "household.spouse_or_partner": [
+     {
+      "path": "household.spouse_or_partner",
+      "value": "spouse",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "household.children": [
+     {
+      "path": "household.children",
+      "value": [],
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "household.dependents": [
+     {
+      "path": "household.dependents",
+      "value": 0,
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "household.child_support_arrangement": [
+     {
+      "path": "household.child_support_arrangement",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "employment.employment_status": [
+     {
+      "path": "employment.employment_status",
+      "value": "retired",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "employment.occupation": [
+     {
+      "path": "employment.occupation",
+      "value": "무직",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "employment.income_stability": [
+     {
+      "path": "employment.income_stability",
+      "value": "unknown",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "employment.employer": [
+     {
+      "path": "employment.employer",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "employment.salary_day": [
+     {
+      "path": "employment.salary_day",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "employment.salary_account": [
+     {
+      "path": "employment.salary_account",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "housing.residence_status": [
+     {
+      "path": "housing.residence_status",
+      "value": "owner",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "housing.address": [
+     {
+      "path": "housing.address",
+      "value": "서울 양천구",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "housing.contract_type": [
+     {
+      "path": "housing.contract_type",
+      "value": "owner",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "housing.rent_amount": [
+     {
+      "path": "housing.rent_amount",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "housing.rent_payee": [
+     {
+      "path": "housing.rent_payee",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "housing.maintenance_fee_payee": [
+     {
+      "path": "housing.maintenance_fee_payee",
+      "value": "관리사무소",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "housing.mortgage_status": [
+     {
+      "path": "housing.mortgage_status",
+      "value": "none",
+      "status": "needs_verification",
+      "confidence": 0.6,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "education.self_education_status": [
+     {
+      "path": "education.self_education_status",
+      "value": "none",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "education.child_education_stage": [
+     {
+      "path": "education.child_education_stage",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "financial_products.checking_accounts": [
+     {
+      "path": "financial_products.checking_accounts",
+      "value": [
+       "main_checking"
+      ],
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "financial_products.savings_accounts": [
+     {
+      "path": "financial_products.savings_accounts",
+      "value": [
+       "savings_1"
+      ],
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "financial_products.loans": [
+     {
+      "path": "financial_products.loans",
+      "value": [],
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "financial_products.pension_or_irp": [
+     {
+      "path": "financial_products.pension_or_irp",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "goals.emergency_fund": [
+     {
+      "path": "goals.emergency_fund",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "goals.housing_deposit_goal": [
+     {
+      "path": "goals.housing_deposit_goal",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "goals.child_education_goal": [
+     {
+      "path": "goals.child_education_goal",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "goals.retirement_goal": [
+     {
+      "path": "goals.retirement_goal",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ]
+   }
+  },
+  "76": {
+   "cells": {
+    "profile.age": [
+     {
+      "path": "profile.age",
+      "value": 73,
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "profile.locale": [
+     {
+      "path": "profile.locale",
+      "value": "ko_KR",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "profile.region": [
+     {
+      "path": "profile.region",
+      "value": "서울 양천구",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "household.marital_status": [
+     {
+      "path": "household.marital_status",
+      "value": "married",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "household.spouse_or_partner": [
+     {
+      "path": "household.spouse_or_partner",
+      "value": "spouse",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "household.children": [
+     {
+      "path": "household.children",
+      "value": [],
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "household.dependents": [
+     {
+      "path": "household.dependents",
+      "value": 0,
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "household.child_support_arrangement": [
+     {
+      "path": "household.child_support_arrangement",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "employment.employment_status": [
+     {
+      "path": "employment.employment_status",
+      "value": "retired",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "employment.occupation": [
+     {
+      "path": "employment.occupation",
+      "value": "무직",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "employment.income_stability": [
+     {
+      "path": "employment.income_stability",
+      "value": "unknown",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "employment.employer": [
+     {
+      "path": "employment.employer",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "employment.salary_day": [
+     {
+      "path": "employment.salary_day",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "employment.salary_account": [
+     {
+      "path": "employment.salary_account",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "housing.residence_status": [
+     {
+      "path": "housing.residence_status",
+      "value": "owner",
+      "status": "historical",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": 76,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     },
+     {
+      "path": "housing.residence_status",
+      "value": "jeonse",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 76,
+      "valid_until": null,
+      "last_confirmed_at": null,
+      "evidence_turns": [],
+      "source_event_instance_id": "traj_00044_ev001",
+      "provenance": "event_delta"
+     }
+    ],
+    "housing.address": [
+     {
+      "path": "housing.address",
+      "value": "서울 양천구",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "housing.contract_type": [
+     {
+      "path": "housing.contract_type",
+      "value": "owner",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "housing.rent_amount": [
+     {
+      "path": "housing.rent_amount",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "housing.rent_payee": [
+     {
+      "path": "housing.rent_payee",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "housing.maintenance_fee_payee": [
+     {
+      "path": "housing.maintenance_fee_payee",
+      "value": "관리사무소",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "housing.mortgage_status": [
+     {
+      "path": "housing.mortgage_status",
+      "value": "none",
+      "status": "historical",
+      "confidence": 0.6,
+      "valid_from": 0,
+      "valid_until": 76,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     },
+     {
+      "path": "housing.mortgage_status",
+      "value": "closed",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 76,
+      "valid_until": null,
+      "last_confirmed_at": null,
+      "evidence_turns": [],
+      "source_event_instance_id": "traj_00044_ev001",
+      "provenance": "event_delta"
+     }
+    ],
+    "education.self_education_status": [
+     {
+      "path": "education.self_education_status",
+      "value": "none",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "education.child_education_stage": [
+     {
+      "path": "education.child_education_stage",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "financial_products.checking_accounts": [
+     {
+      "path": "financial_products.checking_accounts",
+      "value": [
+       "main_checking"
+      ],
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "financial_products.savings_accounts": [
+     {
+      "path": "financial_products.savings_accounts",
+      "value": [
+       "savings_1"
+      ],
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "financial_products.loans": [
+     {
+      "path": "financial_products.loans",
+      "value": [],
+      "status": "needs_verification",
+      "confidence": 0.6,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "financial_products.pension_or_irp": [
+     {
+      "path": "financial_products.pension_or_irp",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "goals.emergency_fund": [
+     {
+      "path": "goals.emergency_fund",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "goals.housing_deposit_goal": [
+     {
+      "path": "goals.housing_deposit_goal",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "goals.child_education_goal": [
+     {
+      "path": "goals.child_education_goal",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "goals.retirement_goal": [
+     {
+      "path": "goals.retirement_goal",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ]
+   }
+  },
+  "96": {
+   "cells": {
+    "profile.age": [
+     {
+      "path": "profile.age",
+      "value": 73,
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "profile.locale": [
+     {
+      "path": "profile.locale",
+      "value": "ko_KR",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "profile.region": [
+     {
+      "path": "profile.region",
+      "value": "서울 양천구",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "household.marital_status": [
+     {
+      "path": "household.marital_status",
+      "value": "married",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "household.spouse_or_partner": [
+     {
+      "path": "household.spouse_or_partner",
+      "value": "spouse",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "household.children": [
+     {
+      "path": "household.children",
+      "value": [],
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "household.dependents": [
+     {
+      "path": "household.dependents",
+      "value": 0,
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "household.child_support_arrangement": [
+     {
+      "path": "household.child_support_arrangement",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "employment.employment_status": [
+     {
+      "path": "employment.employment_status",
+      "value": "retired",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "employment.occupation": [
+     {
+      "path": "employment.occupation",
+      "value": "무직",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "employment.income_stability": [
+     {
+      "path": "employment.income_stability",
+      "value": "unknown",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "employment.employer": [
+     {
+      "path": "employment.employer",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "employment.salary_day": [
+     {
+      "path": "employment.salary_day",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "employment.salary_account": [
+     {
+      "path": "employment.salary_account",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "housing.residence_status": [
+     {
+      "path": "housing.residence_status",
+      "value": "owner",
+      "status": "historical",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": 76,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     },
+     {
+      "path": "housing.residence_status",
+      "value": "jeonse",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 76,
+      "valid_until": null,
+      "last_confirmed_at": null,
+      "evidence_turns": [],
+      "source_event_instance_id": "traj_00044_ev001",
+      "provenance": "event_delta"
+     }
+    ],
+    "housing.address": [
+     {
+      "path": "housing.address",
+      "value": "서울 양천구",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "housing.contract_type": [
+     {
+      "path": "housing.contract_type",
+      "value": "owner",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "housing.rent_amount": [
+     {
+      "path": "housing.rent_amount",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "housing.rent_payee": [
+     {
+      "path": "housing.rent_payee",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "housing.maintenance_fee_payee": [
+     {
+      "path": "housing.maintenance_fee_payee",
+      "value": "관리사무소",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "housing.mortgage_status": [
+     {
+      "path": "housing.mortgage_status",
+      "value": "none",
+      "status": "historical",
+      "confidence": 0.6,
+      "valid_from": 0,
+      "valid_until": 76,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     },
+     {
+      "path": "housing.mortgage_status",
+      "value": "closed",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 76,
+      "valid_until": null,
+      "last_confirmed_at": null,
+      "evidence_turns": [],
+      "source_event_instance_id": "traj_00044_ev001",
+      "provenance": "event_delta"
+     }
+    ],
+    "education.self_education_status": [
+     {
+      "path": "education.self_education_status",
+      "value": "none",
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "education.child_education_stage": [
+     {
+      "path": "education.child_education_stage",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "financial_products.checking_accounts": [
+     {
+      "path": "financial_products.checking_accounts",
+      "value": [
+       "main_checking"
+      ],
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "financial_products.savings_accounts": [
+     {
+      "path": "financial_products.savings_accounts",
+      "value": [
+       "savings_1"
+      ],
+      "status": "current",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "financial_products.loans": [
+     {
+      "path": "financial_products.loans",
+      "value": [],
+      "status": "needs_verification",
+      "confidence": 0.6,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "financial_products.pension_or_irp": [
+     {
+      "path": "financial_products.pension_or_irp",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "goals.emergency_fund": [
+     {
+      "path": "goals.emergency_fund",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "goals.housing_deposit_goal": [
+     {
+      "path": "goals.housing_deposit_goal",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "goals.child_education_goal": [
+     {
+      "path": "goals.child_education_goal",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ],
+    "goals.retirement_goal": [
+     {
+      "path": "goals.retirement_goal",
+      "value": null,
+      "status": "unknown",
+      "confidence": 1.0,
+      "valid_from": 0,
+      "valid_until": null,
+      "last_confirmed_at": 0,
+      "evidence_turns": [],
+      "source_event_instance_id": null,
+      "provenance": "initial"
+     }
+    ]
+   }
+  }
+ },
+ "action_snapshots": {
+  "0": [],
+  "69": [],
+  "73": [],
+  "76": [],
+  "96": []
+ },
+ "final_persona_state": {
+  "month_index": 96,
+  "age": 81,
+  "life_state": {
+   "marital_status": "married",
+   "employment_status": "retired",
+   "residence_status": "jeonse",
+   "children_ages": [],
+   "dependents_count": 0,
+   "lives_with_parents": false,
+   "home_owned": false,
+   "retirement_prepared": true,
+   "pension_receiving": true,
+   "in_education": false
+  }
+ }
+}

@@ -1,21 +1,23 @@
 # History-Necessity Filter
 
-Inspired by HorizonBench's consensus history filter, adapted to finance.
-Purpose: reject (tag) items solvable from surface cues or a single session.
+The history filter is a diagnostic pass for Stage 2 memory MCQ items. It tags
+items that can be solved from surface cues, the last session alone, or the
+answer options alone.
 
 ## Modes
 
 | mode | context shown | success means |
 | --- | --- | --- |
 | single_session | only the latest session | too_easy |
-| partial_prefix | prefix minus earlier critical evidence (last third) | too_easy / leakage |
-| no_history_option | question + options only | leakage_suspected (options give it away) |
+| partial_prefix | the last third of the prefix | too_easy / leakage |
+| no_history_option | question + options only | leakage_suspected |
 
 ## Consensus
 
 Each validator (`provider:model`) answers the MCQ under reduced context. If a
-majority is correct, the item is tagged `too_easy` (or `leakage_suspected`
-for no_history_option). Items are **kept and tagged**, never dropped:
+majority selects `gold.correct_option`, the item is tagged `too_easy` or
+`leakage_suspected`. Items are kept and tagged; the filter does not delete
+records.
 
 ```json
 {"filter_status": "keep|too_easy|leakage_suspected|ambiguous",
@@ -27,42 +29,37 @@ for no_history_option). Items are **kept and tagged**, never dropped:
 
 ```bash
 python scripts/run_history_filter.py \
-  --items data/generated/benchmark_items/stage3_action_mcq.jsonl \
+  --items data/generated/benchmark_items/stage2_memory_mcq.jsonl \
+  --sessions-dir data/generated/sessions \
   --mode single_session \
   --validators openai:gpt-4o-mini,anthropic:claude-haiku-4-5 \
   --max-items 20 --execute
 ```
 
-Without `--execute`/keys, a deterministic mock validator runs so the pipeline
-completes; the report is explicitly marked `mock_only` (placeholder verdicts).
-Outputs: `<items>.filtered.jsonl` +
-`data/generated/quality_reports/history_filter_report.json`.
+Without `--execute` or API keys, a deterministic mock validator runs so the
+pipeline completes. Mock verdicts are placeholders and the report marks them as
+`mock_only`.
 
-**Use ≥2–3 validators.** With a single validator, "majority correct" is just
-"that validator was right," which over-flags items at chance level. Pass a
-comma-separated list so the majority vote is meaningful. See
-`docs/mcq_design.md` for how the stage-3 MCQ is built to defeat option-only
-shortcuts.
+Outputs:
 
-## Read the aggregate verdict, not the per-item flags
+- `<items>.filtered.jsonl`
+- `data/generated/quality_reports/history_filter_report.json`
 
-For the context-dependent stage-3 MCQ, per-item `leakage_suspected` flags are
-**misleading**: a model with a decision prior (e.g. "confirm before moving
-money") gets every post_occurred item right without history while failing
-pre_occurred / cancelled / no_event, so those post items flag as leakage even
-though no option-text shortcut exists. The reliable signal is the aggregate the
-report now prints:
+## Interpreting The Report
 
-```
-overall_history_free_accuracy   0.263
-majority_decision_baseline      0.667
-beats_baseline_without_history  false
-verdict                         OK: ... at or below majority baseline
+Use at least two or three validators. With one validator, "majority correct" is
+just "that validator was right," which over-flags chance-level hits.
+
+The aggregate report compares history-free accuracy against the majority-answer
+baseline over `gold.correct_option`:
+
+```text
+overall_history_free_accuracy
+majority_answer_baseline
+beats_baseline_without_history
+verdict
 ```
 
-A set is leak-free when a history-free validator **cannot beat the
-majority-decision baseline** (always predict the most common decision). In the
-validated ko_KR coverage set, no_history_option accuracy was 25–26% against a
-~67–74% baseline — well below — confirming the item can only be solved by
-reading the session history. Report per-context / macro-averaged accuracy when
-scoring models for the same reason.
+A robust Stage 2 MCQ set should not be consistently solvable without the
+conversation history. Per-item flags are useful for inspection, but the
+aggregate verdict is the stronger signal.

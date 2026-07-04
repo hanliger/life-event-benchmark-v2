@@ -80,9 +80,9 @@ Stage 2는 **memory update schema를 한 줄씩 맞히는 채점**이 아닙니�
 premature update, wrong sibling event 같은 hard negative를 섞어, 대화 이력 없이
 그럴듯한 금융 상식만으로는 풀기 어렵게 만듭니다.
 
-Stage 3(정기 금융 액션 결정) 관련 코드는 실험적으로 남아 있을 수 있지만, 현재 공식
-평가 산출물에는 포함하지 않습니다. 추후 Stage 3를 다시 포함하려면 action impact
-coverage, decision balance, option leakage 방지를 별도 작업으로 정리합니다.
+Stage 3(정기 금융 액션 결정)은 현재 공식 평가 산출물과 item builder에서 제외했습니다.
+추후 Stage 3를 다시 포함하려면 action impact coverage, decision balance, option leakage
+방지를 별도 작업으로 정리합니다.
 
 ---
 
@@ -236,8 +236,8 @@ Stage 2 MCQ 생성은 다음 절차를 따릅니다.
 따라서 Stage 2 평가는 “메모리 업데이트 레코드 하나하나를 점수화”하지 않습니다. 모델은
 대화 prefix를 읽고 현재 메모리 상태를 재구성한 뒤, 가장 일관적인 보기를 선택해야 합니다.
 
-Stage 3 action decision과 action MCQ 관련 코드는 실험적으로 남아 있을 수 있지만, 현재
-기본 `build_benchmark_items.py` 산출물에는 포함하지 않습니다.
+Stage 3 action decision과 action MCQ는 현재 기본 `build_benchmark_items.py` 산출물과
+item builder 구현에서 제외했습니다.
 
 ### 5.11 Audits + 품질 리포트
 `audit_single_session_recoverability.py`, `audit_full_prefix_recoverability.py`,
@@ -501,7 +501,6 @@ prefix gold는 반드시 `gold.loader.read_prefix_gold()`로 읽어 carry-forwar
 | `standing_action_schema.md` | 정기 액션 타입·일관성 규칙·impact(추후 Stage 3 참고용) |
 | `coverage_generation.md` | life_generator 에피소드 주입으로 사건/메모리 coverage 확보 |
 | `dialogue_generation_strategy.md` | 증거 계획, drift/hard-negative, mock/LLM, 검증 |
-| `mcq_design.md` | Stage 3 action MCQ 실험 기록(현재 공식 범위 제외) |
 | `history_filter.md` | Stage 2 memory MCQ 히스토리 필요성 필터 기록 |
 | `failure_modes.md` | 진단용 실패 유형 정의 |
 | `locale_extension_guide.md` | 새 locale 추가 절차 |

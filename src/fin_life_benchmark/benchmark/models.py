@@ -8,11 +8,8 @@ from pydantic import BaseModel, Field
 
 ERROR_TYPES = (
     "stale_memory_carryover",
-    "stale_action_carryover",
-    "unsafe_premature_execution",
     "missed_update",
     "wrong_sibling_event",
-    "overreaction",
     "premature_update",
     "false_commit",
     "historical_state_contamination",
@@ -30,7 +27,7 @@ class CounterfactualOption(BaseModel):
 
 class BenchmarkItem(BaseModel):
     item_id: str
-    stage: str  # stage1_event_status|stage2_memory_mcq|stage3_action_decision|stage3_action_mcq
+    stage: str  # stage1_event_status|stage2_memory_mcq
     trajectory_id: str
     prefix_id: str
     visible_sessions: list[str]

@@ -11,9 +11,8 @@ Lifecycle statuses gate *permission to update*:
   pending/needs_verification. An agent that commits here exhibits
   `premature_update` / `false_commit`.
 - **upcoming** — planned but not happened. pending/needs_verification only;
-  no high-risk execution. Timing evidence is future-tense.
-- **occurred** — financial consequences exist; updates allowed; standing
-  action impacts fire; high-risk changes still need confirmation.
+  timing evidence is future-tense.
+- **occurred** — financial consequences exist; memory updates are allowed.
 - **cancelled** — earlier signals must be *cleared*. An agent that keeps the
   pending state exhibits `cancelled_ignored`.
 - **no_event** — routine sessions and hard negatives; any detected event is a

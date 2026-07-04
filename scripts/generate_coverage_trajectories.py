@@ -1,17 +1,10 @@
 #!/usr/bin/env python
-"""Coverage-driven trajectory generation for the rare post_occurred class.
+"""Coverage-driven trajectory generation for rare financial life events.
 
-post_occurred MCQ items need BOTH sides:
-  1. an occurred life event  — guaranteed by forcing a life_generator episode
-     that contains the event (event side);
-  2. a standing action the event impacts, already present on the persona
-     (action side).
-
-This driver pairs each (event -> impacted action) selector from
-event_to_action_impact.yaml with a persona whose initial standing actions match
-the selector, then forces a life_generator episode containing that event. Every
-emitted trajectory is therefore engineered to produce at least one
-post_occurred action impact.
+The hazard sampler can underproduce rare event/memory-update combinations. This
+driver pairs financially salient events with matching personas, then forces a
+life_generator episode containing the event. The downstream pipeline still
+derives sessions, prefix gold, and Stage 2 memory MCQs normally.
 
 Example:
   python scripts/generate_coverage_trajectories.py \

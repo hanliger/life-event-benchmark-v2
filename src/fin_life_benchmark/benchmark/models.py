@@ -30,7 +30,7 @@ class CounterfactualOption(BaseModel):
 
 class BenchmarkItem(BaseModel):
     item_id: str
-    stage: str  # stage1_event_status|stage2_memory_update|stage3_action_decision|stage3_action_mcq
+    stage: str  # stage1_event_status|stage2_memory_mcq|stage3_action_decision|stage3_action_mcq
     trajectory_id: str
     prefix_id: str
     visible_sessions: list[str]

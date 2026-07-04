@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Build stage1/2/3 benchmark items + stage3 counterfactual MCQ items.
+"""Build official benchmark items.
 
 Example:
   python scripts/build_benchmark_items.py \
@@ -17,7 +17,7 @@ import _bootstrap  # noqa: F401
 
 from fin_life_benchmark.benchmark.item_builder import ItemBuilder
 from fin_life_benchmark.gold.loader import read_prefix_gold
-from fin_life_benchmark.io import RepoPaths, load_yaml, read_jsonl, write_jsonl
+from fin_life_benchmark.io import read_jsonl, write_jsonl
 
 
 def main() -> int:
@@ -39,24 +39,9 @@ def main() -> int:
             sessions_by_traj.setdefault(session["trajectory_id"], []).append(session)
 
     builder = ItemBuilder(seed=args.seed)
-    paths = RepoPaths.default()
-    life_events = load_yaml(paths.registries / "life_events.yaml")
-    impact_registry = load_yaml(paths.registries / "event_to_action_impact.yaml")
-    label_to_event_id = {
-        spec["label_ko"]: event_id
-        for event_id, spec in life_events.items()
-        if isinstance(spec, dict) and spec.get("label_ko")
-    }
     outputs = {
         "stage1_event_status.jsonl": builder.build_stage1(prefixes, sessions_by_traj),
-        "stage2_memory_update.jsonl": builder.build_stage2(prefixes, sessions_by_traj),
-        "stage3_action_decision.jsonl": builder.build_stage3(prefixes, sessions_by_traj),
-        "stage3_action_mcq.jsonl": builder.build_stage3_mcq(
-            prefixes,
-            sessions_by_traj,
-            impact_registry=impact_registry,
-            label_to_event_id=label_to_event_id,
-        ),
+        "stage2_memory_mcq.jsonl": builder.build_stage2(prefixes, sessions_by_traj),
     }
 
     output_dir = Path(args.output_dir)

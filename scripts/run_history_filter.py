@@ -3,7 +3,7 @@
 
 Example:
   python scripts/run_history_filter.py \
-    --items data/generated/benchmark_items/stage3_action_mcq.jsonl \
+    --items data/generated/benchmark_items/stage2_memory_mcq.jsonl \
     --sessions-dir data/generated/sessions \
     --mode single_session \
     --validators openai:gpt-4o-mini,anthropic:claude-haiku-4-5 \
@@ -86,21 +86,20 @@ def main() -> int:
     for r in results:
         by_status[r["filter_status"]] = by_status.get(r["filter_status"], 0) + 1
 
-    # Aggregate signal (the reliable validity test): a history-free validator's
-    # overall accuracy vs the majority-decision baseline. Per-item leakage flags
-    # over-report when a decision prior happens to match one context's answer;
-    # only aggregate-above-baseline indicates the set is solvable without
-    # history. Baseline = share of the most common gold decision.
+    # Aggregate signal: a history-free validator's overall accuracy vs the
+    # majority-answer baseline. Per-item leakage flags can over-report when a
+    # prior happens to match one item; only aggregate-above-baseline indicates
+    # the set is broadly solvable without the full conversation history.
     n = len(results)
     total_votes = sum(len(r.get("filter_votes", [])) for r in results)
     correct_votes = sum(1 for r in results for v in r.get("filter_votes", []) if v.get("correct"))
     overall_acc = round(correct_votes / total_votes, 4) if total_votes else None
-    decision_counts: dict[str, int] = {}
+    answer_counts: dict[str, int] = {}
     for r in results:
-        d = (r.get("gold") or {}).get("expected_decision")
-        if d:
-            decision_counts[d] = decision_counts.get(d, 0) + 1
-    majority_baseline = round(max(decision_counts.values()) / n, 4) if decision_counts and n else None
+        answer = (r.get("gold") or {}).get("correct_option")
+        if answer:
+            answer_counts[answer] = answer_counts.get(answer, 0) + 1
+    majority_baseline = round(max(answer_counts.values()) / n, 4) if answer_counts and n else None
     beats_baseline = (
         overall_acc is not None and majority_baseline is not None and overall_acc > majority_baseline + 0.05
     )
@@ -112,7 +111,7 @@ def main() -> int:
         "mock_only": all(getattr(v, "provider", "") == "mock" for v in validators),
         "by_status": by_status,
         "overall_history_free_accuracy": overall_acc,
-        "majority_decision_baseline": majority_baseline,
+        "majority_answer_baseline": majority_baseline,
         "beats_baseline_without_history": beats_baseline,
         "verdict": (
             "LEAKAGE: solvable without history"

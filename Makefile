@@ -80,18 +80,18 @@ build-items:
 history-filter:
 ifeq ($(EXECUTE),1)
 	$(PYTHON) scripts/run_history_filter.py \
-		--items $(ITEMS_DIR)/stage3_action_mcq.jsonl --sessions-dir $(SESS_DIR) \
+		--items $(ITEMS_DIR)/stage2_memory_mcq.jsonl --sessions-dir $(SESS_DIR) \
 		--mode single_session --execute
 else
 	$(PYTHON) scripts/run_history_filter.py \
-		--items $(ITEMS_DIR)/stage3_action_mcq.jsonl --sessions-dir $(SESS_DIR) \
+		--items $(ITEMS_DIR)/stage2_memory_mcq.jsonl --sessions-dir $(SESS_DIR) \
 		--mode single_session
 endif
 
 audit:
 	$(PYTHON) scripts/audit_single_session_recoverability.py --sessions-dir $(SESS_DIR) --output-dir $(QUALITY)
 	$(PYTHON) scripts/audit_full_prefix_recoverability.py --prefix-gold $(GOLD) --output-dir $(QUALITY)
-	$(PYTHON) scripts/audit_stale_distractors.py --items $(ITEMS_DIR)/stage3_action_mcq.jsonl --prefix-gold $(GOLD) --output-dir $(QUALITY)
+	$(PYTHON) scripts/audit_stale_distractors.py --items $(ITEMS_DIR)/stage2_memory_mcq.jsonl --prefix-gold $(GOLD) --output-dir $(QUALITY)
 	$(PYTHON) scripts/audit_life_stage_constraints.py --trajectories-dir $(TRAJ_DIR) --output-dir $(QUALITY)
 	$(PYTHON) scripts/build_quality_summary.py \
 		--trajectories-dir $(TRAJ_DIR) --sessions-dir $(SESS_DIR) \

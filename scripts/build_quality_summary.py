@@ -90,8 +90,7 @@ def main() -> int:
     stage_counts = {}
     mcq_error_types: Counter = Counter()
     mcq_with_stale = 0
-    mcq_context: Counter = Counter()
-    mcq_decision: Counter = Counter()
+    mcq_hop_type: Counter = Counter()
     mcq_answer_pos: Counter = Counter()
     for path in sorted(Path(args.items_dir).glob("stage*.jsonl")):
         items = list(read_jsonl(path))
@@ -101,17 +100,14 @@ def main() -> int:
                 meta = item.get("metadata") or {}
                 if meta.get("has_stale_distractor"):
                     mcq_with_stale += 1
-                mcq_context[meta.get("context", "?")] += 1
+                mcq_hop_type[meta.get("hop_type") or meta.get("context", "?")] += 1
                 gold = item.get("gold") or {}
-                mcq_decision[gold.get("expected_decision", "?")] += 1
                 mcq_answer_pos[gold.get("correct_option", "?")] += 1
                 for opt in item.get("options", []):
                     if opt.get("error_type"):
                         mcq_error_types[opt["error_type"]] += 1
-
-    mcq_total = sum(mcq_context.values())
-    # majority-class share: fraction won by always predicting the top decision
-    majority_share = (max(mcq_decision.values()) / mcq_total) if mcq_total else 0.0
+                        if opt["error_type"] == "stale_memory_carryover":
+                            mcq_with_stale += 1
 
     prefixes = list(read_jsonl(Path(args.prefix_gold)))
     lines = [
@@ -122,16 +118,8 @@ def main() -> int:
         "## Items per stage file",
         *(f"- {k}: {v}" for k, v in stage_counts.items()),
         "",
-        "## MCQ lifecycle context distribution",
-        *(f"- {k}: {v}" for k, v in mcq_context.most_common()),
-        "",
-        "## MCQ correct-decision distribution",
-        *(f"- {k}: {v}" for k, v in mcq_decision.most_common()),
-        "",
-        f"- majority-decision baseline (always pick most common): {majority_share:.2%}",
-        "  (report per-context / macro-averaged accuracy — a high majority baseline",
-        "   means raw accuracy is misleading; accumulate more trajectories to grow",
-        "   the rare post_occurred class)",
+        "## MCQ hop/context distribution",
+        *(f"- {k}: {v}" for k, v in mcq_hop_type.most_common()),
         "",
         "## MCQ correct-option position (should be spread across A–E)",
         *(f"- {k}: {v}" for k, v in sorted(mcq_answer_pos.items())),
@@ -139,7 +127,7 @@ def main() -> int:
         "## MCQ distractor error types",
         *(f"- {k}: {v}" for k, v in mcq_error_types.most_common()),
         "",
-        f"- MCQ items with stale distractor material: {mcq_with_stale}",
+        f"- MCQ stale-memory distractor occurrences: {mcq_with_stale}",
         "",
         "Constraint check: high-risk decisions without confirmation in gold "
         f"= {high_risk_wo_confirmation} (must be 0)",

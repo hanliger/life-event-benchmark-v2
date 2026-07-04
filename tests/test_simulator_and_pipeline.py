@@ -282,3 +282,70 @@ def test_stage3_mcq_uses_context_dependent_correct_answers():
         "급여 연동 자동저축을(를) 지금 설정(매월 26일, 500,000원) 그대로 다음 회차에도 실행한다.",
         "급여 연동 자동저축의 다음 회차 실행 전에 고객에게 설정을 그대로 진행할지 물어보고, 답을 받기 전에는 바꾸지 않는다.",
     }
+
+
+def test_stage2_memory_mcq_builds_single_and_multi_hop_items():
+    prefixes = [
+        {
+            "prefix_id": "traj_mem_pfx001",
+            "trajectory_id": "traj_mem",
+            "visible_sessions": ["S001"],
+            "gold_memory_updates": [
+                {
+                    "path": "employment.salary_day",
+                    "operation": "update",
+                    "old_value": 10,
+                    "new_value": 25,
+                }
+            ],
+            "gold_full_memory_state": {
+                "employment.salary_day": {
+                    "value": 25,
+                    "status": "current",
+                    "historical_values": [10],
+                }
+            },
+        },
+        {
+            "prefix_id": "traj_mem_pfx002",
+            "trajectory_id": "traj_mem",
+            "visible_sessions": ["S001", "S002"],
+            "gold_memory_updates": [
+                {
+                    "path": "employment.salary_day",
+                    "operation": "update",
+                    "old_value": 10,
+                    "new_value": 25,
+                },
+                {
+                    "path": "housing.rent_payee",
+                    "operation": "update",
+                    "old_value": "기존 임대인",
+                    "new_value": "새 임대인",
+                },
+            ],
+            "gold_full_memory_state": {
+                "employment.salary_day": {
+                    "value": 25,
+                    "status": "current",
+                    "historical_values": [10],
+                },
+                "housing.rent_payee": {
+                    "value": "새 임대인",
+                    "status": "needs_verification",
+                    "historical_values": ["기존 임대인"],
+                },
+            },
+        },
+    ]
+
+    items = ItemBuilder(seed=0).build_stage2(prefixes, {"traj_mem": []})
+    assert {item.stage for item in items} == {"stage2_memory_mcq"}
+    assert {"single", "multi"} <= {item.metadata["hop_type"] for item in items}
+
+    for item in items:
+        correct = [option for option in item.options if option.correct]
+        assert len(correct) == 1
+        assert item.gold["correct_option"] == correct[0].option_id
+        assert "memory_updates" not in item.gold
+        assert any(option.error_type == "stale_memory_carryover" for option in item.options)

@@ -1,7 +1,7 @@
 # Fin-Life Benchmark
 
-**생애 사건(Life Event)에 따른 금융 메모리 유지와 위험 인지형 정기 금융 액션 결정**을
-평가하는 벤치마크 생성 파이프라인입니다. 한국어(ko_KR) 우선, locale 확장 가능.
+**생애 사건(Life Event)에 따른 금융 메모리 유지**를 평가하는 벤치마크 생성
+파이프라인입니다. 한국어(ko_KR) 우선, locale 확장 가능.
 
 > 이 문서는 지금까지 구현된 모든 작업을 한눈에 이해할 수 있도록 자세히 설명합니다.
 > 각 구성요소의 심화 설명은 `docs/` 아래 개별 문서에 있습니다(영문).
@@ -12,19 +12,18 @@
 
 한 사람의 인생은 시간에 따라 변합니다 — 이직하고, 이사하고, 결혼/이혼하고, 아이가
 생기고, 은퇴합니다. 이런 **생애 사건**이 일어나면 은행이 기억하고 있던 정보(급여일,
-집주인, 배우자, 대출 등)가 낡거나(stale) 바뀌고, 자동이체·자동저축 같은 **정기 금융
-액션**도 손봐야 합니다. 그런데 이 결정에는 위험이 따릅니다: 돈이 나가는 변경을
-**사용자 확인 없이 함부로 실행하면 안 됩니다**.
+집주인, 배우자, 대출 등)가 낡거나(stale) 바뀝니다. 이 벤치마크는 그런 변화가
+대화 이력 속에서 어떻게 드러나는지, 그리고 모델이 그 이력을 바탕으로 금융 메모리를
+올바르게 갱신할 수 있는지를 평가합니다.
 
 이 벤치마크는 모델(에이전트)이 다음을 잘 하는지 봅니다.
 
 1. 대화 이력만 보고 **어떤 생애 사건이, 어느 단계까지 진행됐는지** 파악하는가
-2. 그에 맞춰 **금융 메모리를 올바르게 갱신**하는가 (낡은 값 폐기, 검증 필요 표시 등)
-3. **정기 금융 액션을 안전하게 처리**하는가 (확인 요청 / 유지 / 변경)
+2. 그에 맞춰 **현재 금융 메모리 상태를 올바르게 재구성**하는가 (낡은 값 폐기, 검증 필요 표시 등)
 
 핵심 실패 유형은 **낡은 메모리 잔존(stale carryover)**, **조급한 확정(premature
-commitment)**, **위험한 자동 실행(unsafe execution)**, **과거 상태 오염(historical
-contamination)** 입니다. (`docs/failure_modes.md`)
+commitment)**, **과거 상태 오염(historical contamination)** 입니다.
+(`docs/failure_modes.md`)
 
 핵심 철학: **State first, dialogue second.** 먼저 숨겨진 인생/금융 상태의 궤적을
 시뮬레이션하고, 그로부터 은행 대화를 "간접 증거"로 생성합니다. 절대 그 반대가 아닙니다.
@@ -40,12 +39,12 @@ contamination)** 입니다. (`docs/failure_modes.md`)
  NormalizedPersona  (나이/혼인/고용/주거/재무를 정규화 + 결측 추론)
    │  generate_initial_states.py
    ▼
- 초기 금융 메모리 상태  +  초기 정기 금융 액션(standing actions)
+ 초기 금융 메모리 상태
    │  simulate_trajectories.py         (월 단위 hazard FSM)
    │  generate_coverage_trajectories.py (life_generator 에피소드 강제 주입)
    ▼
  Trajectory  = 생애 사건 인스턴스(weak_signal→upcoming→occurred/cancelled)
-              + 매달 메모리 델타 + 정기 액션 impact + 상태 스냅샷
+              + 매달 메모리 델타 + 상태 스냅샷
    │  generate_dialogue_sessions.py    (mock 또는 LLM)
    ▼
  은행 대화 세션(간접 증거만; 사건명·FA코드 노출 금지)
@@ -53,11 +52,10 @@ contamination)** 입니다. (`docs/failure_modes.md`)
    ▼
  export_prefix_gold.py
    ▼
- Prefix Gold  = "여기까지 봤을 때"의 정답 상태(사건 상태/메모리 갱신/액션 결정)
+ Prefix Gold  = "여기까지 봤을 때"의 정답 상태(사건 상태/메모리 갱신)
    │  build_benchmark_items.py
    ▼
- 벤치마크 아이템  Stage1 / Stage2 / Stage3 + 반사실(counterfactual) MCQ
-   │  run_history_filter.py            (히스토리 없이 풀리는 문제 걸러내기)
+ 벤치마크 아이템  Stage1 / Stage2
    │  audit_*.py, build_quality_summary.py
    ▼
  품질 리포트 (data/generated/quality_reports/)
@@ -65,18 +63,26 @@ contamination)** 입니다. (`docs/failure_modes.md`)
 
 ---
 
-## 3. 3-Stage 태스크 정의
+## 3. 2-Stage 태스크 정의
 
 | 단계 | 입력 | 출력(정답) |
 | --- | --- | --- |
 | **Stage 1 — 사건 상태 감지** | 세션 prefix | 생애 사건 라벨 / lifecycle 상태 / 발생 여부 / 증거 세션 |
-| **Stage 2 — 금융 메모리 갱신** | prefix + 초기 메모리 | 메모리 갱신 목록(경로, 연산, 값) |
-| **Stage 3 — 정기 액션 결정** | prefix + 메모리 + 정기 액션 | 액션별 결정(keep/update/pause/cancel/ask_confirmation) |
-| **Stage 3 MCQ** | prefix + 질문 | 반사실 보기(낡은 메모리·위험 실행 오답 포함) |
+| **Stage 2 — 금융 메모리 MCQ** | 세션 prefix + 초기 메모리 | 현재 메모리 상태를 묻는 single-hop/multi-hop 객관식 정답 |
 
 "prefix"란 세션을 시간순으로 1개, 2개, … k개까지 본 상태를 뜻합니다. **정답은
 prefix마다 달라집니다** — 사건이 weak_signal이던 시점엔 갱신 금지, occurred가 되면
 갱신 허용, 이런 식으로 gold가 시간에 따라 변합니다.
+
+Stage 2는 **memory update schema를 한 줄씩 맞히는 채점**이 아닙니다. `prefix_gold`의
+메모리 델타는 gold 상태를 만들기 위한 내부 근거이고, 실제 평가 아이템은 그 결과로
+형성된 현재 메모리 셀을 보기로 제시합니다. 보기에는 stale value, missed update,
+premature update, wrong sibling event 같은 hard negative를 섞어, 대화 이력 없이
+그럴듯한 금융 상식만으로는 풀기 어렵게 만듭니다.
+
+Stage 3(정기 금융 액션 결정) 관련 코드는 실험적으로 남아 있을 수 있지만, 현재 공식
+평가 산출물에는 포함하지 않습니다. 추후 Stage 3를 다시 포함하려면 action impact
+coverage, decision balance, option leakage 방지를 별도 작업으로 정리합니다.
 
 ---
 
@@ -92,13 +98,14 @@ prefix마다 달라집니다** — 사건이 weak_signal이던 시점엔 갱신 
   unknown`)·신뢰도·유효기간·provenance를 가집니다. **값을 지우지 않고** 갱신 시 옛
   값을 historical로 보존 → 나중에 "낡은 값 오답(distractor)"으로 재활용.
 - **StandingAction** (`actions/models.py`): 정기 금융 액션(월세 자동이체, 급여 연동
-  자동저축 등)을 **1급 객체**로 취급. 연결된 메모리 경로·위험도·funds_movement·유효성·
-  감사 로그(history)를 가집니다.
+  자동저축 등)을 표현하는 보조 모델입니다. 현재 공식 평가는 Stage 2까지이므로,
+  이 모델은 초기 금융 상태와 향후 Stage 3 확장을 위한 기반으로만 사용합니다.
 - **EventInstance** (`fsm/models.py`): 샘플링된 생애 사건 1건 + 전체 lifecycle 상태 이력.
 - **Trajectory** (`trajectory/models.py`): 페르소나 + 초기 상태 + 사건 인스턴스 +
-  월별 timeline step(전환·델타·impact) + 월별 상태/메모리/액션 스냅샷.
+  월별 timeline step(전환·메모리 델타) + 월별 상태/메모리 스냅샷.
 - **PrefixGold**: 각 세션 prefix 시점의 정답 상태.
-- **BenchmarkItem** (`benchmark/models.py`): Stage 아이템과 MCQ 반사실 보기.
+- **BenchmarkItem** (`benchmark/models.py`): Stage 1/2 평가 아이템. Stage 2 아이템은
+  `options`와 `gold.correct_option`을 가진 MCQ입니다.
 
 ---
 
@@ -115,10 +122,14 @@ repo에 없었습니다. `life_generator/README.md`의 Node-Action 표로부터 
 주거유형·직업·지역과 페르소나 텍스트 힌트를 읽어 구조화합니다. 결측은 uuid 시드 기반
 결정적 추론(예: 고령+무직→retired, 가구유형에 자녀→자녀 나이 샘플링)으로 채웁니다.
 
-### 5.2 초기 금융 상태 / 액션 생성
-`memory/initial_state_generator.py`, `actions/initial_actions_generator.py`가 상태
-일관성 규칙에 따라 초기 메모리와 액션을 만듭니다. 예: 급여일/급여계좌는 고용 중일
-때만, 월세 자동이체는 월세 세입자만, 배우자 생활비 이체는 기혼+동거일 때만.
+### 5.2 초기 금융 메모리 생성
+`memory/initial_state_generator.py`가 상태 일관성 규칙에 따라 초기 금융 메모리를
+만듭니다. 예: 급여일/급여계좌는 고용 중일 때만, 월세 관련 정보는 월세 세입자에게만
+생성됩니다.
+
+정기 금융 액션 생성기(`actions/initial_actions_generator.py`)도 코드에는 남아 있지만,
+현재 공식 평가 범위는 Stage 2까지입니다. 따라서 액션 관련 데이터는 향후 Stage 3
+확장을 위한 보조 정보로 봅니다.
 
 ### 5.3 생애 상태 FSM + 월 단위 시뮬레이터
 `fsm/life_state_machine.py`, `trajectory/simulator.py`가 **월 단위 tick**으로 궤적을
@@ -139,50 +150,34 @@ monthly_probability ≈ base_rate/12 × age_weight × state_mod × persona_mod
 사건은 `inactive → weak_signal → upcoming → occurred`로 진행하며, weak_signal/upcoming에서
 `cancelled`로 갈 수 있습니다. 이 상태가 **갱신 허용 여부를 결정**합니다:
 
-| 상태 | 허용 메모리 연산 | 고위험 액션 변경 |
+| 상태 | 허용 메모리 연산 | 확정 갱신 정책 |
 | --- | --- | --- |
-| weak_signal | (선택) set_pending / needs_verification | 불가 |
-| upcoming | set_pending / needs_verification | 불가 |
-| occurred | update / mark_stale / archive / needs_verification / reactivate | 확인 요청 후에만 |
-| cancelled | clear_pending 만 | 불가 |
+| weak_signal | (선택) set_pending / needs_verification | 확정 update 금지 |
+| upcoming | set_pending / needs_verification | 확정 update 금지 |
+| occurred | update / mark_stale / archive / needs_verification / reactivate | 발생 이후 갱신 허용 |
+| cancelled | clear_pending 만 | 발생한 사건처럼 update 금지 |
 
 (`docs/event_lifecycle.md`)
 
-### 5.5 델타 엔진 / impact 엔진 + 위험 정책
+### 5.5 델타 엔진
 `memory/delta_engine.py`는 사건 전환 시 메모리 델타를 적용하되 **위 lifecycle 정책을
-강제**합니다(레지스트리가 뭐라 하든 weak_signal에서 확정 갱신 불가). `actions/
-impact_engine.py`는 사건이 기존 액션에 주는 영향을 계산합니다.
+강제**합니다(레지스트리가 뭐라 하든 weak_signal에서 확정 갱신 불가).
+(`docs/financial_memory_schema.md`)
 
-**위험 정책(핵심)**: `funds_movement=true`(돈이 나가는 액션)는 고위험 →
-사용자 확인 없이 실행 금지. impact 엔진이 `must_not_execute=True`를 강제하고 `execute`
-기대를 `ask_confirmation`으로 치환합니다. audit이 "gold 내 확인 없는 고위험 실행 = 0"을
-검증합니다. (`docs/financial_memory_schema.md`, `docs/standing_action_schema.md`)
+`actions/impact_engine.py`와 action impact registry는 실험적으로 남아 있습니다.
+다만 현재 공식 benchmark item은 Stage 1/2까지만 사용하므로, action impact 결과는
+공식 평가 지표로 사용하지 않습니다.
 
-### 5.6 Episode 주입 & Coverage 생성 (life_generator 활용) — **희소 케이스 확보**
-가장 중요한 최근 추가 기능입니다. hazard 샘플러만으로는 **post_occurred**(발생한
-사건이 기존 정기 액션을 건드리는 경우 = Stage3에서 "확인 요청"이 정답인 유일한 상황)가
-너무 드물게 나옵니다. 이유는 두 가지가 동시에 필요하기 때문입니다:
+### 5.6 Episode 주입 & Coverage 생성 (life_generator 활용)
+hazard 샘플러만으로는 특정 생애 사건이 충분히 다양하게 발생하지 않을 수 있습니다.
+`life_generator`의 순서 보장된 에피소드(예: 전세→구매→매각, 취업→교육→이직)를
+trajectory에 강제 주입하면 Stage 1/2에서 필요한 사건 상태와 메모리 변화 coverage를
+더 안정적으로 확보할 수 있습니다.
 
-1. **사건이 실제로 발생** — `life_generator`(생애 사건 그래프)의 순서 보장된 에피소드
-   (전세→구매→매각, 취업→교육→이직 등)를 궤적에 **강제 주입**해서 보장.
-   `trajectory/episode_bridge.py` + `simulate_trajectories.py --mode episode`.
-   forced 이벤트는 hazard 롤을 우회하되 **상태 가드는 준수**하고,
-   `plan_lifecycle(force_occur=True)`로 반드시 occurred까지 진행.
-2. **그 사건이 impact하는 액션을 페르소나가 이미 보유** — 액션 소유 페르소나와 사건을
-   **페어링**. `scripts/generate_coverage_trajectories.py`가 impact 레지스트리의 각
-   (사건→액션) 쌍마다 해당 액션을 가진 페르소나를 골라 에피소드를 강제합니다.
-
-측정 효과(20명 풀, 12년):
-
-| 방식 | post_occurred 쌍/궤적 |
-| --- | --- |
-| hazard만 | 0.90 |
-| 에피소드 주입만 | 0.95 (거의 안 늘어남 → 병목은 액션 쪽) |
-| **coverage(사건×액션 페어링)** | **2.77 (약 3배)** |
-
-또한 occurred 전환 시점에 상태 가드를 재확인해, 시작 땐 유효했지만 그 사이 다른
-사건에 추월당한 모순(예: 실직 중 시작한 "취업/복직"이 발생 전 다른 경로로 취업됨)을
-`cancelled`로 강등합니다. (`docs/coverage_generation.md`)
+`trajectory/episode_bridge.py`와 `simulate_trajectories.py --mode episode`는 forced
+event를 만들되 상태 가드는 준수합니다. 또한 occurred 전환 시점에 상태 가드를 다시
+확인해, 시작 땐 유효했지만 그 사이 다른 사건에 추월당한 모순을 `cancelled`로
+강등합니다. (`docs/coverage_generation.md`)
 
 ### 5.7 Evidence planner + 대화 생성
 `dialogue/evidence_planner.py`가 사건별 다중 세션 증거 계획을 세웁니다. 핵심 설계:
@@ -205,54 +200,50 @@ stale recall(과거 값 회상) 세션도 여기서 계획합니다.
 `quality_reports/dialogue_quality_report.{json,md}`에 기록합니다.
 
 ### 5.9 Prefix Gold + **저장 최적화**
-`gold/prefix_gold_exporter.py`가 각 세션 prefix 시점의 gold(사건 상태/메모리 갱신/액션
-결정 + 전체 상태 스냅샷)를 만듭니다.
+`gold/prefix_gold_exporter.py`가 각 세션 prefix 시점의 gold(사건 상태/메모리 갱신 +
+전체 상태 스냅샷)를 만듭니다.
 
 **최적화**: prefix의 약 91%는 사건 사이의 routine 세션이라 gold 페이로드가 직전과
 동일합니다. 동일한 경우 5개 gold_* 필드를 비워 두고 `repeats_previous` 플래그만 남기며,
 `gold/loader.py:read_prefix_gold()`가 로드 시 carry-forward로 복원합니다.
 → **gold 파일 212MB → 53MB (4배 감소), 아이템 결과는 완전히 동일.**
 
-### 5.10 벤치마크 아이템 + **Context-dependent MCQ** — **누출 방지 재설계**
-`benchmark/item_builder.py`가 Stage1/2/3 아이템과 Stage3 MCQ를 만듭니다.
+### 5.10 벤치마크 아이템
+`benchmark/item_builder.py`가 Stage 1/2 아이템을 만듭니다.
 
-MCQ의 **초기 설계 문제**: 정답("needs_verification 표시 + 사용자 확인 요청")이 문구상
-유일하게 신중해 보여서, 세션을 안 봐도 옵션만으로 정답을 골랐습니다(실측 100% 누출).
+- Stage 1: prefix에서 감지되는 생애 사건과 lifecycle status를 묻습니다.
+- Stage 2: prefix와 초기 금융 메모리를 바탕으로 **현재 금융 메모리 상태**를 묻는
+  MCQ를 만듭니다.
 
-**재설계**: 모든 MCQ가 **동일한 5개 실무 보기**(그대로 실행 / 지금 변경 / 다음 회차 전
-확인 / 보류 / 해지)를 쓰고, **정답은 사건 lifecycle context에 따라 달라집니다**:
+Stage 2 MCQ 생성은 다음 절차를 따릅니다.
 
-| context | 정답 | 근거 |
-| --- | --- | --- |
-| post_occurred | 확인 요청 | 발생한 사건이 설정을 무효화했을 수 있음 (돈이 나감) |
-| pre_occurred | 그대로 유지 | 아직 weak_signal/upcoming — 조치할 것 없음 |
-| cancelled | 그대로 유지 | 신호 소멸, 조치 시 stale pending에 작용 |
-| no_event | 그대로 유지 | hard negative, 아무 일 없음 |
+1. `prefix_gold`를 시간순으로 읽으면서 trajectory별 누적 `gold_memory_updates` 수가
+   증가한 prefix만 후보로 삼습니다. 즉 실제로 새 메모리 변화가 관측된 지점에서만
+   문항을 냅니다.
+2. 후보 prefix의 `gold_full_memory_state`에서 현재 값·상태·historical value를 읽어
+   정답 보기를 만듭니다. 정답은 update JSON 자체가 아니라, 해당 prefix 시점의 현재
+   메모리 셀입니다.
+3. **single-hop MCQ**는 새로 들어온 업데이트 중 하나의 path를 골라 현재 상태를 묻습니다.
+   보기에는 이전 값(stale carryover), 갱신 누락(missed update), 검증 필요/확정 상태
+   혼동(premature update 또는 false commit), 다른 경로 값 오염(wrong sibling)을 넣습니다.
+4. **multi-hop MCQ**는 최근 서로 다른 두 memory path를 함께 묻습니다. 한쪽만 stale인
+   보기, 두 값을 뒤섞은 보기, 둘 다 갱신하지 않는 보기를 넣어 여러 세션의 누적 단서를
+   종합해야 풀리게 합니다.
+5. 정답 위치는 seed 기반으로 섞고, `gold.correct_option`에 A-E 중 하나로 저장합니다.
+   분석용으로 `metadata.hop_type = single|multi`, `gold.memory_path(s)`,
+   `gold.current_cell(s)`를 함께 남깁니다.
 
-옵션 문구가 context마다 같으므로 히스토리 없이는 정답 판별 불가. `keep_to_confirm_ratio`
-(기본 2.0)로 decision 균형을 맞추고(라운드로빈으로 4개 context 모두 유지),
-`build_quality_summary.py`가 majority baseline을 리포트합니다. (`docs/mcq_design.md`)
+따라서 Stage 2 평가는 “메모리 업데이트 레코드 하나하나를 점수화”하지 않습니다. 모델은
+대화 prefix를 읽고 현재 메모리 상태를 재구성한 뒤, 가장 일관적인 보기를 선택해야 합니다.
 
-**검증(실제 gpt-4o-mini)**: 히스토리 없이 옵션만 볼 때 정답률 **25%** ≪ majority
-baseline **67%** → "항상 keep"으로 찍는 것보다도 못함 = **옵션 누출 없음** 확인.
+Stage 3 action decision과 action MCQ 관련 코드는 실험적으로 남아 있을 수 있지만, 현재
+기본 `build_benchmark_items.py` 산출물에는 포함하지 않습니다.
 
-### 5.11 History filter — 히스토리 없이 풀리는 문제 걸러내기
-`validation/history_filter.py` — 축소된 맥락에서도 풀리는 문제를 걸러내는 consensus 필터.
-세 모드: `single_session`(마지막 세션만), `partial_prefix`(초기 증거 제거),
-`no_history_option`(질문+보기만). 검증자(provider:model)가 축소된 맥락에서 문제를
-풀어봐서 **majority baseline을 초과해 맞히면** 누출로 판정합니다.
-
-**중요**: 개별 아이템의 leakage 플래그가 아니라 **aggregate 판정**(리포트의
-`beats_baseline_without_history`)을 봐야 합니다 — decision prior가 한 context와 우연히
-맞으면 per-item 플래그가 과다 보고됩니다. 검증자는 **2~3개 이상** 사용 권장. API 키가
-없으면 mock 검증자로 대체하고 리포트에 placeholder 표시. (`docs/history_filter.md`)
-
-### 5.12 Audits + 품질 리포트
+### 5.11 Audits + 품질 리포트
 `audit_single_session_recoverability.py`, `audit_full_prefix_recoverability.py`,
 `audit_stale_distractors.py`, `audit_life_stage_constraints.py`,
-`build_quality_summary.py`가 라벨/상태/연산/결정/위험 분포, 단일세션 해결률, 누적
-복원률, stale distractor 가용성, 생애단계 위반(반드시 0), MCQ context/decision 분포와
-majority baseline을 리포트합니다.
+`build_quality_summary.py`가 라벨/상태/연산 분포, 단일세션 해결률, 누적 복원률,
+stale distractor 가용성, 생애단계 위반(반드시 0)을 리포트합니다.
 
 ---
 
@@ -266,13 +257,9 @@ Nemotron 500명 정규화 후 생성한 **통합 데이터셋** (자연 hazard +
 | 대화 세션 | 23,100 (mock; 검증 통과율 ≈ 100%) |
 | Prefix gold | 23,100 (53MB, dedup 적용) |
 | Stage 1 아이템 | 8,422 |
-| Stage 2 아이템 | 888 |
-| Stage 3 아이템 | 219 |
-| Stage 3 MCQ | **504** (post_occurred 168 / pre 157 / no_event 156 / cancelled 23) |
-| MCQ decision 균형 | keep 336 : ask_confirmation 168 → majority baseline **66.7%** |
+| Stage 2 memory MCQ 아이템 | 888 |
 | 서로 다른 gold 사건 | 484개 (24개 라벨 전부 등장) |
 | 생애단계 위반 | **0** |
-| impact pair 커버리지 | 24/25 |
 
 > 위 수치는 아래 "통합 데이터셋 재현" 절차로 나온 예시입니다. mock 대화는 템플릿이라
 > 문장이 단조롭습니다. 실제 품질 대화는 `EXECUTE=1`(LLM)이 필요합니다.
@@ -306,7 +293,7 @@ ln -sfn Nemotron-Personas-Korea nemotron-personas-korea
 ### 1. 빠른 스모크 (mock, API·키 불필요, 수 초~수십 초)
 
 ```bash
-make pipeline-smoke              # 정규화→상태→시뮬→대화(mock)→검증→gold→아이템→필터→audit
+make pipeline-smoke              # 정규화→상태→시뮬→대화(mock)→검증→gold→아이템→audit
 ```
 
 작은 규모로 파이프라인 전 구간이 도는지 확인하는 용도입니다.
@@ -316,11 +303,10 @@ make pipeline-smoke              # 정규화→상태→시뮬→대화(mock)→
 ```bash
 make normalize-personas LIMIT=500                  # 페르소나 500명 정규화
 make simulate-smoke NUM_TRAJ=30 HORIZON=10         # 자연스러운 hazard 궤적 30개
-make coverage-trajectories                          # 희소 post_occurred 보장 (같은 폴더에 추가)
+make coverage-trajectories                          # 희소 생애 사건/메모리 변화 보강
 make dialogue-smoke                                 # mock 대화 생성
 make export-gold                                    # prefix gold (dedup 저장)
-make build-items                                    # Stage1/2/3 + MCQ 아이템
-make history-filter                                 # 히스토리 필요성 필터 (mock)
+make build-items                                    # Stage1 + Stage2 memory MCQ 아이템
 make audit                                          # 품질 리포트 생성
 ```
 
@@ -328,16 +314,14 @@ make audit                                          # 품질 리포트 생성
 `LIMIT`(페르소나 수), `NUM_TRAJ`, `HORIZON`(년), `SEED`. 예) `make simulate-smoke
 NUM_TRAJ=100 HORIZON=12 SEED=7`.
 
-### 3. 실제 LLM 대화·필터 (`.env`에 유효한 키 필요)
+### 3. 실제 LLM 대화 생성 (`.env`에 유효한 키 필요)
 
 ```bash
 make dialogue-smoke EXECUTE=1     # OpenAI/Anthropic로 실제 대화 생성
-make history-filter EXECUTE=1     # 실제 검증자(2~3개 권장)로 누출 필터
 ```
 
 `.env`의 `DEFAULT_LLM_PROVIDER`/`DEFAULT_GENERATION_MODEL`,
-`HISTORY_FILTER_VALIDATORS`(예: `openai:gpt-4o-mini,anthropic:claude-haiku-4-5`)로
-제공자·모델을 지정합니다. 키가 없으면 자동으로 mock으로 대체되고 리포트에 표시됩니다.
+제공자·모델을 지정합니다. 키가 없으면 mock 모드로 대화 생성을 계속할 수 있습니다.
 
 ### 4. 개별 스크립트 직접 실행
 
@@ -355,12 +339,12 @@ python scripts/generate_coverage_trajectories.py \
 `simulate_trajectories`(`--mode hazard|episode`, `--coverage`) ·
 `generate_coverage_trajectories` · `generate_dialogue_sessions`
 (`--mock|--dry-run|--execute`) · `validate_dialogues` · `export_prefix_gold` ·
-`build_benchmark_items` · `run_history_filter` · `audit_*` · `build_quality_summary`.
+`build_benchmark_items` · `audit_*` · `build_quality_summary`.
 
 ### 5. 테스트
 
 ```bash
-make test        # pytest 20개 (스키마·엔진·시뮬레이터·gold dedup·coverage·MCQ)
+make test        # 스키마·엔진·시뮬레이터·gold dedup·coverage 중심 테스트
 ```
 
 ### 산출물 위치 (모두 git 미추적)
@@ -370,7 +354,8 @@ data/personas/normalized/personas_ko_KR.jsonl
 data/generated/trajectories/traj_*.json          (traj_cov_* = coverage)
 data/generated/sessions/sessions_traj_*.jsonl
 data/generated/gold/prefix_gold.jsonl            (read_prefix_gold로 읽을 것)
-data/generated/benchmark_items/stage{1,2,3}_*.jsonl
+data/generated/benchmark_items/stage1_event_status.jsonl
+data/generated/benchmark_items/stage2_memory_mcq.jsonl
 data/generated/quality_reports/*.md, *.json
 ```
 
@@ -474,14 +459,14 @@ for e in t['life_event_instances']:
     print(e['label_ko'], [(h['month_index'], h['status']) for h in e['status_history']])
 EOF
 
-# MCQ 한 문제 보기
+# Stage 2 memory MCQ 문항 하나 보기
 python - <<'EOF'
 import json
-r = json.loads(open('data/generated/benchmark_items/stage3_action_mcq.jsonl').readline())
-print(r['metadata']['context'], '| 정답:', r['gold']['correct_option'])
+r = json.loads(open('data/generated/benchmark_items/stage2_memory_mcq.jsonl').readline())
 print(r['question'])
 for o in r['options']:
-    print(' ', o['option_id'], '✓' if o['correct'] else ' ', o.get('error_type') or 'correct', '|', o['text'])
+    print(o['option_id'], o['text'])
+print("gold:", json.dumps(r['gold'], ensure_ascii=False, indent=2))
 EOF
 ```
 
@@ -496,13 +481,11 @@ prefix gold는 반드시 `gold.loader.read_prefix_gold()`로 읽어 carry-forwar
 - mock 대화는 템플릿이라 문장이 단조롭습니다. 자연스러운 대화는 `EXECUTE=1` LLM 생성 필요.
 - coverage 궤적은 타임라인 압축·강제 발생을 쓰므로 약간 인위적입니다 — hazard 궤적과
   **섞어서** 사용하세요(현재 통합 데이터셋이 그 예).
-- impact pair 24/25 커버. 남은 1개(이혼→양육비)는 양육비 이체가 이혼으로 **생성**되는
-  액션이라 "기존 액션 impact"로는 구조적으로 만들기 어렵습니다.
-- MCQ는 decision 불균형이 남습니다(post_occurred만 confirm 정답). **context별
-  macro-평균 정확도**로 평가하세요.
+- Stage 3(정기 금융 액션 결정)은 공식 평가 범위에서 제외했습니다. action impact,
+  decision balance, action-level MCQ leakage 방지는 추후 구현 예정입니다.
 - 24개 사건 중 MVP 10개는 완전한 델타/impact 템플릿, 나머지 14개는 유효한 stub(P2).
 - `en_US` locale은 템플릿만 존재(생성은 한국어 전용).
-- 누출 검사는 부분 문자열 기반이라 드물게 오탐/미탐 가능(2만3천 중 1건 관측).
+- 누출 검사는 부분 문자열 기반이라 드물게 오탐/미탐 가능.
 
 ---
 
@@ -515,10 +498,10 @@ prefix gold는 반드시 `gold.loader.read_prefix_gold()`로 읽어 carry-forwar
 | `life_state_fsm.md` | 월 단위 hazard FSM, 상태 가드, life_generator를 왜 대체했나 |
 | `event_lifecycle.md` | lifecycle 상태와 갱신 허용 규칙 |
 | `financial_memory_schema.md` | 메모리 셀·연산·이력 보존 |
-| `standing_action_schema.md` | 정기 액션 타입·일관성 규칙·impact |
-| `coverage_generation.md` | **life_generator 에피소드 주입 × 액션 페어링으로 post_occurred 확보** |
+| `standing_action_schema.md` | 정기 액션 타입·일관성 규칙·impact(추후 Stage 3 참고용) |
+| `coverage_generation.md` | life_generator 에피소드 주입으로 사건/메모리 coverage 확보 |
 | `dialogue_generation_strategy.md` | 증거 계획, drift/hard-negative, mock/LLM, 검증 |
-| `mcq_design.md` | **context-dependent MCQ 재설계와 누출 방지** |
-| `history_filter.md` | 히스토리 필요성 필터, aggregate 판정 해석법 |
+| `mcq_design.md` | Stage 3 action MCQ 실험 기록(현재 공식 범위 제외) |
+| `history_filter.md` | Stage 2 memory MCQ 히스토리 필요성 필터 기록 |
 | `failure_modes.md` | 진단용 실패 유형 정의 |
 | `locale_extension_guide.md` | 새 locale 추가 절차 |

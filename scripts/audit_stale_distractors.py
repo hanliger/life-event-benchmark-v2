@@ -3,7 +3,7 @@
 
 Example:
   python scripts/audit_stale_distractors.py \
-    --items data/generated/benchmark_items/stage3_action_mcq.jsonl \
+    --items data/generated/benchmark_items/stage2_memory_mcq.jsonl \
     --prefix-gold data/generated/gold/prefix_gold.jsonl \
     --output-dir data/generated/quality_reports
 """

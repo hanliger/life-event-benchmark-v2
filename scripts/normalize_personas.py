@@ -3,10 +3,10 @@
 
 Example:
   python scripts/normalize_personas.py \
-    --input-dir nemotron-personas-korea \
+    --input-dir Nemotron-Personas-Korea \
     --locale ko_KR \
     --output data/personas/normalized/personas_ko_KR.jsonl \
-    --limit 20
+    --limit 20 --sample-random --seed 42
 """
 
 from __future__ import annotations
@@ -28,10 +28,24 @@ def main() -> int:
     parser.add_argument("--locale", default="ko_KR")
     parser.add_argument("--output", required=True)
     parser.add_argument("--limit", type=int, default=None, help="max personas (smoke runs)")
+    parser.add_argument(
+        "--sample-random",
+        action="store_true",
+        help="sample --limit personas reproducibly instead of taking the first rows",
+    )
+    parser.add_argument("--seed", type=int, default=42, help="random seed for --sample-random")
     args = parser.parse_args()
+    if args.sample_random and args.limit is None:
+        parser.error("--sample-random requires --limit")
 
     records = []
-    for raw in tqdm(iter_raw_personas(Path(args.input_dir), limit=args.limit), desc="normalize", total=args.limit):
+    raw_iter = iter_raw_personas(
+        Path(args.input_dir),
+        limit=args.limit,
+        random_sample=args.sample_random,
+        seed=args.seed,
+    )
+    for raw in tqdm(raw_iter, desc="normalize", total=args.limit):
         persona = normalize_persona(raw, locale=args.locale)
         records.append(persona.model_dump(mode="json"))
 

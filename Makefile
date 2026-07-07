@@ -4,6 +4,9 @@ SEED ?= 42
 HORIZON ?= 8
 NUM_TRAJ ?= 5
 EXECUTE ?= 0
+SAMPLE_RANDOM ?= 1
+PERSONA_INPUT ?= Nemotron-Personas-Korea
+RANDOM_SAMPLE_FLAGS := $(if $(filter 1 true yes,$(SAMPLE_RANDOM)),--sample-random --seed $(SEED),)
 
 PERSONAS := data/personas/normalized/personas_ko_KR.jsonl
 TRAJ_DIR := data/generated/trajectories
@@ -23,13 +26,13 @@ setup:
 
 inventory:
 	@echo "see docs/repo_inventory.md"
-	@ls nemotron-personas-korea/data 2>/dev/null | head -3 || echo "WARNING: persona data missing"
+	@ls $(PERSONA_INPUT)/data 2>/dev/null | head -3 || echo "WARNING: persona data missing"
 	@$(PYTHON) -c "import life_generator; print('life_generator importable')"
 
 normalize-personas:
 	$(PYTHON) scripts/normalize_personas.py \
-		--input-dir nemotron-personas-korea --locale ko_KR \
-		--output $(PERSONAS) --limit $(LIMIT)
+		--input-dir $(PERSONA_INPUT) --locale ko_KR \
+		--output $(PERSONAS) --limit $(LIMIT) $(RANDOM_SAMPLE_FLAGS)
 
 initial-states:
 	$(PYTHON) scripts/generate_initial_states.py \

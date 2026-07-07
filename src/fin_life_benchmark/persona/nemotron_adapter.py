@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import random
+from bisect import bisect_right
 from pathlib import Path
 from typing import Any, Iterator
 
@@ -36,8 +37,7 @@ def _rng_for(source_id: str, salt: str = "") -> random.Random:
     return random.Random(int(digest[:16], 16))
 
 
-def iter_raw_personas(input_dir: Path, limit: int | None = None) -> Iterator[dict[str, Any]]:
-    """Load raw personas from parquet/jsonl/json/csv files under input_dir."""
+def _persona_files(input_dir: Path) -> list[Path]:
     input_dir = Path(input_dir)
     if not input_dir.exists():
         raise FileNotFoundError(f"persona input dir not found: {input_dir}")
@@ -48,52 +48,103 @@ def iter_raw_personas(input_dir: Path, limit: int | None = None) -> Iterator[dic
     candidates = [p for p in candidates if "images" not in p.parts and ".cache" not in p.parts]
     if not candidates:
         raise FileNotFoundError(f"no persona files (*.parquet/*.jsonl/*.json/*.csv) under {input_dir}")
+    return candidates
+
+
+def _iter_persona_file(path: Path) -> Iterator[dict[str, Any]]:
+    if path.suffix == ".parquet":
+        import pandas as pd
+
+        frame = pd.read_parquet(path)
+        for record in frame.to_dict(orient="records"):
+            yield record
+    elif path.suffix == ".jsonl":
+        import json
+
+        with path.open(encoding="utf-8") as handle:
+            for line in handle:
+                line = line.strip()
+                if line:
+                    yield json.loads(line)
+    elif path.suffix == ".json":
+        import json
+
+        data = json.loads(path.read_text(encoding="utf-8"))
+        rows = data if isinstance(data, list) else [data]
+        yield from rows
+    elif path.suffix == ".csv":
+        import pandas as pd
+
+        for record in pd.read_csv(path).to_dict(orient="records"):
+            yield record
+
+
+def _iter_random_parquet_personas(candidates: list[Path], limit: int, seed: int) -> Iterator[dict[str, Any]]:
+    import pandas as pd
+    import pyarrow.parquet as pq
+
+    row_counts = [(path, pq.ParquetFile(path).metadata.num_rows) for path in candidates]
+    total_rows = sum(count for _, count in row_counts)
+    if total_rows <= 0:
+        return
+
+    sample_size = min(limit, total_rows)
+    rng = random.Random(seed)
+    sampled = rng.sample(range(total_rows), sample_size)
+
+    cumulative: list[int] = []
+    running = 0
+    for _, count in row_counts:
+        running += count
+        cumulative.append(running)
+
+    frames: dict[Path, Any] = {}
+    for global_index in sampled:
+        file_index = bisect_right(cumulative, global_index)
+        previous = cumulative[file_index - 1] if file_index else 0
+        path = row_counts[file_index][0]
+        local_index = global_index - previous
+        if path not in frames:
+            frames[path] = pd.read_parquet(path)
+        yield frames[path].iloc[int(local_index)].to_dict()
+
+
+def iter_raw_personas(
+    input_dir: Path,
+    limit: int | None = None,
+    *,
+    random_sample: bool = False,
+    seed: int = 42,
+) -> Iterator[dict[str, Any]]:
+    """Load raw personas from parquet/jsonl/json/csv files under input_dir.
+
+    By default records are yielded in file order for backwards compatibility.
+    With random_sample=True, --limit-sized samples are drawn reproducibly from
+    all candidate files instead of taking the first rows.
+    """
+    candidates = _persona_files(input_dir)
+
+    if random_sample:
+        if limit is None:
+            raise ValueError("random_sample=True requires limit")
+        if all(path.suffix == ".parquet" for path in candidates):
+            yield from _iter_random_parquet_personas(candidates, limit=limit, seed=seed)
+            return
+        records = [record for path in candidates for record in _iter_persona_file(path)]
+        rng = random.Random(seed)
+        for record in rng.sample(records, min(limit, len(records))):
+            yield record
+        return
 
     yielded = 0
     for path in candidates:
         if limit is not None and yielded >= limit:
             return
-        if path.suffix == ".parquet":
-            import pandas as pd
-
-            frame = pd.read_parquet(path)
-            if limit is not None:
-                frame = frame.head(limit - yielded)
-            for record in frame.to_dict(orient="records"):
-                yield record
-                yielded += 1
-                if limit is not None and yielded >= limit:
-                    return
-        elif path.suffix == ".jsonl":
-            import json
-
-            with path.open(encoding="utf-8") as handle:
-                for line in handle:
-                    line = line.strip()
-                    if not line:
-                        continue
-                    yield json.loads(line)
-                    yielded += 1
-                    if limit is not None and yielded >= limit:
-                        return
-        elif path.suffix == ".json":
-            import json
-
-            data = json.loads(path.read_text(encoding="utf-8"))
-            rows = data if isinstance(data, list) else [data]
-            for row in rows:
-                yield row
-                yielded += 1
-                if limit is not None and yielded >= limit:
-                    return
-        elif path.suffix == ".csv":
-            import pandas as pd
-
-            for record in pd.read_csv(path).to_dict(orient="records"):
-                yield record
-                yielded += 1
-                if limit is not None and yielded >= limit:
-                    return
+        for record in _iter_persona_file(path):
+            yield record
+            yielded += 1
+            if limit is not None and yielded >= limit:
+                return
 
 
 def _infer_employment(raw: dict[str, Any], age: int, rng: random.Random, notes: list[str]) -> OccupationState:

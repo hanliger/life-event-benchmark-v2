@@ -1,0 +1,45 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요. 자동상환 계좌 설정하러 왔습니다."},
+    {"speaker": "assistant", "text": "안녕하세요 고객님. 자동상환 계좌 설정 도와드리겠습니다. 어떤 상품에 대한 자동상환인지 말씀해 주시겠어요?"},
+    {"speaker": "user", "text": "개인 대출 상환용으로 하려고요."},
+    {"speaker": "assistant", "text": "네, 개인 대출 상환용 자동이체 계좌를 등록해 드리겠습니다. 현재 사용하시는 계좌가 있으신가요?"},
+    {"speaker": "user", "text": "네, 주거래 통장으로 하고 싶습니다."},
+    {"speaker": "assistant", "text": "알겠습니다. 주거래 통장 번호 확인 부탁드립니다."},
+    {"speaker": "user", "text": "여기 통장 가져왔습니다."},
+    {"speaker": "assistant", "text": "확인했습니다. 이 계좌에서 매달 대출 상환금이 자동으로 출금되도록 설정하는 방식입니다. 괜찮으실까요?"},
+    {"speaker": "user", "text": "네, 그렇게 해주세요."},
+    {"speaker": "assistant", "text": "출금 희망일은 언제로 설정해 드릴까요?"},
+    {"speaker": "user", "text": "월급 들어오는 날 다음날로 해주세요."},
+    {"speaker": "assistant", "text": "알겠습니다. 급여일 다음날로 지정하겠습니다. 상환 금액은 고정 금액으로 하시겠습니까?"},
+    {"speaker": "user", "text": "네, 매번 같은 금액으로요."},
+    {"speaker": "assistant", "text": "네, 고정 금액으로 진행하겠습니다. 혹시 이 계좌로 다른 목적의 자금도 함께 관리하실 계획이신가요?"},
+    {"speaker": "user", "text": "네, 사실 친구한테 빌린 돈 상환도 이 계좌로 같이 하려고요."},
+    {"speaker": "assistant", "text": "네, 말씀 감사합니다. 다만 자동상환 설정은 대출 상환 목적으로만 처리되며, 개인 간 송금은 별도로 이체하셔야 합니다. 참고 부탁드립니다."},
+    {"speaker": "user", "text": "아, 그렇군요. 알겠습니다."},
+    {"speaker": "assistant", "text": "혹시 개인 송금도 자동이체로 설정을 원하시면 별도 계좌나 이체 등록이 필요합니다. 원하시나요?"},
+    {"speaker": "user", "text": "아니요, 그건 제가 직접 보낼게요."},
+    {"speaker": "assistant", "text": "알겠습니다. 그럼 대출 자동상환만 설정해 드리겠습니다. 잔액 부족 시 알림을 받으시겠습니까?"},
+    {"speaker": "user", "text": "네, 알림 받고 싶습니다."},
+    {"speaker": "assistant", "text": "네, 잔액 부족 알림 서비스도 함께 등록해 드리겠습니다. 문자와 앱 알림 중 어떤 방식을 선호하시나요?"},
+    {"speaker": "user", "text": "문자로 받을게요."},
+    {"speaker": "assistant", "text": "확인했습니다. 마지막으로 자동상환 시작일은 이번 달부터로 할까요, 다음 달부터로 할까요?"},
+    {"speaker": "user", "text": "다음 달부터 시작해주세요."},
+    {"speaker": "assistant", "text": "네, 다음 달 첫 출금부터 자동상환이 적용되도록 설정하겠습니다. 최종 확인 후 출금이 진행되니 안내 문자 확인 부탁드립니다."},
+    {"speaker": "user", "text": "네, 알겠습니다."},
+    {"speaker": "assistant", "text": "설정이 완료되었습니다. 추가로 궁금하신 사항 있으신가요?"},
+    {"speaker": "user", "text": "아니요, 없습니다. 감사합니다."},
+    {"speaker": "assistant", "text": "네, 이용해 주셔서 감사합니다. 좋은 하루 되세요."}
+  ],
+  "cue_annotations": [
+    {"turn_index": 14, "cue_type": "personal_debt_repayment_mention", "linked_memory_path": "life_event.no_event.friend_loan_repayment"}
+  ],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

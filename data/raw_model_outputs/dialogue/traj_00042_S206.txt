@@ -1,0 +1,43 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요. 예금 금리 좀 여쭤보려고요."},
+    {"speaker": "assistant", "text": "안녕하세요, 고객님. 어떤 종류의 예금 상품 금리를 확인해 드릴까요?"},
+    {"speaker": "user", "text": "정기예금이요. 1년짜리로요."},
+    {"speaker": "assistant", "text": "네, 1년 만기 정기예금 기준으로 현재 기본금리는 연 3.2%입니다."},
+    {"speaker": "user", "text": "우대금리 같은 것도 있나요?"},
+    {"speaker": "assistant", "text": "네, 급여이체나 자동이체 실적에 따라 최대 0.3% 추가 우대가 가능합니다."},
+    {"speaker": "user", "text": "저는 자동이체는 몇 개 있어요."},
+    {"speaker": "assistant", "text": "그러시면 우대조건 확인 후 최종 금리를 안내해 드릴 수 있습니다. 자동이체 항목을 확인해 드릴까요?"},
+    {"speaker": "user", "text": "네, 부탁드려요."},
+    {"speaker": "assistant", "text": "확인해 보니 공과금 자동이체 실적이 있으셔서 0.2% 우대 적용이 가능하십니다."},
+    {"speaker": "user", "text": "그럼 총 3.4%인가요?"},
+    {"speaker": "assistant", "text": "네, 맞습니다. 3.4%로 적용됩니다."},
+    {"speaker": "user", "text": "2년짜리는 얼마나 되나요?"},
+    {"speaker": "assistant", "text": "2년 만기 정기예금은 기본금리 3.4%, 우대 적용 시 최대 3.7%입니다."},
+    {"speaker": "user", "text": "3년은요?"},
+    {"speaker": "assistant", "text": "3년 만기는 기본금리 3.5%, 우대 적용 시 최대 3.8%로 안내드립니다."},
+    {"speaker": "user", "text": "생각보다 차이가 크지 않네요."},
+    {"speaker": "assistant", "text": "네, 최근 금리 흐름상 만기 기간별 차이가 크지 않은 편입니다."},
+    {"speaker": "user", "text": "그럼 1년짜리가 나을 것 같네요."},
+    {"speaker": "assistant", "text": "네, 자금 활용도를 고려하시면 1년 만기도 좋은 선택이 될 수 있습니다."},
+    {"speaker": "user", "text": "혹시 중도해지하면 금리가 어떻게 되나요?"},
+    {"speaker": "assistant", "text": "중도해지 시에는 약정금리보다 낮은 중도해지 이율이 적용됩니다."},
+    {"speaker": "user", "text": "얼마나 낮아지나요?"},
+    {"speaker": "assistant", "text": "가입 기간에 따라 다르지만 보통 1% 내외로 적용됩니다."},
+    {"speaker": "user", "text": "그렇군요. 알겠습니다."},
+    {"speaker": "assistant", "text": "혹시 예금 가입을 바로 진행해 드릴까요?"},
+    {"speaker": "user", "text": "아니요, 오늘은 금리만 확인하려고 했어요."},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 필요하실 때 언제든 다시 안내해 드리겠습니다."},
+    {"speaker": "user", "text": "네, 감사합니다."},
+    {"speaker": "assistant", "text": "감사합니다, 고객님. 좋은 하루 보내세요."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

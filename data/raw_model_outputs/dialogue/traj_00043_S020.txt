@@ -1,0 +1,44 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요, 이체확인증 좀 뽑으려고 하는데요"},
+    {"speaker": "assistant", "text": "안녕하세요 고객님, 이체확인증 발급 도와드리겠습니다. 어떤 거래 내역인지 확인이 필요한데요, 이체하신 날짜를 알려주실 수 있을까요?"},
+    {"speaker": "user", "text": "지난주 화요일이었나 그럴 거예요"},
+    {"speaker": "assistant", "text": "네, 확인해보겠습니다. 이체하신 계좌가 저희 은행 계좌 맞으실까요?"},
+    {"speaker": "user", "text": "네 여기 계좌 맞아요"},
+    {"speaker": "assistant", "text": "본인 명의 계좌인지 확인 부탁드리겠습니다. 신분증 가지고 오셨을까요?"},
+    {"speaker": "user", "text": "네 여기요"},
+    {"speaker": "assistant", "text": "감사합니다. 잠시만 기다려주시겠어요, 거래 내역 조회하겠습니다."},
+    {"speaker": "user", "text": "네 천천히 하세요"},
+    {"speaker": "assistant", "text": "화요일에 이체하신 건이 두 건 조회되는데요, 금액이 어느 정도였는지 기억나실까요?"},
+    {"speaker": "user", "text": "한 오십만원 정도였던 거 같은데"},
+    {"speaker": "assistant", "text": "네, 확인했습니다. 오십만원 이체 건 맞으신가요? 수취인 이름 말씀드릴까요?"},
+    {"speaker": "user", "text": "네 말해주세요"},
+    {"speaker": "assistant", "text": "김OO 님 앞으로 이체된 내역이 있습니다. 맞으실까요?"},
+    {"speaker": "user", "text": "네 맞아요 그거예요"},
+    {"speaker": "assistant", "text": "확인 감사합니다. 이체확인증에 이체 사유도 기재해드릴까요, 아니면 기본 양식으로만 발급해드릴까요?"},
+    {"speaker": "user", "text": "그냥 기본으로 해주세요"},
+    {"speaker": "assistant", "text": "네 알겠습니다. 발급하는 데 몇 분 정도 걸리는데 잠시 앉아서 기다려주시겠어요?"},
+    {"speaker": "user", "text": "네 괜찮아요"},
+    {"speaker": "assistant", "text": "이체확인증 출력이 완료됐습니다. 확인서 한 부만 필요하신가요, 여러 부 필요하신가요?"},
+    {"speaker": "user", "text": "한 부면 돼요"},
+    {"speaker": "assistant", "text": "네, 한 부 발급해드리겠습니다. 혹시 다른 날짜 이체 건도 확인이 필요하신가요?"},
+    {"speaker": "user", "text": "아니요 이거 하나만 필요해요"},
+    {"speaker": "assistant", "text": "알겠습니다. 여기 이체확인증 나왔습니다. 내용 한번 확인 부탁드리겠습니다."},
+    {"speaker": "user", "text": "네 맞네요 감사합니다"},
+    {"speaker": "assistant", "text": "혹시 이체확인증 용도가 어디 제출용이신지 여쭤봐도 될까요, 필요하시면 도장도 찍어드릴 수 있어서요"},
+    {"speaker": "user", "text": "그냥 서류 제출용이에요 도장 찍어주세요"},
+    {"speaker": "assistant", "text": "네 알겠습니다. 은행 직인 찍어서 드리겠습니다. 잠시만 기다려주세요."},
+    {"speaker": "user", "text": "네"},
+    {"speaker": "assistant", "text": "직인 날인해서 다시 드리겠습니다. 오늘 업무는 이걸로 마무리해드리면 될까요?"},
+    {"speaker": "user", "text": "네 이거면 됐어요 수고하세요"}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

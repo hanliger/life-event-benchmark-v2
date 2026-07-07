@@ -1,0 +1,43 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요. 예금 금리 좀 여쭤보려고요."},
+    {"speaker": "assistant", "text": "안녕하세요, 고객님. 어떤 종류의 예금 상품이 궁금하신가요?"},
+    {"speaker": "user", "text": "정기예금이요. 1년짜리로 알아보고 싶어서요."},
+    {"speaker": "assistant", "text": "네, 1년제 정기예금 기준으로 안내드리겠습니다. 예치 금액은 어느 정도 생각하고 계신가요?"},
+    {"speaker": "user", "text": "한 3천만 원 정도요."},
+    {"speaker": "assistant", "text": "3천만 원 기준으로는 연 3.2% 금리가 적용됩니다. 우대 조건 충족 시 3.4%까지 가능합니다."},
+    {"speaker": "user", "text": "우대 조건이 뭔가요?"},
+    {"speaker": "assistant", "text": "저희 은행 급여 이체나 카드 실적이 있으시면 우대금리가 적용됩니다. 혹시 해당되시나요?"},
+    {"speaker": "user", "text": "아니요, 지금은 해당 없어요."},
+    {"speaker": "assistant", "text": "그러시면 기본 금리 3.2%로 안내드리겠습니다. 다른 기간의 상품도 함께 비교해드릴까요?"},
+    {"speaker": "user", "text": "네, 6개월짜리도 궁금해요."},
+    {"speaker": "assistant", "text": "6개월제는 연 2.9% 금리입니다. 1년제보다는 조금 낮습니다."},
+    {"speaker": "user", "text": "그렇군요. 3년짜리는요?"},
+    {"speaker": "assistant", "text": "3년제는 연 3.5%로 가장 높습니다. 다만 중도 해지 시 이자 손실이 있을 수 있습니다."},
+    {"speaker": "user", "text": "중도 해지하면 이자가 얼마나 줄어요?"},
+    {"speaker": "assistant", "text": "가입 기간에 따라 다르지만, 1년 미만 해지 시 약정 금리의 절반 수준으로 적용됩니다."},
+    {"speaker": "user", "text": "생각보다 많이 줄어드네요."},
+    {"speaker": "assistant", "text": "네, 그래서 자금이 오래 묶여도 괜찮으신 경우에 3년제를 추천드립니다."},
+    {"speaker": "user", "text": "저는 여유 자금이라 괜찮을 것 같아요."},
+    {"speaker": "assistant", "text": "그러시면 3년제 정기예금이 적합해 보입니다. 이자 지급 방식은 만기 일시 지급과 월 지급 중 선택 가능하십니다."},
+    {"speaker": "user", "text": "만기 일시 지급이 나을까요?"},
+    {"speaker": "assistant", "text": "생활비 목적이 아니시라면 만기 일시 지급이 총 이자 면에서 유리합니다."},
+    {"speaker": "user", "text": "그럼 그걸로 할게요. 신청은 오늘 바로 되나요?"},
+    {"speaker": "assistant", "text": "네, 가능합니다. 다만 실제 가입은 고객님 확인 후 진행되며, 신분증만 확인되면 접수해드릴 수 있습니다."},
+    {"speaker": "user", "text": "신분증 여기 있습니다."},
+    {"speaker": "assistant", "text": "감사합니다. 확인 후 3년제 정기예금, 3천만 원, 만기 일시 지급으로 안내해드리겠습니다."},
+    {"speaker": "user", "text": "네, 그렇게 해주세요."},
+    {"speaker": "assistant", "text": "잠시만 기다려주시면 처리해드리겠습니다."},
+    {"speaker": "user", "text": "네, 알겠습니다. 감사합니다."},
+    {"speaker": "assistant", "text": "확인 감사합니다. 처리 완료되면 안내 문자로 알려드리겠습니다."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

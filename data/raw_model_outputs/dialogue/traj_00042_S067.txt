@@ -1,0 +1,43 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요. 거래내역 좀 확인하고 싶어서요."},
+    {"speaker": "assistant", "text": "안녕하세요, 고객님. 어떤 계좌의 거래내역을 확인하시겠습니까?"},
+    {"speaker": "user", "text": "제 입출금 통장이요. 그거 하나만 쓰고 있어요."},
+    {"speaker": "assistant", "text": "네, 확인해 드리겠습니다. 신분증 좀 보여주시겠습니까?"},
+    {"speaker": "user", "text": "네, 여기 있습니다."},
+    {"speaker": "assistant", "text": "감사합니다. 조회하실 기간을 말씀해 주시겠습니까?"},
+    {"speaker": "user", "text": "최근 석 달 정도요."},
+    {"speaker": "assistant", "text": "네, 최근 3개월 거래내역 조회해 드리겠습니다. 잠시만 기다려 주세요."},
+    {"speaker": "user", "text": "네, 천천히 봐 주세요."},
+    {"speaker": "assistant", "text": "조회 완료되었습니다. 화면으로 보여드릴까요, 아니면 출력해 드릴까요?"},
+    {"speaker": "user", "text": "출력해 주시면 좋겠어요."},
+    {"speaker": "assistant", "text": "네, 출력해 드리겠습니다. 특정 날짜나 금액 위주로 궁금하신 부분 있으세요?"},
+    {"speaker": "user", "text": "지난달에 좀 큰 금액이 나간 게 있어서 확인하려고요."},
+    {"speaker": "assistant", "text": "네, 지난달 내역 중에서 다시 한번 짚어 드리겠습니다. 대략 어느 정도 금액이었습니까?"},
+    {"speaker": "user", "text": "정확히는 모르겠는데 백만 원 넘는 거였던 것 같아요."},
+    {"speaker": "assistant", "text": "확인해 보겠습니다. 잠시만요. 지난달 15일에 백이십만 원 출금 내역이 있으시네요."},
+    {"speaker": "user", "text": "아, 맞아요. 그게 뭐였는지 확인하려고 했어요."},
+    {"speaker": "assistant", "text": "해당 거래는 창구 출금으로 기록되어 있습니다. 기억나시는 부분이 있으신가요?"},
+    {"speaker": "user", "text": "네, 이제 생각났어요. 감사합니다."},
+    {"speaker": "assistant", "text": "다행입니다. 다른 기간 내역도 더 확인해 드릴까요?"},
+    {"speaker": "user", "text": "아니요, 그거면 충분해요."},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 혹시 정기적으로 나가는 이체 내역도 함께 확인해 드릴까요?"},
+    {"speaker": "user", "text": "그것도 한번 봐 주세요."},
+    {"speaker": "assistant", "text": "확인해 드리겠습니다. 매달 통신비와 관리비가 자동이체로 나가고 계시네요."},
+    {"speaker": "user", "text": "네, 맞습니다. 금액도 잘 맞나요?"},
+    {"speaker": "assistant", "text": "네, 금액은 매달 동일하게 나가고 있어 이상 없습니다."},
+    {"speaker": "user", "text": "다행이네요. 오늘은 이 정도면 될 것 같아요."},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 출력물 챙겨드리겠습니다."},
+    {"speaker": "user", "text": "감사합니다. 수고하세요."},
+    {"speaker": "assistant", "text": "네, 고객님도 좋은 하루 보내시기 바랍니다."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

@@ -1,0 +1,43 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요. 거래내역 좀 확인하고 싶어서 왔습니다."},
+    {"speaker": "assistant", "text": "안녕하세요, 고객님. 거래내역 조회 도와드리겠습니다. 본인 확인을 위해 신분증 좀 보여주시겠어요?"},
+    {"speaker": "user", "text": "네, 여기 있습니다."},
+    {"speaker": "assistant", "text": "감사합니다. 확인되었습니다. 어느 계좌 내역을 조회해 드릴까요?"},
+    {"speaker": "user", "text": "제 이름으로 된 입출금 통장이요."},
+    {"speaker": "assistant", "text": "네, 확인했습니다. 조회 기간은 어떻게 해드릴까요?"},
+    {"speaker": "user", "text": "최근 석 달 정도 보고 싶습니다."},
+    {"speaker": "assistant", "text": "네, 최근 3개월 거래내역으로 조회해 드리겠습니다. 잠시만 기다려 주세요."},
+    {"speaker": "user", "text": "네, 천천히 하세요."},
+    {"speaker": "assistant", "text": "조회 완료되었습니다. 화면으로 보여드릴까요, 아니면 출력해 드릴까요?"},
+    {"speaker": "user", "text": "출력해서 주시면 좋겠습니다."},
+    {"speaker": "assistant", "text": "네, 출력해 드리겠습니다. 혹시 특정 거래 내용을 따로 확인하고 싶으신 건 없으신가요?"},
+    {"speaker": "user", "text": "지난달에 큰 금액 나간 게 뭔지 궁금합니다."},
+    {"speaker": "assistant", "text": "확인해 드리겠습니다. 지난달 20일에 자동이체로 나간 항목이 있는데, 확인해 드릴까요?"},
+    {"speaker": "user", "text": "네, 그거 맞는지 보고 싶습니다."},
+    {"speaker": "assistant", "text": "자동이체 항목은 관리비 납부로 확인됩니다. 매달 같은 날짜에 동일한 금액으로 나가고 있습니다."},
+    {"speaker": "user", "text": "아, 그거군요. 알겠습니다."},
+    {"speaker": "assistant", "text": "네, 혹시 다른 거래 내역도 확인이 필요하신 게 있을까요?"},
+    {"speaker": "user", "text": "입금 내역도 한번 봐주세요."},
+    {"speaker": "assistant", "text": "네, 최근 입금 내역 보여드리겠습니다. 정기적으로 들어오는 금액이 있으신데 맞으신가요?"},
+    {"speaker": "user", "text": "네, 맞습니다. 확인차 왔습니다."},
+    {"speaker": "assistant", "text": "네, 확인 도와드렸습니다. 이 내역서는 출력해서 드리겠습니다."},
+    {"speaker": "user", "text": "감사합니다. 그럼 이걸로 됐습니다."},
+    {"speaker": "assistant", "text": "네, 혹시 인터넷뱅킹으로 직접 조회하는 방법도 안내해 드릴까요?"},
+    {"speaker": "user", "text": "그것도 알려주시면 좋겠습니다."},
+    {"speaker": "assistant", "text": "네, 앱 실행 후 거래내역 조회 메뉴에서 원하시는 기간을 설정하시면 바로 확인 가능하십니다."},
+    {"speaker": "user", "text": "네, 다음엔 그렇게 해보겠습니다."},
+    {"speaker": "assistant", "text": "네, 필요하시면 창구에서도 언제든 도와드리겠습니다. 오늘 업무는 여기까지 하시면 될까요?"},
+    {"speaker": "user", "text": "네, 이 정도면 됐습니다. 감사합니다."},
+    {"speaker": "assistant", "text": "네, 이용해 주셔서 감사합니다. 좋은 하루 되세요."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

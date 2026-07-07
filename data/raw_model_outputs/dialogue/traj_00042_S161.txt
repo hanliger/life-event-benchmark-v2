@@ -1,0 +1,47 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요. 거래내역 좀 확인하고 싶은데요."},
+    {"speaker": "assistant", "text": "안녕하세요, 고객님. 거래내역 조회 도와드리겠습니다. 본인 확인 먼저 진행해도 될까요?"},
+    {"speaker": "user", "text": "네, 신분증 여기 있습니다."},
+    {"speaker": "assistant", "text": "감사합니다. 확인되었습니다. 조회하실 계좌 번호 말씀해 주시겠어요?"},
+    {"speaker": "user", "text": "제 예금 계좌요. 통장 들고 왔습니다."},
+    {"speaker": "assistant", "text": "네, 확인했습니다. 조회 기간은 어느 정도로 도와드릴까요?"},
+    {"speaker": "user", "text": "지난 두 달치 정도 보고 싶습니다."},
+    {"speaker": "assistant", "text": "네, 두 달 기간으로 조회해 드리겠습니다. 잠시만 기다려 주세요."},
+    {"speaker": "user", "text": "네, 천천히 해주세요."},
+    {"speaker": "assistant", "text": "조회 완료되었습니다. 화면으로 함께 보실까요?"},
+    {"speaker": "user", "text": "네, 그렇게 해주세요."},
+    {"speaker": "assistant", "text": "여기 보시면 지난달 이체 내역이 좀 많으신데, 특정 항목 확인이 필요하신가요?"},
+    {"speaker": "user", "text": "네, 이 이체 건이요. 회사 경비 처리용 이체라 금액 확인이 필요합니다."},
+    {"speaker": "assistant", "text": "네, 해당 이체 건 금액과 날짜 다시 짚어드리겠습니다. 8월 12일에 45만 원 이체 맞으실까요?"},
+    {"speaker": "user", "text": "맞습니다. 그거 확인하려고 온 겁니다."},
+    {"speaker": "assistant", "text": "네, 정확히 8월 12일 오후 2시 15분에 45만 원 이체되셨습니다. 수취인 정보도 필요하신가요?"},
+    {"speaker": "user", "text": "네, 그것도 좀 부탁드립니다."},
+    {"speaker": "assistant", "text": "수취인은 계좌 뒷번호로만 확인 가능합니다. 뒷번호 1234로 되어 있습니다."},
+    {"speaker": "user", "text": "알겠습니다. 그거면 됩니다."},
+    {"speaker": "assistant", "text": "혹시 이 외에도 확인하고 싶으신 이체 건이 더 있으실까요?"},
+    {"speaker": "user", "text": "이번 달 것도 하나 더 있는데, 비슷한 용도입니다."},
+    {"speaker": "assistant", "text": "네, 이번 달 내역도 조회해 드리겠습니다. 잠시만 기다려 주세요."},
+    {"speaker": "user", "text": "천천히 봐주세요."},
+    {"speaker": "assistant", "text": "확인되었습니다. 9월 3일에 30만 원 이체 건이 있으신데, 이 부분 맞으실까요?"},
+    {"speaker": "user", "text": "네, 맞습니다. 감사합니다."},
+    {"speaker": "assistant", "text": "혹시 이 내역들 출력이나 문서로도 필요하신가요?"},
+    {"speaker": "user", "text": "네, 출력해서 가져가고 싶습니다."},
+    {"speaker": "assistant", "text": "네, 바로 출력해 드리겠습니다. 잠시만 기다려 주세요."},
+    {"speaker": "user", "text": "네, 감사합니다."},
+    {"speaker": "assistant", "text": "출력물 여기 있습니다. 더 필요하신 부분 있으실까요?"},
+    {"speaker": "user", "text": "아니요, 이걸로 충분합니다. 수고하셨습니다."},
+    {"speaker": "assistant", "text": "네, 오늘 이용해 주셔서 감사합니다. 좋은 하루 보내세요."}
+  ],
+  "cue_annotations": [
+    {"turn_index": 12, "cue_type": "explicit_purpose_mention", "linked_memory_path": "life_event.no_event.transaction_purpose"}
+  ],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

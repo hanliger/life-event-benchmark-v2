@@ -1,0 +1,43 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요. 예금 금리 좀 알아보러 왔습니다."},
+    {"speaker": "assistant", "text": "안녕하세요, 고객님. 예금 금리 문의 도와드리겠습니다. 어떤 종류의 예금을 생각하고 계신가요?"},
+    {"speaker": "user", "text": "정기예금이요. 1년짜리로 보고 있습니다."},
+    {"speaker": "assistant", "text": "네, 현재 저희 은행 1년 만기 정기예금 기본 금리는 연 3.5%입니다. 우대금리 적용 시 최대 3.8%까지 가능합니다."},
+    {"speaker": "user", "text": "우대금리는 어떻게 받나요?"},
+    {"speaker": "assistant", "text": "급여이체나 자동이체 실적, 카드 사용 실적 등이 있으면 우대금리 항목에 해당됩니다. 고객님 거래 내역 확인해드릴까요?"},
+    {"speaker": "user", "text": "네, 확인 부탁드립니다."},
+    {"speaker": "assistant", "text": "잠시만요. 확인해보니 고객님은 자동이체 실적이 있어 0.2% 우대 적용 가능하십니다."},
+    {"speaker": "user", "text": "그럼 3.7% 정도 되는 거네요."},
+    {"speaker": "assistant", "text": "네, 맞습니다. 다른 우대 조건도 확인해드릴까요?"},
+    {"speaker": "user", "text": "아니요, 괜찮습니다. 그 정도면 충분해요."},
+    {"speaker": "assistant", "text": "알겠습니다. 혹시 예치 금액은 어느 정도로 생각하고 계신가요?"},
+    {"speaker": "user", "text": "한 3천만 원 정도 생각하고 있습니다."},
+    {"speaker": "assistant", "text": "그 금액이면 이자가 세전 기준 연간 약 111만 원 정도 됩니다. 참고하시면 됩니다."},
+    {"speaker": "user", "text": "세후로는 얼마 정도 되나요?"},
+    {"speaker": "assistant", "text": "이자소득세 15.4% 제외하면 세후 약 94만 원 정도 되실 것 같습니다."},
+    {"speaker": "user", "text": "생각보다 괜찮네요."},
+    {"speaker": "assistant", "text": "네, 다른 상품과 비교도 원하시면 안내해드릴 수 있습니다."},
+    {"speaker": "user", "text": "다른 은행이랑 비교하면 어떤가요?"},
+    {"speaker": "assistant", "text": "타행 대비 저희 은행이 소폭 높은 편입니다. 다만 우대조건은 은행마다 다르니 참고 부탁드립니다."},
+    {"speaker": "user", "text": "그렇군요. 만기는 자동 연장되나요?"},
+    {"speaker": "assistant", "text": "고객님께서 원하시는 경우에만 진행됩니다. 만기 시 저희가 안내드리고 확인 후 처리해드립니다."},
+    {"speaker": "user", "text": "그럼 지금 바로 가입은 안 하고, 좀 더 생각해볼게요."},
+    {"speaker": "assistant", "text": "네, 천천히 결정하셔도 괜찮습니다. 오늘 확인하신 금리 정보는 문자로도 보내드릴까요?"},
+    {"speaker": "user", "text": "네, 그렇게 해주세요."},
+    {"speaker": "assistant", "text": "알겠습니다. 등록된 번호로 안내 문자 발송해드리겠습니다."},
+    {"speaker": "user", "text": "감사합니다."},
+    {"speaker": "assistant", "text": "네, 추가로 궁금하신 사항 있으실까요?"},
+    {"speaker": "user", "text": "아니요, 오늘은 이걸로 됐습니다."},
+    {"speaker": "assistant", "text": "네, 방문해주셔서 감사합니다. 좋은 하루 보내세요."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

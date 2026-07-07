@@ -1,0 +1,45 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요. 이체할 곳 등록하러 왔습니다."},
+    {"speaker": "assistant", "text": "안녕하세요, 고객님. 수취인 등록 도와드리겠습니다. 어떤 계좌를 등록하실지 말씀해 주시겠어요?"},
+    {"speaker": "user", "text": "네, 자주 보낼 계좌 하나 등록하려고요."},
+    {"speaker": "assistant", "text": "네, 먼저 수취인 성함을 알려주시겠어요?"},
+    {"speaker": "user", "text": "박정우입니다."},
+    {"speaker": "assistant", "text": "감사합니다. 계좌번호와 은행명도 확인 부탁드립니다."},
+    {"speaker": "user", "text": "국민은행이고, 계좌번호는 문자로 보내드릴게요."},
+    {"speaker": "assistant", "text": "네, 확인했습니다. 국민은행 계좌로 등록 진행하면 될까요?"},
+    {"speaker": "user", "text": "네, 맞습니다."},
+    {"speaker": "assistant", "text": "등록 사유를 여쭤봐도 될까요? 간단히 말씀해 주시면 됩니다."},
+    {"speaker": "user", "text": "회사 경비 처리용 이체라서요."},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 정기적으로 보내실 계좌인가요, 아니면 필요할 때마다 보내실 건가요?"},
+    {"speaker": "user", "text": "필요할 때마다 보낼 것 같습니다."},
+    {"speaker": "assistant", "text": "네, 확인했습니다. 본인 확인을 위해 등록하신 휴대폰으로 인증번호를 보내드리겠습니다."},
+    {"speaker": "user", "text": "네, 확인해보겠습니다."},
+    {"speaker": "assistant", "text": "문자 받으셨으면 인증번호 알려주시겠어요?"},
+    {"speaker": "user", "text": "네, 지금 받았습니다. 123456이요."},
+    {"speaker": "assistant", "text": "확인되었습니다. 수취인 등록 처리 중이니 잠시만 기다려주세요."},
+    {"speaker": "user", "text": "네, 알겠습니다."},
+    {"speaker": "assistant", "text": "등록 완료되었습니다. 추가로 확인하실 사항 있으실까요?"},
+    {"speaker": "user", "text": "등록된 수취인한테 이체 한도는 어떻게 되나요?"},
+    {"speaker": "assistant", "text": "신규 등록 계좌는 일정 시간 동안 이체 한도가 제한될 수 있습니다. 자세한 한도는 앱에서 확인 가능합니다."},
+    {"speaker": "user", "text": "나중에 상태는 어디서 볼 수 있나요?"},
+    {"speaker": "assistant", "text": "모바일뱅킹 앱의 수취인 관리 메뉴에서 확인하실 수 있습니다."},
+    {"speaker": "user", "text": "혹시 등록에 수수료가 있나요?"},
+    {"speaker": "assistant", "text": "수취인 등록 자체에는 수수료가 없습니다. 이체 시에만 일반 수수료가 적용됩니다."},
+    {"speaker": "user", "text": "네, 감사합니다."},
+    {"speaker": "assistant", "text": "다른 문의사항 있으실까요?"},
+    {"speaker": "user", "text": "아니요, 이걸로 됐습니다."},
+    {"speaker": "assistant", "text": "네, 이용해 주셔서 감사합니다. 좋은 하루 보내세요."}
+  ],
+  "cue_annotations": [
+    {"turn_index": 10, "cue_type": "company_expense_transfer_mention", "linked_memory_path": "financial_task.recipient_registration.purpose"}
+  ],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

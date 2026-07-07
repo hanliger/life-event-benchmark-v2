@@ -1,0 +1,45 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요. 카드 관련해서 여쭤볼 게 있어서요."},
+    {"speaker": "assistant", "text": "안녕하세요, 고객님. 어떤 부분이 궁금하신가요?"},
+    {"speaker": "user", "text": "카드를 며칠째 못 찾고 있어서요. 집 안에서도 안 보이네요."},
+    {"speaker": "assistant", "text": "네, 걱정되시겠습니다. 혹시 마지막으로 카드를 사용하신 게 언제인지 기억나시나요?"},
+    {"speaker": "user", "text": "지난주쯔음인 것 같은데. 정확히는 잘 모르겠어요."},
+    {"speaker": "assistant", "text": "괜찮습니다. 이용내역을 함께 확인해보면 도움이 될 것 같습니다. 잠시 조회해드리겠습니다."},
+    {"speaker": "user", "text": "네, 확인해주세요."},
+    {"speaker": "assistant", "text": "확인해보니 지난주 화요일에 이체 내역이 있으시네요. 이후로는 카드 사용 기록이 없습니다."},
+    {"speaker": "user", "text": "아, 그건 친구한테 빌린 돈 상환한 거예요. 그거 말고는 없나요?"},
+    {"speaker": "assistant", "text": "네, 그 이후로 사용 내역은 확인되지 않습니다. 그럼 카드는 화요일 이후로 사용 안 하신 것 맞으실까요?"},
+    {"speaker": "user", "text": "네, 그런 것 같아요."},
+    {"speaker": "assistant", "text": "알겠습니다. 카드가 계속 안 보이신다면 이용을 막아두는 것이 안전할 것 같습니다. 진행해드릴까요?"},
+    {"speaker": "user", "text": "그렇게 해주세요."},
+    {"speaker": "assistant", "text": "네, 다만 이용 중단은 되돌리기 어려운 조치라 고객님 본인 확인 후 진행됩니다. 신분증 확인 도와드릴 수 있을까요?"},
+    {"speaker": "user", "text": "여기 있습니다."},
+    {"speaker": "assistant", "text": "확인 감사합니다. 이용 중단 처리와 함께 새 카드를 신청해드릴 수 있는데, 진행 원하시나요?"},
+    {"speaker": "user", "text": "네, 새 카드도 하나 만들어주세요."},
+    {"speaker": "assistant", "text": "알겠습니다. 새 카드 배송지는 기존 주소로 동일하게 진행할까요?"},
+    {"speaker": "user", "text": "네, 그대로 해주세요."},
+    {"speaker": "assistant", "text": "네, 확인했습니다. 카드 수령까지는 통상 5일 정도 소요됩니다."},
+    {"speaker": "user", "text": "알겠습니다. 그동안은 결제가 안 되는 거죠?"},
+    {"speaker": "assistant", "text": "네, 이용 중단 처리 이후에는 해당 카드로 결제가 불가하십니다."},
+    {"speaker": "user", "text": "혹시 자동이체 되는 것도 문제 생기나요?"},
+    {"speaker": "assistant", "text": "카드 연결된 자동이체가 있으시면 새 카드 수령 후 다시 연결해드려야 합니다. 확인해드릴까요?"},
+    {"speaker": "user", "text": "네, 부탁드립니다."},
+    {"speaker": "assistant", "text": "확인해보니 통신비 자동이체 한 건 연결되어 있습니다. 카드 수령 후 안내드리겠습니다."},
+    {"speaker": "user", "text": "네, 감사합니다."},
+    {"speaker": "assistant", "text": "혹시 추가로 궁금하신 점 있으실까요?"},
+    {"speaker": "user", "text": "아니요, 없습니다."},
+    {"speaker": "assistant", "text": "네, 처리 도와드렸습니다. 좋은 하루 되십시오."}
+  ],
+  "cue_annotations": [
+    {"turn_index": 8, "cue_type": "life_event_indirect", "linked_memory_path": "friend_loan_repayment"}
+  ],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

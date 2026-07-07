@@ -1,0 +1,45 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요. 주소 변경하러 왔습니다."},
+    {"speaker": "assistant", "text": "네, 고객님. 등록되어 있는 주소를 새 주소로 변경해드리겠습니다. 신분증 확인 부탁드립니다."},
+    {"speaker": "user", "text": "여기 있습니다."},
+    {"speaker": "assistant", "text": "확인했습니다. 변경하실 새 주소를 말씀해 주시겠어요?"},
+    {"speaker": "user", "text": "용인시 처인구 쪽입니다. 자세한 건 여기 적어드릴게요."},
+    {"speaker": "assistant", "text": "감사합니다. 우편물 수령 주소도 동일하게 변경할까요?"},
+    {"speaker": "user", "text": "네, 같이 해주세요."},
+    {"speaker": "assistant", "text": "알겠습니다. 혹시 등록되어 있는 연락처도 변경이 필요하신가요?"},
+    {"speaker": "user", "text": "아니요, 전화번호는 그대로입니다."},
+    {"speaker": "assistant", "text": "네, 그럼 주소만 변경 진행하겠습니다. 잠시만 기다려 주세요."},
+    {"speaker": "user", "text": "네, 천천히 하셔도 됩니다."},
+    {"speaker": "assistant", "text": "확인 중입니다. 참고로 계좌에 연결된 자동이체 항목은 그대로 유지됩니다."},
+    {"speaker": "user", "text": "아, 동호회 회비 정기이체도 그대로 되나요?"},
+    {"speaker": "assistant", "text": "네, 정기이체는 주소 변경과 무관하게 기존 설정대로 유지됩니다."},
+    {"speaker": "user", "text": "다행이네요. 그건 계속 나가야 해서요."},
+    {"speaker": "assistant", "text": "네, 별도로 변경 요청 안 하시면 그대로 진행됩니다."},
+    {"speaker": "user", "text": "네, 그건 안 건드려도 됩니다."},
+    {"speaker": "assistant", "text": "알겠습니다. 그럼 주소 변경만 진행하겠습니다."},
+    {"speaker": "user", "text": "네, 부탁드립니다."},
+    {"speaker": "assistant", "text": "처리 완료되었습니다. 확인해 보시겠어요?"},
+    {"speaker": "user", "text": "네. 맞습니다."},
+    {"speaker": "assistant", "text": "혹시 명세서 수령 방식도 확인이 필요하실까요?"},
+    {"speaker": "user", "text": "그건 지금 그대로 우편으로 받고 있습니다."},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 새 주소로 계속 우편 발송해드리겠습니다."},
+    {"speaker": "user", "text": "네, 감사합니다."},
+    {"speaker": "assistant", "text": "추가로 변경하실 정보 있으실까요?"},
+    {"speaker": "user", "text": "아니요, 이거면 됐습니다."},
+    {"speaker": "assistant", "text": "네, 그럼 오늘 주소 변경 업무는 여기서 마무리하겠습니다."},
+    {"speaker": "user", "text": "수고하셨습니다."},
+    {"speaker": "assistant", "text": "감사합니다, 좋은 하루 되세요."}
+  ],
+  "cue_annotations": [
+    {"turn_index": 13, "cue_type": "동호회 회비 정기이체", "linked_memory_path": "customer.recurring_transfer.club_fee"}
+  ],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

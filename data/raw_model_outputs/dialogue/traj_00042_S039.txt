@@ -1,0 +1,43 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요. 예금 금리 좀 여쭤보려고 왔습니다."},
+    {"speaker": "assistant", "text": "안녕하세요, 고객님. 어떤 종류의 예금 상품을 알아보고 계신가요?"},
+    {"speaker": "user", "text": "정기예금 금리가 궁금해서요."},
+    {"speaker": "assistant", "text": "네, 정기예금은 가입 기간에 따라 금리가 다릅니다. 생각하고 계신 예치 기간이 있으신가요?"},
+    {"speaker": "user", "text": "1년 정도 생각하고 있습니다."},
+    {"speaker": "assistant", "text": "1년 정기예금은 현재 기본 금리 연 3.2퍼센트로 안내되고 있습니다."},
+    {"speaker": "user", "text": "우대 조건 같은 것도 있나요?"},
+    {"speaker": "assistant", "text": "네, 저희 은행 급여 이체나 자동이체 실적이 있으시면 최대 0.3퍼센트포인트 추가 우대가 가능합니다."},
+    {"speaker": "user", "text": "저는 급여 이체는 해당 안 됩니다."},
+    {"speaker": "assistant", "text": "그러시면 기본 금리 기준으로 안내드리는 게 맞을 것 같습니다. 혹시 예치하실 금액 규모는 정해두셨나요?"},
+    {"speaker": "user", "text": "3천만 원 정도 생각하고 있습니다."},
+    {"speaker": "assistant", "text": "3천만 원이시면 일반 정기예금과 특판 예금 두 가지를 비교해 드릴 수 있는데, 들어보시겠어요?"},
+    {"speaker": "user", "text": "네, 말씀해 주세요."},
+    {"speaker": "assistant", "text": "일반 정기예금은 연 3.2퍼센트이고, 이번 달 한시 특판은 연 3.5퍼센트입니다. 다만 특판은 중도해지 시 이자율이 낮아지는 점 참고 부탁드립니다."},
+    {"speaker": "user", "text": "중도해지 하게 되면 얼마나 낮아지나요?"},
+    {"speaker": "assistant", "text": "중도해지 시에는 경과 기간에 따라 다르지만 대략 연 1퍼센트 내외로 적용됩니다."},
+    {"speaker": "user", "text": "그렇군요. 만기까지 유지하는 게 나을 것 같네요."},
+    {"speaker": "assistant", "text": "네, 자금을 계속 두실 계획이시라면 특판 상품이 더 유리하실 수 있습니다."},
+    {"speaker": "user", "text": "이자는 매달 받을 수 있나요, 아니면 만기에 받나요?"},
+    {"speaker": "assistant", "text": "월 지급식과 만기 일시 지급식 중 선택하실 수 있습니다. 어떤 방식이 편하신가요?"},
+    {"speaker": "user", "text": "만기에 한 번에 받는 게 나을 것 같습니다."},
+    {"speaker": "assistant", "text": "알겠습니다. 만기 일시 지급식으로 안내드리겠습니다. 세금 관련해서는 일반과세로 진행하시면 될까요?"},
+    {"speaker": "user", "text": "네, 일반과세로 해주세요."},
+    {"speaker": "assistant", "text": "확인했습니다. 오늘은 금리 안내만 받으시는 건가요, 아니면 가입까지 진행하시겠습니까?"},
+    {"speaker": "user", "text": "오늘은 금리만 확인하고 다음에 다시 오겠습니다."},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 특판 금리는 이번 달 말까지 적용된다는 점만 참고해 주시면 좋겠습니다."},
+    {"speaker": "user", "text": "네, 알겠습니다. 감사합니다."},
+    {"speaker": "assistant", "text": "감사합니다, 고객님. 추가로 궁금하신 점 있으시면 언제든 다시 방문해 주세요."},
+    {"speaker": "user", "text": "네, 수고하세요."},
+    {"speaker": "assistant", "text": "네, 편안한 하루 되십시오."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

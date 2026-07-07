@@ -1,0 +1,45 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요. 거래내역 좀 확인하고 싶은데요."},
+    {"speaker": "assistant", "text": "안녕하세요, 고객님. 어떤 계좌의 거래내역을 확인해 드릴까요?"},
+    {"speaker": "user", "text": "제 입출금 통장이요. 최근 석 달치요."},
+    {"speaker": "assistant", "text": "네, 본인 확인 먼저 진행하겠습니다. 신분증 좀 보여주시겠어요?"},
+    {"speaker": "user", "text": "여기 있습니다."},
+    {"speaker": "assistant", "text": "확인 감사합니다. 성함과 생년월일 확인됐습니다. 계좌번호는 뒷자리 알고 계신가요?"},
+    {"speaker": "user", "text": "1234로 끝나는 계좌요."},
+    {"speaker": "assistant", "text": "네, 조회해 드리겠습니다. 잠시만 기다려 주세요."},
+    {"speaker": "user", "text": "네, 천천히 하세요."},
+    {"speaker": "assistant", "text": "조회됐습니다. 화면으로 함께 보시겠어요, 아니면 출력해 드릴까요?"},
+    {"speaker": "user", "text": "출력해 주세요."},
+    {"speaker": "assistant", "text": "네, 출력해 드리겠습니다. 특정 기간이나 항목만 따로 확인하고 싶으신 건 있으실까요?"},
+    {"speaker": "user", "text": "매달 나가는 이체 하나가 맞는지 확인하고 싶어서요."},
+    {"speaker": "assistant", "text": "네, 어떤 항목인지 말씀해 주시면 함께 확인해 드리겠습니다."},
+    {"speaker": "user", "text": "동호회 회비 정기이체가 매달 제대로 나가고 있는지 궁금해서요."},
+    {"speaker": "assistant", "text": "네, 내역에서 확인해 드리겠습니다. 이체일이 대략 며칠쯤인지 기억나세요?"},
+    {"speaker": "user", "text": "매달 15일쯤인 것 같습니다."},
+    {"speaker": "assistant", "text": "확인해 보니 매달 15일 전후로 동일 금액이 이체되고 있네요. 금액은 3만원 맞으실까요?"},
+    {"speaker": "user", "text": "네, 맞습니다."},
+    {"speaker": "assistant", "text": "네, 세 달 모두 정상적으로 이체된 것으로 확인됩니다. 다른 항목도 확인해 드릴까요?"},
+    {"speaker": "user", "text": "아니요, 그거면 됐습니다."},
+    {"speaker": "assistant", "text": "네, 그럼 전체 내역 출력본 드리겠습니다. 확인 부탁드립니다."},
+    {"speaker": "user", "text": "네, 감사합니다."},
+    {"speaker": "assistant", "text": "혹시 이 이체 항목을 변경하거나 해지하실 계획은 없으신가요?"},
+    {"speaker": "user", "text": "아니요, 그냥 확인만 하려던 겁니다."},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 계속 유지하시는 걸로 안내드리겠습니다."},
+    {"speaker": "user", "text": "네, 그렇게 해주세요."},
+    {"speaker": "assistant", "text": "추가로 확인하실 사항 있으실까요?"},
+    {"speaker": "user", "text": "아니요, 없습니다. 수고하셨습니다."},
+    {"speaker": "assistant", "text": "네, 오늘 방문해 주셔서 감사합니다. 좋은 하루 되세요."}
+  ],
+  "cue_annotations": [
+    {"turn_index": 14, "cue_type": "explicit_cue", "linked_memory_path": "no_event.club_membership_fee_transfer"}
+  ],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

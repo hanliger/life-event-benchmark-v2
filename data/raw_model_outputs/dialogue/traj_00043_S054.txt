@@ -1,0 +1,45 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요, 주소 좀 바꾸려고요."},
+    {"speaker": "assistant", "text": "안녕하세요 고객님, 주소 변경 도와드리겠습니다. 본인 확인을 위해 신분증 좀 보여주시겠어요?"},
+    {"speaker": "user", "text": "네 여기요."},
+    {"speaker": "assistant", "text": "확인 감사합니다. 변경하실 새 주소를 말씀해 주시겠어요?"},
+    {"speaker": "user", "text": "대구 북구 쪽이고 상세 주소는 좀 있다 문자로 드릴게요."},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 우선 시군구까지만 먼저 등록해 드릴까요?"},
+    {"speaker": "user", "text": "네 그렇게 해주세요."},
+    {"speaker": "assistant", "text": "혹시 이번 주소 변경이 전체 계좌에 다 적용되는 건지, 특정 계좌만 변경하시는 건지 확인 부탁드립니다."},
+    {"speaker": "user", "text": "전체 다 바꿔주세요. 계좌는 몇 개 안 돼요."},
+    {"speaker": "assistant", "text": "네, 확인했습니다. 지금 보유 중이신 계좌가 급여통장이랑 예금통장 두 개로 나오는데 맞으실까요?"},
+    {"speaker": "user", "text": "아 그리고 여행 경비 모으는 통장 하나 더 있어요."},
+    {"speaker": "assistant", "text": "네, 확인했습니다. 그 통장도 주소 변경 대상에 포함해 드릴까요?"},
+    {"speaker": "user", "text": "네 다 똑같이 해주세요."},
+    {"speaker": "assistant", "text": "알겠습니다. 혹시 그 통장은 자동이체나 정기 납부 연결된 게 있으신가요?"},
+    {"speaker": "user", "text": "아니요 그냥 모으는 용도라 이체 같은 건 없어요."},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 그럼 세 계좌 모두 새 주소로 일괄 변경해 드리겠습니다."},
+    {"speaker": "user", "text": "네 감사합니다."},
+    {"speaker": "assistant", "text": "혹시 우편물 수령 주소도 동일하게 변경하시겠어요, 아니면 기존 주소 유지하시겠어요?"},
+    {"speaker": "user", "text": "그냥 다 새 주소로 해주세요."},
+    {"speaker": "assistant", "text": "알겠습니다. 마지막으로 연락처 변경 사항은 없으신가요?"},
+    {"speaker": "user", "text": "전화번호는 그대로예요."},
+    {"speaker": "assistant", "text": "네, 확인했습니다. 그럼 신분증상 주소와 실제 거주지가 다르실 경우 별도 서류 필요할 수 있는데, 혹시 임대차 계약서나 공공요금 고지서 지참하셨나요?"},
+    {"speaker": "user", "text": "공과금 고지서 가져왔어요."},
+    {"speaker": "assistant", "text": "네 감사합니다. 그럼 그걸로 진행하겠습니다. 잠시만 기다려 주세요."},
+    {"speaker": "user", "text": "네."},
+    {"speaker": "assistant", "text": "고객님, 주소 변경이 정상적으로 완료되었습니다. 문자로도 안내 드리겠습니다."},
+    {"speaker": "user", "text": "네 확인했어요."},
+    {"speaker": "assistant", "text": "혹시 오늘 다른 업무도 필요하신 게 있으실까요?"},
+    {"speaker": "user", "text": "아니요 이거면 됐어요."},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 이용해 주셔서 감사합니다. 좋은 하루 보내세요."}
+  ],
+  "cue_annotations": [
+    {"turn_index": 10, "cue_type": "weak_signal_no_event", "linked_memory_path": "customer.accounts.travel_savings"}
+  ],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

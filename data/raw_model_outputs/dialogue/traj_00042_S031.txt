@@ -1,0 +1,43 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요. 예금 금리 좀 여쭤보려고요."},
+    {"speaker": "assistant", "text": "안녕하세요, 고객님. 예금 금리 문의 도와드리겠습니다. 어떤 상품이 궁금하신가요?"},
+    {"speaker": "user", "text": "정기예금 금리요. 1년짜리로 알고 싶습니다."},
+    {"speaker": "assistant", "text": "네, 현재 1년 만기 정기예금 기본 금리는 연 3.2%입니다. 우대조건 적용 시 최대 3.5%까지 가능합니다."},
+    {"speaker": "user", "text": "우대조건이 뭔가요?"},
+    {"speaker": "assistant", "text": "저희 은행 급여이체나 자동이체 실적, 또는 인터넷뱅킹 가입 여부에 따라 우대금리가 적용됩니다."},
+    {"speaker": "user", "text": "저는 그런 실적은 없는데요."},
+    {"speaker": "assistant", "text": "그러시면 기본 금리인 3.2%가 적용되실 것 같습니다. 혹시 다른 만기 기간도 비교해 드릴까요?"},
+    {"speaker": "user", "text": "네, 6개월이랑 2년짜리도 알려주세요."},
+    {"speaker": "assistant", "text": "6개월 만기는 연 2.8%, 2년 만기는 연 3.4%입니다. 기간이 길수록 금리가 조금 더 높습니다."},
+    {"speaker": "user", "text": "그럼 2년이 제일 유리하겠네요."},
+    {"speaker": "assistant", "text": "네, 금리 면에서는 2년이 유리합니다. 다만 중도해지 시 금리가 낮아지니 자금 계획도 함께 고려하시는 게 좋습니다."},
+    {"speaker": "user", "text": "중도해지하면 얼마나 낮아지나요?"},
+    {"speaker": "assistant", "text": "중도해지 시에는 경과 기간에 따라 연 0.5%에서 1% 사이로 적용됩니다."},
+    {"speaker": "user", "text": "생각보다 많이 낮아지네요."},
+    {"speaker": "assistant", "text": "네, 그래서 계획하신 자금 사용 시점을 미리 고려해서 만기를 정하시는 걸 권장드립니다."},
+    {"speaker": "user", "text": "1년짜리로 하는 게 안전할 것 같긴 합니다."},
+    {"speaker": "assistant", "text": "네, 1년 만기도 안정적인 선택입니다. 예치 금액은 어느 정도 생각하고 계신가요?"},
+    {"speaker": "user", "text": "한 삼천만 원 정도요."},
+    {"speaker": "assistant", "text": "네, 삼천만 원 기준으로 1년 만기 시 세전 이자는 약 96만 원 정도 예상됩니다."},
+    {"speaker": "user", "text": "세금 떼면 얼마 정도 남나요?"},
+    {"speaker": "assistant", "text": "이자소득세 15.4% 제외하면 약 81만 원 정도 실수령하실 수 있습니다."},
+    {"speaker": "user", "text": "알겠습니다. 조금 더 고민해보고 결정할게요."},
+    {"speaker": "assistant", "text": "네, 천천히 생각해보셔도 됩니다. 오늘 바로 가입하지 않으셔도 괜찮습니다."},
+    {"speaker": "user", "text": "혹시 금리는 자주 바뀌나요?"},
+    {"speaker": "assistant", "text": "시장 상황에 따라 조정될 수 있어서, 가입 전에는 다시 한 번 확인해보시는 걸 권해드립니다."},
+    {"speaker": "user", "text": "네, 그럼 다음에 다시 문의드릴게요."},
+    {"speaker": "assistant", "text": "네, 언제든 편하게 방문해 주시면 안내해드리겠습니다."},
+    {"speaker": "user", "text": "감사합니다. 수고하세요."},
+    {"speaker": "assistant", "text": "네, 좋은 하루 보내시기 바랍니다."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

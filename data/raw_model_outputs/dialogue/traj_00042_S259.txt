@@ -1,0 +1,45 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요. 이체확인증 좀 받으러 왔습니다."},
+    {"speaker": "assistant", "text": "안녕하세요, 고객님. 이체확인증 발급 도와드리겠습니다. 어떤 거래 건인지 확인 부탁드립니다."},
+    {"speaker": "user", "text": "지난주에 보낸 이체 건입니다."},
+    {"speaker": "assistant", "text": "네, 정확한 날짜나 금액 기억나시나요?"},
+    {"speaker": "user", "text": "화요일이었고, 금액은 오십만 원입니다."},
+    {"speaker": "assistant", "text": "확인해보겠습니다. 성함과 계좌번호 뒷자리 알려주시겠어요?"},
+    {"speaker": "user", "text": "이광호이고, 뒷자리는 4523입니다."},
+    {"speaker": "assistant", "text": "조회됐습니다. 화요일 오십만 원 이체 건 맞으신가요?"},
+    {"speaker": "user", "text": "네 맞습니다."},
+    {"speaker": "assistant", "text": "이체확인증은 어떤 용도로 필요하신가요? 용도에 따라 양식이 조금 다를 수 있습니다."},
+    {"speaker": "user", "text": "회사 경비 처리용 이체라서 확인증이 필요합니다."},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 그러면 일반 거래 확인 양식으로 발급해드리면 될 것 같습니다."},
+    {"speaker": "user", "text": "네, 그렇게 해주세요."},
+    {"speaker": "assistant", "text": "발급 방식은 출력물로 드릴지, 이메일로 보내드릴지 어떻게 하시겠습니까?"},
+    {"speaker": "user", "text": "출력물로 받고 싶습니다."},
+    {"speaker": "assistant", "text": "알겠습니다. 신분증 확인 부탁드리겠습니다."},
+    {"speaker": "user", "text": "여기 있습니다."},
+    {"speaker": "assistant", "text": "확인했습니다. 잠시만 기다려주시면 출력해드리겠습니다."},
+    {"speaker": "user", "text": "네, 천천히 하세요."},
+    {"speaker": "assistant", "text": "출력 완료되었습니다. 내용 한번 확인 부탁드립니다."},
+    {"speaker": "user", "text": "네, 금액이랑 날짜 맞네요."},
+    {"speaker": "assistant", "text": "혹시 이 확인증이 회사 경비 처리 절차에서 별도 서명이나 도장이 추가로 필요하신가요?"},
+    {"speaker": "user", "text": "아니요, 그냥 이 상태로 제출하면 됩니다."},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 확인증 원본은 이대로 드리겠습니다."},
+    {"speaker": "user", "text": "감사합니다."},
+    {"speaker": "assistant", "text": "혹시 추가로 필요하신 서류나 문의사항 있으신가요?"},
+    {"speaker": "user", "text": "아니요, 이거면 충분합니다."},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 오늘 업무는 이체확인증 발급으로 마무리하겠습니다."},
+    {"speaker": "user", "text": "네, 수고하셨습니다."},
+    {"speaker": "assistant", "text": "감사합니다, 고객님. 좋은 하루 되세요."}
+  ],
+  "cue_annotations": [
+    {"turn_index": 10, "cue_type": "explicit_cue", "linked_memory_path": "life_event.expense_type.company_reimbursement"}
+  ],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

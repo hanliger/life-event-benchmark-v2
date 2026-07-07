@@ -1,0 +1,43 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요. 이체확인증 발급받으러 왔습니다."},
+    {"speaker": "assistant", "text": "안녕하세요, 고객님. 이체확인증 발급 도와드리겠습니다. 본인 확인을 위해 신분증 좀 보여주시겠어요?"},
+    {"speaker": "user", "text": "네, 여기 있습니다."},
+    {"speaker": "assistant", "text": "확인 감사합니다. 어떤 계좌에서 이루어진 이체 내역인지 알 수 있을까요?"},
+    {"speaker": "user", "text": "제 예금 계좌요. 지난주에 이체한 거예요."},
+    {"speaker": "assistant", "text": "네, 계좌번호 마지막 네 자리만 말씀해주시겠어요?"},
+    {"speaker": "user", "text": "3452입니다."},
+    {"speaker": "assistant", "text": "확인했습니다. 이체 날짜는 정확히 기억하시나요?"},
+    {"speaker": "user", "text": "지난주 화요일이었던 것 같은데요."},
+    {"speaker": "assistant", "text": "네, 조회해보겠습니다. 잠시만 기다려주세요."},
+    {"speaker": "user", "text": "네, 천천히 하세요."},
+    {"speaker": "assistant", "text": "확인됐습니다. 화요일에 이체하신 내역이 한 건 있는데, 이걸로 발급해드리면 될까요?"},
+    {"speaker": "user", "text": "네, 그거 맞습니다."},
+    {"speaker": "assistant", "text": "이체확인증은 출력본과 전자문서 두 가지로 드릴 수 있는데, 어떤 걸로 원하세요?"},
+    {"speaker": "user", "text": "출력본으로 주세요. 필요한 데가 있어서요."},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 용도는 별도로 기재하지 않아도 되는 문서로 처리해드릴까요?"},
+    {"speaker": "user", "text": "네, 그냥 일반 용도로 해주세요."},
+    {"speaker": "assistant", "text": "확인했습니다. 발급 부수는 몇 장 필요하신가요?"},
+    {"speaker": "user", "text": "두 장이면 됩니다."},
+    {"speaker": "assistant", "text": "네, 두 장 준비해드리겠습니다. 수수료는 한 장당 500원인데, 괜찮으신가요?"},
+    {"speaker": "user", "text": "네, 괜찮습니다."},
+    {"speaker": "assistant", "text": "그럼 계좌에서 수수료 차감해서 진행하겠습니다. 잠시만 기다려주세요."},
+    {"speaker": "user", "text": "네, 알겠습니다."},
+    {"speaker": "assistant", "text": "발급이 완료되었습니다. 여기 출력본 두 장 확인해보시겠어요?"},
+    {"speaker": "user", "text": "네, 잘 나왔네요."},
+    {"speaker": "assistant", "text": "혹시 이체 내역 중 다른 날짜 것도 추가로 필요하신가요?"},
+    {"speaker": "user", "text": "아니요, 이거면 충분합니다."},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 오늘 처리해드린 내용은 이체확인증 발급 두 장이었습니다. 더 필요하신 업무 있으실까요?"},
+    {"speaker": "user", "text": "없습니다. 감사합니다."},
+    {"speaker": "assistant", "text": "네, 이용해주셔서 감사합니다. 좋은 하루 보내세요."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

@@ -1,0 +1,43 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요. 이체확인증 발급받으러 왔습니다."},
+    {"speaker": "assistant", "text": "안녕하세요, 고객님. 이체확인증 발급 도와드리겠습니다. 어떤 계좌의 이체 내역인지 확인 부탁드립니다."},
+    {"speaker": "user", "text": "제 입출금 통장이요. 지난주에 이체한 거요."},
+    {"speaker": "assistant", "text": "네, 신분증 먼저 확인하겠습니다. 가지고 계신가요?"},
+    {"speaker": "user", "text": "네, 여기 있습니다."},
+    {"speaker": "assistant", "text": "감사합니다. 확인되었습니다. 이체하신 날짜를 정확히 기억하시나요?"},
+    {"speaker": "user", "text": "정확한 날짜는 잘 모르겠고, 대략 지난주 화요일쯤인 것 같습니다."},
+    {"speaker": "assistant", "text": "네, 그 기간 내역을 조회해서 찾아보겠습니다. 잠시만 기다려 주세요."},
+    {"speaker": "user", "text": "네, 천천히 하세요."},
+    {"speaker": "assistant", "text": "확인했습니다. 화요일에 이체 내역이 두 건 있는데, 금액으로 구분 가능하실까요?"},
+    {"speaker": "user", "text": "네, 오십만 원짜리요."},
+    {"speaker": "assistant", "text": "네, 오십만 원 이체 건 확인했습니다. 수취인 명의도 확인해 드릴까요?"},
+    {"speaker": "user", "text": "네, 확인해주시면 좋겠습니다."},
+    {"speaker": "assistant", "text": "수취인 성함은 김OO 님으로 되어 있습니다. 맞으신가요?"},
+    {"speaker": "user", "text": "네, 맞습니다."},
+    {"speaker": "assistant", "text": "그럼 이 내역으로 확인증 발급 진행하겠습니다. 용도는 개인 보관용이신가요, 제출용이신가요?"},
+    {"speaker": "user", "text": "제출용입니다. 어디에 낼 게 있어서요."},
+    {"speaker": "assistant", "text": "네, 제출용으로 발급해 드리겠습니다. 출력은 여기서 바로 해드릴까요, 아니면 이메일로 받으실까요?"},
+    {"speaker": "user", "text": "여기서 바로 받는 게 편하겠네요."},
+    {"speaker": "assistant", "text": "알겠습니다. 잠시만 기다려 주시면 출력해 드리겠습니다."},
+    {"speaker": "user", "text": "네, 기다리겠습니다."},
+    {"speaker": "assistant", "text": "출력 완료되었습니다. 내용 한번 확인해 주시겠어요?"},
+    {"speaker": "user", "text": "네... 이체 날짜랑 금액 다 맞네요."},
+    {"speaker": "assistant", "text": "네, 확인 감사합니다. 혹시 도장이나 서명이 추가로 필요하신가요?"},
+    {"speaker": "user", "text": "아니요, 이대로 괜찮습니다."},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 발급 건은 이 정도로 마무리해 드리면 될까요?"},
+    {"speaker": "user", "text": "네, 그거면 됐습니다."},
+    {"speaker": "assistant", "text": "네, 확인증 잘 챙겨 가시고 오늘 방문해 주셔서 감사합니다."},
+    {"speaker": "user", "text": "네, 수고하셨습니다."},
+    {"speaker": "assistant", "text": "네, 좋은 하루 보내세요, 고객님."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

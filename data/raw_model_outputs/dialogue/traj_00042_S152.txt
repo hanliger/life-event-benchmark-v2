@@ -1,0 +1,43 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요. 거래내역 좀 확인하고 싶은데요."},
+    {"speaker": "assistant", "text": "안녕하세요, 고객님. 거래내역 조회 도와드리겠습니다. 본인 확인을 위해 신분증 좀 보여주시겠어요?"},
+    {"speaker": "user", "text": "네, 여기 있습니다."},
+    {"speaker": "assistant", "text": "확인 감사합니다. 어느 계좌 내역을 확인해 드릴까요?"},
+    {"speaker": "user", "text": "제 예금 계좌요. 통장 여기 있어요."},
+    {"speaker": "assistant", "text": "네, 확인했습니다. 조회 기간은 어떻게 설정해 드릴까요?"},
+    {"speaker": "user", "text": "최근 석 달 정도만 보여주세요."},
+    {"speaker": "assistant", "text": "네, 최근 3개월 거래내역 조회해 드리겠습니다. 잠시만 기다려 주세요."},
+    {"speaker": "user", "text": "네, 천천히 하세요."},
+    {"speaker": "assistant", "text": "조회 완료됐습니다. 화면으로 보여드릴까요, 아니면 출력해 드릴까요?"},
+    {"speaker": "user", "text": "출력해 주시면 좋겠어요."},
+    {"speaker": "assistant", "text": "네, 바로 출력해 드리겠습니다. 혹시 특정 거래 건을 따로 확인하고 싶으신가요?"},
+    {"speaker": "user", "text": "지난달 초에 큰 금액 입금된 게 있었는데 그거 좀 자세히 보고 싶어요."},
+    {"speaker": "assistant", "text": "네, 해당 날짜로 조회해 드리겠습니다. 정확한 날짜 기억하시나요?"},
+    {"speaker": "user", "text": "정확히는 모르겠고 월초쯤일 거예요."},
+    {"speaker": "assistant", "text": "알겠습니다. 해당 기간 내역 찾아드리겠습니다. 잠시만요."},
+    {"speaker": "user", "text": "네."},
+    {"speaker": "assistant", "text": "확인했습니다. 3일에 입금 내역이 하나 있는데 이건가요?"},
+    {"speaker": "user", "text": "맞아요, 그거예요."},
+    {"speaker": "assistant", "text": "네, 이 내역 포함해서 전체 출력해 드리겠습니다. 다른 계좌도 함께 확인하시겠어요?"},
+    {"speaker": "user", "text": "아니요, 이 계좌만 보면 돼요."},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 출력물 정리해서 드리겠습니다."},
+    {"speaker": "user", "text": "감사합니다."},
+    {"speaker": "assistant", "text": "혹시 최근 거래 중 확인이 안 되는 부분이나 문의사항 있으신가요?"},
+    {"speaker": "user", "text": "아니요, 다 확인했어요. 깔끔하네요."},
+    {"speaker": "assistant", "text": "다행입니다. 출력본 여기 있습니다. 확인해 보시겠어요?"},
+    {"speaker": "user", "text": "네, 잘 나왔네요."},
+    {"speaker": "assistant", "text": "네, 오늘 업무는 이걸로 마무리해 드리면 될까요?"},
+    {"speaker": "user", "text": "네, 됐습니다. 수고하세요."},
+    {"speaker": "assistant", "text": "네, 감사합니다. 좋은 하루 되세요, 고객님."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

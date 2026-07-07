@@ -1,0 +1,44 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요. 이체확인증 좀 발급받으려고 왔습니다."},
+    {"speaker": "assistant", "text": "안녕하세요, 고객님. 이체확인증 발급 도와드리겠습니다. 어떤 거래에 대한 확인증이 필요하신가요?"},
+    {"speaker": "user", "text": "지난주에 이체한 건이요."},
+    {"speaker": "assistant", "text": "네, 정확한 날짜를 알려주시면 조회가 빠를 것 같습니다."},
+    {"speaker": "user", "text": "음, 아마 화요일이었을 겁니다."},
+    {"speaker": "assistant", "text": "확인해보겠습니다. 본인 확인을 위해 신분증 좀 보여주시겠어요?"},
+    {"speaker": "user", "text": "네, 여기 있습니다."},
+    {"speaker": "assistant", "text": "감사합니다. 성함과 생년월일 확인했습니다. 계좌번호도 알려주시겠어요?"},
+    {"speaker": "user", "text": "잠시만요, 여기 통장에 있네요."},
+    {"speaker": "assistant", "text": "네, 확인했습니다. 조회해보니 화요일에 이체 내역이 하나 있으시네요. 이 건이 맞으실까요?"},
+    {"speaker": "user", "text": "네, 맞습니다."},
+    {"speaker": "assistant", "text": "금액은 삼십만 원, 수취인은 개인 계좌로 되어 있는데 확인 부탁드립니다."},
+    {"speaker": "user", "text": "네, 그 건 맞아요."},
+    {"speaker": "assistant", "text": "알겠습니다. 이체확인증은 서면 발급과 이메일 발급 중 어떤 방식을 원하시나요?"},
+    {"speaker": "user", "text": "서면으로 받고 싶습니다."},
+    {"speaker": "assistant", "text": "네, 서면으로 준비해드리겠습니다. 잠시만 기다려주시겠어요?"},
+    {"speaker": "user", "text": "네, 기다리겠습니다."},
+    {"speaker": "assistant", "text": "출력 중입니다. 혹시 다른 이체 건도 함께 확인증이 필요하신가요?"},
+    {"speaker": "user", "text": "아니요, 이 건만 필요합니다."},
+    {"speaker": "assistant", "text": "알겠습니다. 확인증에 들어갈 용도는 특별히 기재할 내용이 있으실까요?"},
+    {"speaker": "user", "text": "아니요, 그냥 일반 확인용으로 해주세요."},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 곧 출력 완료됩니다."},
+    {"speaker": "user", "text": "감사합니다."},
+    {"speaker": "assistant", "text": "여기 이체확인증 나왔습니다. 내용 한번 확인해주시겠어요?"},
+    {"speaker": "user", "text": "네, 날짜랑 금액 맞네요."},
+    {"speaker": "assistant", "text": "다행입니다. 혹시 사본도 한 부 더 필요하신가요?"},
+    {"speaker": "user", "text": "아니요, 한 부면 충분합니다."},
+    {"speaker": "assistant", "text": "알겠습니다. 오늘 도와드릴 업무는 이걸로 다 처리된 걸까요?"},
+    {"speaker": "user", "text": "네, 이걸로 됐습니다."},
+    {"speaker": "assistant", "text": "네, 이용해주셔서 감사합니다. 좋은 하루 보내세요."},
+    {"speaker": "user", "text": "네, 수고하세요."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

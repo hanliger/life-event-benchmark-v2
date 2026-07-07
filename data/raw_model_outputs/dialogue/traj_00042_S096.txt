@@ -1,0 +1,43 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요. 입금 알림 설정하러 왔습니다."},
+    {"speaker": "assistant", "text": "안녕하세요, 고객님. 입금 알림 서비스 신청 도와드리겠습니다. 어느 계좌에 설정해 드릴까요?"},
+    {"speaker": "user", "text": "제 주거래 통장이요. 이거 하나면 됩니다."},
+    {"speaker": "assistant", "text": "네, 확인해보겠습니다. 신분증 좀 보여주시겠어요?"},
+    {"speaker": "user", "text": "여기 있습니다."},
+    {"speaker": "assistant", "text": "감사합니다. 본인 확인 완료되었습니다. 알림은 문자와 앱 푸시 중 어떤 방식으로 받으시겠어요?"},
+    {"speaker": "user", "text": "문자로 받고 싶습니다."},
+    {"speaker": "assistant", "text": "네, 문자 알림으로 설정하겠습니다. 알림받으실 휴대폰 번호가 등록된 번호와 동일한가요?"},
+    {"speaker": "user", "text": "네, 그대로입니다."},
+    {"speaker": "assistant", "text": "알겠습니다. 입금 금액 제한 없이 모든 입금 건에 대해 알림 받으시겠어요?"},
+    {"speaker": "user", "text": "네, 그냥 다 받고 싶어요."},
+    {"speaker": "assistant", "text": "네, 전체 입금 건 알림으로 설정하겠습니다. 출금 알림도 함께 받으시겠습니까?"},
+    {"speaker": "user", "text": "출금은 필요 없어요. 입금만요."},
+    {"speaker": "assistant", "text": "네, 입금 알림만 설정해드리겠습니다. 잠시만 기다려주세요."},
+    {"speaker": "user", "text": "네, 천천히 하세요."},
+    {"speaker": "assistant", "text": "설정 완료되었습니다. 오늘부터 입금이 발생하면 문자로 안내드립니다."},
+    {"speaker": "user", "text": "감사합니다. 확인 문자는 언제쯤 오나요?"},
+    {"speaker": "assistant", "text": "실제 입금이 발생하는 즉시 발송됩니다. 테스트 문자는 지금 바로 보내드릴까요?"},
+    {"speaker": "user", "text": "네, 한번 보내주세요."},
+    {"speaker": "assistant", "text": "네, 테스트 문자 발송했습니다. 정상적으로 수신되셨는지 확인 부탁드립니다."},
+    {"speaker": "user", "text": "네, 방금 받았습니다."},
+    {"speaker": "assistant", "text": "확인 감사합니다. 알림 문구에 입금자명과 금액이 함께 표시됩니다."},
+    {"speaker": "user", "text": "네, 좋네요."},
+    {"speaker": "assistant", "text": "혹시 알림 수신 시간대를 제한하고 싶으신가요? 예를 들어 야간에는 받지 않도록 설정도 가능합니다."},
+    {"speaker": "user", "text": "아니요, 그냥 항상 받겠습니다."},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 그럼 모든 시간대에 알림 받으시는 걸로 마무리하겠습니다."},
+    {"speaker": "user", "text": "네, 이제 다 된 건가요?"},
+    {"speaker": "assistant", "text": "네, 입금 알림 설정 모두 완료되었습니다. 추가로 필요하신 사항 있으실까요?"},
+    {"speaker": "user", "text": "아니요, 없습니다. 감사합니다."},
+    {"speaker": "assistant", "text": "네, 이용해 주셔서 감사합니다. 좋은 하루 보내세요."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

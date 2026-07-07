@@ -1,0 +1,43 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요. 예금 금리 좀 여쭤보려고 왔습니다."},
+    {"speaker": "assistant", "text": "안녕하세요, 고객님. 예금 금리 문의 도와드리겠습니다. 어떤 종류의 예금을 생각하고 계신가요?"},
+    {"speaker": "user", "text": "정기예금이요. 1년짜리로 알아보고 있습니다."},
+    {"speaker": "assistant", "text": "네, 1년 만기 정기예금 기준으로 안내드리겠습니다. 예치하실 금액대는 어느 정도로 생각하고 계신가요?"},
+    {"speaker": "user", "text": "한 삼천만 원 정도 생각하고 있습니다."},
+    {"speaker": "assistant", "text": "삼천만 원 기준으로 현재 1년 정기예금 금리는 연 3.4%입니다. 우대금리 조건을 충족하시면 추가로 0.2%포인트 더 받으실 수 있습니다."},
+    {"speaker": "user", "text": "우대금리 조건이 뭔가요?"},
+    {"speaker": "assistant", "text": "저희 은행 급여통장을 보유하시거나 자동이체를 3건 이상 등록하시면 우대금리가 적용됩니다."},
+    {"speaker": "user", "text": "저는 자동이체가 몇 건 있긴 한데 정확히 몇 건인지 모르겠네요."},
+    {"speaker": "assistant", "text": "확인해드리겠습니다. 성함과 생년월일 말씀해 주시겠습니까?"},
+    {"speaker": "user", "text": "이광호입니다. 생년월일은 저기, 뒷자리는 생략해도 될까요?"},
+    {"speaker": "assistant", "text": "네, 성함만으로 조회 가능합니다. 잠시만 기다려 주세요."},
+    {"speaker": "assistant", "text": "확인해보니 자동이체가 2건 등록되어 있으시네요. 한 건만 더 등록하시면 우대금리 적용이 가능합니다."},
+    {"speaker": "user", "text": "그렇군요. 그럼 3년짜리 정기예금은 금리가 어떻게 되나요?"},
+    {"speaker": "assistant", "text": "3년 만기 정기예금은 연 3.6%이며, 우대조건 충족 시 3.8%까지 가능합니다."},
+    {"speaker": "user", "text": "1년이랑 3년 차이가 크지 않네요."},
+    {"speaker": "assistant", "text": "네, 최근 금리 상황상 만기별 차이가 크지 않은 편입니다. 자금 활용 계획에 따라 선택하시는 것이 좋습니다."},
+    {"speaker": "user", "text": "일단은 급하게 쓸 돈은 아니라서요."},
+    {"speaker": "assistant", "text": "그러시면 3년 상품도 고려해보실 만합니다. 중도해지 시 금리는 어떻게 되는지도 안내해드릴까요?"},
+    {"speaker": "user", "text": "네, 그것도 알아두면 좋을 것 같습니다."},
+    {"speaker": "assistant", "text": "중도해지 시에는 경과 기간에 따라 기본금리보다 낮은 중도해지이율이 적용됩니다. 6개월 이내 해지 시에는 연 0.5% 수준입니다."},
+    {"speaker": "user", "text": "생각보다 많이 낮아지네요."},
+    {"speaker": "assistant", "text": "네, 그래서 예치 기간을 충분히 여유 있게 잡으시는 것을 권해드립니다."},
+    {"speaker": "user", "text": "알겠습니다. 그럼 다른 은행 상품과 비교자료도 볼 수 있나요?"},
+    {"speaker": "assistant", "text": "저희 창구에서는 저희 은행 상품 안내만 가능합니다. 타행 비교는 금융감독원 금리비교 사이트를 참고하시면 편리하십니다."},
+    {"speaker": "user", "text": "그렇군요. 참고하겠습니다."},
+    {"speaker": "assistant", "text": "혹시 오늘 바로 가입 진행을 원하시나요, 아니면 좀 더 검토해보시겠습니까?"},
+    {"speaker": "user", "text": "오늘은 그냥 금리만 확인하러 왔어요. 나중에 다시 오겠습니다."},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 필요하실 때 언제든 다시 방문해 주시면 안내해드리겠습니다."},
+    {"speaker": "user", "text": "감사합니다. 수고하세요."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

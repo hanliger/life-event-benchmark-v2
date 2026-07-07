@@ -1,0 +1,42 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요. 거래내역 좀 확인하고 싶은데요."},
+    {"speaker": "assistant", "text": "안녕하세요, 고객님. 거래내역 조회 도와드리겠습니다. 본인 확인을 위해 성함과 생년월일 말씀해 주시겠어요?"},
+    {"speaker": "user", "text": "이광호입니다. 생년월일은 저기, 알려드릴게요."},
+    {"speaker": "assistant", "text": "네, 확인 감사합니다. 조회하실 계좌를 말씀해 주시겠어요?"},
+    {"speaker": "user", "text": "제 이름으로 된 예금 계좌요."},
+    {"speaker": "assistant", "text": "네, 확인했습니다. 조회 기간은 어떻게 설정해 드릴까요?"},
+    {"speaker": "user", "text": "최근 석 달 정도요."},
+    {"speaker": "assistant", "text": "알겠습니다. 최근 3개월 거래내역 조회해 드리겠습니다. 잠시만 기다려 주세요."},
+    {"speaker": "user", "text": "네, 천천히 하세요."},
+    {"speaker": "assistant", "text": "조회 완료됐습니다. 화면으로 보여드릴까요, 아니면 출력해 드릴까요?"},
+    {"speaker": "user", "text": "출력해 주시면 좋겠네요."},
+    {"speaker": "assistant", "text": "네, 바로 인쇄해 드리겠습니다. 잠시만요."},
+    {"speaker": "user", "text": "감사합니다."},
+    {"speaker": "assistant", "text": "여기 있습니다. 혹시 특정 날짜나 거래 건에 대해 궁금하신 부분 있으신가요?"},
+    {"speaker": "user", "text": "지난달 초에 큰 금액 나간 게 뭔지 좀 볼게요."},
+    {"speaker": "assistant", "text": "네, 확인해 드리겠습니다. 해당 거래는 자동이체로 표시되어 있습니다."},
+    {"speaker": "user", "text": "아, 그거였군요. 알겠습니다."},
+    {"speaker": "assistant", "text": "혹시 그 외에도 확인하고 싶으신 거래 내역이 있으실까요?"},
+    {"speaker": "user", "text": "아니요, 그거면 충분합니다."},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 내역서는 우편으로도 받아보실 수 있는데, 필요하신가요?"},
+    {"speaker": "user", "text": "그건 괜찮습니다. 오늘 받은 걸로 충분해요."},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 혹시 다른 계좌 거래내역도 확인해 드릴까요?"},
+    {"speaker": "user", "text": "아니요, 이 계좌만 보면 됩니다."},
+    {"speaker": "assistant", "text": "알겠습니다. 오늘 조회하신 내용은 이상 없으신가요?"},
+    {"speaker": "user", "text": "네, 잘 확인했습니다."},
+    {"speaker": "assistant", "text": "네, 도와드릴 부분이 더 있으실까요?"},
+    {"speaker": "user", "text": "아니요, 여기까지만 할게요."},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 오늘 방문해 주셔서 감사합니다. 좋은 하루 되세요."},
+    {"speaker": "user", "text": "네, 수고하세요."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

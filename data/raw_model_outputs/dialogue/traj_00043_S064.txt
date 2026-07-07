@@ -1,0 +1,41 @@
+{
+  "turns": [
+    {"speaker": "user", "text": "예금 금리 좀 물어보려고 왔는데요."},
+    {"speaker": "assistant", "text": "안녕하세요, 고객님. 예금 금리 안내 도와드리겠습니다. 어떤 종류의 예금을 알아보고 계신가요?"},
+    {"speaker": "user", "text": "그냥 일반 정기예금이요."},
+    {"speaker": "assistant", "text": "네, 정기예금 기준으로 안내드리겠습니다. 예치 기간은 어느 정도 생각하고 계세요?"},
+    {"speaker": "user", "text": "한 1년 정도요."},
+    {"speaner": "assistant", "text": "현재 1년제 정기예금 기본 금리는 연 3.2%입니다. 우대조건 적용 시 최대 3.5%까지 가능합니다."},
+    {"speaker": "user", "text": "우대조건이 뭔데요?"},
+    {"speaker": "assistant", "text": "월급 이체나 카드 실적, 자동이체 등록 등이 있는데요, 고객님 거래 내역 확인해드릴까요?"},
+    {"speaker": "user", "text": "네 확인해주세요."},
+    {"speaker": "assistant", "text": "확인해보니 고객님은 자동이체 실적으로 0.2% 우대 적용 가능하십니다."},
+    {"speaker": "user", "text": "그럼 3.4%인 거예요?"},
+    {"speaker": "assistant", "text": "네, 맞습니다. 3.2%에 0.2% 우대 더해서 3.4% 적용됩니다."},
+    {"speaker": "user", "text": "다른 은행은 더 준다던데."},
+    {"speaker": "assistant", "text": "요즘 금리 차이가 크지 않은 편인데, 혹시 어느 정도 금리를 보셨는지 여쭤봐도 될까요?"},
+    {"speaker": "user", "text": "인터넷에서 3.6% 봤어요."},
+    {"speaker": "assistant", "text": "그 상품은 특판이나 비대면 전용일 가능성이 있습니다. 저희도 비대면 가입 시 우대금리 조건이 다릅니다."},
+    {"speaker": "user", "text": "비대면은 얼마나 더 줘요?"},
+    {"speaker": "assistant", "text": "비대면 가입 시 0.1% 추가되어 최대 3.5%까지 가능합니다."},
+    {"speaker": "user", "text": "그 정도면 여기서 해도 되겠네요."},
+    {"speaker": "assistant", "text": "네, 좋은 선택이십니다. 예치금액은 어느 정도로 생각하고 계신가요?"},
+    {"speaker": "user", "text": "천만 원 정도요."},
+    {"speaker": "assistant", "text": "천만 원 기준으로 1년 후 만기 시 예상 이자는 약 34만 원입니다."},
+    {"speaker": "user", "text": "세금 떼고요?"},
+    {"speaker": "assistant", "text": "네, 세전 기준입니다. 이자소득세 15.4% 제외하면 약 28만 원 정도 실수령입니다."},
+    {"speaker": "user", "text": "그럼 지금 바로 가입할 수 있어요?"},
+    {"speaker": "assistant", "text": "네, 다만 계좌 개설과 자금 이동이 필요하니 고객님 확인 후 진행하겠습니다. 지금 진행해드릴까요?"},
+    {"speaker": "user", "text": "네 해주세요."},
+    {"speaker": "assistant", "text": "알겠습니다. 신분증 확인 후 바로 처리해드리겠습니다."},
+    {"speaker": "user", "text": "여기요."},
+    {"speaker": "assistant", "text": "확인 감사합니다. 잠시만 기다려주시면 가입 완료해드리겠습니다."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}

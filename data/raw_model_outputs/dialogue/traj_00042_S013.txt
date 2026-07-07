@@ -1,0 +1,45 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요. 대출 잔액 좀 확인하고 싶어서요."},
+    {"speaker": "assistant", "text": "안녕하세요 고객님. 본인 확인 먼저 도와드리겠습니다. 성함과 생년월일 말씀해 주시겠어요?"},
+    {"speaker": "user", "text": "이광호입니다. 57년생이에요."},
+    {"speaker": "assistant", "text": "확인 감사합니다. 어떤 대출 상품의 잔액을 확인하시는 건가요?"},
+    {"speaker": "user", "text": "예전에 받은 신용대출이요."},
+    {"speaker": "assistant", "text": "네, 조회해 드리겠습니다. 잠시만 기다려 주세요."},
+    {"speaker": "user", "text": "네, 천천히 하세요."},
+    {"speaker": "assistant", "text": "확인되었습니다. 현재 대출 잔액은 1,250만 원이시고, 다음 상환일은 이번 달 25일입니다."},
+    {"speaker": "user", "text": "생각보다 많이 남았네요."},
+    {"speaker": "assistant", "text": "월 상환액과 이자율도 함께 안내해 드릴까요?"},
+    {"speaker": "user", "text": "네, 알려주세요."},
+    {"speaker": "assistant", "text": "월 상환액은 45만 원이고 금리는 연 4.2%입니다."},
+    {"speaker": "user", "text": "이번 달은 좀 더 갚아야 할 것 같아서요."},
+    {"speaker": "assistant", "text": "추가 상환을 원하시는 건가요?"},
+    {"speaker": "user", "text": "네, 친구한테 빌린 돈 상환하고 남는 돈으로 좀 넣으려고요."},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 추가 상환 금액을 정하셨으면 말씀해 주세요."},
+    {"speaker": "user", "text": "한 백만 원 정도 생각하고 있어요."},
+    {"speaker": "assistant", "text": "백만 원 상환 시 잔액은 1,150만 원으로 조정됩니다. 진행해 드릴까요?"},
+    {"speaker": "user", "text": "아직은 확인만 하려고요."},
+    {"speaker": "assistant", "text": "네, 그러시면 오늘은 조회만 도와드리겠습니다. 다른 궁금하신 점 있으신가요?"},
+    {"speaker": "user", "text": "중도상환 수수료도 있나요?"},
+    {"speaker": "assistant", "text": "이 상품은 중도상환수수료가 없는 상품으로 확인됩니다."},
+    {"speaker": "user", "text": "다행이네요. 수수료 없으면 편하게 갚을 수 있겠어요."},
+    {"speaker": "assistant", "text": "네, 맞습니다. 원하실 때 자유롭게 상환하실 수 있습니다."},
+    {"speaker": "user", "text": "그럼 다음 달에 다시 와서 갚을게요."},
+    {"speaker": "assistant", "text": "네, 언제든 방문하시면 도와드리겠습니다. 잔액 조회 내역은 문자로 보내드릴까요?"},
+    {"speaker": "user", "text": "네, 문자로 받으면 좋겠어요."},
+    {"speaker": "assistant", "text": "알겠습니다. 등록된 번호로 발송해 드리겠습니다."},
+    {"speaker": "user", "text": "감사합니다. 수고하세요."},
+    {"speaker": "assistant", "text": "네, 이광호 고객님도 좋은 하루 되세요."}
+  ],
+  "cue_annotations": [
+    {"turn_index": 14, "cue_type": "explicit_phrase", "linked_memory_path": "life_event.no_event.debt_repayment_friend"}
+  ],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

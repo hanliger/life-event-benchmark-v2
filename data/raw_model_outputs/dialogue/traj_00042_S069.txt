@@ -1,0 +1,45 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요. 대출 잔액 좀 확인하고 싶어서요."},
+    {"speaker": "assistant", "text": "안녕하세요, 고객님. 대출 잔액 조회 도와드리겠습니다. 본인 확인 먼저 진행해도 될까요?"},
+    {"speaker": "user", "text": "네, 신분증 여기 있습니다."},
+    {"speaker": "assistant", "text": "확인 감사합니다. 어떤 대출 상품의 잔액을 확인하시는 건가요?"},
+    {"speaker": "user", "text": "주택담보대출이요."},
+    {"speaker": "assistant", "text": "네, 조회해드리겠습니다. 잠시만 기다려주세요."},
+    {"speaker": "assistant", "text": "현재 대출 잔액은 8천 2백만원으로 확인됩니다."},
+    {"speaker": "user", "text": "지난달보다 좀 줄었나요?"},
+    {"speaker": "assistant", "text": "네, 지난달 대비 상환금이 반영되어 다소 줄었습니다. 최근에 추가 상환하신 내역이 있으신가요?"},
+    {"speaker": "user", "text": "그건 아니고 정기 상환만 됐을 겁니다."},
+    {"speaker": "assistant", "text": "네, 확인해보니 정기 자동이체로 상환된 내역만 있습니다."},
+    {"speaker": "user", "text": "요즘 병원비도 좀 나가서 신경이 쓰이네요."},
+    {"speaker": "assistant", "text": "그러셨군요. 혹시 다른 계좌 출금 내역도 함께 확인해드릴까요?"},
+    {"speaker": "user", "text": "네, 수술비 수납한 게 얼마였는지 좀 봐주세요."},
+    {"speaker": "assistant", "text": "확인해드리겠습니다. 지난주에 병원 앞으로 이체된 내역이 있으신데, 이 부분 말씀하시는 걸까요?"},
+    {"speaker": "user", "text": "네 맞아요. 그거 때문에 통장이 좀 비어서요."},
+    {"speaker": "assistant", "text": "네, 확인됩니다. 대출 잔액에는 영향이 없으니 안심하셔도 됩니다."},
+    {"speaker": "user", "text": "다행이네요. 이자는 그대로인가요?"},
+    {"speaker": "assistant", "text": "네, 금리 변동 없이 기존 조건 그대로 적용되고 있습니다."},
+    {"speaker": "user", "text": "다음 상환일이 언제였죠?"},
+    {"speaker": "assistant", "text": "다음 상환일은 이번 달 25일입니다."},
+    {"speaker": "user", "text": "네, 알겠습니다. 금액은 얼마나 되나요?"},
+    {"speaker": "assistant", "text": "이번 달 상환 예정 금액은 원리금 합산 62만원입니다."},
+    {"speaker": "user", "text": "네, 확인했습니다."},
+    {"speaker": "assistant", "text": "혹시 상환 방식 변경이나 추가 문의사항 있으신가요?"},
+    {"speaker": "user", "text": "아니요, 오늘은 잔액만 확인하면 됩니다."},
+    {"speaker": "assistant", "text": "네, 잘 알겠습니다. 잔액과 상환 일정 모두 안내드린 내용 그대로입니다."},
+    {"speaker": "user", "text": "네, 수고하셨습니다."},
+    {"speaker": "assistant", "text": "감사합니다, 고객님. 좋은 하루 보내세요."}
+  ],
+  "cue_annotations": [
+    {"turn_index": 13, "cue_type": "explicit_expense_mention", "linked_memory_path": "life_event.medical_surgery_payment"},
+    {"turn_index": 15, "cue_type": "financial_consequence", "linked_memory_path": "account.balance_reduction_due_to_surgery_payment"}
+  ],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

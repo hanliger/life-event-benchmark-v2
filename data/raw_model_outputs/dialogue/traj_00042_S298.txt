@@ -1,0 +1,43 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요. 예금 금리 좀 여쭤보려고 왔습니다."},
+    {"speaker": "assistant", "text": "안녕하세요 고객님. 어떤 예금 상품을 알아보고 계신가요?"},
+    {"speaker": "user", "text": "정기예금이요. 1년짜리로 생각하고 있습니다."},
+    {"speaker": "assistant", "text": "네, 현재 1년 만기 정기예금 기본 금리는 연 3.2퍼센트입니다."},
+    {"speaker": "user", "text": "우대금리도 있나요?"},
+    {"speaker": "assistant", "text": "네, 급여이체나 자동이체 실적에 따라 최대 0.3퍼센트포인트 추가 우대가 가능합니다."},
+    {"speaker": "user", "text": "저는 급여이체는 없는데요."},
+    {"speaker": "assistant", "text": "그러시면 인터넷뱅킹 가입이나 카드 이용 실적으로도 일부 우대가 적용됩니다."},
+    {"speaker": "user", "text": "카드는 쓰고 있습니다."},
+    {"speaker": "assistant", "text": "카드 실적 확인해드릴까요? 조회해보면 우대 적용 여부를 바로 알 수 있습니다."},
+    {"speaker": "user", "text": "네, 확인 부탁드립니다."},
+    {"speaker": "assistant", "text": "잠시만요... 확인해보니 0.2퍼센트포인트 우대 적용 가능하십니다."},
+    {"speaker": "user", "text": "그럼 최종 금리는 얼마나 되나요?"},
+    {"speaker": "assistant", "text": "네, 3.4퍼센트로 적용받으실 수 있습니다."},
+    {"speaker": "user", "text": "2년짜리는 금리가 어떻게 되나요?"},
+    {"speaker": "assistant", "text": "2년 만기는 기본 3.4퍼센트이며 우대 적용 시 최대 3.6퍼센트입니다."},
+    {"speaker": "user", "text": "그렇군요. 3년은요?"},
+    {"speaker": "assistant", "text": "3년 만기는 기본 3.5퍼센트이고 우대 포함 시 3.7퍼센트까지 가능합니다."},
+    {"speaker": "user", "text": "기간이 길수록 금리가 조금씩 오르네요."},
+    {"speaker": "assistant", "text": "네, 맞습니다. 만기가 길수록 금리 혜택이 조금씩 높아지는 구조입니다."},
+    {"speaker": "user", "text": "중도 해지하면 금리가 어떻게 되나요?"},
+    {"speaker": "assistant", "text": "중도 해지 시에는 약정 금리보다 낮은 중도해지 금리가 적용됩니다."},
+    {"speaker": "user", "text": "얼마나 낮아지나요?"},
+    {"speaker": "assistant", "text": "가입 기간에 따라 다르지만 대략 1퍼센트 내외로 적용되실 수 있습니다."},
+    {"speaker": "user", "text": "그럼 그냥 만기까지 유지하는 게 낫겠네요."},
+    {"speaker": "assistant", "text": "네, 목돈을 오래 두실 계획이시라면 만기까지 유지하시는 편이 유리합니다."},
+    {"speaker": "user", "text": "알겠습니다. 오늘은 금리만 확인하려고 했어요."},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 가입 원하실 때 다시 방문해주시면 안내해드리겠습니다."},
+    {"speaker": "user", "text": "네, 설명 감사합니다."},
+    {"speaker": "assistant", "text": "네, 고객님. 좋은 하루 보내세요."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

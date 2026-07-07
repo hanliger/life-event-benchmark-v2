@@ -1,0 +1,45 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요. 아파트 관리비 자동납부 좀 신청하려고요."},
+    {"speaker": "assistant", "text": "안녕하세요 고객님. 관리비 자동납부 신청 도와드리겠습니다. 등록하실 계좌가 있으신가요?"},
+    {"speaker": "user", "text": "네, 제 급여통장으로 하려고 합니다."},
+    {"speaker": "assistant", "text": "알겠습니다. 관리사무소에서 받으신 고지서나 청구서 번호 가지고 계신가요?"},
+    {"speaker": "user", "text": "여기 있습니다."},
+    {"speaker": "assistant", "text": "확인했습니다. 매월 몇 일에 출금되길 원하시나요?"},
+    {"speaker": "user", "text": "25일이 좋을 것 같습니다."},
+    {"speaker": "assistant", "text": "네, 25일로 설정하겠습니다. 계좌 잔액은 충분히 유지해 주셔야 자동이체가 정상 처리됩니다."},
+    {"speaker": "user", "text": "네, 요즘 통장에서 좀 나갈 일이 많아서 신경 쓰고 있습니다."},
+    {"speaker": "assistant", "text": "그러시군요. 혹시 잔액 부족으로 이체가 안 될 경우 대비해서 알림 서비스도 신청해드릴까요?"},
+    {"speaker": "user", "text": "좋습니다. 신청해주세요."},
+    {"speaker": "assistant", "text": "네, 알림 서비스도 함께 등록해드리겠습니다. 휴대폰 번호 확인 부탁드립니다."},
+    {"speaker": "user", "text": "010-1234-5678 맞습니다."},
+    {"speaker": "assistant", "text": "확인했습니다. 그런데 최근 계좌에서 큰 금액이 이체된 이력이 있는데 확인차 여쭤봐도 될까요?"},
+    {"speaker": "user", "text": "아, 얼마 전에 친구한테 빌린 돈 상환한 거예요."},
+    {"speaker": "assistant", "text": "아, 그러셨군요. 별다른 문제는 없으신 거죠?"},
+    {"speaker": "user", "text": "네, 그냥 갚은 겁니다."},
+    {"speaker": "assistant", "text": "알겠습니다. 그럼 관리비 자동납부는 계획대로 25일에 진행하는 걸로 하겠습니다."},
+    {"speaker": "user", "text": "네, 그렇게 해주세요."},
+    {"speaker": "assistant", "text": "혹시 관리비 금액이 매달 변동되는 편이신가요?"},
+    {"speaker": "user", "text": "네, 계절에 따라 조금씩 달라지더라고요."},
+    {"speaker": "assistant", "text": "그러면 정액이 아닌 청구금액 기준으로 자동이체 설정해드리겠습니다."},
+    {"speaker": "user", "text": "네, 그게 편하겠네요."},
+    {"speaker": "assistant", "text": "신청 내용 다시 한번 확인해드리겠습니다. 급여통장에서 매월 25일, 청구금액 기준으로 관리비 자동이체 등록됩니다. 맞으신가요?"},
+    {"speaker": "user", "text": "네, 맞습니다."},
+    {"speaker": "assistant", "text": "등록 완료해드렸습니다. 첫 출금은 다음 달 25일부터 진행됩니다."},
+    {"speaker": "user", "text": "네, 확인했습니다."},
+    {"speaker": "assistant", "text": "이용해 주셔서 감사합니다. 추가로 궁금하신 사항 있으신가요?"},
+    {"speaker": "user", "text": "아니요, 없습니다. 감사합니다."},
+    {"speaker": "assistant", "text": "네, 좋은 하루 보내세요."}
+  ],
+  "cue_annotations": [
+    {"turn_index": 14, "cue_type": "financial_flow_context", "linked_memory_path": "no_event.friend_loan_repayment"}
+  ],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

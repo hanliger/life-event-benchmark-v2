@@ -1,0 +1,45 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요. 거래내역 좀 확인하고 싶습니다."},
+    {"speaker": "assistant", "text": "안녕하세요, 고객님. 거래내역 조회 도와드리겠습니다. 본인 확인 먼저 진행할까요?"},
+    {"speaker": "user", "text": "네, 어떻게 하면 됩니까."},
+    {"speaker": "assistant", "text": "신분증과 통장 지참하셨을까요? 성함과 생년월일 말씀해주시면 확인하겠습니다."},
+    {"speaker": "user", "text": "이광호입니다. 생년월일은 1957년생입니다."},
+    {"speaker": "assistant", "text": "확인 감사합니다. 조회하실 계좌 번호를 알려주시겠어요?"},
+    {"speaker": "user", "text": "잠시만요, 통장 좀 꺼내겠습니다."},
+    {"speaker": "assistant", "text": "천천히 확인해 주세요."},
+    {"speaker": "user", "text": "여기 있습니다. 계좌번호 불러드릴게요."},
+    {"speaker": "assistant", "text": "네, 말씀해 주세요."},
+    {"speaker": "user", "text": "110-234-567890입니다."},
+    {"speaker": "assistant", "text": "확인되었습니다. 조회 기간은 어느 정도로 원하시나요?"},
+    {"speaker": "user", "text": "최근 석 달 정도만 보고 싶습니다."},
+    {"speaker": "assistant", "text": "네, 최근 3개월 거래내역 조회해드리겠습니다. 잠시만 기다려 주세요."},
+    {"speaker": "user", "text": "네, 천천히 하세요."},
+    {"speaker": "assistant", "text": "조회 완료되었습니다. 화면으로 보여드릴까요, 아니면 출력해드릴까요?"},
+    {"speaker": "user", "text": "출력해서 주시면 좋겠습니다."},
+    {"speaker": "assistant", "text": "네, 출력해드리겠습니다. 혹시 특정 거래 내역을 따로 찾으시는 것도 있으신가요?"},
+    {"speaker": "user", "text": "지난달에 큰 금액 나간 게 있었는데 확인하고 싶습니다."},
+    {"speaker": "assistant", "text": "네, 확인해드리겠습니다. 대략 어느 시점인지 기억나시나요?"},
+    {"speaker": "user", "text": "중순쯤이었던 것 같습니다."},
+    {"speaker": "assistant", "text": "말씀하신 시기 기준으로 찾아보니 15일에 출금 내역이 있으시네요. 이 내역 맞으실까요?"},
+    {"speaker": "user", "text": "네, 맞습니다. 그거였습니다."},
+    {"speaker": "assistant", "text": "다행입니다. 해당 내역도 함께 출력해드리겠습니다."},
+    {"speaker": "user", "text": "감사합니다. 그럼 이체 내역은 따로 안 나오나요?"},
+    {"speaker": "assistant", "text": "이체 내역도 전체 조회 결과에 포함되어 있습니다. 확인해보시겠어요?"},
+    {"speaker": "user", "text": "네, 한번 보여주십시오."},
+    {"speaker": "assistant", "text": "여기 있습니다. 확인해보시고 궁금하신 부분 있으시면 말씀해 주세요."},
+    {"speaker": "user", "text": "네, 잘 나왔습니다. 이걸로 충분합니다."},
+    {"speaker": "assistant", "text": "네, 그럼 오늘 거래내역 조회는 이걸로 마무리하겠습니다. 더 도와드릴 일 있으신가요?"},
+    {"speaker": "user", "text": "아니요, 없습니다. 감사합니다."},
+    {"speaker": "assistant", "text": "네, 이용해 주셔서 감사합니다. 좋은 하루 되세요."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

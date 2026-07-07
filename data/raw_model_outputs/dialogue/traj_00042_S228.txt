@@ -1,0 +1,43 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요. 예금 금리 좀 여쭤보려고요."},
+    {"speaker": "assistant", "text": "안녕하세요, 고객님. 어떤 종류의 예금 상품을 알아보고 계신가요?"},
+    {"speaker": "user", "text": "정기예금이요. 1년짜리로 생각하고 있습니다."},
+    {"speaker": "assistant", "text": "네, 현재 1년 만기 정기예금 기본금리는 연 3.2퍼센트입니다. 우대조건 적용 시 최대 3.5퍼센트까지 가능합니다."},
+    {"speaker": "user", "text": "우대조건이 뭔가요?"},
+    {"speaker": "assistant", "text": "저희 은행 급여 이체나 카드 실적, 자동이체 등록 등이 있으면 우대금리가 적용됩니다. 혹시 해당되는 항목이 있으실까요?"},
+    {"speaker": "user", "text": "카드는 쓰고 있어요. 자동이체는 잘 모르겠네요."},
+    {"speaker": "assistant", "text": "카드 실적만으로도 0.1퍼센트 우대가 적용 가능합니다. 자동이체는 공과금이나 통신비 등록 시 추가 우대가 있습니다."},
+    {"speaker": "user", "text": "그럼 지금 가입하면 얼마나 받을 수 있는 거죠?"},
+    {"speaker": "assistant", "text": "카드 실적 우대만 적용 시 연 3.3퍼센트로 가입 가능하십니다."},
+    {"speaker": "user", "text": "다른 은행은 좀 더 높다던데 맞나요?"},
+    {"speaker": "assistant", "text": "시중은행별로 차이가 있을 수 있습니다. 저희는 안정적인 금리와 함께 중도해지 시 이자 손실이 적은 편입니다."},
+    {"speaker": "user", "text": "중도해지하면 이자는 어떻게 되나요?"},
+    {"speaker": "assistant", "text": "가입 기간에 따라 차등 적용되며, 6개월 이상 유지 시 약정금리의 50퍼센트 수준을 받으실 수 있습니다."},
+    {"speaker": "user", "text": "그렇군요. 3개월짜리 상품도 있나요?"},
+    {"speaker": "assistant", "text": "네, 3개월 만기 정기예금은 기본금리 연 2.5퍼센트입니다."},
+    {"speaker": "user", "text": "그럼 1년이 더 나은 거 같네요."},
+    {"speaker": "assistant", "text": "네, 장기로 두실수록 금리 면에서 유리하실 수 있습니다."},
+    {"speaker": "user", "text": "최소 가입 금액은 얼마인가요?"},
+    {"speaker": "assistant", "text": "최소 100만원부터 가입 가능하십니다."},
+    {"speaker": "user", "text": "만기 후에 자동 연장도 되나요?"},
+    {"speaker": "assistant", "text": "네, 만기일에 별도 신청 없으시면 동일 기간으로 재예치 처리됩니다."},
+    {"speaker": "user", "text": "이자는 매달 나오나요, 만기에 나오나요?"},
+    {"speaker": "assistant", "text": "고객님께서 선택하실 수 있습니다. 월지급식과 만기일시지급식 중 편하신 방식으로 결정하시면 됩니다."},
+    {"speaker": "user", "text": "저는 만기 때 한번에 받는 게 좋겠네요."},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 만기일시지급식으로 안내해드리겠습니다."},
+    {"speaker": "user", "text": "오늘 바로 가입은 안 하고 좀 더 생각해볼게요."},
+    {"speaker": "assistant", "text": "네, 천천히 검토해보시고 필요하실 때 다시 방문해 주시면 안내해드리겠습니다."},
+    {"speaker": "user", "text": "네, 감사합니다."},
+    {"speaker": "assistant", "text": "네, 좋은 하루 보내십시오, 고객님."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

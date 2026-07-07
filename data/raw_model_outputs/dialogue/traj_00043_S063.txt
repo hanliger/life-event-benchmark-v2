@@ -1,0 +1,43 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "예금 금리 좀 알아보러 왔는데요."},
+    {"speaker": "assistant", "text": "안녕하세요 고객님. 예금 금리 문의 도와드리겠습니다. 어떤 상품을 생각하고 계신가요?"},
+    {"speaker": "user", "text": "그냥 목돈 좀 넣어두려고요. 1년짜리로."},
+    {"speaker": "assistant", "text": "네, 1년 만기 정기예금으로 안내드리겠습니다. 예치하실 금액대는 어느 정도 생각하고 계세요?"},
+    {"speaker": "user", "text": "천만 원 정도요."},
+    {"speaker": "assistant", "text": "천만 원 기준으로는 현재 1년제 기본금리 3.2% 적용됩니다. 우대조건 충족 시 3.5%까지 가능하세요."},
+    {"speaker": "user", "text": "우대조건이 뭔데요?"},
+    {"speaker": "assistant", "text": "저희 은행 급여이체나 자동이체 실적 있으시면 우대금리 붙습니다. 혹시 급여이체 계좌 있으신가요?"},
+    {"speaker": "user", "text": "월급은 다른 은행으로 들어와요."},
+    {"speaker": "assistant", "text": "알겠습니다. 그럼 카드 결제 자동이체나 관리비 자동이체로도 일부 우대 가능한데, 혹시 그런 이체 있으신가요?"},
+    {"speaker": "user", "text": "카드값은 여기서 나가요."},
+    {"speaker": "assistant", "text": "그러시면 카드 자동이체 조건으로 0.2% 우대 적용 가능해서 3.4%까지는 받으실 수 있으세요."},
+    {"speaker": "user", "text": "다른 은행이랑 비교하면 어떤가요?"},
+    {"speaker": "assistant", "text": "타 은행 대비 비슷한 수준이시고, 저희는 만기 후 자동연장 없이 문의 후 재예치하는 방식이라 관리가 편하실 수 있습니다."},
+    {"speaker": "user", "text": "2년짜리는 금리 더 높아요?"},
+    {"speaker": "assistant", "text": "2년제는 기본금리 3.4%이고 우대 적용 시 최대 3.7%까지 가능하십니다."},
+    {"speaker": "user", "text": "음 그럼 2년이 낫겠네."},
+    {"speaker": "assistant", "text": "네, 자금 계획상 2년 정도 여유 있으시면 2년제가 유리하실 수 있습니다. 중도해지 시 금리는 낮아지는 점만 참고해주세요."},
+    {"speaker": "user", "text": "중도해지하면 얼마나 깎여요?"},
+    {"speaker": "assistant", "text": "예치 기간에 따라 다르지만 6개월 미만 해지 시에는 기본금리의 절반 이하로 적용됩니다."},
+    {"speaker": "user", "text": "그럼 그냥 급할 때 뺄 수도 있는 거죠?"},
+    {"speaker": "assistant", "text": "네, 중도해지는 언제든 가능하시고, 다만 이자 손해가 있으니 참고만 해주시면 됩니다."},
+    {"speaker": "user", "text": "알겠어요. 그럼 2년으로 할게요."},
+    {"speaker": "assistant", "text": "네, 신청 도와드리겠습니다. 예치금은 오늘 바로 넣으실 예정이신가요?"},
+    {"speaker": "user", "text": "네 오늘 넣을게요."},
+    {"speaker": "assistant", "text": "확인 절차 안내드리겠습니다. 신분증 주시면 접수 진행하겠습니다."},
+    {"speaker": "user", "text": "여기요."},
+    {"speaker": "assistant", "text": "감사합니다. 접수 처리 완료되면 문자로 안내드리겠습니다. 진행해도 괜찮으실까요?"},
+    {"speaker": "user", "text": "네, 진행해주세요."},
+    {"speaker": "assistant", "text": "네, 처리 도와드리겠습니다. 오늘 방문해주셔서 감사합니다."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

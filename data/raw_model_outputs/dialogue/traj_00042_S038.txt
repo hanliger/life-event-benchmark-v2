@@ -1,0 +1,43 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요. 예금 금리 좀 여쭤보려고 왔습니다."},
+    {"speaker": "assistant", "text": "안녕하세요, 고객님. 어떤 예금 상품의 금리를 확인해 드릴까요?"},
+    {"speaker": "user", "text": "정기예금 금리가 궁금해서요."},
+    {"speaker": "assistant", "text": "네, 정기예금 기준으로 안내해 드리겠습니다. 예치 기간은 어느 정도 생각하고 계신가요?"},
+    {"speaker": "user", "text": "1년 정도 생각하고 있습니다."},
+    {"speaker": "assistant", "text": "1년 만기 정기예금 기준으로는 연 3.2% 금리가 적용됩니다. 우대금리 조건도 함께 안내해 드릴까요?"},
+    {"speaker": "user", "text": "네, 알려주세요."},
+    {"speaker": "assistant", "text": "저희 은행 급여이체나 자동이체 실적이 있으시면 최대 0.3% 추가 우대가 가능합니다. 해당되는 거래가 있으신가요?"},
+    {"speaker": "user", "text": "자동이체는 몇 개 있는 것 같습니다."},
+    {"speaker": "assistant", "text": "그러시면 우대금리 적용 가능성이 있으니, 실제 신청 시 거래 내역 확인 후 정확한 금리를 안내해 드리겠습니다. 예치 금액은 대략 어느 정도로 생각하고 계신가요?"},
+    {"speaker": "user", "text": "한 3천만 원 정도요."},
+    {"speaker": "assistant", "text": "3천만 원 기준으로 1년 후 세전 이자는 약 96만 원 정도 됩니다. 다른 기간도 비교해서 보여드릴까요?"},
+    {"speaker": "user", "text": "6개월짜리도 궁금합니다."},
+    {"speaker": "assistant", "text": "6개월 만기 정기예금은 연 2.8% 금리가 적용됩니다. 1년보다는 금리가 다소 낮은 편입니다."},
+    {"speaker": "user", "text": "그렇군요. 차이가 좀 있네요."},
+    {"speaker": "assistant", "text": "네, 기간이 길수록 금리가 조금씩 높아지는 구조입니다. 혹시 중도 해지 가능성도 고려하고 계신가요?"},
+    {"speaker": "user", "text": "아니요, 만기까지 그냥 둘 생각입니다."},
+    {"speaker": "assistant", "text": "그러시면 1년 정기예금이 좀 더 유리하실 것 같습니다. 최근 금리 변동 추이도 함께 안내해 드릴까요?"},
+    {"speaker": "user", "text": "네, 부탁드립니다."},
+    {"speaker": "assistant", "text": "최근 3개월간 정기예금 금리는 소폭 상승세를 보이고 있습니다. 다음 달에 다시 조정될 가능성도 있습니다."},
+    {"speaker": "user", "text": "그럼 지금 가입하는 게 나을까요?"},
+    {"speaker": "assistant", "text": "정확한 예측은 어렵지만, 현재 금리도 나쁘지 않은 수준입니다. 오늘 바로 가입을 원하시나요?"},
+    {"speaker": "user", "text": "아직 결정은 안 했습니다. 좀 더 생각해보려고요."},
+    {"speaker": "assistant", "text": "네, 천천히 검토하셔도 됩니다. 금리 안내 자료를 인쇄해서 드릴까요?"},
+    {"speaker": "user", "text": "네, 그래주시면 감사하겠습니다."},
+    {"speaker": "assistant", "text": "알겠습니다. 잠시만 기다려 주시면 정리해서 드리겠습니다."},
+    {"speaker": "user", "text": "네, 감사합니다."},
+    {"speaker": "assistant", "text": "여기 정기예금 금리표와 우대조건 안내문 준비해 드렸습니다. 확인 부탁드립니다."},
+    {"speaker": "user", "text": "네, 잘 받았습니다. 오늘은 이만 가보겠습니다."},
+    {"speaker": "assistant", "text": "네, 고객님. 이용해 주셔서 감사합니다. 편안한 하루 되세요."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

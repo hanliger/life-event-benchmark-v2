@@ -1,0 +1,46 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요. 거래내역 조회 좀 하려고 왔습니다."},
+    {"speaker": "assistant", "text": "안녕하세요 고객님. 어떤 계좌의 거래내역을 확인해 드릴까요?"},
+    {"speaker": "user", "text": "제 명의 계좌 하나 조회하면 됩니다."},
+    {"speaker": "assistant", "text": "네, 신분증 확인 부탁드리겠습니다."},
+    {"speaker": "user", "text": "여기 있습니다."},
+    {"speaker": "assistant", "text": "확인했습니다. 조회하실 기간을 말씀해 주시겠어요?"},
+    {"speaker": "user", "text": "지난달 초부터 지금까지요."},
+    {"speaker": "assistant", "text": "네, 지난달 1일부터 오늘까지 조회해 드리겠습니다. 잠시만요."},
+    {"speaker": "assistant", "text": "조회됐습니다. 특별히 확인하고 싶으신 거래가 있으신가요?"},
+    {"speaker": "user", "text": "네, 큰 금액으로 나간 거 하나 확인하려고요."},
+    {"speaker": "assistant", "text": "어떤 항목인지 여쭤봐도 될까요?"},
+    {"speaker": "user", "text": "장례식장 비용 이체한 게 있는데 정확히 얼마 나갔는지 보려고요."},
+    {"speaker": "assistant", "text": "네, 해당 항목 찾아보겠습니다. 이체일이 대략 언제쯤이었나요?"},
+    {"speaker": "user", "text": "한 이 주 전쯤이었던 것 같습니다."},
+    {"speaker": "assistant", "text": "확인했습니다. 이체 금액은 350만원이고, 받는 곳은 장례식장으로 되어 있네요."},
+    {"speaker": "user", "text": "네 맞습니다. 그거 하나 더 있는지도 봐주세요."},
+    {"speaker": "assistant", "text": "네, 비슷한 항목으로 며칠 뒤에도 이체가 있으신데 확인해 드릴까요?"},
+    {"speaker": "user", "text": "그건 아마 고인 명의 계좌에서 정리하면서 나간 걸 겁니다."},
+    {"speaker": "assistant", "text": "네, 참고하겠습니다. 그 거래도 함께 내역서에 표시해 드릴까요?"},
+    {"speaker": "user", "text": "네, 둘 다 나오게 해주세요."},
+    {"speaker": "assistant", "text": "알겠습니다. 두 건 모두 포함해서 정리해 드리겠습니다."},
+    {"speaker": "user", "text": "내역서는 출력해서 받을 수 있나요?"},
+    {"speaker": "assistant", "text": "네, 가능합니다. 출력본으로 드릴까요, 아니면 메일로도 보내드릴까요?"},
+    {"speaker": "user", "text": "출력본이면 됩니다."},
+    {"speaker": "assistant", "text": "네, 바로 출력해 드리겠습니다. 잠시만 기다려 주세요."},
+    {"speaker": "assistant", "text": "여기 내역서 나왔습니다. 확인 부탁드립니다."},
+    {"speaker": "user", "text": "네, 맞게 나온 것 같습니다."},
+    {"speaker": "assistant", "text": "다행입니다. 더 필요하신 조회 사항 있으실까요?"},
+    {"speaker": "user", "text": "아니요, 이거면 충분합니다."},
+    {"speaker": "assistant", "text": "네, 그럼 오늘 상담은 여기서 마무리하겠습니다. 좋은 하루 되세요."}
+  ],
+  "cue_annotations": [
+    {"turn_index": 11, "cue_type": "explicit_expense_reference", "linked_memory_path": "life_event.occurred.장례식장_비용_이체"},
+    {"turn_index": 17, "cue_type": "account_relation_reference", "linked_memory_path": "life_event.occurred.고인_명의_계좌"}
+  ],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

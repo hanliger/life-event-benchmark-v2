@@ -1,0 +1,43 @@
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요. 거래내역 좀 확인하고 싶어서요."},
+    {"speaker": "assistant", "text": "안녕하세요, 고객님. 거래내역 조회 도와드리겠습니다. 본인 확인을 위해 신분증을 보여주시겠어요?"},
+    {"speaker": "user", "text": "네, 여기 있습니다."},
+    {"speaker": "assistant", "text": "확인 감사합니다. 조회하실 계좌를 말씀해 주시겠어요?"},
+    {"speaker": "user", "text": "제 주거래 계좌요. 최근 석 달치만 보고 싶어요."},
+    {"speaker": "assistant", "text": "네, 최근 3개월간 거래내역 조회해드리겠습니다. 잠시만 기다려 주세요."},
+    {"speaker": "user", "text": "네, 천천히 하세요."},
+    {"speaker": "assistant", "text": "조회 완료되었습니다. 화면으로 함께 보시겠어요, 아니면 출력해드릴까요?"},
+    {"speaker": "user", "text": "출력해서 보고 싶습니다."},
+    {"speaker": "assistant", "text": "네, 출력해드리겠습니다. 확인하실 부분이 있으신가요?"},
+    {"speaker": "user", "text": "여기 매달 나가는 이체 내역이 있는데요."},
+    {"speaker": "assistant", "text": "어떤 내역인지 말씀해주시면 자세히 안내해드리겠습니다."},
+    {"speaker": "user", "text": "동호회 회비 정기이체인데, 금액이 맞는지 궁금해서요."},
+    {"speaker": "assistant", "text": "네, 확인해드리겠습니다. 매달 같은 날짜, 같은 금액으로 이체되고 있는 것 맞으실까요?"},
+    {"speaker": "user", "text": "네, 맞는 것 같은데 한번 확인만 하고 싶었어요."},
+    {"speaker": "assistant", "text": "화면 보시면 지난 3개월 모두 동일한 금액으로 정상 이체된 것으로 확인됩니다."},
+    {"speaker": "user", "text": "다행이네요. 혹시 이체일이 언제인지도 나오나요?"},
+    {"speaker": "assistant", "text": "네, 매월 15일에 이체되고 있는 것으로 나와 있습니다."},
+    {"speaker": "user", "text": "네, 알겠습니다. 그거면 됐습니다."},
+    {"speaker": "assistant", "text": "혹시 다른 거래내역도 함께 확인해드릴까요?"},
+    {"speaker": "user", "text": "아니요, 그건 됐고요. 카드 사용 내역도 볼 수 있나요?"},
+    {"speaker": "assistant", "text": "네, 가능합니다. 최근 몇 개월 내역을 보여드릴까요?"},
+    {"speaker": "user", "text": "한 달치만 보면 될 것 같아요."},
+    {"speaker": "assistant", "text": "네, 최근 한 달 카드 사용 내역 조회해드리겠습니다."},
+    {"speaker": "user", "text": "네, 감사합니다."},
+    {"speaker": "assistant", "text": "조회 완료되었습니다. 이 내역도 출력해드릴까요?"},
+    {"speaker": "user", "text": "네, 같이 출력해주세요."},
+    {"speaker": "assistant", "text": "네, 함께 출력해드렸습니다. 더 필요하신 사항 있으실까요?"},
+    {"speaker": "user", "text": "아니요, 오늘은 이걸로 충분합니다."},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 방문해주셔서 감사합니다, 좋은 하루 되세요."}
+  ],
+  "cue_annotations": [
+    {"turn_index": 12, "cue_type": "regular_transfer_mention", "linked_memory_path": "customer.transactions.recurring_transfer.club_fee"}
+  ],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}

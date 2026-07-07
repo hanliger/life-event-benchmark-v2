@@ -1,0 +1,45 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "저기 이체확인증 좀 뽑아야 되는데요"},
+    {"speaker": "assistant", "text": "네 고객님 안녕하세요. 이체확인증 발급 도와드리겠습니다. 어떤 거래 건인지 확인 부탁드립니다."},
+    {"speaker": "user", "text": "지난주에 이체한 거요. 회사 경비 처리용 이체라서 확인증 필요해서요"},
+    {"speaker": "assistant", "text": "네 알겠습니다. 정확한 이체 날짜나 금액 기억나시나요?"},
+    {"speaker": "user", "text": "음 정확히는 모르겠고 지난주 화요일쯤일 거예요"},
+    {"speaker": "assistant", "text": "확인해보겠습니다. 성함이랑 계좌번호 뒷자리 확인 부탁드립니다."},
+    {"speaker": "user", "text": "유수범이고요 계좌 뒷자리 4728이에요"},
+    {"speaker": "assistant", "text": "네 확인했습니다. 화요일 거래 내역 중에 이체 건이 두 개 있는데 금액 기억나시나요?"},
+    {"speaker": "user", "text": "하나는 좀 크고 하나는 작은데 큰 거였을 거예요"},
+    {"speaker": "assistant", "text": "그러면 오전에 이루어진 35만원 이체 건 맞으실까요?"},
+    {"speaker": "user", "text": "네 맞아요 그거"},
+    {"speaker": "assistant", "text": "확인됐습니다. 확인증에 받는 분 성함이나 거래 목적을 별도로 기재해드릴까요?"},
+    {"speaker": "user", "text": "회사 경비 처리용이라 목적란에 그렇게 좀 적어주세요"},
+    {"speaker": "assistant", "text": "네 알겠습니다. 거래 목적란에 회사 경비 처리 명목으로 기재해서 발급해드리겠습니다."},
+    {"speaker": "user", "text": "네 그리고 도장 같은 거 찍혀야 되나요"},
+    {"speaker": "assistant", "text": "네 은행 직인이 자동으로 날인되어 발급됩니다. 출력본과 PDF 파일 중 어떤 방식으로 받으시겠어요?"},
+    {"speaker": "user", "text": "출력본으로 주세요 회사 제출용이라"},
+    {"speaker": "assistant", "text": "알겠습니다. 출력해드리겠습니다. 발급 매수는 한 부면 될까요?"},
+    {"speaker": "user", "text": "두 부 필요할 것 같은데요"},
+    {"speaker": "assistant", "text": "네 두 부로 준비해드리겠습니다. 수수료는 한 부당 500원씩 부과되는 점 안내드립니다."},
+    {"speaker": "user", "text": "네 상관없어요"},
+    {"speaker": "assistant", "text": "확인 감사합니다. 잠시만 기다려주시면 바로 출력해드리겠습니다."},
+    {"speaker": "user", "text": "네 천천히 하세요"},
+    {"speaker": "assistant", "text": "출력 완료됐습니다. 확인증 내용에 이체 일자, 금액, 목적 확인 부탁드립니다."},
+    {"speaker": "user", "text": "네 맞네요 잘 나왔어요"},
+    {"speaker": "assistant", "text": "감사합니다. 추가로 다른 계좌 이체 건도 확인증 필요하신 부분 있으실까요?"},
+    {"speaker": "user", "text": "아니요 이거면 됐어요"},
+    {"speaker": "assistant", "text": "네 알겠습니다. 오늘 도와드릴 업무는 이걸로 마무리해드릴까요?"},
+    {"speaker": "user", "text": "네 그거면 됐어요 수고하세요"},
+    {"speaker": "assistant", "text": "네 감사합니다 고객님. 좋은 하루 보내세요."}
+  ],
+  "cue_annotations": [
+    {"turn_index": 2, "cue_type": "explicit_purpose_cue", "linked_memory_path": "business_expense_transfer_context"}
+  ],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

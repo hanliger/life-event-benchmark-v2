@@ -1,0 +1,43 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요. 예금 금리 좀 여쭤보려고 왔습니다."},
+    {"speaker": "assistant", "text": "안녕하세요, 고객님. 예금 금리 안내 도와드리겠습니다. 어떤 종류의 예금을 생각하고 계신가요?"},
+    {"speaker": "user", "text": "정기예금이요. 1년짜리로 알아보고 싶습니다."},
+    {"speaker": "assistant", "text": "네, 현재 1년 만기 정기예금 기본 금리는 연 3.2%입니다. 우대조건 충족 시 최대 3.5%까지 적용 가능합니다."},
+    {"speaker": "user", "text": "우대조건이 뭔가요?"},
+    {"speaker": "assistant", "text": "급여이체 실적이나 카드 사용 실적, 자동이체 등록 여부에 따라 금리가 추가됩니다. 고객님께서는 저희 은행 거래 이력이 있으신가요?"},
+    {"speaker": "user", "text": "네, 오래전부터 거래하고 있습니다."},
+    {"speaker": "assistant", "text": "그러시면 기존 거래 내역 확인 후 우대금리 적용 가능 여부 안내드릴 수 있습니다. 예치 금액은 어느 정도 생각하고 계신가요?"},
+    {"speaker": "user", "text": "한 3천만원 정도요."},
+    {"speaker": "assistant", "text": "3천만원 기준으로 안내드리면, 기본금리 적용 시 연 3.2% 이자, 우대금리 적용 시 연 3.5% 이자로 계산됩니다."},
+    {"speaker": "user", "text": "차이가 좀 있네요."},
+    {"speaker": "assistant", "text": "네, 우대조건 충족 여부에 따라 이자 차이가 발생합니다. 6개월짜리 상품도 함께 안내드릴까요?"},
+    {"speaker": "user", "text": "네, 궁금합니다."},
+    {"speaker": "assistant", "text": "6개월 정기예금은 기본금리 연 2.8%이며, 우대 적용 시 3.0%까지 가능합니다."},
+    {"speaker": "user", "text": "1년이랑 6개월 중에 뭐가 더 유리할까요?"},
+    {"speaker": "assistant", "text": "자금을 언제 다시 사용하실 계획이신지에 따라 다릅니다. 특별히 정해두신 시점이 있으신가요?"},
+    {"speaker": "user", "text": "아니요, 당분간은 그냥 묶어두려고요."},
+    {"speaker": "assistant", "text": "그러시면 금리 측면에서는 1년 상품이 조금 더 유리하실 것 같습니다."},
+    {"speaker": "user", "text": "그럼 1년으로 알아볼게요."},
+    {"speaker": "assistant", "text": "네, 1년 정기예금 기준으로 우대조건 적용 가능성 확인 후 정확한 금리 안내드리겠습니다. 잠시만 기다려 주시겠어요?"},
+    {"speaker": "user", "text": "네, 알겠습니다."},
+    {"speaker": "assistant", "text": "확인해보니 고객님께서는 자동이체 등록 실적이 있으셔서 우대금리 0.2% 추가 적용 가능하십니다."},
+    {"speaker": "user", "text": "그럼 3.4%가 되는 거죠?"},
+    {"speaker": "assistant", "text": "네, 맞습니다. 3천만원 기준 1년 만기 시 예상 이자는 세전 약 102만원입니다."},
+    {"speaker": "user", "text": "생각보다 괜찮네요."},
+    {"speaker": "assistant", "text": "가입을 원하시면 신분증 확인 후 절차 도와드리겠습니다. 오늘 바로 진행하시겠어요?"},
+    {"speaker": "user", "text": "오늘은 그냥 금리만 확인하려고 왔어요."},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 필요하실 때 언제든 방문하시면 오늘 안내드린 조건으로 도와드리겠습니다."},
+    {"speaker": "user", "text": "감사합니다. 오늘은 이만 가볼게요."},
+    {"speaker": "assistant", "text": "네, 안녕히 가세요. 좋은 하루 되시길 바랍니다."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

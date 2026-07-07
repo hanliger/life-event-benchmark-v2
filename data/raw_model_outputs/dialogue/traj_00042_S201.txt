@@ -1,0 +1,43 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요. 입금 알림 설정하러 왔습니다."},
+    {"speaker": "assistant", "text": "안녕하세요, 고객님. 입금 알림 설정 도와드리겠습니다. 본인 확인을 위해 신분증 좀 보여주시겠어요?"},
+    {"speaker": "user", "text": "네, 여기 있습니다."},
+    {"speaker": "assistant", "text": "확인 감사합니다. 어떤 계좌에 알림을 설정하고 싶으신가요?"},
+    {"speaker": "user", "text": "제 주거래 통장이요. 하나뿐입니다."},
+    {"speaker": "assistant", "text": "네, 조회해보겠습니다. 잠시만 기다려 주세요."},
+    {"speaker": "user", "text": "네."},
+    {"speaker": "assistant", "text": "확인했습니다. 입금 알림은 문자와 앱 알림 중 어떤 방식을 원하시나요?"},
+    {"speaker": "user", "text": "문자로 받고 싶습니다."},
+    {"speaker": "assistant", "text": "네, 문자 알림으로 설정하겠습니다. 알림 받으실 휴대폰 번호가 등록된 번호와 동일한가요?"},
+    {"speaker": "user", "text": "네, 같습니다."},
+    {"speaker": "assistant", "text": "알겠습니다. 알림 기준 금액을 설정하실 수 있는데, 특정 금액 이상만 받으시겠어요, 아니면 모든 입금에 대해 받으시겠어요?"},
+    {"speaker": "user", "text": "그냥 다 알림 받고 싶습니다."},
+    {"speaker": "assistant", "text": "네, 전체 입금 알림으로 설정하겠습니다. 출금 알림도 함께 설정하시겠습니까?"},
+    {"speaker": "user", "text": "아니요, 입금만 하겠습니다."},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 그럼 입금 알림만 신청하겠습니다. 별도 수수료는 없으니 안심하셔도 됩니다."},
+    {"speaker": "user", "text": "수수료 없나요? 확인차 여쭤봅니다."},
+    {"speaker": "assistant", "text": "네, 입금 알림 서비스는 무료로 제공됩니다."},
+    {"speaker": "user", "text": "알겠습니다. 그럼 진행해 주세요."},
+    {"speaker": "assistant", "text": "네, 지금 신청 처리하겠습니다. 잠시만 기다려 주세요."},
+    {"speaker": "user", "text": "네, 기다리겠습니다."},
+    {"speaker": "assistant", "text": "처리 완료되었습니다. 등록하신 번호로 확인 문자가 곧 발송될 예정입니다."},
+    {"speaker": "user", "text": "언제쯤 오나요?"},
+    {"speaker": "assistant", "text": "보통 몇 분 이내로 도착합니다. 혹시 문자가 오지 않으면 다시 방문해 주셔도 됩니다."},
+    {"speaker": "user", "text": "네, 알겠습니다."},
+    {"speaker": "assistant", "text": "혹시 다른 계좌도 함께 알림 설정을 원하시나요?"},
+    {"speaker": "user", "text": "아니요, 지금은 이 계좌만 하겠습니다."},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 오늘 신청하신 내용은 이대로 마무리하겠습니다."},
+    {"speaker": "user", "text": "수고하셨습니다."},
+    {"speaker": "assistant", "text": "네, 이용해 주셔서 감사합니다. 좋은 하루 보내세요."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

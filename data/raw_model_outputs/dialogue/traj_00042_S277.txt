@@ -1,0 +1,44 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요. 만기 알림 문자를 받아서 왔습니다."},
+    {"speaker": "assistant", "text": "안녕하세요, 고객님. 어떤 상품 만기 안내였는지 확인해 드리겠습니다. 성함과 연락처 확인 부탁드립니다."},
+    {"speaker": "user", "text": "이광호입니다. 010으로 등록된 번호 그대로입니다."},
+    {"speaker": "assistant", "text": "확인했습니다. 정기예금 상품 만기가 다음 주로 되어 있네요. 만기 후 처리 방법을 안내해 드릴까요?"},
+    {"speaker": "user", "text": "네, 어떻게 되는지 궁금해서요."},
+    {"speaker": "assistant", "text": "만기 시 자동 재예치, 보통예금 이체, 혹은 다른 상품 전환 중 선택하실 수 있습니다. 어떤 방향을 생각하고 계신가요?"},
+    {"speaker": "user", "text": "이번엔 그냥 두려고요. 특별히 계획은 없습니다."},
+    {"speaker": "assistant", "text": "알겠습니다. 그러면 기존과 동일한 조건으로 재예치하시는 방법을 안내해 드릴까요?"},
+    {"speaker": "user", "text": "조건은 비슷하면 괜찮습니다."},
+    {"speaker": "assistant", "text": "네, 다만 최근 금리가 소폭 변경되어서 재예치 시 이율이 조금 달라질 수 있습니다. 확인해 드릴까요?"},
+    {"speaker": "user", "text": "네, 한번 확인 부탁드립니다."},
+    {"speaker": "assistant", "text": "확인해 보니 현재 이율은 기존보다 0.1%p 낮게 적용됩니다. 이 조건으로 진행해도 괜찮으실까요?"},
+    {"speaker": "user", "text": "그 정도면 큰 차이는 없네요. 괜찮습니다."},
+    {"speaker": "assistant", "text": "네, 그럼 만기일에 동일 금액으로 재예치 처리해 드리겠습니다. 별도로 함께 확인하실 다른 통장이 있으신가요?"},
+    {"speaker": "user", "text": "따로 여행 경비 모으는 통장이 있는데, 그건 그대로 두면 되나요?"},
+    {"speaker": "assistant", "text": "네, 그 통장은 별도 상품이라 이번 만기와는 관계없이 그대로 유지됩니다. 확인 차원에서 잔액 조회 도와드릴까요?"},
+    {"speaker": "user", "text": "네, 부탁드립니다."},
+    {"speaker": "assistant", "text": "조회해 보니 정상적으로 유지되고 있고, 최근 몇 달간 꾸준히 입금 내역이 있으시네요."},
+    {"speaker": "user", "text": "그냥 조금씩 모으고 있어서요."},
+    {"speaker": "assistant", "text": "네, 좋은 습관이시네요. 다시 만기 예금 건으로 돌아가면, 재예치 기간은 기존과 동일하게 12개월로 진행할까요?"},
+    {"speaker": "user", "text": "네, 그렇게 해주세요."},
+    {"speaker": "assistant", "text": "알겠습니다. 다만 실제 재예치 실행은 만기일 당일 고객님 확인 후 진행되는 점 참고 부탁드립니다."},
+    {"speaker": "user", "text": "네, 알겠습니다."},
+    {"speaker": "assistant", "text": "혹시 만기일 이후 문자나 알림 방식도 함께 확인이 필요하실까요?"},
+    {"speaker": "user", "text": "문자로만 받으면 될 것 같습니다."},
+    {"speaker": "assistant", "text": "네, 문자 알림으로 그대로 유지해 드리겠습니다. 추가로 궁금하신 점 있으실까요?"},
+    {"speaker": "user", "text": "아니요, 없습니다."},
+    {"speaker": "assistant", "text": "네, 오늘 안내드린 내용은 만기일에 다시 한 번 확인 절차 거쳐 진행됩니다. 방문 감사드립니다."},
+    {"speaker": "user", "text": "네, 수고하셨습니다."}
+  ],
+  "cue_annotations": [
+    {"turn_index": 14, "cue_type": "explicit_cue", "linked_memory_path": "savings.travel_fund"}
+  ],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

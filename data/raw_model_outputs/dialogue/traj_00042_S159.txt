@@ -1,0 +1,43 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요. 이체확인증 좀 발급받고 싶습니다."},
+    {"speaker": "assistant", "text": "안녕하세요, 고객님. 이체확인증 발급 도와드리겠습니다. 먼저 본인 확인을 위해 신분증 부탁드립니다."},
+    {"speaker": "user", "text": "여기 있습니다."},
+    {"speaker": "assistant", "text": "감사합니다. 확인 완료되었습니다. 어느 계좌에서 이체하신 건에 대한 확인증이 필요하신가요?"},
+    {"speaker": "user", "text": "제 예금 계좌에서 나간 이체 건입니다."},
+    {"speaker": "assistant", "text": "네, 해당 계좌번호를 말씀해 주시겠습니까?"},
+    {"speaker": "user", "text": "잠시만요. 여기 통장에 있습니다."},
+    {"speaker": "assistant", "text": "확인했습니다. 이체하신 날짜는 대략 언제쯤이신가요?"},
+    {"speaker": "user", "text": "지난달 중순쯤이었던 것 같습니다."},
+    {"speaker": "assistant", "text": "네, 그 시기 내역 조회해보겠습니다. 잠시만 기다려 주시겠어요?"},
+    {"speaker": "user", "text": "네, 천천히 하세요."},
+    {"speaker": "assistant", "text": "조회되었습니다. 이체 건이 두 개 있는데요, 금액이 좀 다릅니다. 어떤 건인지 말씀해 주시겠어요?"},
+    {"speaker": "user", "text": "삼십만 원 나간 것 맞습니다."},
+    {"speaker": "assistant", "text": "네, 확인했습니다. 이체확인증은 종이로 출력해드릴까요, 아니면 이메일로 보내드릴까요?"},
+    {"speaker": "user", "text": "종이로 부탁드립니다."},
+    {"speaker": "assistant", "text": "알겠습니다. 확인증에 이체 목적도 함께 기재해드릴까요?"},
+    {"speaker": "user", "text": "아니요, 그냥 기본 양식으로 해주세요."},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 발급 매수는 한 부면 충분하실까요?"},
+    {"speaker": "user", "text": "두 부 부탁드립니다."},
+    {"speaker": "assistant", "text": "네, 두 부 출력해드리겠습니다. 잠시만 기다려 주세요."},
+    {"speaker": "user", "text": "네."},
+    {"speaker": "assistant", "text": "출력 완료되었습니다. 내용 한번 확인 부탁드립니다."},
+    {"speaker": "user", "text": "네, 금액이랑 날짜 맞네요."},
+    {"speaker": "assistant", "text": "다행입니다. 수수료는 발생하지 않는 서비스라 별도 비용은 없습니다."},
+    {"speaker": "user", "text": "네, 알겠습니다."},
+    {"speaker": "assistant", "text": "혹시 다른 계좌의 이체 내역도 확인이 필요하신가요?"},
+    {"speaker": "user", "text": "아니요, 이거면 됐습니다."},
+    {"speaker": "assistant", "text": "네, 그러면 오늘 업무는 이체확인증 발급으로 마무리하겠습니다."},
+    {"speaker": "user", "text": "네, 수고하셨습니다."},
+    {"speaker": "assistant", "text": "감사합니다, 고객님. 편안한 하루 되세요."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

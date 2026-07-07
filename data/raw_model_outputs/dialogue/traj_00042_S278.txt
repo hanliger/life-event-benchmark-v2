@@ -1,0 +1,44 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요. 예금 금리 좀 여쭤보려고요."},
+    {"speaker": "assistant", "text": "안녕하세요, 고객님. 어떤 예금 상품에 대해 안내해 드릴까요?"},
+    {"speaker": "user", "text": "정기예금이요. 1년짜리로 알아보고 있어요."},
+    {"speaker": "assistant", "text": "네, 확인해 드리겠습니다. 예치하실 금액대는 어느 정도로 생각하고 계신가요?"},
+    {"speaker": "user", "text": "한 3천만 원 정도요."},
+    {"speaker": "assistant", "text": "감사합니다. 현재 1년제 정기예금 기본 금리는 연 3.2퍼센트입니다."},
+    {"speaker": "user", "text": "우대금리도 있나요?"},
+    {"speaker": "assistant", "text": "네, 자동이체 등록이나 급여이체 실적이 있으시면 0.2퍼센트 추가 적용됩니다."},
+    {"speaker": "user", "text": "저는 자동이체는 몇 개 있어요."},
+    {"speaker": "assistant", "text": "그러시면 우대금리 적용 대상이 되실 수 있습니다. 등록된 자동이체 건수를 확인해 드릴까요?"},
+    {"speaker": "user", "text": "네, 확인해 주세요."},
+    {"speaker": "assistant", "text": "확인해 보니 자동이체 두 건이 등록되어 있어 우대 조건 충족되십니다."},
+    {"speaker": "user", "text": "그럼 실제 적용 금리는 얼마인가요."},
+    {"speaker": "assistant", "text": "3천만 원 기준으로 연 3.4퍼센트 적용 가능하십니다."},
+    {"speaker": "user", "text": "이자는 만기에 한번에 받는 건가요?"},
+    {"speaker": "assistant", "text": "네, 만기 일시 지급식과 월이자 지급식 중 선택하실 수 있습니다."},
+    {"speaker": "user", "text": "차이가 뭔가요."},
+    {"speaker": "assistant", "text": "만기 일시 지급은 이자가 복리로 계산되어 총 수령액이 조금 더 많고, 월이자 지급은 매달 일정 금액을 받으실 수 있습니다."},
+    {"speaker": "user", "text": "저는 만기에 한번에 받는 걸로 할게요."},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 예금 기간은 1년으로 그대로 진행해 드릴까요?"},
+    {"speaker": "user", "text": "네, 1년으로 해주세요."},
+    {"speaker": "assistant", "text": "확인 감사합니다. 다만 실제 가입은 본인 확인 절차 후 진행되며, 고객님 확인을 거쳐 최종 처리됩니다."},
+    {"speaker": "user", "text": "그럼 오늘 바로 가입은 안 되나요?"},
+    {"speaker": "assistant", "text": "금리 안내는 지금 드릴 수 있지만, 실제 예금 개설은 신분증 확인 후 별도로 진행해 드립니다."},
+    {"speaker": "user", "text": "그럼 신분증 가져왔는데 지금 해도 되나요."},
+    {"speaker": "assistant", "text": "네, 가능합니다. 신분증 확인 후 가입 절차 도와드리겠습니다."},
+    {"speaker": "user", "text": "여기 있습니다."},
+    {"speaker": "assistant", "text": "감사합니다. 확인되었습니다. 3천만 원, 1년 만기 정기예금으로 진행해 드리겠습니다."},
+    {"speaker": "user", "text": "네, 그렇게 해주세요."},
+    {"speaker": "assistant", "text": "처리 완료되었습니다. 만기일 안내 문자도 함께 발송해 드리겠습니다."},
+    {"speaker": "user", "text": "감사합니다. 수고하세요."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

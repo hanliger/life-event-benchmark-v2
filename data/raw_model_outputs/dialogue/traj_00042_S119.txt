@@ -1,0 +1,43 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요. 이체확인증 발급받으러 왔습니다."},
+    {"speaker": "assistant", "text": "안녕하세요, 고객님. 이체확인증 발급 도와드리겠습니다. 성함과 계좌번호 확인 부탁드립니다."},
+    {"speaker": "user", "text": "이광호입니다. 계좌번호는 여기 있습니다."},
+    {"speaker": "assistant", "text": "감사합니다. 확인 잠시만 기다려 주세요."},
+    {"speaker": "user", "text": "네, 천천히 하세요."},
+    {"speaker": "assistant", "text": "확인되었습니다. 어떤 이체 건에 대한 확인증이 필요하신가요?"},
+    {"speaker": "user", "text": "지난주에 보낸 이체 건이요."},
+    {"speaker": "assistant", "text": "네, 날짜와 대략적인 금액 알려주시겠어요?"},
+    {"speaker": "user", "text": "월요일이었고, 금액은 오십만 원입니다."},
+    {"speaker": "assistant", "text": "잠시만요, 해당 내역 조회해보겠습니다."},
+    {"speaker": "user", "text": "네."},
+    {"speaker": "assistant", "text": "월요일 자로 오십만 원 이체 내역 확인됩니다. 이 건 맞으실까요?"},
+    {"speaker": "user", "text": "맞습니다."},
+    {"speaker": "assistant", "text": "확인증은 서면과 이메일 발송 중 어떤 방식으로 받으시겠어요?"},
+    {"speaker": "user", "text": "서면으로 받고 싶습니다."},
+    {"speaker": "assistant", "text": "알겠습니다. 확인증 출력해드리겠습니다. 용도도 함께 기재할까요?"},
+    {"speaker": "user", "text": "용도는 특별히 안 적어도 됩니다."},
+    {"speaker": "assistant", "text": "네, 그러면 기본 양식으로 출력해드리겠습니다. 잠시만 기다려 주세요."},
+    {"speaker": "user", "text": "네, 알겠습니다."},
+    {"speaker": "assistant", "text": "출력 완료되었습니다. 확인해보시겠어요?"},
+    {"speaker": "user", "text": "네, 확인했습니다. 잘 나왔네요."},
+    {"speaker": "assistant", "text": "다행입니다. 혹시 다른 이체 건도 확인증 필요하신가요?"},
+    {"speaker": "user", "text": "아니요, 이거 하나면 됩니다."},
+    {"speaker": "assistant", "text": "알겠습니다. 발급 수수료는 없으니 안심하셔도 됩니다."},
+    {"speaker": "user", "text": "네, 감사합니다."},
+    {"speaker": "assistant", "text": "혹시 계좌 관련해서 더 궁금하신 사항 있으실까요?"},
+    {"speaker": "user", "text": "아니요, 오늘은 이거면 충분합니다."},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 오늘 방문해주셔서 감사합니다."},
+    {"speaker": "user", "text": "네, 수고하세요."},
+    {"speaker": "assistant", "text": "안녕히 가세요, 고객님."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

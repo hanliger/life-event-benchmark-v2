@@ -1,0 +1,43 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요. 거래내역 좀 확인하려고요."},
+    {"speaker": "assistant", "text": "안녕하세요, 고객님. 거래내역 조회 도와드리겠습니다. 본인 확인 먼저 진행해도 될까요?"},
+    {"speaker": "user", "text": "네, 신분증 여기 있습니다."},
+    {"speaker": "assistant", "text": "감사합니다. 성함과 생년월일 확인 부탁드립니다."},
+    {"speaker": "user", "text": "이광호입니다. 오오년생이고요."},
+    {"speaker": "assistant", "text": "확인되었습니다. 어느 계좌의 거래내역을 조회해 드릴까요?"},
+    {"speaker": "user", "text": "주로 쓰는 입출금 통장이요."},
+    {"speaker": "assistant", "text": "네, 조회 기간은 어느 정도로 원하십니까?"},
+    {"speaker": "user", "text": "최근 세 달 정도만 봐주세요."},
+    {"speaker": "assistant", "text": "확인해드리겠습니다. 잠시만 기다려주세요."},
+    {"speaker": "user", "text": "네, 천천히 하세요."},
+    {"speaker": "assistant", "text": "조회되었습니다. 화면으로 보여드릴까요, 아니면 출력해드릴까요?"},
+    {"speaker": "user", "text": "출력해주시면 좋겠네요."},
+    {"speaker": "assistant", "text": "네, 바로 출력해드리겠습니다."},
+    {"speaker": "user", "text": "감사합니다."},
+    {"speaker": "assistant", "text": "혹시 특정 거래 건을 따로 찾고 계신가요?"},
+    {"speaker": "user", "text": "지난달 자동이체 내역이 궁금해서요."},
+    {"speaker": "assistant", "text": "네, 자동이체 항목만 따로 필터링해서 보여드리겠습니다."},
+    {"speaker": "user", "text": "네, 그렇게 해주세요."},
+    {"speaker": "assistant", "text": "확인해보니 지난달 자동이체는 두 건이 있었습니다. 상세 내역 안내드릴까요?"},
+    {"speaker": "user", "text": "네, 말씀해주세요."},
+    {"speaker": "assistant", "text": "관리비와 통신비 항목으로 각각 출금되었습니다."},
+    {"speaker": "user", "text": "네, 확인했습니다."},
+    {"speaker": "assistant", "text": "더 필요하신 내역이 있으실까요?"},
+    {"speaker": "user", "text": "아니요, 이 정도면 충분합니다."},
+    {"speaker": "assistant", "text": "그럼 출력물 챙겨드리겠습니다."},
+    {"speaker": "user", "text": "네, 감사합니다."},
+    {"speaker": "assistant", "text": "오늘 도와드린 내용 외에 다른 문의사항 있으실까요?"},
+    {"speaker": "user", "text": "없습니다. 수고하셨어요."},
+    {"speaker": "assistant", "text": "네, 감사합니다. 좋은 하루 보내세요."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

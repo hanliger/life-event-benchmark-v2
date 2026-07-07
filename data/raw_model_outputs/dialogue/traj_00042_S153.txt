@@ -1,0 +1,45 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요, 생활비 정기송금 관련해서 문의드리려고 합니다."},
+    {"speaker": "assistant", "text": "네, 고객님. 정기송금 관련하여 어떤 부분을 도와드릴까요?"},
+    {"speaker": "user", "text": "매달 나가는 생활비 이체 금액을 좀 조정하고 싶습니다."},
+    {"speaker": "assistant", "text": "네, 현재 등록되어 있는 정기송금 내역을 확인해드리겠습니다. 계좌번호를 알려주시겠어요?"},
+    {"speaker": "user", "text": "네, 여기 있습니다."},
+    {"speaker": "assistant", "text": "확인했습니다. 현재 매월 20일에 생활비 명목으로 이체가 설정되어 있으신데, 금액을 어떻게 변경하시겠어요?"},
+    {"speaker": "user", "text": "지금보다 조금 늘리고 싶습니다."},
+    {"speaker": "assistant", "text": "알겠습니다. 구체적으로 희망하시는 금액을 말씀해주시겠어요?"},
+    {"speaker": "user", "text": "지금 30만원인데 40만원으로 바꿔주세요."},
+    {"speaker": "assistant", "text": "네, 확인했습니다. 혹시 다른 정기송금 항목도 함께 확인해드릴까요?"},
+    {"speaker": "user", "text": "아, 그러고 보니 회사 경비 처리용 이체도 하나 있는데 그건 그대로 두시면 됩니다."},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 그 항목은 변동 없이 유지하도록 하겠습니다."},
+    {"speaker": "user", "text": "네, 감사합니다."},
+    {"speaker": "assistant", "text": "생활비 이체 날짜는 기존대로 매월 20일 유지하시면 될까요?"},
+    {"speaker": "user", "text": "네, 그대로 괜찮습니다."},
+    {"speaker": "assistant", "text": "알겠습니다. 이체 수수료는 기존과 동일하게 적용됩니다. 참고 부탁드립니다."},
+    {"speaker": "user", "text": "네, 확인했습니다."},
+    {"speaker": "assistant", "text": "변경하실 금액이 40만원으로 확정되면, 다음 이체일부터 적용됩니다. 진행해드릴까요?"},
+    {"speaker": "user", "text": "네, 진행해주세요."},
+    {"speaker": "assistant", "text": "다만 정기송금 변경은 고객님 확인 후 최종 진행되니, 지금 말씀하신 내용으로 확정하시겠습니까?"},
+    {"speaker": "user", "text": "네, 확정해주세요."},
+    {"speaker": "assistant", "text": "알겠습니다. 변경 신청 접수하였습니다. 완료 문자로 다시 안내드리겠습니다."},
+    {"speaker": "user", "text": "네, 알겠습니다."},
+    {"speaker": "assistant", "text": "추가로 등록된 다른 자동이체 항목도 확인해드릴까요?"},
+    {"speaker": "user", "text": "아니요, 그건 됐습니다."},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 그럼 오늘 상담 내용은 생활비 정기송금 금액 변경으로 정리해드리겠습니다."},
+    {"speaker": "user", "text": "네, 맞습니다."},
+    {"speaker": "assistant", "text": "혹시 더 궁금하신 사항 있으실까요?"},
+    {"speaker": "user", "text": "아니요, 없습니다. 감사합니다."},
+    {"speaker": "assistant", "text": "네, 이용해주셔서 감사합니다. 좋은 하루 보내세요."}
+  ],
+  "cue_annotations": [
+    {"turn_index": 10, "cue_type": "business_expense_transfer_mention", "linked_memory_path": "no_event/hard_negative"}
+  ],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

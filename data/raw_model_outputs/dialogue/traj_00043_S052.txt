@@ -1,0 +1,45 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요, 예금 금리 좀 알아보려고요."},
+    {"speaker": "assistant", "text": "안녕하세요, 고객님. 예금 금리 문의 도와드리겠습니다. 어떤 종류의 예금을 생각하고 계신가요?"},
+    {"speaker": "user", "text": "그냥 정기예금이요. 목돈 좀 있어서."},
+    {"speaker": "assistant", "text": "네, 정기예금 기준으로 안내드리겠습니다. 예치 기간은 어느 정도 생각하고 계신가요?"},
+    {"speaker": "user", "text": "한 1년 정도요."},
+    {"speaker": "assistant", "text": "1년제 정기예금 기준으로는 현재 연 3.4% 금리가 적용되고 있습니다. 예치 금액은 대략 어느 정도이신가요?"},
+    {"speaker": "user", "text": "천만원쯨요."},
+    {"speaker": "assistant", "text": "천만 원 예치 시 1년 만기 기준으로 약 34만 원 정도의 이자가 발생합니다. 참고로 세전 금액입니다."},
+    {"speaker": "user", "text": "세금 얼마나 떼요?"},
+    {"speaker": "assistant", "text": "일반과세 기준으로 이자소득세 15.4%가 적용됩니다. 실수령 이자는 대략 28만 원 정도로 예상됩니다."},
+    {"speaker": "user", "text": "다른 은행보다 나은 편이에요?"},
+    {"speaker": "assistant", "text": "타 은행 대비 비슷하거나 약간 높은 수준입니다. 다만 저희 은행 우대조건 충족 시 금리가 조금 더 올라갈 수 있습니다."},
+    {"speaker": "user", "text": "우대조건이 뭔데요?"},
+    {"speaker": "assistant", "text": "급여이체나 자동이체 실적, 혹은 카드 사용 실적이 있으면 0.2%포인트 정도 추가 우대가 가능합니다."},
+    {"speaker": "user", "text": "저는 그냥 카드값 정도만 나가는데."},
+    {"speaker": "assistant", "text": "카드 실적도 우대조건에 포함될 수 있습니다. 사용 중인 카드가 저희 은행 카드인지 확인해드릴까요?"},
+    {"speaker": "user", "text": "네 확인해주세요."},
+    {"speaker": "assistant", "text": "확인해보니 고객님 카드가 우대조건에 해당됩니다. 적용 시 연 3.6% 금리로 예상됩니다."},
+    {"speaker": "user", "text": "오 조금 낫네요."},
+    {"speaker": "assistant", "text": "네, 소폭이지만 도움이 되실 겁니다. 예치 기간을 2년으로 늘리시면 금리가 더 높아지는데, 고려해보시겠어요?"},
+    {"speaker": "user", "text": "아니요 1년이면 됐어요. 급하게 뺄 일이 생길 수도 있어서."},
+    {"speaker": "assistant", "text": "알겠습니다. 참고로 중도 해지 시에는 약정 금리보다 낮은 금리가 적용됩니다. 이 부분 유의하시면 됩니다."},
+    {"speaker": "user", "text": "얼마나 낮아져요?"},
+    {"speaker": "assistant", "text": "예치 기간에 따라 다르지만, 6개월 이전 해지 시 연 1% 이하로 적용될 수 있습니다."},
+    {"speaker": "user", "text": "그럼 그냥 1년 채워야겠네요."},
+    {"speaker": "assistant", "text": "네, 만기까지 유지하시면 안내드린 금리 그대로 적용됩니다."},
+    {"speaker": "user", "text": "가입은 오늘 안 해도 되죠? 좀 더 생각해볼게요."},
+    {"speaker": "assistant", "text": "물론입니다. 오늘은 조회만 도와드린 걸로 하고, 가입은 고객님 확인 후 편하실 때 진행하시면 됩니다."},
+    {"speaker": "user", "text": "네 알겠습니다."},
+    {"speaker": "assistant", "text": "추가로 궁금하신 점 있으실까요?"},
+    {"speaker": "user", "text": "아니요 됐어요. 감사합니다."},
+    {"speaker": "assistant", "text": "네, 감사합니다. 좋은 하루 보내세요."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

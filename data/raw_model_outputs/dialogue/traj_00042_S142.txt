@@ -1,0 +1,45 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요. 주소 변경하려고 왔습니다."},
+    {"speaker": "assistant", "text": "안녕하세요, 고객님. 주소 변경 도와드리겠습니다. 본인 확인을 위해 신분증 먼저 보여주시겠어요?"},
+    {"speaker": "user", "text": "네, 여기 있습니다."},
+    {"speaker": "assistant", "text": "확인 감사합니다. 등록되어 있는 계좌 전체에 대해 주소를 변경해드릴까요, 아니면 특정 계좌만 변경 원하시나요?"},
+    {"speaker": "user", "text": "전체로 해주세요."},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 새 주소를 말씀해주시겠어요?"},
+    {"speaker": "user", "text": "용인시 처인구로 그대로입니다. 동만 바뀌었어요."},
+    {"speaker": "assistant", "text": "네, 상세 주소 정확히 불러주시겠어요?"},
+    {"speaker": "user", "text": "번지수랑 동호수 다시 알려드릴게요."},
+    {"speaker": "assistant", "text": "네, 말씀해주세요."},
+    {"speaker": "user", "text": "여기 적어드린 대로입니다."},
+    {"speaker": "assistant", "text": "확인했습니다. 우편물 수령 주소도 동일하게 변경할까요?"},
+    {"speaker": "user", "text": "네, 그렇게 해주세요."},
+    {"speaker": "assistant", "text": "알겠습니다. 혹시 여행 경비 모으는 통장도 같은 주소로 등록되어 있는데, 그 계좌도 함께 변경해드릴까요?"},
+    {"speaker": "user", "text": "아, 그것도 부탁드립니다."},
+    {"speaker": "assistant", "text": "네, 확인했습니다. 해당 통장도 함께 변경 처리하겠습니다."},
+    {"speaker": "user", "text": "감사합니다."},
+    {"speaker": "assistant", "text": "혹시 카드 배송지도 이번에 함께 변경 원하시나요?"},
+    {"speaker": "user", "text": "네, 카드도 같이 부탁드립니다."},
+    {"speaker": "assistant", "text": "알겠습니다. 카드 재발급은 아니고 배송지 정보만 갱신하는 것으로 진행하겠습니다."},
+    {"speaker": "user", "text": "네, 그거면 됩니다."},
+    {"speaker": "assistant", "text": "확인 차 다시 여쭙겠습니다. 계좌 전체, 우편물, 카드 배송지 모두 새 주소로 변경하는 것 맞으실까요?"},
+    {"speaker": "user", "text": "네, 맞습니다."},
+    {"speaker": "assistant", "text": "네, 그럼 변경 처리 진행하겠습니다. 잠시만 기다려주세요."},
+    {"speaker": "user", "text": "네, 알겠습니다."},
+    {"speaker": "assistant", "text": "처리 완료되었습니다. 문자로 변경 내역 안내드렸습니다."},
+    {"speaker": "user", "text": "확인했습니다."},
+    {"speaker": "assistant", "text": "혹시 추가로 다른 계좌나 정보 변경하실 것 있으실까요?"},
+    {"speaker": "user", "text": "아니요, 이걸로 됐습니다."},
+    {"speaker": "assistant", "text": "네, 오늘 방문해주셔서 감사합니다. 좋은 하루 보내세요."}
+  ],
+  "cue_annotations": [
+    {"turn_index": 13, "cue_type": "travel_savings_account_mention", "linked_memory_path": "no_event/account_context"}
+  ],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

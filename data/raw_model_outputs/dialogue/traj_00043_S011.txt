@@ -1,0 +1,45 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요, 관리비 자동납부 때문에 왔는데요"},
+    {"speaker": "assistant", "text": "안녕하세요 고객님, 관리비 자동납부 관련 문의 도와드리겠습니다. 신규 등록이신가요, 아니면 기존 내용 변경이신가요?"},
+    {"speaker": "user", "text": "지금 등록된 거 계좌를 좀 바꾸고 싶어서요"},
+    {"speaker": "assistant", "text": "네, 확인 도와드리겠습니다. 본인 확인을 위해 성함과 생년월일 말씀해주시겠어요?"},
+    {"speaker": "user", "text": "유수범이고 칠십년생입니다"},
+    {"speaker": "assistant", "text": "확인 감사합니다. 현재 관리비 자동납부가 연결된 계좌를 조회해드릴게요, 잠시만요"},
+    {"speaker": "user", "text": "네"},
+    {"speaker": "assistant", "text": "고객님 명의로 등록된 계좌 확인됐습니다. 이 계좌를 다른 계좌로 변경하시는 거 맞으실까요?"},
+    {"speaker": "user", "text": "네 맞아요, 요즘 통장을 좀 나눠서 쓰고 있어서"},
+    {"speaker": "assistant", "text": "그러시군요. 변경하실 계좌 번호나 통장을 확인해주시겠어요?"},
+    {"speaker": "user", "text": "여기 통장 있어요, 이걸로 해주세요"},
+    {"speaker": "assistant", "text": "네, 확인했습니다. 이 계좌로 관리비 자동납부 변경 진행해도 괜찮으실까요? 출금이 발생하는 변경이라 고객님 확인이 필요합니다"},
+    {"speaker": "user", "text": "네 괜찮아요 진행해주세요"},
+    {"speaker": "assistant", "text": "네, 변경 신청 접수했습니다. 다음 관리비 청구부터 새 계좌로 적용될 예정입니다"},
+    {"speaker": "user", "text": "네 감사합니다"},
+    {"speaker": "assistant", "text": "혹시 자동납부 금액 한도도 함께 확인해드릴까요?"},
+    {"speaker": "user", "text": "아뇨 그건 그대로 둬도 돼요"},
+    {"speaker": "assistant", "text": "알겠습니다. 그럼 현재 설정 그대로 유지하겠습니다"},
+    {"speaker": "user", "text": "요즘 계좌를 좀 정리하려고요, 친구한테 빌린 돈 상환할 것도 있고 해서"},
+    {"speaker": "assistant", "text": "네, 그래서 계좌 관리를 신경 쓰고 계셨군요. 혹시 이체 관련해서 추가로 도와드릴 부분 있을까요?"},
+    {"speaker": "user", "text": "아니요 오늘은 이거만 하면 돼요"},
+    {"speaker": "assistant", "text": "네 알겠습니다. 새로 등록하신 계좌로 관리비가 정상 출금되는지는 다음 청구일에 문자로 안내드릴게요"},
+    {"speaker": "user", "text": "네 그거 좋네요"},
+    {"speaker": "assistant", "text": "혹시 관리비 자동납부 외에 다른 공과금도 자동이체 등록되어 있는지 확인해드릴까요?"},
+    {"speaker": "user", "text": "아 그거는 다음에 할게요, 오늘은 바빠서"},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 필요하실 때 언제든 다시 방문해주세요"},
+    {"speaker": "user", "text": "네 수고하세요"},
+    {"speaker": "assistant", "text": "네, 관리비 자동납부 계좌 변경 처리 완료됐습니다. 좋은 하루 되세요"},
+    {"speaker": "user", "text": "네 감사합니다"},
+    {"speaker": "assistant", "text": "감사합니다 고객님, 궁금하신 점 있으시면 언제든 연락 주세요"}
+  ],
+  "cue_annotations": [
+    {"turn_index": 18, "cue_type": "financial_context_mention", "linked_memory_path": "life_event.debt_repayment_friend"}
+  ],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

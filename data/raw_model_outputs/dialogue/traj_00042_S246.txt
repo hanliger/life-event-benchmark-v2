@@ -1,0 +1,44 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요, 계좌 내역 좀 확인하고 싶어서요."},
+    {"speaker": "assistant", "text": "안녕하세요 고객님. 어떤 내역을 확인하고 싶으신가요?"},
+    {"speaker": "user", "text": "최근에 통장에서 좀 낯선 금액이 빠져나간 게 있어서요."},
+    {"speaker": "assistant", "text": "네, 언제 발생한 거래인지 알려주시겠어요?"},
+    {"speaker": "user", "text": "이번 달 초쯤인 것 같아요. 정확한 날짜는 잘 모르겠네요."},
+    {"speaker": "assistant", "text": "거래 내역 조회해드리겠습니다. 잠시만 기다려주세요."},
+    {"speaker": "user", "text": "네, 부탁드립니다."},
+    {"speaker": "assistant", "text": "확인해보니 매달 같은 금액이 정기적으로 이체되고 있는데요, 혹시 짐작 가시는 부분 있으신가요?"},
+    {"speaker": "user", "text": "아, 그거 동호회 회비 정기이체인 것 같아요. 깜빡했네요."},
+    {"speaker": "assistant", "text": "네, 등록해두신 자동이체 항목 중에 그 이름으로 되어 있는지 한번 확인해드릴까요?"},
+    {"speaker": "user", "text": "네, 확인 부탁드려요."},
+    {"speaker": "assistant", "text": "확인해보니 매월 15일에 같은 계좌로 이체되고 있는 항목이 있네요."},
+    {"speaker": "user", "text": "맞아요, 그거 같습니다. 제가 착각했네요."},
+    {"speaker": "assistant", "text": "다행입니다. 혹시 다른 이상한 거래는 없으셨나요?"},
+    {"speaker": "user", "text": "네, 그 외에는 없는 것 같아요."},
+    {"speaker": "assistant", "text": "그럼 이번 건은 별도 조치 없이 종결해도 괜찮을까요?"},
+    {"speaker": "user", "text": "네, 그렇게 해주세요."},
+    {"speaker": "assistant", "text": "혹시 앞으로 이런 정기이체 내역을 미리 안내받고 싶으시면 알림 설정도 가능합니다."},
+    {"speaker": "user", "text": "오, 그런 게 있어요?"},
+    {"speaker": "assistant", "text": "네, 문자나 앱 알림으로 매달 이체 전에 안내해드릴 수 있습니다."},
+    {"speaker": "user", "text": "그럼 그것도 신청하고 싶어요."},
+    {"speaker": "assistant", "text": "네, 알림 신청은 본인 확인 후 바로 진행 가능합니다. 신분증 준비되셨나요?"},
+    {"speaker": "user", "text": "네, 여기 있습니다."},
+    {"speaker": "assistant", "text": "확인 감사합니다. 알림 신청 처리해드리겠습니다."},
+    {"speaker": "user", "text": "감사합니다."},
+    {"speaker": "assistant", "text": "혹시 추가로 궁금하신 점 있으실까요?"},
+    {"speaker": "user", "text": "아니요, 오늘은 이 정도면 될 것 같습니다."},
+    {"speaker": "assistant", "text": "네, 그럼 오늘 상담은 여기서 마무리하겠습니다. 좋은 하루 되세요."},
+    {"speaker": "user", "text": "네, 수고하세요."}
+  ],
+  "cue_annotations": [
+    {"turn_index": 9, "cue_type": "explicit_cue", "linked_memory_path": "life_event.recurring_transfer.club_dues"}
+  ],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

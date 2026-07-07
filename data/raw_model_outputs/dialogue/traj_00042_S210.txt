@@ -1,0 +1,43 @@
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요. 대출 잔액 좀 확인하려고요."},
+    {"speaker": "assistant", "text": "안녕하세요, 고객님. 대출 잔액 조회 도와드리겠습니다. 본인 확인을 위해 신분증 제시해 주시겠어요?"},
+    {"speaker": "user", "text": "네, 여기 있습니다."},
+    {"speaker": "assistant", "text": "확인했습니다. 어떤 대출 상품의 잔액을 조회해 드릴까요?"},
+    {"speaker": "user", "text": "주택담보대출이요."},
+    {"speaker": "assistant", "text": "네, 조회해 드리겠습니다. 잠시만 기다려 주세요."},
+    {"speaker": "user", "text": "네, 알겠습니다."},
+    {"speaker": "assistant", "text": "확인됐습니다. 현재 대출 잔액은 4,820만 원입니다."},
+    {"speaker": "user", "text": "이번 달에 얼마 갚았는지도 볼 수 있나요?"},
+    {"speaker": "assistant", "text": "네, 이번 달 상환액은 87만 원으로 확인됩니다."},
+    {"speaker": "user", "text": "다음 달 상환일도 알려주세요."},
+    {"speaker": "assistant", "text": "다음 상환일은 오는 15일입니다."},
+    {"speaker": "user", "text": "네. 그리고 혹시 이 계좌에서 이체도 가능한가요?"},
+    {"speaker": "assistant", "text": "네, 가능합니다. 어떤 목적의 이체이신가요?"},
+    {"speaker": "user", "text": "회사 경비 처리용 이체가 있어서요."},
+    {"speaker": "assistant", "text": "알겠습니다. 이체는 대출 계좌가 아닌 입출금 계좌에서 진행하시는 것이 맞으실까요?"},
+    {"speaker": "user", "text": "네, 그렇습니다. 대출 잔액만 궁금해서요."},
+    {"speaker": "assistant", "text": "네, 이해했습니다. 대출 관련해서 더 필요한 정보 있으실까요?"},
+    {"speaker": "user", "text": "만기일도 확인 가능한가요?"},
+    {"speaker": "assistant", "text": "네, 해당 대출 만기일은 2031년 8월입니다."},
+    {"speaker": "user", "text": "감사합니다. 금리는 지금 얼마인가요?"},
+    {"speaker": "assistant", "text": "현재 적용 금리는 연 3.45%입니다."},
+    {"speaker": "user", "text": "고정인가요, 변동인가요?"},
+    {"speaker": "assistant", "text": "혼합형 금리로, 5년 고정 후 변동 적용되는 상품입니다."},
+    {"speaker": "user", "text": "그렇군요. 알겠습니다."},
+    {"speaker": "assistant", "text": "네, 추가로 궁금하신 사항 있으신가요?"},
+    {"speaker": "user", "text": "아니요, 오늘은 이걸로 됐습니다."},
+    {"speaker": "assistant", "text": "네, 대출 잔액 조회 관련 상담 마무리하겠습니다. 좋은 하루 보내세요."},
+    {"speaker": "user", "text": "네, 수고하세요."},
+    {"speaker": "assistant", "text": "감사합니다, 고객님."}
+  ],
+  "cue_annotations": [
+    {"turn_index": 14, "cue_type": "hard_negative_distractor", "linked_memory_path": "life_event.none"}
+  ],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}

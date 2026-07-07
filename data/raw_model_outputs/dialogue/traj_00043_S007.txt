@@ -1,0 +1,47 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요, 예금 금리 좀 알아보려고요."},
+    {"speaker": "assistant", "text": "안녕하세요 고객님, 문의 주셔서 감사합니다. 어떤 상품의 금리를 확인해 드릴까요?"},
+    {"speaker": "user", "text": "정기예금이랑 적금 둘 다 궁금해서요."},
+    {"speaker": "assistant", "text": "네, 현재 정기예금은 12개월 기준 연 3.2%, 적금은 12개월 기준 연 3.5% 적용되고 있습니다."},
+    {"speaker": "user", "text": "요즘 좀 낮아진 거 같은데 맞나요."},
+    {"speaker": "assistant", "text": "지난달 대비 소폭 하락한 편입니다. 혹시 목돈을 어느 정도 기간으로 운용하실 계획이신가요?"},
+    {"speaker": "user", "text": "그냥 좀 넉넉하게 오래 넣어두고 싶어서요."},
+    {"speaker": "assistant", "text": "장기 운용을 고려하신다면 24개월 이상 상품도 안내해 드릴 수 있습니다. 확인해 드릴까요?"},
+    {"speaker": "user", "text": "네, 그거랑 비교해서 알려주세요."},
+    {"speaker": "assistant", "text": "24개월 정기예금은 연 3.4%로 조금 더 높습니다. 다만 중도 해지 시 이자가 줄어드는 점은 참고 부탁드립니다."},
+    {"speaker": "user", "text": "그렇군요. 요즘 노후 자금 계획도 좀 세워보려고 이것저것 보고 있어요."},
+    {"speaker": "assistant", "text": "그러시군요. 예금 금리 외에 다른 자산 계획도 함께 고려 중이신가요?"},
+    {"speaker": "user", "text": "네, 연금저축 점검도 한번 해봐야 할 거 같고."},
+    {"speaker": "assistant", "text": "네, 연금저축은 별도로 상담 예약을 도와드릴 수 있습니다. 오늘은 예금 금리 위주로 안내 계속해 드릴까요?"},
+    {"speaker": "user", "text": "네 일단 그거 먼저요."},
+    {"speaker": "assistant", "text": "알겠습니다. 그럼 24개월 정기예금 기준으로 예상 이자를 계산해 드릴까요?"},
+    {"speaker": "user", "text": "네 대충 얼마나 나오는지 궁금해요."},
+    {"speaker": "assistant", "text": "1000만 원 기준으로 24개월 예치 시 세전 이자는 약 68만 원 정도 됩니다."},
+    {"speaker": "user", "text": "생각보다 괜찮네요."},
+    {"speaker": "assistant", "text": "네, 다만 세금 공제 후 실수령액은 조금 줄어드니 참고 부탁드립니다. 혹시 여유 자금 규모는 어느 정도로 생각하고 계신가요?"},
+    {"speaker": "user", "text": "그건 아직 정확히 모르겠어요. 퇴직 이후 생활비 계산도 해봐야 해서."},
+    {"speaker": "assistant", "text": "그러시군요. 생활비 계산이 끝나신 후에 예치 금액을 정하셔도 늦지 않습니다."},
+    {"speaker": "user", "text": "네 맞아요, 그래서 일단 금리만 보고 가려고요."},
+    {"speaker": "assistant", "text": "네, 그럼 오늘은 정기예금과 적금 금리 안내로 마무리해 드려도 될까요?"},
+    {"speaker": "user", "text": "네 그정도면 됐어요."},
+    {"speaker": "assistant", "text": "혹시 나중에 상품 가입 결정하시면 다시 방문 주시면 안내 도와드리겠습니다."},
+    {"speaker": "user", "text": "네 알겠습니다."},
+    {"speaker": "assistant", "text": "추가로 연금저축 관련 상담도 원하시면 예약 도와드릴까요?"},
+    {"speaker": "user", "text": "그건 다음에 따로 올게요."},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 오늘 상담 도와드려서 감사합니다. 좋은 하루 되세요."}
+  ],
+  "cue_annotations": [
+    {"turn_index": 10, "cue_type": "노후 자금 계획", "linked_memory_path": "life_event.retirement_planning.weak_signal"},
+    {"turn_index": 12, "cue_type": "연금저축 점검", "linked_memory_path": "life_event.pension_check.weak_signal"},
+    {"turn_index": 20, "cue_type": "퇴직 이후 생활비 계산", "linked_memory_path": "life_event.retirement_living_cost.weak_signal"}
+  ],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

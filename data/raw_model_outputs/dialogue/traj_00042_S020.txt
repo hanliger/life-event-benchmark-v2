@@ -1,0 +1,45 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요. 생활비로 쓰는 계좌 하나 정리하고 싶어서 왔습니다."},
+    {"speaker": "assistant", "text": "안녕하세요, 고객님. 어떤 계좌를 정리하고 싶으신지 조금 더 말씀해 주시겠어요?"},
+    {"speaker": "user", "text": "지금 쓰는 통장이 여러 개라 하나로 모으고 싶어서요."},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 현재 사용 중인 계좌가 몇 개나 되시나요?"},
+    {"speaker": "user", "text": "세 개 정도 됩니다. 자동이체가 이것저것 걸려 있어서요."},
+    {"speaker": "assistant", "text": "자동이체 내역을 하나의 계좌로 통합하시려는 거군요. 어떤 항목들이 있으신가요?"},
+    {"speaker": "user", "text": "카드값, 관리비, 그리고 회사 경비 처리용 이체가 하나 있습니다."},
+    {"speaker": "assistant", "text": "네, 확인했습니다. 회사 경비 처리용 이체는 정기적으로 나가는 건가요, 아니면 필요할 때마다 하시는 건가요?"},
+    {"speaker": "user", "text": "매달 비슷한 날짜에 나갑니다."},
+    {"speaker": "assistant", "text": "그러면 그 이체도 새 계좌로 옮기실 계획이신가요?"},
+    {"speaker": "user", "text": "네, 다 한곳으로 모으고 싶습니다."},
+    {"speaker": "assistant", "text": "알겠습니다. 우선 어느 계좌를 주 생활비 계좌로 지정하실지 정해야 할 것 같습니다."},
+    {"speaker": "user", "text": "지금 급여 들어오던 계좌로 하려고 합니다."},
+    {"speaker": "assistant", "text": "네, 그 계좌로 통합하시면 관리가 수월하실 것 같습니다. 기존 자동이체 항목은 모두 해지 후 새로 등록하는 방식으로 진행됩니다."},
+    {"speaker": "user", "text": "그럼 지금 걸려 있는 건 다 없어지는 건가요?"},
+    {"speaker": "assistant", "text": "네, 기존 자동이체는 고객님 확인 후 해지 처리되고, 새 계좌로 재등록하시는 절차입니다. 바로 진행할까요?"},
+    {"speaker": "user", "text": "카드값이랑 관리비는 진행해주시고, 나머지는 좀 더 생각해볼게요."},
+    {"speaker": "assistant", "text": "알겠습니다. 회사 경비 처리용 이체는 그대로 유지하시는 걸로 처리하겠습니다."},
+    {"speaker": "user", "text": "네, 그건 아직 건드리지 마세요."},
+    {"speaker": "assistant", "text": "네, 반영했습니다. 카드값과 관리비 자동이체는 오늘 날짜로 신규 계좌에 등록해 드리겠습니다."},
+    {"speaker": "user", "text": "네, 부탁드립니다."},
+    {"speaker": "assistant", "text": "혹시 이체 한도도 함께 확인하시겠어요? 생활비 계좌 특성상 한도 설정을 조정하시는 분들이 많으십니다."},
+    {"speaker": "user", "text": "한도는 지금 그대로 두겠습니다."},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 그럼 자동이체 신청서 확인 후 서명 부탁드리겠습니다."},
+    {"speaker": "user", "text": "서명은 여기 하면 되나요?"},
+    {"speaker": "assistant", "text": "네, 맞습니다. 서명해 주시면 접수 처리하겠습니다."},
+    {"speaker": "user", "text": "다 됐습니다."},
+    {"speaker": "assistant", "text": "확인했습니다. 처리 완료되었고, 오늘부터 카드값과 관리비는 새 계좌에서 출금됩니다."},
+    {"speaker": "user", "text": "네, 감사합니다."},
+    {"speaker": "assistant", "text": "네, 오늘 도와드린 내용은 여기까지입니다. 좋은 하루 보내세요."}
+  ],
+  "cue_annotations": [
+    {"turn_index": 6, "cue_type": "회사 경비 처리용 이체", "linked_memory_path": "no_event"}
+  ],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

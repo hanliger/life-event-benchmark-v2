@@ -1,0 +1,44 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요. 환율 알림 설정하고 싶어서요."},
+    {"speaker": "assistant", "text": "안녕하세요, 고객님. 환율 알림 서비스 신청 도와드리겠습니다. 어떤 통화 환율을 알림 받고 싶으신가요?"},
+    {"speaker": "user", "text": "달러요. 미국 달러 환율이요."},
+    {"speaker": "assistant", "text": "네, 미국 달러 환율 알림으로 설정 도와드리겠습니다. 알림을 받고 싶은 기준 환율이 있으신가요?"},
+    {"speaker": "user", "text": "1300원 넘으면 알려주세요."},
+    {"speaker": "assistant", "text": "1300원 이상일 때 알림 받으시는 걸로 설정하겠습니다. 알림 받으실 방법은 문자와 앱 알림 중 어느 쪽으로 하시겠어요?"},
+    {"speaker": "user", "text": "문자로 받을게요."},
+    {"speaker": "assistant", "text": "네, 문자 알림으로 설정하겠습니다. 알림 받으실 휴대폰 번호 확인 부탁드립니다."},
+    {"speaker": "user", "text": "저장된 번호 그대로 쓰면 됩니다."},
+    {"speaker": "assistant", "text": "확인했습니다. 등록된 번호로 설정 진행하겠습니다. 혹시 하한 알림도 필요하신가요?"},
+    {"speaker": "user", "text": "1250원 아래로 떨어지면도 알려주세요."},
+    {"speaker": "assistant", "text": "네, 1250원 이하 알림도 함께 추가해드리겠습니다. 두 가지 조건 모두 확인 부탁드립니다. 상한 1300원, 하한 1250원 맞으신가요?"},
+    {"speaker": "user", "text": "네 맞습니다."},
+    {"speaker": "assistant", "text": "설정 반영해드렸습니다. 그런데 계좌 확인 중에 이체 항목이 하나 보이는데, 확인 차원에서 여쭤봐도 될까요?"},
+    {"speaker": "user", "text": "네, 뭔데요."},
+    {"speaker": "assistant", "text": "매달 같은 날짜에 소액이 자동이체 되고 있는데, 어떤 용도인지 여쭤봐도 될까요?"},
+    {"speaker": "user", "text": "아, 그건 동호회 회비 정기이체예요. 문제 있는 건 아니에요."},
+    {"speaker": "assistant", "text": "네, 확인 감사합니다. 별다른 문제는 없으시고요, 그럼 다시 환율 알림 관련해서 말씀드리겠습니다. 알림 유효 기간은 어떻게 설정해드릴까요?"},
+    {"speaker": "user", "text": "1년으로 해주세요."},
+    {"speaker": "assistant", "text": "네, 1년 유효 기간으로 설정하겠습니다. 만료 전에 재신청 안내 문자도 받아보시겠어요?"},
+    {"speaker": "user", "text": "네, 받을게요."},
+    {"speaker": "assistant", "text": "알겠습니다. 만료 한 달 전에 안내 문자 발송되도록 설정하겠습니다. 최종적으로 설정 내용 안내드려도 될까요?"},
+    {"speaker": "user", "text": "네, 말씀해주세요."},
+    {"speaker": "assistant", "text": "미국 달러 환율 알림, 상한 1300원, 하한 1250원, 문자 알림, 유효기간 1년으로 설정되었습니다. 맞으신가요?"},
+    {"speaker": "user", "text": "네 맞습니다."},
+    {"speaker": "assistant", "text": "설정 완료되었습니다. 알림은 오늘부터 적용됩니다. 추가로 궁금하신 점 있으실까요?"},
+    {"speaker": "user", "text": "아니요, 없습니다."},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 이용해주셔서 감사합니다. 좋은 하루 보내세요."},
+    {"speaker": "user", "text": "네, 수고하세요."}
+  ],
+  "cue_annotations": [
+    {"turn_index": 16, "cue_type": "hard_negative_distractor", "linked_memory_path": "customer.transactions.recurring_transfer.club_fee"}
+  ],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

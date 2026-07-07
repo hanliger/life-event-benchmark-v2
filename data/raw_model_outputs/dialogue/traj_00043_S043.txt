@@ -1,0 +1,43 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "예금 금리 좀 물어보려고 왔는데요."},
+    {"speaker": "assistant", "text": "안녕하세요, 고객님. 예금 금리 안내 도와드리겠습니다. 어떤 상품이 궁금하신가요?"},
+    {"speaker": "user", "text": "그냥 일반 정기예금이요."},
+    {"speaker": "assistant", "text": "네, 정기예금 기준으로 안내드리겠습니다. 예치 기간은 어느 정도 생각하고 계세요?"},
+    {"speaker": "user", "text": "한 1년 정도."},
+    {"speaker": "assistant", "text": "1년제 정기예금은 현재 연 3.2% 금리 적용됩니다. 가입 예정 금액도 알려주실 수 있을까요?"},
+    {"speaker": "user", "text": "천만 원 정도 넣으려고요."},
+    {"speaker": "assistant", "text": "천만 원 기준으로 1년 만기 시 예상 이자는 약 32만 원입니다. 세전 기준이고 세후는 조금 낮아집니다."},
+    {"speaker": "user", "text": "세금 얼마나 떼는데요?"},
+    {"speaker": "assistant", "text": "일반과세 기준으로 15.4% 원천징수됩니다. 세후 이자는 약 27만 원 정도로 예상됩니다."},
+    {"speaker": "user", "text": "다른 은행보다 낫나요?"},
+    {"speaker": "assistant", "text": "정확한 타행 비교는 어렵지만, 저희 은행은 신규 가입 시 우대금리 조건도 있습니다. 급여 이체나 카드 실적 있으신가요?"},
+    {"speaker": "user", "text": "카드는 쓰고 있어요."},
+    {"speaker": "assistant", "text": "카드 실적 조건 충족하시면 0.2% 추가 우대 가능합니다. 카드 사용액 확인해드릴까요?"},
+    {"speaker": "user", "text": "네, 확인해주세요."},
+    {"speaker": "assistant", "text": "확인해보니 우대조건 충족 가능하십니다. 그럼 3.4% 금리 적용 가능하세요."},
+    {"speaker": "user", "text": "오 그럼 이자가 더 늘어나겠네요."},
+    {"speaker": "assistant", "text": "네, 천만 원 기준으로 세전 이자 약 34만 원 정도로 늘어납니다."},
+    {"speaker": "user", "text": "중도 해지하면 손해 많이 봐요?"},
+    {"speaker": "assistant", "text": "중도 해지 시 기본금리보다 낮은 중도해지 이율이 적용됩니다. 보통 만기 대비 절반 이하로 줄어듭니다."},
+    {"speaker": "user", "text": "그럼 그냥 만기까지 넣는 게 낫겠네."},
+    {"speaker": "assistant", "text": "네, 특별한 자금 필요 없으시면 만기까지 유지하시는 게 유리합니다."},
+    {"speaker": "user", "text": "그럼 오늘 바로 가입할 수 있어요?"},
+    {"speaker": "assistant", "text": "네, 신분증만 있으시면 오늘 바로 가입 가능합니다. 신분증 지참하셨나요?"},
+    {"speaker": "user", "text": "네, 여기 있어요."},
+    {"speaker": "assistant", "text": "확인했습니다. 가입 금액과 기간 다시 한번 확인드릴게요. 천만 원, 1년 정기예금 맞으실까요?"},
+    {"speaker": "user", "text": "네 맞아요."},
+    {"speaker": "assistant", "text": "네, 그럼 신청서 작성 도와드리겠습니다. 잠시만 기다려 주세요."},
+    {"speaker": "user", "text": "네 알겠어요."},
+    {"speaker": "assistant", "text": "작성 완료되면 바로 안내드리겠습니다. 잠시만 기다려 주세요."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

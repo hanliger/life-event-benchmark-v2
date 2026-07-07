@@ -1,0 +1,44 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요. 거래내역 좀 확인하고 싶은데요."},
+    {"speaker": "assistant", "text": "안녕하세요, 고객님. 거래내역 조회 도와드리겠습니다. 본인 확인을 위해 성함과 생년월일 말씀해 주시겠어요?"},
+    {"speaker": "user", "text": "이광호입니다. 생년월일은 잠시만요, 확인해 드릴게요."},
+    {"speaker": "assistant", "text": "네, 천천히 말씀해 주세요."},
+    {"speaker": "user", "text": "육이년 삼월 십오일입니다."},
+    {"speaker": "assistant", "text": "확인 감사합니다. 조회하실 계좌 번호를 알고 계신가요, 아니면 등록된 계좌로 안내해 드릴까요?"},
+    {"speaker": "user", "text": "등록된 계좌로 해주세요."},
+    {"speaker": "assistant", "text": "네, 확인해 보니 보통예금 계좌가 하나 등록되어 있습니다. 이 계좌로 진행할까요?"},
+    {"speaker": "user", "text": "네, 그거 맞습니다."},
+    {"speaker": "assistant", "text": "조회하실 기간을 말씀해 주시겠어요? 최근 한 달, 세 달, 아니면 직접 지정하실 수도 있습니다."},
+    {"speaker": "user", "text": "최근 세 달 정도 보고 싶습니다."},
+    {"speaker": "assistant", "text": "네, 최근 세 달간 거래내역 조회해 드리겠습니다. 잠시만 기다려 주세요."},
+    {"speaker": "user", "text": "네, 알겠습니다."},
+    {"speaker": "assistant", "text": "확인되었습니다. 해당 기간 입출금 내역이 총 스물세 건 있는데요, 전체 목록으로 안내드릴까요, 아니면 특정 항목만 확인하실까요?"},
+    {"speaker": "user", "text": "특정 항목만 보고 싶어요. 지난달 큰 금액 나간 게 있었는지 궁금합니다."},
+    {"speaker": "assistant", "text": "네, 지난달 내역 중 십만 원 이상 출금 건 위주로 안내드리겠습니다. 잠시만요."},
+    {"speaker": "user", "text": "네."},
+    {"speaker": "assistant", "text": "지난달 십오일에 삼십만 원, 이십일일에 십오만 원 출금 내역이 확인됩니다. 이 두 건이 맞으실까요?"},
+    {"speaker": "user", "text": "네, 맞는 것 같습니다. 어디서 나간 건지 좀 더 자세히 볼 수 있나요?"},
+    {"speaker": "assistant", "text": "네, 삼십만 원은 관리비 자동이체이고, 십오만 원은 카드 결제 대금으로 표시되어 있습니다."},
+    {"speaker": "user", "text": "아, 그렇군요. 확인했습니다."},
+    {"speaker": "assistant", "text": "혹시 이 외에 추가로 조회하고 싶으신 기간이나 항목이 있으신가요?"},
+    {"speaker": "user", "text": "아니요, 그 정도면 충분합니다."},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 조회하신 내역을 문서로 출력해 드릴까요, 아니면 이메일로 보내드릴까요?"},
+    {"speaker": "user", "text": "문서로 받고 싶습니다."},
+    {"speaker": "assistant", "text": "네, 지금 출력해 드리겠습니다. 잠시만 기다려 주세요."},
+    {"speaker": "user", "text": "네, 감사합니다."},
+    {"speaker": "assistant", "text": "여기 있습니다, 고객님. 확인해 보시고 궁금하신 점 있으면 말씀해 주세요."},
+    {"speaker": "user", "text": "네, 잘 나왔네요. 이걸로 되었습니다."},
+    {"speaker": "assistant", "text": "네, 오늘 거래내역 조회 도와드렸습니다. 다른 업무 필요하시면 언제든 말씀해 주세요."},
+    {"speaker": "user", "text": "네, 수고하셨습니다."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

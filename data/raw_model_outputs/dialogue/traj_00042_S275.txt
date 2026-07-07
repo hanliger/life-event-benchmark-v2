@@ -1,0 +1,46 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요. 예금 금리 좀 알아보러 왔습니다."},
+    {"speaker": "assistant", "text": "안녕하세요, 고객님. 어떤 종류의 예금 금리를 확인해 드릴까요?"},
+    {"speaker": "user", "text": "정기예금이요. 1년짜리로 알아보고 싶습니다."},
+    {"speaker": "assistant", "text": "네, 현재 1년제 정기예금 기본금리는 연 3.2%입니다. 우대조건 적용 시 최대 3.5%까지 가능합니다."},
+    {"speaker": "user", "text": "우대조건이 뭔가요?"},
+    {"speaker": "assistant", "text": "저희 은행 카드 이용이나 자동이체 등록, 급여이체 여부에 따라 추가 금리가 적용됩니다."},
+    {"speaker": "user", "text": "저는 카드는 안 쓰는데요."},
+    {"speaker": "assistant", "text": "그러시면 자동이체 항목만 충족하셔도 0.1%포인트 정도 우대가 가능합니다."},
+    {"speaker": "user", "text": "그럼 3.3% 정도 되겠네요."},
+    {"speaker": "assistant", "text": "네, 맞습니다. 정확한 금리는 가입 시점 기준으로 다시 확인해 드리겠습니다."},
+    {"speaker": "user", "text": "6개월짜리도 있나요?"},
+    {"speaker": "assistant", "text": "네, 6개월제 정기예금은 기본금리 연 2.8%입니다."},
+    {"speaker": "user", "text": "차이가 좀 있네요."},
+    {"speaker": "assistant", "text": "네, 기간이 짧을수록 금리가 다소 낮게 책정됩니다."},
+    {"speaker": "user", "text": "그럼 1년으로 하는 게 낫겠네요."},
+    {"speaker": "assistant", "text": "네, 자금을 오래 두실 계획이시면 1년제가 더 유리하실 것 같습니다."},
+    {"speaker": "user", "text": "최소 가입금액은 얼마인가요?"},
+    {"speaker": "assistant", "text": "정기예금은 최소 100만 원부터 가입 가능하십니다."},
+    {"speaker": "user", "text": "중간에 해지하면 손해가 크나요?"},
+    {"speaker": "assistant", "text": "만기 전 해지 시에는 약정금리 대신 중도해지금리가 적용되어 이자가 낮아집니다."},
+    {"speaker": "user", "text": "그럼 만기까지 두는 게 좋겠네요."},
+    {"speaker": "assistant", "text": "네, 자금 계획에 여유가 있으시면 만기까지 유지하시는 것을 권해드립니다."},
+    {"speaker": "user", "text": "이자는 매달 나오나요, 아니면 만기에 나오나요?"},
+    {"speaker": "assistant", "text": "일반형은 만기 일시지급이고, 월지급형을 선택하시면 매월 이자를 받으실 수 있습니다."},
+    {"speaker": "user", "text": "월지급형이 낫겠네요, 생활비로 쓰기 편하니까요."},
+    {"speaker": "assistant", "text": "네, 다만 월지급형은 기본금리보다 소폭 낮게 적용되는 점 참고하시면 좋겠습니다."},
+    {"speaker": "user", "text": "그래도 편의성이 더 중요할 것 같습니다."},
+    {"speaker": "assistant", "text": "네, 고객님 상황에는 월지급형이 적합해 보입니다."},
+    {"speaker": "user", "text": "오늘 바로 가입할 수 있나요?"},
+    {"speaker": "assistant", "text": "네, 신분증과 예치금만 준비되시면 오늘 가입 진행이 가능합니다."},
+    {"speaker": "user", "text": "신분증 여기 있습니다. 진행해 주세요."},
+    {"speaker": "assistant", "text": "네, 확인했습니다. 금액과 가입 기간 다시 한번 확인 후 진행해 드리겠습니다."},
+    {"speaker": "user", "text": "네, 감사합니다."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

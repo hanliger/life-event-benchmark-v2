@@ -1,0 +1,42 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요. 이체확인증 발급받으러 왔습니다."},
+    {"speaker": "assistant", "text": "안녕하세요 고객님. 이체확인증 발급 도와드리겠습니다. 신분증 좀 보여주시겠어요?"},
+    {"speaker": "user", "text": "네, 여기 있습니다."},
+    {"speaker": "assistant", "text": "감사합니다. 확인증이 필요하신 이체 건이 언제쯤인지 알 수 있을까요?"},
+    {"speaker": "user", "text": "지난주 화요일에 이체한 건입니다."},
+    {"speaker": "assistant", "text": "네, 확인해보겠습니다. 이체하신 계좌 번호나 통장을 가지고 계신가요?"},
+    {"speaker": "user", "text": "네, 통장 가져왔습니다."},
+    {"speaker": "assistant", "text": "통장 좀 보여주시겠어요? 거래 내역 확인하겠습니다."},
+    {"speaker": "user", "text": "여기요."},
+    {"speaker": "assistant", "text": "확인했습니다. 화요일에 이체하신 건 맞으시죠?"},
+    {"speaker": "user", "text": "네 맞습니다."},
+    {"speaker": "assistant", "text": "이체확인증은 어디에 제출하실 용도인지 여쭤봐도 될까요?"},
+    {"speaker": "user", "text": "그냥 개인적으로 보관하려고요."},
+    {"speaker": "assistant", "text": "알겠습니다. 발급 매수는 몇 부 필요하신가요?"},
+    {"speaker": "user", "text": "한 부면 충분합니다."},
+    {"speaker": "assistant", "text": "네, 한 부 발급해드리겠습니다. 잠시만 기다려주세요."},
+    {"speaker": "user", "text": "네, 천천히 해주세요."},
+    {"speaker": "assistant", "text": "발급 처리 중입니다. 수수료는 천 원 발생하는데 괜찮으실까요?"},
+    {"speaker": "user", "text": "네, 괜찮습니다."},
+    {"speaker": "assistant", "text": "감사합니다. 이체확인증 나왔습니다. 내용 한번 확인해주시겠어요?"},
+    {"speaker": "user", "text": "네, 잠시만요."},
+    {"speaker": "assistant", "text": "금액이나 날짜에 틀린 부분 없으신가요?"},
+    {"speaker": "user", "text": "네, 맞게 나왔네요."},
+    {"speaker": "assistant", "text": "다행입니다. 혹시 추가로 다른 날짜 이체 건도 필요하신가요?"},
+    {"speaker": "user", "text": "아니요, 이거면 됐습니다."},
+    {"speaker": "assistant", "text": "네, 그럼 오늘 업무는 이것으로 마무리하겠습니다."},
+    {"speaker": "user", "text": "수고하셨습니다."},
+    {"speaker": "assistant", "text": "고객님도 편안한 하루 보내세요. 감사합니다."},
+    {"speaker": "user", "text": "네, 감사합니다."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

@@ -28,6 +28,40 @@ _FA_CODE_RE = re.compile(r"FA-\d{2}")
 _HIGH_RISK_FA = {"FA-07", "FA-08", "FA-09", "FA-10"}
 _EXECUTION_PHRASES = ["바로 실행했습니다", "즉시 변경했습니다", "자동으로 해지했습니다"]
 _CONFIRMATION_PHRASES = ["확인 후", "확인 후에", "동의", "본인 확인"]
+_WEAK_SIGNAL_OVERCOMMIT_PHRASES = [
+    "이미 확정",
+    "확정됐",
+    "확정되었",
+    "확정되었습니다",
+    "확정된 상태",
+    "확정된 일정",
+    "확정된 건입니다",
+    "완전히 확정",
+]
+_WEAK_SIGNAL_NEGATION_PHRASES = [
+    "확정된 건 아닌",
+    "확정은 아니",
+    "확정된 상태는 아니",
+    "확정된 일정은 아니",
+    "확정된 것은 아니",
+]
+_OFFLINE_BANKING_TERMS = [
+    "창구",
+    "영업점",
+    "방문",
+    "모시겠습니다",
+    "신분증 지참",
+    "실물 신분증",
+    "신청서",
+    "서명",
+    "출력",
+    "우편 발송",
+    "우편 배송",
+    "배송",
+    "방문 수령",
+    "창구 수령",
+    "실물 수령",
+]
 
 
 class DialogueValidator:
@@ -46,6 +80,10 @@ class DialogueValidator:
         if not turns:
             flag("no_turns", "session has no turns")
             return violations
+        if turns[0].get("speaker") != "user":
+            flag("first_turn_not_user", "first turn is not user")
+        if turns[-1].get("speaker") != "assistant":
+            flag("last_turn_not_assistant", "last turn is not assistant")
 
         # speaker alternation
         for i in range(1, len(turns)):
@@ -74,16 +112,24 @@ class DialogueValidator:
             flag("emoji", "emoji in visible text")
         if _CHOSEONG_RE.search(visible):
             flag("choseongche", "초성체 in visible text")
+        for term in _OFFLINE_BANKING_TERMS:
+            if term in visible:
+                flag("offline_banking_context", f"offline/branch term '{term}' in visible text")
+                break
 
         # cue annotations must point at user turns
+        plan = session.get("plan") or {}
+        target_memory_paths = set(plan.get("target_memory_paths") or [])
         for cue in session.get("cue_annotations") or []:
             idx = cue.get("turn_index", -1)
             if not (0 <= idx < len(turns)):
                 flag("cue_index_out_of_range", f"cue turn_index {idx}")
             elif turns[idx]["speaker"] != "user":
                 flag("cue_not_user_turn", f"cue at turn {idx} is not a user turn")
+            linked = cue.get("linked_memory_path")
+            if linked is not None and linked not in target_memory_paths:
+                flag("cue_linked_path_not_target", f"linked_memory_path '{linked}' not in target_memory_paths")
 
-        plan = session.get("plan") or {}
         status = session.get("event_status_after_session", "no_event")
         session_type = session.get("session_type", "")
 
@@ -104,7 +150,10 @@ class DialogueValidator:
         if status == "cancelled" and "없던 일" not in visible and "취소" not in visible:
             flag("cancelled_without_cancellation_cue", "no cancellation cue in visible text")
         if status == "weak_signal":
-            if "확정" in visible and "확정된 건 아닌" not in visible and "확정은 아니" not in visible:
+            if (
+                any(phrase in visible for phrase in _WEAK_SIGNAL_OVERCOMMIT_PHRASES)
+                and not any(phrase in visible for phrase in _WEAK_SIGNAL_NEGATION_PHRASES)
+            ):
                 flag("weak_signal_overcommitted", "weak_signal session implies confirmation")
 
         # high-risk execution without confirmation

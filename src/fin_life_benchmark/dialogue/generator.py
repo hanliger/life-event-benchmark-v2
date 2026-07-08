@@ -14,11 +14,14 @@ import json
 import random
 import re
 from pathlib import Path
+from typing import Any
 
 from ..io import RepoPaths
 from ..io import load_yaml
 from ..llm.client import LLMClient
 from ..persona.models import NormalizedPersona
+from ..fsm.registry import load_life_event_templates
+from ..validation.dialogue_validator import DialogueValidator
 from .models import CueAnnotation, DialogueGenerationPlan, QualitySelfCheck, Session, Turn
 
 _HIGH_RISK_FA = {"FA-07", "FA-08", "FA-09", "FA-10"}
@@ -49,6 +52,28 @@ _CUE_WRAPPER_BY_STATUS = {
     "no_event": "{cue} 관련해서 확인 부탁드려요",
 }
 
+_OFFLINE_BANKING_TERMS = [
+    "창구",
+    "영업점",
+    "방문",
+    "모시겠습니다",
+    "신분증 지참",
+    "실물 신분증",
+    "신청서",
+    "서명",
+    "출력",
+    "우편 발송",
+    "우편 배송",
+    "배송",
+    "방문 수령",
+    "창구 수령",
+    "실물 수령",
+]
+
+
+class LLMOutputValidationError(ValueError):
+    """Raised when an LLM response is JSON but not a valid session payload."""
+
 
 def _slugify(text: str) -> str:
     return re.sub(r"[^0-9a-zA-Z가-힣]+", "_", text).strip("_")[:40]
@@ -76,6 +101,7 @@ class DialogueGenerator:
         self.cfg = load_yaml(self.paths.generation / "dialogue.yaml")
         self.prompt_template = (self.paths.prompts / "dialogue" / "generate_banking_session_ko.md").read_text(encoding="utf-8")
         self.repair_template = (self.paths.prompts / "dialogue" / "repair_banking_session_ko.md").read_text(encoding="utf-8")
+        self.validator = DialogueValidator(load_life_event_templates(self.paths))
 
     # ------------------------------------------------------------------ mock
     def _mock_session(self, plan: DialogueGenerationPlan, persona: NormalizedPersona) -> Session:
@@ -157,11 +183,16 @@ class DialogueGenerator:
             "{age}": str(plan.age),
             "{user_style}": persona.style.formality + ", " + persona.style.verbosity,
             "{persona_summary}": persona.persona_text[:200],
+            "{employment_status}": persona.occupation_state.employment_status,
+            "{residence_status}": persona.housing.residence_status,
+            "{marital_status}": persona.household.marital_status,
+            "{has_loan}": str(persona.financial_profile.has_loan).lower(),
             "{session_type}": plan.session_type,
             "{financial_task}": plan.financial_task,
             "{event_status}": plan.event_status_after_session,
             "{must_include_cues}": json.dumps(plan.must_include_cues, ensure_ascii=False),
             "{must_not_include_terms}": json.dumps(plan.must_not_include_terms, ensure_ascii=False),
+            "{target_memory_paths}": json.dumps(plan.target_memory_paths, ensure_ascii=False),
             "{turns_min}": str(self.cfg.get("turns_min", 7)),
             "{turns_max}": str(self.cfg.get("turns_max", 10)),
             "{user_turns_min}": str(self.cfg.get("user_turns_min", 4)),
@@ -182,6 +213,109 @@ class DialogueGenerator:
             raise ValueError("no JSON object in LLM output")
         return json.loads(text[start : end + 1])
 
+    def _write_raw_llm_output(self, raw_path: Path, raw: str) -> None:
+        raw_path.write_text(raw, encoding="utf-8")
+        metadata = getattr(self.client, "last_response_metadata", None)
+        if not metadata:
+            return
+        metadata_path = raw_path.with_suffix(".meta.json")
+        metadata_path.write_text(
+            json.dumps(metadata, ensure_ascii=False, indent=2, sort_keys=True),
+            encoding="utf-8",
+        )
+
+    def _payload_to_parts(
+        self,
+        payload: dict[str, Any],
+        plan: DialogueGenerationPlan,
+        persona: NormalizedPersona,
+    ) -> tuple[list[Turn], list[CueAnnotation], QualitySelfCheck]:
+        if not isinstance(payload, dict):
+            raise LLMOutputValidationError("payload must be a JSON object")
+
+        raw_turns = payload.get("turns")
+        if not isinstance(raw_turns, list) or not raw_turns:
+            raise LLMOutputValidationError("payload.turns must be a non-empty list")
+
+        turns: list[Turn] = []
+        for index, item in enumerate(raw_turns):
+            if not isinstance(item, dict):
+                raise LLMOutputValidationError(f"turns[{index}] must be an object")
+            missing = [key for key in ("speaker", "text") if key not in item]
+            if missing:
+                raise LLMOutputValidationError(f"turns[{index}] missing required key(s): {', '.join(missing)}")
+            speaker = item["speaker"]
+            text = item["text"]
+            if speaker not in {"user", "assistant"}:
+                raise LLMOutputValidationError(f"turns[{index}].speaker must be 'user' or 'assistant'")
+            if not isinstance(text, str) or not text.strip():
+                raise LLMOutputValidationError(f"turns[{index}].text must be a non-empty string")
+            turns.append(Turn(speaker=speaker, text=text))
+
+        for index, turn in enumerate(turns):
+            expected = "user" if index % 2 == 0 else "assistant"
+            if turn.speaker != expected:
+                raise LLMOutputValidationError(f"turns[{index}].speaker must be '{expected}' for strict alternation")
+        if turns[-1].speaker != "assistant":
+            raise LLMOutputValidationError("dialogue must end with an assistant turn")
+        visible = " ".join(turn.text for turn in turns)
+        if persona.occupation_state.employment_status != "employed":
+            for term in ("월급", "급여 받", "급여일"):
+                if term in visible:
+                    raise LLMOutputValidationError(
+                        f"visible dialogue conflicts with employment_status={persona.occupation_state.employment_status}: '{term}'"
+                    )
+        if persona.housing.residence_status != "wolse":
+            for term in ("월세", "집주인"):
+                if term in visible:
+                    raise LLMOutputValidationError(
+                        f"visible dialogue conflicts with residence_status={persona.housing.residence_status}: '{term}'"
+                    )
+        for term in _OFFLINE_BANKING_TERMS:
+            if term in visible:
+                raise LLMOutputValidationError(f"visible dialogue must be online banking/chatbot style, not branch style: '{term}'")
+
+        raw_cues = payload.get("cue_annotations") or []
+        if not isinstance(raw_cues, list):
+            raise LLMOutputValidationError("payload.cue_annotations must be a list when present")
+
+        cues: list[CueAnnotation] = []
+        allowed_memory_paths = set(plan.target_memory_paths)
+        for index, item in enumerate(raw_cues):
+            if not isinstance(item, dict):
+                raise LLMOutputValidationError(f"cue_annotations[{index}] must be an object")
+            try:
+                turn_index = int(item.get("turn_index", 0))
+            except (TypeError, ValueError) as exc:
+                raise LLMOutputValidationError(f"cue_annotations[{index}].turn_index must be an integer") from exc
+            if not (0 <= turn_index < len(turns)):
+                raise LLMOutputValidationError(f"cue_annotations[{index}].turn_index out of range: {turn_index}")
+            if turns[turn_index].speaker != "user":
+                one_based_candidate = turn_index - 1
+                if 0 <= one_based_candidate < len(turns) and turns[one_based_candidate].speaker == "user":
+                    turn_index = one_based_candidate
+                else:
+                    raise LLMOutputValidationError(f"cue_annotations[{index}].turn_index must point to a user turn")
+            linked_memory_path = item.get("linked_memory_path")
+            if linked_memory_path is not None and linked_memory_path not in allowed_memory_paths:
+                raise LLMOutputValidationError(
+                    f"cue_annotations[{index}].linked_memory_path must be null or one of target_memory_paths"
+                )
+            cues.append(
+                CueAnnotation(
+                    turn_index=turn_index,
+                    cue_type=str(item.get("cue_type", "unknown")),
+                    cue_text=item.get("cue_text"),
+                    linked_memory_path=linked_memory_path,
+                )
+            )
+
+        raw_check = payload.get("quality_self_check") or {}
+        if not isinstance(raw_check, dict):
+            raise LLMOutputValidationError("payload.quality_self_check must be an object when present")
+        check = QualitySelfCheck(**raw_check)
+        return turns, cues, check
+
     def _llm_session(self, plan: DialogueGenerationPlan, persona: NormalizedPersona, raw_dir: Path) -> Session:
         assert self.client is not None, "llm mode requires an LLMClient"
         prompt = self._build_prompt(plan, persona)
@@ -189,47 +323,70 @@ class DialogueGenerator:
         raw = self.client.generate(system, prompt)
 
         raw_dir.mkdir(parents=True, exist_ok=True)
-        (raw_dir / f"{plan.trajectory_id}_{plan.session_id}.txt").write_text(raw, encoding="utf-8")
-
-        try:
-            payload = self._parse_llm_json(raw)
-        except (ValueError, json.JSONDecodeError):
-            repair = (
-                self.repair_template
-                .replace("{violations}", "출력이 유효한 JSON이 아닙니다.")
-                .replace("{original_prompt}", prompt[:4000])
-                .replace("{previous_output}", raw[:4000])
-            )
-            raw = self.client.generate(system, repair)
-            (raw_dir / f"{plan.trajectory_id}_{plan.session_id}_repair.txt").write_text(raw, encoding="utf-8")
-            payload = self._parse_llm_json(raw)
-
-        turns = [Turn(speaker=t["speaker"], text=t["text"]) for t in payload.get("turns", [])]
-        cues = [
-            CueAnnotation(
-                turn_index=int(c.get("turn_index", 0)),
-                cue_type=str(c.get("cue_type", "unknown")),
-                linked_memory_path=c.get("linked_memory_path"),
-            )
-            for c in payload.get("cue_annotations", [])
+        raw_path = raw_dir / f"{plan.trajectory_id}_{plan.session_id}.txt"
+        max_repair_attempts = int(self.cfg.get("repair_attempts", 3))
+        repair_paths = [
+            raw_dir / f"{plan.trajectory_id}_{plan.session_id}_repair{'' if attempt == 1 else attempt}.txt"
+            for attempt in range(1, max_repair_attempts + 1)
         ]
-        check = QualitySelfCheck(**(payload.get("quality_self_check") or {}))
-        return Session(
-            session_id=plan.session_id,
-            trajectory_id=plan.trajectory_id,
-            month_index=plan.month_index,
-            age=plan.age,
-            session_type=plan.session_type,
-            linked_event_instance_id=plan.linked_event_instance_id,
-            event_status_after_session=plan.event_status_after_session,
-            mapped_action=plan.mapped_action,
-            financial_task=plan.financial_task,
-            turns=turns,
-            cue_annotations=cues,
-            quality_self_check=check,
-            generator=self.client.provider,
-            plan=plan,
-        )
+        for repair_path in repair_paths:
+            if repair_path.exists():
+                repair_path.unlink()
+            metadata_path = repair_path.with_suffix(".meta.json")
+            if metadata_path.exists():
+                metadata_path.unlink()
+        self._write_raw_llm_output(raw_path, raw)
+
+        current_raw = raw
+        last_error: Exception | None = None
+        session: Session | None = None
+        for attempt in range(max_repair_attempts + 1):
+            try:
+                payload = self._parse_llm_json(current_raw)
+                turns, cues, check = self._payload_to_parts(payload, plan, persona)
+                candidate = Session(
+                    session_id=plan.session_id,
+                    trajectory_id=plan.trajectory_id,
+                    month_index=plan.month_index,
+                    age=plan.age,
+                    session_type=plan.session_type,
+                    linked_event_instance_id=plan.linked_event_instance_id,
+                    event_status_after_session=plan.event_status_after_session,
+                    mapped_action=plan.mapped_action,
+                    financial_task=plan.financial_task,
+                    turns=turns,
+                    cue_annotations=cues,
+                    quality_self_check=check,
+                    generator=self.client.provider,
+                    plan=plan,
+                )
+                violations = self.validator.validate_session(candidate.model_dump(mode="json"))
+                if violations:
+                    details = "; ".join(f"{v['code']}: {v['detail']}" for v in violations)
+                    raise LLMOutputValidationError(f"dialogue validator violations: {details}")
+                session = candidate
+                break
+            except (ValueError, json.JSONDecodeError, LLMOutputValidationError) as exc:
+                last_error = exc
+                if attempt >= max_repair_attempts:
+                    raise LLMOutputValidationError(
+                        f"{plan.trajectory_id}_{plan.session_id}: LLM output is invalid after "
+                        f"{max_repair_attempts} repair attempts: {last_error}"
+                    ) from exc
+                repair = (
+                    self.repair_template
+                    .replace("{violations}", str(exc))
+                    .replace("{original_prompt}", prompt[:4000])
+                    .replace("{previous_output}", current_raw[:4000])
+                )
+                current_raw = self.client.generate(system, repair)
+                self._write_raw_llm_output(repair_paths[attempt], current_raw)
+        else:
+            raise LLMOutputValidationError(f"{plan.trajectory_id}_{plan.session_id}: LLM output is invalid")
+
+        if session is None:
+            raise LLMOutputValidationError(f"{plan.trajectory_id}_{plan.session_id}: LLM output is invalid")
+        return session
 
     # ------------------------------------------------------------------ main
     def generate_session(self, plan: DialogueGenerationPlan, persona: NormalizedPersona) -> Session | None:

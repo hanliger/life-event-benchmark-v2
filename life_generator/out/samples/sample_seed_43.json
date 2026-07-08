@@ -4,9 +4,7 @@
     "marriage_only_core",
     "retirement_pension_arc",
     "self_independence_residence_core",
-    "rental_to_homeownership_lifecycle",
-    "family_bereavement_core",
-    "early_career_learning_arc"
+    "rental_to_homeownership_lifecycle"
   ],
   "episodes": [
     {
@@ -92,73 +90,9 @@
       ],
       "priority": 50,
       "source_template_id": "rental_to_homeownership_lifecycle"
-    },
-    {
-      "template_id": "family_bereavement_core",
-      "template_name": "가족 사망",
-      "domain": "relationship",
-      "kind": "core_subgraph",
-      "event_ages": [
-        [
-          "relationship_family_death",
-          35
-        ]
-      ],
-      "priority": 72,
-      "source_template_id": "family_bereavement_core"
-    },
-    {
-      "template_id": "early_career_learning_arc",
-      "template_name": "취업-교육-이직",
-      "domain": "career",
-      "kind": "core_subgraph",
-      "event_ages": [
-        [
-          "career_employment",
-          24
-        ],
-        [
-          "career_education",
-          25
-        ],
-        [
-          "career_job_change",
-          28
-        ],
-        [
-          "career_transfer",
-          29
-        ]
-      ],
-      "priority": 65,
-      "source_template_id": "early_career_learning_arc"
     }
   ],
   "events": [
-    {
-      "age": 24,
-      "event_id": "career_employment",
-      "name": "취업",
-      "domain": "career",
-      "episode_id": "early_career_learning_arc",
-      "episode_name": "취업-교육-이직",
-      "episode_kind": "core_subgraph",
-      "priority": 65,
-      "actor": "self",
-      "child_age": null
-    },
-    {
-      "age": 25,
-      "event_id": "career_education",
-      "name": "교육",
-      "domain": "career",
-      "episode_id": "early_career_learning_arc",
-      "episode_name": "취업-교육-이직",
-      "episode_kind": "core_subgraph",
-      "priority": 65,
-      "actor": "self",
-      "child_age": null
-    },
     {
       "age": 27,
       "event_id": "relationship_independence",
@@ -193,42 +127,6 @@
       "episode_kind": "core_subgraph",
       "priority": 62,
       "actor": "household",
-      "child_age": null
-    },
-    {
-      "age": 28,
-      "event_id": "career_job_change",
-      "name": "이직",
-      "domain": "career",
-      "episode_id": "early_career_learning_arc",
-      "episode_name": "취업-교육-이직",
-      "episode_kind": "core_subgraph",
-      "priority": 65,
-      "actor": "self",
-      "child_age": null
-    },
-    {
-      "age": 29,
-      "event_id": "career_transfer",
-      "name": "전근",
-      "domain": "career",
-      "episode_id": "early_career_learning_arc",
-      "episode_name": "취업-교육-이직",
-      "episode_kind": "core_subgraph",
-      "priority": 65,
-      "actor": "self",
-      "child_age": null
-    },
-    {
-      "age": 35,
-      "event_id": "relationship_family_death",
-      "name": "가족 사망",
-      "domain": "relationship",
-      "episode_id": "family_bereavement_core",
-      "episode_name": "가족 사망",
-      "episode_kind": "core_subgraph",
-      "priority": 72,
-      "actor": "family",
       "child_age": null
     },
     {

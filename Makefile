@@ -1,7 +1,7 @@
 PYTHON ?= python
 LIMIT ?= 5
 SEED ?= 42
-HORIZON ?= 8
+HORIZON ?= 10
 NUM_TRAJ ?= 5
 EXECUTE ?= 0
 SAMPLE_RANDOM ?= 1
@@ -62,7 +62,7 @@ dialogue-smoke:
 ifeq ($(EXECUTE),1)
 	$(PYTHON) scripts/generate_dialogue_sessions.py \
 		--trajectories-dir $(TRAJ_DIR) --locale ko_KR \
-		--output-dir $(SESS_DIR) --max-trajectories $(NUM_TRAJ) --overwrite --execute
+		--output-dir $(SESS_DIR) --max-trajectories $(NUM_TRAJ) --overwrite --execute --continue-on-error
 else
 	$(PYTHON) scripts/generate_dialogue_sessions.py \
 		--trajectories-dir $(TRAJ_DIR) --locale ko_KR \
@@ -96,6 +96,7 @@ audit:
 	$(PYTHON) scripts/audit_full_prefix_recoverability.py --prefix-gold $(GOLD) --output-dir $(QUALITY)
 	$(PYTHON) scripts/audit_stale_distractors.py --items $(ITEMS_DIR)/stage2_memory_mcq.jsonl --prefix-gold $(GOLD) --output-dir $(QUALITY)
 	$(PYTHON) scripts/audit_life_stage_constraints.py --trajectories-dir $(TRAJ_DIR) --output-dir $(QUALITY)
+	$(PYTHON) scripts/audit_generation_consistency.py --trajectories-dir $(TRAJ_DIR) --sessions-dir $(SESS_DIR) --output-dir $(QUALITY)
 	$(PYTHON) scripts/build_quality_summary.py \
 		--trajectories-dir $(TRAJ_DIR) --sessions-dir $(SESS_DIR) \
 		--prefix-gold $(GOLD) --items-dir $(ITEMS_DIR) --output-dir $(QUALITY)

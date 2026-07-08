@@ -60,6 +60,8 @@ class ImpactEngine:
                     continue
                 if not self._matches(selector, action):
                     continue
+                if action.validity_status == "needs_review":
+                    continue
                 must_not_execute = bool(action.funds_movement)
                 if action.funds_movement and expected == ActionDecisionEnum.EXECUTE:
                     # risk policy: never auto-execute funds-moving changes

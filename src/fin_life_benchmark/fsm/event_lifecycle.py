@@ -14,6 +14,8 @@ from ..locale.loader import LocaleConfig
 from ..trajectory.models import LifeState
 from .models import EventStatus, LifeEventTemplate
 
+MAX_COUNT_BELOW_FIVE = 4
+
 
 def plan_lifecycle(
     template: LifeEventTemplate,
@@ -72,12 +74,15 @@ def sample_event_params(
     elif event_id == "relationship_divorce_or_separation":
         params["child_support_amount"] = pick("support_amounts_krw") if state.has_children else None
     elif event_id == "relationship_childbirth_or_adoption":
-        params["children_after"] = sorted(state.children_ages + [0])
-        params["dependents_after"] = state.dependents_count + 1
+        params["children_after"] = sorted((state.children_ages + [0])[:MAX_COUNT_BELOW_FIVE])
+        params["dependents_after"] = min(MAX_COUNT_BELOW_FIVE, state.dependents_count + 1)
     elif event_id == "relationship_dependent_change":
-        delta = 1 if state.dependents_count == 0 or rng.random() < 0.7 else -1
+        if state.dependents_count >= MAX_COUNT_BELOW_FIVE:
+            delta = -1
+        else:
+            delta = 1 if state.dependents_count == 0 or rng.random() < 0.7 else -1
         params["dependent_delta"] = delta
-        params["dependents_after"] = max(0, state.dependents_count + delta)
+        params["dependents_after"] = max(0, min(MAX_COUNT_BELOW_FIVE, state.dependents_count + delta))
         params["support_amount"] = pick("support_amounts_krw")
     elif event_id == "relationship_family_death":
         params["dependents_after"] = max(0, state.dependents_count - 1)
@@ -118,7 +123,8 @@ def apply_occurred_to_life_state(event_id: str, state: LifeState, params: dict[s
     elif event_id == "relationship_divorce_or_separation":
         state.marital_status = "divorced"
     elif event_id == "relationship_childbirth_or_adoption":
-        state.children_ages = list(params.get("children_after") or (state.children_ages + [0]))
+        children_after = list(params.get("children_after") or (state.children_ages + [0]))
+        state.children_ages = sorted(children_after[:MAX_COUNT_BELOW_FIVE])
         state.dependents_count = int(params.get("dependents_after", state.dependents_count + 1))
     elif event_id == "relationship_dependent_change":
         state.dependents_count = int(params.get("dependents_after", state.dependents_count + 1))

@@ -31,9 +31,27 @@ class LifeState(BaseModel):
     def has_children(self) -> bool:
         return len(self.children_ages) > 0
 
+    @property
+    def has_dependents(self) -> bool:
+        return self.dependents_count > 0
+
+    @property
+    def can_add_child(self) -> bool:
+        return len(self.children_ages) < 4
+
+    @property
+    def can_add_dependent(self) -> bool:
+        return self.dependents_count < 4
+
     def guard_value(self, field: str) -> Any:
         if field == "has_children":
             return self.has_children
+        if field == "has_dependents":
+            return self.has_dependents
+        if field == "can_add_child":
+            return self.can_add_child
+        if field == "can_add_dependent":
+            return self.can_add_dependent
         return getattr(self, field)
 
     def tick_year(self) -> None:

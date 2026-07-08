@@ -1,48 +1,50 @@
 # Design Overview
 
-## Positioning
+이 레포는 synthetic persona에서 금융 상담 benchmark item까지 생성합니다.
 
-This benchmark measures **life-event-driven financial memory maintenance**
-under long-horizon persona drift. It is *state-first*: a hidden state
-trajectory is simulated first, and banking dialogue is generated from it as
-indirect evidence.
+## Pipeline
 
-## Critical conceptual requirements (design invariants)
-
-1. **State-first** — dialogue derives from hidden life/financial state.
-2. **Prefix-level** — gold changes over time; every prefix has gold state.
-3. **Lifecycle-aware** — weak_signal/upcoming/cancelled gate update permission.
-4. **Financial memory-aware** — events produce update / mark_stale /
-   needs_verification / archive / reactivate operations.
-5. **Stale distractors** — old memory values feed MCQ distractors.
-6. **History-needed** — some items must require multi-session history.
-7. **Locale-aware** — Korean first; country logic isolated in locale configs.
-8. **No leakage** — visible dialogue never reveals labels or FA codes.
-
-## Module map
-
-```
-src/fin_life_benchmark/
-  io/          paths, jsonl, yaml loading
-  locale/      LocaleConfig loader (ko_KR, en_US template)
-  persona/     NormalizedPersona + Nemotron adapter
-  memory/      MemoryCell/FinancialMemoryState, initial state gen, delta engine
-  actions/     StandingAction, initial actions gen, impact engine
-  fsm/         LifeEventTemplate registry, guards+hazard, lifecycle planner
-  trajectory/  LifeState, Trajectory, monthly-tick simulator
-  dialogue/    evidence planner, mock/LLM generator, session models
-  gold/        prefix gold exporter
-  benchmark/   stage 1 event-status + stage 2 memory-MCQ item builder
-  validation/  dialogue validator, history filter, audits
-  llm/         provider-agnostic client (.env-driven)
+```text
+normalize_personas
+  -> generate_initial_states
+  -> simulate_trajectories
+  -> generate_dialogue_sessions
+  -> validate_dialogues
+  -> export_prefix_gold
+  -> build_benchmark_items
+  -> audit
 ```
 
-## Dataflow contracts
+## Core Objects
 
-- Trajectory JSON is self-contained: persona, initial states, event instances
-  (with param payloads), timeline steps (transitions + applied memory deltas
-  and action impact metadata) and month-keyed snapshots. Downstream stages
-  never re-simulate.
-- Sessions carry their generation `plan` for validation and audits.
-- Prefix gold is derived purely from (trajectory, sessions); items purely from
-  (prefix gold, sessions). Each stage is re-runnable in isolation.
+- `NormalizedPersona`: 나이, 직업 상태, 가구, 주거, 금융 성향.
+- `FinancialMemoryState`: 금융 기억 cell history. `unknown`과 `not_applicable`을 구분합니다.
+- `StandingAction`: 월세 이체, 급여연동 저축, 대출상환 같은 반복 금융 액션.
+- `Trajectory`: persona, 초기 상태, 생애 사건, memory update, action impact의 시간축.
+- `Session`: 사용자가 보는 은행 상담 대화.
+- `PrefixGold`: 특정 세션 prefix까지 모델이 알아야 하는 정답 상태.
+- `BenchmarkItem`: 평가용 MCQ/item.
+
+## Generation Modes
+
+- `mock`: API 없이 deterministic dialogue 생성.
+- `dry_run`: LLM prompt만 저장.
+- `llm`: `.env`의 OpenAI/Anthropic 설정으로 실제 대화 생성.
+
+## Main Commands
+
+```bash
+make pipeline-smoke EXECUTE=0 LIMIT=2 NUM_TRAJ=2
+make dialogue-smoke EXECUTE=1 NUM_TRAJ=2
+make validate-dialogues
+make audit
+make test
+```
+
+## Quality Gates
+
+- Dialogue schema validation + one repair attempt.
+- Dialogue leakage/turn/cue validation.
+- Life-stage guard audit.
+- Initial memory/action consistency audit.
+- No-op/repeated delta filtering.

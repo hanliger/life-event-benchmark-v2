@@ -33,6 +33,7 @@ class CellStatus(str, Enum):
     PENDING = "pending"
     CANCELLED = "cancelled"
     UNKNOWN = "unknown"
+    NOT_APPLICABLE = "not_applicable"
 
 
 class MemoryCell(BaseModel):
@@ -75,7 +76,7 @@ class FinancialMemoryState(BaseModel):
 
     def current_value(self, path: str) -> Any:
         cell = self.latest(path)
-        if cell is None or cell.status in {CellStatus.HISTORICAL, CellStatus.CANCELLED}:
+        if cell is None or cell.status in {CellStatus.HISTORICAL, CellStatus.CANCELLED, CellStatus.NOT_APPLICABLE}:
             return None
         return cell.value
 
@@ -121,7 +122,13 @@ class FinancialMemoryState(BaseModel):
             )
 
         if op in {MemoryOperation.CREATE, MemoryOperation.UPDATE}:
-            if latest is not None and latest.status in {CellStatus.CURRENT, CellStatus.NEEDS_VERIFICATION, CellStatus.STALE}:
+            if latest is not None and latest.status in {
+                CellStatus.CURRENT,
+                CellStatus.NEEDS_VERIFICATION,
+                CellStatus.STALE,
+                CellStatus.NOT_APPLICABLE,
+                CellStatus.UNKNOWN,
+            }:
                 latest.status = CellStatus.HISTORICAL
                 latest.valid_until = month
             _append(update.new_value, CellStatus.CURRENT)

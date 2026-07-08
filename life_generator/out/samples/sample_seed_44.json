@@ -4,9 +4,7 @@
     "self_independence_residence_core",
     "early_career_learning_arc",
     "accident_family_illness_core",
-    "marriage_childbirth_education_arc",
-    "separate_household_core",
-    "dependent_care_core"
+    "marriage_childbirth_education_arc"
   ],
   "episodes": [
     {
@@ -104,34 +102,6 @@
       ],
       "priority": 80,
       "source_template_id": "marriage_childbirth_education_arc"
-    },
-    {
-      "template_id": "separate_household_core",
-      "template_name": "분가",
-      "domain": "relationship",
-      "kind": "core_subgraph",
-      "event_ages": [
-        [
-          "relationship_separate_household",
-          61
-        ]
-      ],
-      "priority": 58,
-      "source_template_id": "separate_household_core"
-    },
-    {
-      "template_id": "dependent_care_core",
-      "template_name": "부양가족 발생",
-      "domain": "relationship",
-      "kind": "core_subgraph",
-      "event_ages": [
-        [
-          "relationship_dependent_added",
-          62
-        ]
-      ],
-      "priority": 70,
-      "source_template_id": "dependent_care_core"
     }
   ],
   "events": [
@@ -302,38 +272,7 @@
       "priority": 80,
       "actor": "child",
       "child_age": 18
-    },
-    {
-      "age": 61,
-      "event_id": "relationship_separate_household",
-      "name": "분가",
-      "domain": "relationship",
-      "episode_id": "separate_household_core",
-      "episode_name": "분가",
-      "episode_kind": "core_subgraph",
-      "priority": 58,
-      "actor": "household",
-      "child_age": null
-    },
-    {
-      "age": 62,
-      "event_id": "relationship_dependent_added",
-      "name": "부양가족 발생",
-      "domain": "relationship",
-      "episode_id": "dependent_care_core",
-      "episode_name": "부양가족 발생",
-      "episode_kind": "core_subgraph",
-      "priority": 70,
-      "actor": "parent",
-      "child_age": null
     }
   ],
-  "rejections": [
-    {
-      "episode_id": "marriage_only_core",
-      "reason": "already married",
-      "conflicted_event_id": "relationship_marriage",
-      "age": 67
-    }
-  ]
+  "rejections": []
 }

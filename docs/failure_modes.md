@@ -1,23 +1,45 @@
 # Failure Modes
 
-The benchmark's diagnostic vocabulary. Stage 2 memory MCQ distractors and
-analysis reports map onto these.
+Known failure modes and current mitigation.
 
-| failure mode | definition | typical trigger |
-| --- | --- | --- |
-| **stale_memory_carryover** | using a memory value that an occurred event invalidated (old salary day, old address, old payee) | update/archive/mark_stale missed |
-| **false_commit** | committing a memory update from weak_signal-only evidence | lifecycle gating ignored |
-| **premature_update** | updating on upcoming evidence before occurrence | update before occurred |
-| **missed_update** | failing to update after clear occurred evidence | evidence integration failure |
-| **over_update** | updating unrelated memory paths beyond the event's scope | overgeneralization |
-| **historical_state_contamination** | answering from a historical cell as if current (archived employer, cancelled pending value) | history/current confusion |
-| **wrong_sibling_event** | detecting a confusable sibling event (이사 vs 주택 구매, 취업 vs 이직) | cue discrimination failure |
-| **no_event_false_positive** | detecting an event in routine / hard-negative sessions | over-detection |
-| **cancelled_ignored** | keeping pending state after cancellation evidence | clear_pending missed |
+## Dialogue Output
 
-Sources of distractor material:
-- memory cell histories (`historical_values`) → stale_memory_carryover
-- lifecycle statuses in prefix gold → false_commit / premature_update /
-  cancelled_ignored
-- sibling_confusions in the event registry → wrong_sibling_event
-- hard_negative sessions → no_event_false_positive
+- Invalid JSON: repair once.
+- Missing `speaker`/`text`: repair once.
+- Wrong speaker value: repair once.
+- Cue index out of range: repair once.
+- Repair still invalid: raise `LLMOutputValidationError` with trajectory/session id.
+
+## Dialogue Quality
+
+- Speaker alternation violation.
+- Cue annotation points to assistant turn.
+- Forbidden life-event label appears in visible text.
+- Assistant summarizes hidden event too directly.
+
+Run:
+
+```bash
+make validate-dialogues
+```
+
+## State Conflicts
+
+- Non-employed persona has salary action.
+- Owner has rent action.
+- No-loan persona has loan repayment.
+- `unknown` used where `not_applicable` is correct.
+
+Run:
+
+```bash
+make audit
+```
+
+## Trajectory Noise
+
+- `old_value == new_value` update.
+- Repeated stale/needs_verification on the same latest cell.
+- Repeated action impacts for already reviewed actions.
+
+These are filtered in the delta/action engines.

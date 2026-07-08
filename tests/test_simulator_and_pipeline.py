@@ -6,12 +6,15 @@ from fin_life_benchmark.actions.initial_actions_generator import build_initial_a
 from fin_life_benchmark.benchmark.item_builder import ItemBuilder
 from fin_life_benchmark.dialogue.evidence_planner import EvidencePlanner
 from fin_life_benchmark.dialogue.generator import DialogueGenerator
+from fin_life_benchmark.fsm.event_lifecycle import sample_event_params
+from fin_life_benchmark.fsm.life_state_machine import LifeStateMachine
 from fin_life_benchmark.fsm.registry import load_life_event_templates
 from fin_life_benchmark.gold.prefix_gold_exporter import export_prefix_gold
 from fin_life_benchmark.io import RepoPaths, load_yaml
 from fin_life_benchmark.locale import load_locale
 from fin_life_benchmark.memory.initial_state_generator import build_initial_memory
 from fin_life_benchmark.persona.models import HouseholdState, HousingState, NormalizedPersona, OccupationState
+from fin_life_benchmark.trajectory.models import LifeState
 from fin_life_benchmark.trajectory.simulator import TrajectorySimulator
 from fin_life_benchmark.validation.dialogue_validator import DialogueValidator
 
@@ -58,6 +61,51 @@ def test_lifecycle_history_is_ordered_and_valid():
         ranks = [order[s] for s in statuses]
         assert ranks == sorted(ranks), f"invalid lifecycle {statuses}"
         assert statuses[-1] in {"occurred", "cancelled", "weak_signal", "upcoming"}
+
+
+def test_family_death_requires_existing_dependent():
+    templates = load_life_event_templates()
+    template = templates["relationship_family_death"]
+    fsm = LifeStateMachine(templates)
+
+    no_dependents = LifeState(dependents_count=0)
+    assert not fsm.guards_pass(template, no_dependents, 45, 0, {}, [])
+
+    with_dependents = LifeState(dependents_count=1)
+    assert fsm.guards_pass(template, with_dependents, 45, 0, {}, [])
+
+
+def test_life_stage_invariant_guards():
+    templates = load_life_event_templates()
+    fsm = LifeStateMachine(templates)
+
+    marriage = templates["relationship_marriage"]
+    assert not fsm.guards_pass(marriage, LifeState(marital_status="separated"), 35, 0, {}, [])
+    assert fsm.guards_pass(marriage, LifeState(marital_status="divorced"), 35, 0, {}, [])
+
+    childbirth = templates["relationship_childbirth_or_adoption"]
+    nearly_full_children = LifeState(marital_status="married", children_ages=[1, 3, 5, 7], dependents_count=3)
+    assert not fsm.guards_pass(childbirth, nearly_full_children, 35, 0, {}, [])
+    nearly_full_dependents = LifeState(marital_status="married", children_ages=[1, 3, 5], dependents_count=4)
+    assert not fsm.guards_pass(childbirth, nearly_full_dependents, 35, 0, {}, [])
+    room_for_one = LifeState(marital_status="married", children_ages=[1, 3, 5], dependents_count=3)
+    assert fsm.guards_pass(childbirth, room_for_one, 35, 0, {}, [])
+
+    in_school = LifeState(in_education=True, employment_status="employed")
+    assert not fsm.guards_pass(templates["education_self_program_start"], in_school, 35, 0, {}, [])
+    assert not fsm.guards_pass(templates["education_study_abroad"], in_school, 35, 0, {}, [])
+
+
+def test_dependent_change_never_exceeds_four_dependents():
+    paths = RepoPaths.default()
+    locale = load_locale("ko_KR", paths)
+    templates = load_life_event_templates(paths)
+    state = LifeState(dependents_count=4)
+
+    params = sample_event_params(templates["relationship_dependent_change"], state, locale, random.Random(0))
+
+    assert params["dependent_delta"] == -1
+    assert params["dependents_after"] == 3
 
 
 def test_end_to_end_mock_pipeline_in_memory():

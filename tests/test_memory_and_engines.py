@@ -65,6 +65,52 @@ def test_delta_engine_job_change_occurred():
     assert any(u.operation == MemoryOperation.UPDATE for u in updates)
 
 
+def test_delta_engine_skips_noop_update():
+    engine = DeltaEngine()
+    engine.registry = {
+        "test_event": {
+            "on_occurred": {
+                "memory_updates": [
+                    {"path": "employment.employer", "operation": "update", "value_from": "literal:같은직장"}
+                ]
+            }
+        }
+    }
+    memory = _memory_with("employment.employer", "같은직장")
+    instance = EventInstance(
+        event_instance_id="t_ev_noop", event_id="test_event", label_ko="테스트", domain="employment",
+    )
+
+    updates = engine.apply_transition(memory, instance, EventStatus.OCCURRED, 12, random.Random(0))
+
+    assert updates == []
+    assert len(memory.history("employment.employer")) == 1
+    assert memory.current_value("employment.employer") == "같은직장"
+
+
+def test_delta_engine_skips_repeated_needs_verification():
+    engine = DeltaEngine()
+    engine.registry = {
+        "test_event": {
+            "on_occurred": {
+                "memory_updates": [
+                    {"path": "employment.salary_day", "operation": "needs_verification"}
+                ]
+            }
+        }
+    }
+    memory = _memory_with("employment.salary_day", 25)
+    memory.apply(MemoryUpdate(path="employment.salary_day", operation=MemoryOperation.NEEDS_VERIFICATION, month_index=3))
+    instance = EventInstance(
+        event_instance_id="t_ev_repeat", event_id="test_event", label_ko="테스트", domain="employment",
+    )
+
+    updates = engine.apply_transition(memory, instance, EventStatus.OCCURRED, 12, random.Random(0))
+
+    assert updates == []
+    assert memory.latest("employment.salary_day").status == CellStatus.NEEDS_VERIFICATION
+
+
 def test_impact_engine_never_executes_funds_moving_actions():
     engine = ImpactEngine()
     action = StandingAction(
@@ -80,6 +126,25 @@ def test_impact_engine_never_executes_funds_moving_actions():
     for impact in impacts:
         assert impact.must_not_execute
         assert impact.expected_decision.value != "execute"
+    assert action.validity_status == "needs_review"
+
+
+def test_impact_engine_skips_actions_already_needing_review():
+    engine = ImpactEngine()
+    action = StandingAction(
+        action_id="SO_x", type="salary_linked_savings", label="자동저축",
+        status=ActionStatus.ACTIVE, funds_movement=True, risk="high",
+        linked_memory_paths=["employment.salary_day"],
+    )
+    instance = EventInstance(
+        event_instance_id="t_ev002", event_id="career_job_change", label_ko="이직/전근", domain="employment",
+    )
+
+    first = engine.apply_transition([action], instance, EventStatus.OCCURRED, 12)
+    second = engine.apply_transition([action], instance, EventStatus.OCCURRED, 13)
+
+    assert first
+    assert second == []
     assert action.validity_status == "needs_review"
 
 

@@ -17,7 +17,7 @@ from typing import Any
 
 from ..fsm.models import EventInstance, EventStatus
 from ..io import RepoPaths, load_yaml
-from .models import FinancialMemoryState, MemoryOperation, MemoryUpdate
+from .models import CellStatus, FinancialMemoryState, MemoryOperation, MemoryUpdate
 
 _ALLOWED_OPS_BY_STATUS: dict[EventStatus, set[MemoryOperation]] = {
     EventStatus.WEAK_SIGNAL: {MemoryOperation.SET_PENDING, MemoryOperation.NEEDS_VERIFICATION, MemoryOperation.NO_UPDATE},
@@ -58,6 +58,28 @@ class DeltaEngine:
             return value_from.split(":", 1)[1]
         return value_from
 
+    @staticmethod
+    def _is_noop(memory: FinancialMemoryState, update: MemoryUpdate) -> bool:
+        latest = memory.latest(update.path)
+        if update.operation in {MemoryOperation.CREATE, MemoryOperation.UPDATE}:
+            return latest is not None and latest.status == CellStatus.CURRENT and latest.value == update.new_value
+        if update.operation == MemoryOperation.MARK_STALE:
+            return latest is None or latest.status == CellStatus.STALE
+        if update.operation == MemoryOperation.NEEDS_VERIFICATION:
+            return latest is not None and latest.status == CellStatus.NEEDS_VERIFICATION
+        if update.operation == MemoryOperation.ARCHIVE:
+            return latest is None or latest.status in {CellStatus.HISTORICAL, CellStatus.CANCELLED}
+        if update.operation == MemoryOperation.CLEAR_PENDING:
+            return not any(
+                cell.status == CellStatus.PENDING
+                or (
+                    cell.status == CellStatus.NEEDS_VERIFICATION
+                    and cell.source_event_instance_id == update.source_event_instance_id
+                )
+                for cell in memory.history(update.path)
+            )
+        return False
+
     def apply_transition(
         self,
         memory: FinancialMemoryState,
@@ -95,5 +117,7 @@ class DeltaEngine:
                 event_status=to_status.value,
                 optional=bool(spec.get("optional", False)),
             )
+            if self._is_noop(memory, update):
+                continue
             applied.append(memory.apply(update))
         return applied

@@ -39,26 +39,45 @@ def build_initial_memory(persona: NormalizedPersona, locale: LocaleConfig, seed:
     set_("household.marital_status", persona.household.marital_status)
     if persona.household.marital_status == "married":
         set_("household.spouse_or_partner", "spouse")
-    else:
+    elif persona.household.marital_status == "unknown":
         set_("household.spouse_or_partner", None, status=CellStatus.UNKNOWN)
+    else:
+        set_("household.spouse_or_partner", None, status=CellStatus.NOT_APPLICABLE)
     set_("household.children", list(persona.household.children_ages))
     set_("household.dependents", persona.household.dependents_count)
-    set_("household.child_support_arrangement", None, status=CellStatus.UNKNOWN)
+    set_(
+        "household.child_support_arrangement",
+        None,
+        status=CellStatus.UNKNOWN if persona.household.children_ages else CellStatus.NOT_APPLICABLE,
+    )
 
     # employment
     emp = persona.occupation_state
-    set_("employment.employment_status", emp.employment_status)
-    set_("employment.occupation", emp.occupation)
-    set_("employment.income_stability", emp.income_stability)
+    employment_status = emp.employment_status
+    set_("employment.employment_status", employment_status)
+    if employment_status in {"employed", "self_employed"}:
+        set_("employment.occupation", emp.occupation)
+        set_("employment.income_stability", emp.income_stability)
+    elif employment_status == "unknown":
+        set_("employment.occupation", emp.occupation, status=CellStatus.UNKNOWN)
+        set_("employment.income_stability", emp.income_stability, status=CellStatus.UNKNOWN)
+    else:
+        set_("employment.occupation", None, status=CellStatus.NOT_APPLICABLE)
+        set_("employment.income_stability", None, status=CellStatus.NOT_APPLICABLE)
     if emp.employment_status == "employed":
         employer = emp.employer or rng.choice(locale.pool("employer_pool"))
         set_("employment.employer", employer)
         set_("employment.salary_day", rng.choice(locale.pool("salary_days")))
         set_("employment.salary_account", "main_checking")
-    else:
+    elif emp.employment_status == "unknown":
         set_("employment.employer", None, status=CellStatus.UNKNOWN)
         set_("employment.salary_day", None, status=CellStatus.UNKNOWN)
         set_("employment.salary_account", None, status=CellStatus.UNKNOWN)
+    else:
+        employer_status = CellStatus.UNKNOWN if emp.employment_status == "self_employed" else CellStatus.NOT_APPLICABLE
+        set_("employment.employer", emp.employer, status=employer_status)
+        set_("employment.salary_day", None, status=CellStatus.NOT_APPLICABLE)
+        set_("employment.salary_account", None, status=CellStatus.NOT_APPLICABLE)
 
     # housing
     housing = persona.housing
@@ -70,21 +89,21 @@ def build_initial_memory(persona: NormalizedPersona, locale: LocaleConfig, seed:
             set_("housing.rent_amount", rng.choice(locale.pool("rent_amounts_krw")))
             set_("housing.rent_payee", locale.banking_terms.get("rent_payee") or "집주인")
         else:
-            set_("housing.rent_amount", None, status=CellStatus.UNKNOWN)
-            set_("housing.rent_payee", None, status=CellStatus.UNKNOWN)
+            set_("housing.rent_amount", None, status=CellStatus.NOT_APPLICABLE)
+            set_("housing.rent_payee", None, status=CellStatus.NOT_APPLICABLE)
         set_("housing.maintenance_fee_payee", "관리사무소")
         set_("housing.mortgage_status", "none")
     elif housing.residence_status == "owner":
         set_("housing.contract_type", "owner")
-        set_("housing.rent_amount", None, status=CellStatus.UNKNOWN)
-        set_("housing.rent_payee", None, status=CellStatus.UNKNOWN)
+        set_("housing.rent_amount", None, status=CellStatus.NOT_APPLICABLE)
+        set_("housing.rent_payee", None, status=CellStatus.NOT_APPLICABLE)
         set_("housing.maintenance_fee_payee", "관리사무소")
         set_("housing.mortgage_status", "active" if persona.financial_profile.loan_type == "mortgage" else "none")
     else:
         set_("housing.contract_type", "family_home" if housing.residence_status == "family_home" else "other")
-        set_("housing.rent_amount", None, status=CellStatus.UNKNOWN)
-        set_("housing.rent_payee", None, status=CellStatus.UNKNOWN)
-        set_("housing.maintenance_fee_payee", None, status=CellStatus.UNKNOWN)
+        set_("housing.rent_amount", None, status=CellStatus.NOT_APPLICABLE)
+        set_("housing.rent_payee", None, status=CellStatus.NOT_APPLICABLE)
+        set_("housing.maintenance_fee_payee", None, status=CellStatus.NOT_APPLICABLE)
         set_("housing.mortgage_status", "none")
 
     # education
@@ -94,7 +113,7 @@ def build_initial_memory(persona: NormalizedPersona, locale: LocaleConfig, seed:
         stage = "preschool" if oldest < 7 else "primary" if oldest < 13 else "middle" if oldest < 16 else "high" if oldest < 20 else "adult"
         set_("education.child_education_stage", stage)
     else:
-        set_("education.child_education_stage", None, status=CellStatus.UNKNOWN)
+        set_("education.child_education_stage", None, status=CellStatus.NOT_APPLICABLE)
 
     # financial products
     set_("financial_products.checking_accounts", ["main_checking"])
@@ -103,7 +122,7 @@ def build_initial_memory(persona: NormalizedPersona, locale: LocaleConfig, seed:
     loans = [persona.financial_profile.loan_type] if persona.financial_profile.has_loan else []
     set_("financial_products.loans", loans)
     set_("financial_products.pension_or_irp", "irp" if persona.financial_profile.has_pension_or_irp else None,
-         status=CellStatus.CURRENT if persona.financial_profile.has_pension_or_irp else CellStatus.UNKNOWN)
+         status=CellStatus.CURRENT if persona.financial_profile.has_pension_or_irp else CellStatus.NOT_APPLICABLE)
 
     # goals
     set_("goals.emergency_fund", "building" if persona.financial_profile.savings_propensity == "high" else None,
@@ -111,7 +130,7 @@ def build_initial_memory(persona: NormalizedPersona, locale: LocaleConfig, seed:
     set_("goals.housing_deposit_goal", "active" if housing.residence_status in {"wolse", "jeonse"} and persona.age < 45 else None,
          status=CellStatus.CURRENT if housing.residence_status in {"wolse", "jeonse"} and persona.age < 45 else CellStatus.UNKNOWN)
     set_("goals.child_education_goal", "active" if any(a < 19 for a in persona.household.children_ages) else None,
-         status=CellStatus.CURRENT if any(a < 19 for a in persona.household.children_ages) else CellStatus.UNKNOWN)
+         status=CellStatus.CURRENT if any(a < 19 for a in persona.household.children_ages) else CellStatus.NOT_APPLICABLE)
     set_("goals.retirement_goal", "active" if persona.age >= 45 and persona.financial_profile.has_pension_or_irp else None,
          status=CellStatus.CURRENT if persona.age >= 45 and persona.financial_profile.has_pension_or_irp else CellStatus.UNKNOWN)
 

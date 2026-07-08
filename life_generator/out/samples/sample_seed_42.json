@@ -4,9 +4,7 @@
     "employer_sponsored_study_obligation_arc",
     "marriage_only_core",
     "dependent_care_core",
-    "separate_household_core",
-    "rental_contract_long_cycle",
-    "retirement_pension_arc"
+    "separate_household_core"
   ],
   "episodes": [
     {
@@ -80,101 +78,9 @@
       ],
       "priority": 58,
       "source_template_id": "separate_household_core"
-    },
-    {
-      "template_id": "rental_contract_long_cycle",
-      "template_name": "임차 계약 변경",
-      "domain": "residence",
-      "kind": "core_subgraph",
-      "event_ages": [
-        [
-          "residence_move",
-          30
-        ],
-        [
-          "residence_jeonse_contract",
-          30
-        ],
-        [
-          "residence_contract_change",
-          34
-        ],
-        [
-          "residence_move_out",
-          37
-        ],
-        [
-          "residence_move",
-          37
-        ],
-        [
-          "residence_rent_contract",
-          38
-        ],
-        [
-          "residence_contract_change",
-          40
-        ]
-      ],
-      "priority": 45,
-      "source_template_id": "rental_contract_long_cycle"
-    },
-    {
-      "template_id": "retirement_pension_arc",
-      "template_name": "은퇴-연금",
-      "domain": "career",
-      "kind": "core_subgraph",
-      "event_ages": [
-        [
-          "career_retirement_prep",
-          59
-        ],
-        [
-          "career_pension_start",
-          67
-        ]
-      ],
-      "priority": 55,
-      "source_template_id": "retirement_pension_arc"
     }
   ],
   "events": [
-    {
-      "age": 30,
-      "event_id": "residence_move",
-      "name": "이사",
-      "domain": "residence",
-      "episode_id": "rental_contract_long_cycle",
-      "episode_name": "임차 계약 변경",
-      "episode_kind": "core_subgraph",
-      "priority": 45,
-      "actor": "household",
-      "child_age": null
-    },
-    {
-      "age": 30,
-      "event_id": "residence_jeonse_contract",
-      "name": "전세계약",
-      "domain": "residence",
-      "episode_id": "rental_contract_long_cycle",
-      "episode_name": "임차 계약 변경",
-      "episode_kind": "core_subgraph",
-      "priority": 45,
-      "actor": "household",
-      "child_age": null
-    },
-    {
-      "age": 34,
-      "event_id": "residence_contract_change",
-      "name": "주거 계약 변경",
-      "domain": "residence",
-      "episode_id": "rental_contract_long_cycle",
-      "episode_name": "임차 계약 변경",
-      "episode_kind": "core_subgraph",
-      "priority": 45,
-      "actor": "household",
-      "child_age": null
-    },
     {
       "age": 35,
       "event_id": "career_employment",
@@ -188,42 +94,6 @@
       "child_age": null
     },
     {
-      "age": 37,
-      "event_id": "residence_move_out",
-      "name": "퇴거",
-      "domain": "residence",
-      "episode_id": "rental_contract_long_cycle",
-      "episode_name": "임차 계약 변경",
-      "episode_kind": "core_subgraph",
-      "priority": 45,
-      "actor": "household",
-      "child_age": null
-    },
-    {
-      "age": 37,
-      "event_id": "residence_move",
-      "name": "이사",
-      "domain": "residence",
-      "episode_id": "rental_contract_long_cycle",
-      "episode_name": "임차 계약 변경",
-      "episode_kind": "core_subgraph",
-      "priority": 45,
-      "actor": "household",
-      "child_age": null
-    },
-    {
-      "age": 38,
-      "event_id": "residence_rent_contract",
-      "name": "월세계약",
-      "domain": "residence",
-      "episode_id": "rental_contract_long_cycle",
-      "episode_name": "임차 계약 변경",
-      "episode_kind": "core_subgraph",
-      "priority": 45,
-      "actor": "household",
-      "child_age": null
-    },
-    {
       "age": 39,
       "event_id": "career_study_abroad",
       "name": "유학",
@@ -233,18 +103,6 @@
       "episode_kind": "core_subgraph",
       "priority": 85,
       "actor": "self",
-      "child_age": null
-    },
-    {
-      "age": 40,
-      "event_id": "residence_contract_change",
-      "name": "주거 계약 변경",
-      "domain": "residence",
-      "episode_id": "rental_contract_long_cycle",
-      "episode_name": "임차 계약 변경",
-      "episode_kind": "core_subgraph",
-      "priority": 45,
-      "actor": "household",
       "child_age": null
     },
     {
@@ -317,30 +175,6 @@
       "episode_kind": "core_subgraph",
       "priority": 70,
       "actor": "parent",
-      "child_age": null
-    },
-    {
-      "age": 59,
-      "event_id": "career_retirement_prep",
-      "name": "은퇴 준비 시작",
-      "domain": "career",
-      "episode_id": "retirement_pension_arc",
-      "episode_name": "은퇴-연금",
-      "episode_kind": "core_subgraph",
-      "priority": 55,
-      "actor": "self",
-      "child_age": null
-    },
-    {
-      "age": 67,
-      "event_id": "career_pension_start",
-      "name": "연금수령시작",
-      "domain": "career",
-      "episode_id": "retirement_pension_arc",
-      "episode_name": "은퇴-연금",
-      "episode_kind": "core_subgraph",
-      "priority": 55,
-      "actor": "self",
       "child_age": null
     }
   ],

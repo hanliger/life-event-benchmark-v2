@@ -4,9 +4,7 @@
     "separate_household_core",
     "early_career_learning_arc",
     "marriage_childbirth_education_arc",
-    "self_independence_residence_core",
-    "leave_return_reskilling_arc",
-    "dependent_care_core"
+    "self_independence_residence_core"
   ],
   "episodes": [
     {
@@ -104,42 +102,6 @@
       ],
       "priority": 62,
       "source_template_id": "self_independence_residence_core"
-    },
-    {
-      "template_id": "leave_return_reskilling_arc",
-      "template_name": "휴직-복직-재교육",
-      "domain": "career",
-      "kind": "core_subgraph",
-      "event_ages": [
-        [
-          "career_leave",
-          34
-        ],
-        [
-          "career_reinstatement",
-          36
-        ],
-        [
-          "career_education",
-          39
-        ]
-      ],
-      "priority": 55,
-      "source_template_id": "leave_return_reskilling_arc"
-    },
-    {
-      "template_id": "dependent_care_core",
-      "template_name": "부양가족 발생",
-      "domain": "relationship",
-      "kind": "core_subgraph",
-      "event_ages": [
-        [
-          "relationship_dependent_added",
-          59
-        ]
-      ],
-      "priority": 70,
-      "source_template_id": "dependent_care_core"
     }
   ],
   "events": [
@@ -240,30 +202,6 @@
       "child_age": null
     },
     {
-      "age": 34,
-      "event_id": "career_leave",
-      "name": "휴직",
-      "domain": "career",
-      "episode_id": "leave_return_reskilling_arc",
-      "episode_name": "휴직-복직-재교육",
-      "episode_kind": "core_subgraph",
-      "priority": 55,
-      "actor": "self",
-      "child_age": null
-    },
-    {
-      "age": 36,
-      "event_id": "career_reinstatement",
-      "name": "복직",
-      "domain": "career",
-      "episode_id": "leave_return_reskilling_arc",
-      "episode_name": "휴직-복직-재교육",
-      "episode_kind": "core_subgraph",
-      "priority": 55,
-      "actor": "self",
-      "child_age": null
-    },
-    {
       "age": 37,
       "event_id": "relationship_childbirth",
       "name": "출산",
@@ -285,18 +223,6 @@
       "episode_kind": "core_subgraph",
       "priority": 58,
       "actor": "household",
-      "child_age": null
-    },
-    {
-      "age": 39,
-      "event_id": "career_education",
-      "name": "교육",
-      "domain": "career",
-      "episode_id": "leave_return_reskilling_arc",
-      "episode_name": "휴직-복직-재교육",
-      "episode_kind": "core_subgraph",
-      "priority": 55,
-      "actor": "self",
       "child_age": null
     },
     {
@@ -336,18 +262,6 @@
       "child_age": 16
     },
     {
-      "age": 59,
-      "event_id": "relationship_dependent_added",
-      "name": "부양가족 발생",
-      "domain": "relationship",
-      "episode_id": "dependent_care_core",
-      "episode_name": "부양가족 발생",
-      "episode_kind": "core_subgraph",
-      "priority": 70,
-      "actor": "parent",
-      "child_age": null
-    },
-    {
       "age": 62,
       "event_id": "relationship_child_independence",
       "name": "자녀 독립",
@@ -360,18 +274,5 @@
       "child_age": 25
     }
   ],
-  "rejections": [
-    {
-      "episode_id": "marriage_only_core",
-      "reason": "already married",
-      "conflicted_event_id": "relationship_marriage",
-      "age": 34
-    },
-    {
-      "episode_id": "marriage_adoption_education_arc",
-      "reason": "already married",
-      "conflicted_event_id": "relationship_marriage",
-      "age": 34
-    }
-  ]
+  "rejections": []
 }

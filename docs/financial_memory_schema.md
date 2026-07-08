@@ -1,41 +1,40 @@
 # Financial Memory Schema
 
-Memory is a map `path -> [MemoryCell...]` (full history, oldest first).
-Paths are declared in `configs/registries/financial_memory_schema.yaml`
-across domains: profile, household, employment, housing, education,
-financial_products, goals.
+`FinancialMemoryState` stores path-based cell histories. Values are never physically deleted; old values remain available for stale-memory distractors.
 
-## MemoryCell
+## Cell Status
 
-| field | meaning |
-| --- | --- |
-| value | current payload (any JSON value) |
-| status | current / historical / stale / needs_verification / pending / cancelled / unknown |
-| confidence | 0..1, degraded by mark_stale / needs_verification |
-| valid_from / valid_until | month indexes bounding validity |
-| last_confirmed_at | last month the user confirmed the value |
-| evidence_turns | `SXXX:turn` pointers |
-| source_event_instance_id | provenance event |
-| provenance | initial / event_delta / dialogue / manual |
+- `current`: active value.
+- `historical`: previous value kept for history.
+- `stale`: value may be outdated.
+- `needs_verification`: value requires user confirmation.
+- `pending`: weak/upcoming evidence, not committed.
+- `cancelled`: pending value cancelled.
+- `unknown`: value may exist, but is unknown.
+- `not_applicable`: value should not exist in the current state.
 
-## Operations
+## unknown vs not_applicable
 
-| op | semantics |
-| --- | --- |
-| create / update | archive previous current cell (status=historical, valid_until=now), append new current cell |
-| mark_stale | latest cell → stale, confidence ≤ 0.4 |
-| archive | latest cell → historical |
-| needs_verification | latest cell → needs_verification (kept value, confidence ≤ 0.6) |
-| set_pending | append pending cell (confidence 0.5) |
-| clear_pending | pending cells → cancelled; event-scoped needs_verification cells restored to current |
-| reactivate | most recent historical cell → current |
-| no_update | no-op |
+Use `unknown` when the field could apply:
 
-**Nothing is deleted.** `historical_values(path)` powers stale-memory
-distractors in benchmark items.
+- employed user, salary day not known yet
+- married user, spouse account not known
 
-## Lifecycle gating (enforced by DeltaEngine)
+Use `not_applicable` when the field should not apply:
 
-weak_signal/upcoming may only set_pending / needs_verification; occurred may
-commit; cancelled may only clear_pending. A registry template violating this
-raises at generation time.
+- retired user, `employment.salary_day`
+- owner, `housing.rent_amount`
+- no children, `education.child_education_stage`
+
+`current_value(path)` returns `None` for `historical`, `cancelled`, and `not_applicable`.
+
+## Update Semantics
+
+- `update/create`: appends a new `current` cell.
+- `mark_stale`: marks latest cell stale.
+- `needs_verification`: marks latest cell as needing confirmation.
+- `set_pending`: creates a pending cell for weak/upcoming evidence.
+- `clear_pending`: cancels pending evidence.
+- `reactivate`: restores the latest historical cell.
+
+The delta engine skips no-op updates and repeated stale/verification marks.

@@ -16,8 +16,6 @@ digraph sample_life_path {
   "event_11" [label="중학교 입학\n44", pos="15.3,-1.6!", fontcolor="#9333ea"];
   "event_12" [label="고등학교 입학\n47", pos="18.0,-1.6!", fontcolor="#9333ea"];
   "event_13" [label="자녀 독립\n49", pos="19.8,-1.6!", fontcolor="#9333ea"];
-  "event_14" [label="분가\n61", pos="30.6,-3.2!", fontcolor="#0891b2"];
-  "event_15" [label="부양가족 발생\n62", pos="31.5,-4.0!", fontcolor="#ca8a04"];
   "event_1" -> "event_2" [color="#16a34a"];
   "event_2" -> "event_4" [color="#16a34a"];
   "event_0" -> "event_3" [color="#2563eb"];

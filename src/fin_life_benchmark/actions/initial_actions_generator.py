@@ -18,7 +18,7 @@ import hashlib
 import random
 
 from ..locale.loader import LocaleConfig
-from ..memory.models import FinancialMemoryState
+from ..memory.models import CellStatus, FinancialMemoryState
 from ..persona.models import NormalizedPersona
 from .models import ActionStatus, StandingAction
 
@@ -41,6 +41,8 @@ def build_initial_actions(
     def add(type_: str, label: str, *, destination: str | None, amount: int | None,
             trigger_rule: str, trigger_day: int | None, linked: list[str]) -> None:
         nonlocal counter
+        if any((cell := memory.latest(path)) is not None and cell.status == CellStatus.NOT_APPLICABLE for path in linked):
+            return
         counter += 1
         actions.append(
             StandingAction(

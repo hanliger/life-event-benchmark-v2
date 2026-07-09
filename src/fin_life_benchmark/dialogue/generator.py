@@ -86,18 +86,50 @@ def _contains_any(text: str, terms: list[str]) -> str | None:
     return None
 
 
+def _context_memory_value(plan: DialogueGenerationPlan, path: str) -> Any:
+    cell = (plan.structured_context.get("current_memory") or {}).get(path) or {}
+    if not isinstance(cell, dict):
+        return None
+    return cell.get("value")
+
+
+def _context_life_state_value(plan: DialogueGenerationPlan, key: str) -> Any:
+    life_state = (
+        (plan.structured_context.get("persona_state") or {})
+        .get("life_state")
+        or {}
+    )
+    if not isinstance(life_state, dict):
+        return None
+    return life_state.get(key)
+
+
+def _session_context_value(plan: DialogueGenerationPlan, path: str, fallback: Any) -> Any:
+    value = _context_memory_value(plan, path)
+    if value is not None:
+        return value
+    value = _context_life_state_value(plan, path.split(".")[-1])
+    if value is not None:
+        return value
+    return fallback
+
+
 class DialogueGenerator:
     def __init__(
         self,
         mode: str = "mock",
         client: LLMClient | None = None,
         paths: RepoPaths | None = None,
+        raw_output_dir: Path | None = None,
+        raw_filename_suffix: str = "",
     ):
         if mode not in {"mock", "dry_run", "llm"}:
             raise ValueError(f"unknown dialogue mode: {mode}")
         self.mode = mode
         self.client = client
         self.paths = paths or RepoPaths.default()
+        self.raw_output_dir = raw_output_dir
+        self.raw_filename_suffix = raw_filename_suffix
         self.cfg = load_yaml(self.paths.generation / "dialogue.yaml")
         self.prompt_template = (self.paths.prompts / "dialogue" / "generate_banking_session_ko.md").read_text(encoding="utf-8")
         self.repair_template = (self.paths.prompts / "dialogue" / "repair_banking_session_ko.md").read_text(encoding="utf-8")
@@ -179,13 +211,28 @@ class DialogueGenerator:
 
     # ------------------------------------------------------------------- llm
     def _build_prompt(self, plan: DialogueGenerationPlan, persona: NormalizedPersona) -> str:
+        employment_status = _session_context_value(
+            plan,
+            "employment.employment_status",
+            persona.occupation_state.employment_status,
+        )
+        residence_status = _session_context_value(
+            plan,
+            "housing.residence_status",
+            persona.housing.residence_status,
+        )
+        marital_status = _session_context_value(
+            plan,
+            "household.marital_status",
+            persona.household.marital_status,
+        )
         replacements = {
             "{age}": str(plan.age),
             "{user_style}": persona.style.formality + ", " + persona.style.verbosity,
             "{persona_summary}": persona.persona_text[:200],
-            "{employment_status}": persona.occupation_state.employment_status,
-            "{residence_status}": persona.housing.residence_status,
-            "{marital_status}": persona.household.marital_status,
+            "{employment_status}": str(employment_status),
+            "{residence_status}": str(residence_status),
+            "{marital_status}": str(marital_status),
             "{has_loan}": str(persona.financial_profile.has_loan).lower(),
             "{session_type}": plan.session_type,
             "{financial_task}": plan.financial_task,
@@ -225,6 +272,48 @@ class DialogueGenerator:
             encoding="utf-8",
         )
 
+    @staticmethod
+    def _repair_cue_annotations(
+        turns: list[Turn],
+        cues: list[CueAnnotation],
+        plan: DialogueGenerationPlan,
+    ) -> list[CueAnnotation]:
+        if not plan.must_include_cues:
+            return cues
+
+        repaired = list(cues)
+        memory_paths = list(plan.target_memory_paths)
+        annotated_keys = {
+            (cue.turn_index, cue.cue_text or cue.cue_type)
+            for cue in repaired
+        }
+
+        for cue_index, required_cue in enumerate(plan.must_include_cues):
+            if not required_cue:
+                continue
+            matching_turn = None
+            for turn_index, turn in enumerate(turns):
+                if turn.speaker == "user" and required_cue in turn.text:
+                    matching_turn = turn_index
+                    break
+            if matching_turn is None:
+                continue
+            key = (matching_turn, required_cue)
+            if key in annotated_keys:
+                continue
+            linked_memory_path = memory_paths[cue_index % len(memory_paths)] if memory_paths else None
+            repaired.append(
+                CueAnnotation(
+                    turn_index=matching_turn,
+                    cue_type=_slugify(required_cue) or "required_cue",
+                    cue_text=required_cue,
+                    linked_memory_path=linked_memory_path,
+                )
+            )
+            annotated_keys.add(key)
+
+        return repaired
+
     def _payload_to_parts(
         self,
         payload: dict[str, Any],
@@ -260,17 +349,12 @@ class DialogueGenerator:
         if turns[-1].speaker != "assistant":
             raise LLMOutputValidationError("dialogue must end with an assistant turn")
         visible = " ".join(turn.text for turn in turns)
-        if persona.occupation_state.employment_status != "employed":
-            for term in ("월급", "급여 받", "급여일"):
-                if term in visible:
-                    raise LLMOutputValidationError(
-                        f"visible dialogue conflicts with employment_status={persona.occupation_state.employment_status}: '{term}'"
-                    )
-        if persona.housing.residence_status != "wolse":
+        residence_status = _session_context_value(plan, "housing.residence_status", persona.housing.residence_status)
+        if residence_status != "wolse":
             for term in ("월세", "집주인"):
                 if term in visible:
                     raise LLMOutputValidationError(
-                        f"visible dialogue conflicts with residence_status={persona.housing.residence_status}: '{term}'"
+                        f"visible dialogue conflicts with residence_status={residence_status}: '{term}'"
                     )
         for term in _OFFLINE_BANKING_TERMS:
             if term in visible:
@@ -310,6 +394,7 @@ class DialogueGenerator:
                     linked_memory_path=linked_memory_path,
                 )
             )
+        cues = self._repair_cue_annotations(turns, cues, plan)
         if plan.must_include_cues and not cues:
             raise LLMOutputValidationError(
                 "cue_annotations must include at least one user-turn annotation "
@@ -328,10 +413,11 @@ class DialogueGenerator:
         raw = self.client.generate(system, prompt)
 
         raw_dir.mkdir(parents=True, exist_ok=True)
-        raw_path = raw_dir / f"{plan.trajectory_id}_{plan.session_id}.txt"
+        raw_stem = f"{plan.trajectory_id}_{plan.session_id}{self.raw_filename_suffix}"
+        raw_path = raw_dir / f"{raw_stem}.txt"
         max_repair_attempts = int(self.cfg.get("repair_attempts", 3))
         repair_paths = [
-            raw_dir / f"{plan.trajectory_id}_{plan.session_id}_repair{'' if attempt == 1 else attempt}.txt"
+            raw_dir / f"{raw_stem}_repair{'' if attempt == 1 else attempt}.txt"
             for attempt in range(1, max_repair_attempts + 1)
         ]
         for repair_path in repair_paths:
@@ -395,12 +481,13 @@ class DialogueGenerator:
 
     # ------------------------------------------------------------------ main
     def generate_session(self, plan: DialogueGenerationPlan, persona: NormalizedPersona) -> Session | None:
-        raw_dir = self.paths.raw_model_outputs / "dialogue"
+        raw_dir = self.raw_output_dir or self.paths.raw_model_outputs / "dialogue"
         if self.mode == "mock":
             return self._mock_session(plan, persona)
         if self.mode == "dry_run":
             raw_dir.mkdir(parents=True, exist_ok=True)
             prompt = self._build_prompt(plan, persona)
-            (raw_dir / f"{plan.trajectory_id}_{plan.session_id}_prompt.txt").write_text(prompt, encoding="utf-8")
+            raw_stem = f"{plan.trajectory_id}_{plan.session_id}{self.raw_filename_suffix}"
+            (raw_dir / f"{raw_stem}_prompt.txt").write_text(prompt, encoding="utf-8")
             return None
         return self._llm_session(plan, persona, raw_dir)

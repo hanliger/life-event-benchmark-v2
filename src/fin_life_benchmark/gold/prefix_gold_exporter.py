@@ -46,6 +46,32 @@ def _serialize_memory_state(memory: Any) -> dict[str, Any]:
     return out
 
 
+_STATUS_RANK = {
+    "weak_signal": 1,
+    "upcoming": 2,
+    "occurred": 3,
+    "cancelled": 4,
+}
+
+
+def _status_value(status: Any) -> str:
+    return getattr(status, "value", status)
+
+
+def _status_rank(status: Any) -> int:
+    return _STATUS_RANK.get(str(_status_value(status)), -1)
+
+
+def _visible_event_status(instance: Any, linked_sessions: list[dict[str, Any]]) -> EventStatus:
+    """Return the latest event status actually evidenced in visible sessions."""
+    latest = sorted(linked_sessions, key=lambda s: (s["month_index"], s["session_id"]))[-1]
+    status = latest.get("event_status_after_session")
+    try:
+        return EventStatus(status)
+    except ValueError:
+        return instance.status_as_of(latest["month_index"])
+
+
 def export_prefix_gold(trajectory: Trajectory, sessions: list[dict[str, Any]]) -> list[PrefixGold]:
     sessions = sorted(sessions, key=lambda s: (s["month_index"], s["session_id"]))
     start_age = trajectory.initial_persona_state.age
@@ -94,12 +120,14 @@ def export_prefix_gold(trajectory: Trajectory, sessions: list[dict[str, Any]]) -
 
         # gold life events: instances with >=1 evidence session in prefix
         gold_events: list[GoldLifeEvent] = []
+        visible_instance_status: dict[str, EventStatus] = {}
         for instance_id, linked in sessions_by_instance.items():
             in_prefix = [s for s in linked if s["session_id"] in visible_ids]
             if not in_prefix:
                 continue
             instance = instances[instance_id]
-            status = instance.status_as_of(month)
+            status = _visible_event_status(instance, in_prefix)
+            visible_instance_status[instance_id] = status
             evidence_turns = [
                 f"{s['session_id']}:{c['turn_index']}"
                 for s in in_prefix
@@ -119,7 +147,7 @@ def export_prefix_gold(trajectory: Trajectory, sessions: list[dict[str, Any]]) -
                 )
             )
 
-        # gold memory updates: updates whose source event has evidence in prefix
+        # gold memory updates: updates whose source event/status has evidence in prefix
         visible_instances = {e.event_instance_id for e in gold_events}
         gold_updates = [
             GoldMemoryUpdate(
@@ -138,6 +166,7 @@ def export_prefix_gold(trajectory: Trajectory, sessions: list[dict[str, Any]]) -
             if u.month_index is not None
             and u.month_index <= month
             and u.source_event_instance_id in visible_instances
+            and _status_rank(u.event_status) <= _status_rank(visible_instance_status.get(u.source_event_instance_id))
         ]
 
         gold_decisions = [

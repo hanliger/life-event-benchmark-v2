@@ -36,6 +36,14 @@ def _format_sessions(sessions: list[dict[str, Any]]) -> str:
     return "\n\n".join(blocks)
 
 
+def _format_initial_memory(memory: dict[str, Any]) -> str:
+    lines = ["다음은 문제와 관련된 초기 금융 메모리입니다."]
+    for path, cell in sorted(memory.items()):
+        cell = cell or {}
+        lines.append(f"- {path}: 상태={cell.get('status')}, 값={cell.get('value')}")
+    return "\n".join(lines)
+
+
 def _visible_for_mode(item: dict[str, Any], sessions_by_id: dict[str, dict], mode: str) -> list[dict[str, Any]]:
     ids = item["visible_sessions"]
     if mode == "no_history_option":
@@ -55,6 +63,10 @@ def build_validator_prompt(item: dict[str, Any], visible: list[dict[str, Any]]) 
     if visible:
         lines.append("다음은 은행 상담 세션 이력입니다.\n")
         lines.append(_format_sessions(visible))
+        lines.append("")
+    initial_memory = (item.get("metadata") or {}).get("initial_memory") or {}
+    if initial_memory:
+        lines.append(_format_initial_memory(initial_memory))
         lines.append("")
     lines.append(item["question"])
     lines.append("")

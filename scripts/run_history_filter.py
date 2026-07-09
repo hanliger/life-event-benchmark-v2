@@ -52,6 +52,10 @@ def main() -> int:
             missing.append("OPENAI_API_KEY")
         if "anthropic:" in spec and not os.environ.get("ANTHROPIC_API_KEY"):
             missing.append("ANTHROPIC_API_KEY")
+        if ("gemini:" in spec or "google:" in spec) and not (
+            os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+        ):
+            missing.append("GEMINI_API_KEY or GOOGLE_API_KEY")
         if missing:
             print(f"API keys missing ({', '.join(missing)}): falling back to mock validator")
             spec = "mock:mock-validator"

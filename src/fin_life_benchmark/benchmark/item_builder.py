@@ -75,12 +75,30 @@ class ItemBuilder:
         return items
 
     # ------------------------------------------------------------- stage 2
+    @staticmethod
+    def _initial_memory_by_traj(prefixes: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+        initial: dict[str, dict[str, Any]] = {}
+        for prefix in prefixes:
+            traj = prefix["trajectory_id"]
+            if traj not in initial and prefix.get("gold_full_memory_state"):
+                initial[traj] = prefix["gold_full_memory_state"]
+        return initial
+
+    @staticmethod
+    def _evidenced_updates(updates: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        return [update for update in updates if update.get("evidence_turns")]
+
+    @staticmethod
+    def _initial_memory_subset(initial_memory: dict[str, Any], paths: list[str]) -> dict[str, Any]:
+        return {path: initial_memory.get(path) for path in paths}
+
     def build_stage2(self, prefixes: list[dict[str, Any]], sessions_by_traj: dict) -> list[BenchmarkItem]:
         items: list[BenchmarkItem] = []
         seen_counts: dict[str, int] = {}
+        initial_by_traj = self._initial_memory_by_traj(prefixes)
         for prefix in prefixes:
             traj = prefix["trajectory_id"]
-            updates = prefix["gold_memory_updates"]
+            updates = self._evidenced_updates(prefix["gold_memory_updates"])
             n_updates = len(updates)
             previous = seen_counts.get(traj, 0)
             if n_updates == 0 or n_updates == previous:
@@ -88,10 +106,11 @@ class ItemBuilder:
                 continue
             seen_counts[traj] = n_updates
             new_updates = updates[previous:n_updates]
-            single = self._stage2_single_hop_item(prefix, new_updates)
+            initial_memory = initial_by_traj.get(traj, {})
+            single = self._stage2_single_hop_item(prefix, new_updates, initial_memory)
             if single is not None:
                 items.append(single)
-            multi = self._stage2_multi_hop_item(prefix, updates)
+            multi = self._stage2_multi_hop_item(prefix, updates, initial_memory)
             if multi is not None:
                 items.append(multi)
         return items
@@ -213,6 +232,7 @@ class ItemBuilder:
         self,
         prefix: dict[str, Any],
         new_updates: list[dict[str, Any]],
+        initial_memory: dict[str, Any],
     ) -> BenchmarkItem | None:
         if not new_updates:
             return None
@@ -244,6 +264,7 @@ class ItemBuilder:
                 "hop_type": "single",
                 "source_update_operation": update.get("operation"),
                 "n_visible_sessions": len(prefix["visible_sessions"]),
+                "initial_memory": self._initial_memory_subset(initial_memory, [path]),
             },
         )
 
@@ -251,6 +272,7 @@ class ItemBuilder:
         self,
         prefix: dict[str, Any],
         updates: list[dict[str, Any]],
+        initial_memory: dict[str, Any],
     ) -> BenchmarkItem | None:
         memory = prefix.get("gold_full_memory_state") or {}
         paths = []
@@ -332,5 +354,6 @@ class ItemBuilder:
             metadata={
                 "hop_type": "multi",
                 "n_visible_sessions": len(prefix["visible_sessions"]),
+                "initial_memory": self._initial_memory_subset(initial_memory, [a, b]),
             },
         )

@@ -193,6 +193,7 @@ class DialogueGenerator:
             "{must_include_cues}": json.dumps(plan.must_include_cues, ensure_ascii=False),
             "{must_not_include_terms}": json.dumps(plan.must_not_include_terms, ensure_ascii=False),
             "{target_memory_paths}": json.dumps(plan.target_memory_paths, ensure_ascii=False),
+            "{structured_context}": json.dumps(plan.structured_context, ensure_ascii=False),
             "{turns_min}": str(self.cfg.get("turns_min", 7)),
             "{turns_max}": str(self.cfg.get("turns_max", 10)),
             "{user_turns_min}": str(self.cfg.get("user_turns_min", 4)),
@@ -309,7 +310,11 @@ class DialogueGenerator:
                     linked_memory_path=linked_memory_path,
                 )
             )
-
+        if plan.must_include_cues and not cues:
+            raise LLMOutputValidationError(
+                "cue_annotations must include at least one user-turn annotation "
+                "when plan.must_include_cues is non-empty"
+            )
         raw_check = payload.get("quality_self_check") or {}
         if not isinstance(raw_check, dict):
             raise LLMOutputValidationError("payload.quality_self_check must be an object when present")

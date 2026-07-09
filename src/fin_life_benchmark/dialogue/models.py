@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 SESSION_TYPES = (
@@ -44,6 +46,7 @@ class DialogueGenerationPlan(BaseModel):
     must_not_include_terms: list[str] = Field(default_factory=list)
     target_memory_paths: list[str] = Field(default_factory=list)
     target_action_ids: list[str] = Field(default_factory=list)
+    structured_context: dict[str, Any] = Field(default_factory=dict)
     desired_single_session_recoverability: str = "medium"  # low|medium|high
     desired_cumulative_recoverability: str = "high"  # medium|high
 

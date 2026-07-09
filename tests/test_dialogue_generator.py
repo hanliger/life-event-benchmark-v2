@@ -370,3 +370,62 @@ def test_weak_signal_flags_event_confirmation_language():
     violations = generator.validator.validate_session(session)
 
     assert "weak_signal_overcommitted" in {violation["code"] for violation in violations}
+
+
+def test_llm_session_repairs_missing_required_cue_annotation(tmp_path):
+    plan = _plan()
+    plan.must_include_cues = ["새 주소"]
+    plan.target_memory_paths = ["housing.address"]
+    broken = """
+    {
+      "turns": [
+        {"speaker": "user", "text": "새 주소로 안내문 받는 곳도 바꿔야 할 것 같아요."},
+        {"speaker": "assistant", "text": "네, 안내문 수령 주소 확인을 도와드리겠습니다."}
+      ],
+      "cue_annotations": [],
+      "quality_self_check": {}
+    }
+    """
+    repaired = """
+    {
+      "turns": [
+        {"speaker": "user", "text": "새 주소로 안내문 받는 곳도 바꿔야 할 것 같아요."},
+        {"speaker": "assistant", "text": "네, 안내문 수령 주소 확인을 도와드리겠습니다."}
+      ],
+      "cue_annotations": [
+        {"turn_index": 0, "cue_type": "address_update_reference", "linked_memory_path": "housing.address"}
+      ],
+      "quality_self_check": {}
+    }
+    """
+    client = FakeLLMClient([broken, repaired])
+    generator = DialogueGenerator(mode="llm", client=client, paths=RepoPaths.default())
+
+    session = generator._llm_session(plan, _persona(), tmp_path)
+
+    assert session.cue_annotations[0].turn_index == 0
+    assert session.cue_annotations[0].linked_memory_path == "housing.address"
+    assert "cue_annotations must include at least one user-turn annotation" in client.requests[1][1]
+
+
+def test_validator_flags_missing_required_cue_annotation():
+    generator = DialogueGenerator(paths=RepoPaths.default())
+    session = {
+        "turns": [
+            {"speaker": "user", "text": "새 주소로 안내문 받는 곳도 바꿔야 할 것 같아요."},
+            {"speaker": "assistant", "text": "네, 안내문 수령 주소 확인을 도와드리겠습니다."},
+        ],
+        "event_status_after_session": "occurred",
+        "session_type": "consequence_session",
+        "mapped_action": "FA-01",
+        "cue_annotations": [],
+        "plan": {
+            "must_include_cues": ["새 주소"],
+            "must_not_include_terms": [],
+            "target_memory_paths": ["housing.address"],
+        },
+    }
+
+    violations = generator.validator.validate_session(session)
+
+    assert "missing_cue_annotation" in {violation["code"] for violation in violations}

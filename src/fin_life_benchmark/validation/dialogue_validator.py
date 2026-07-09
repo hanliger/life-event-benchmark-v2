@@ -120,7 +120,8 @@ class DialogueValidator:
         # cue annotations must point at user turns
         plan = session.get("plan") or {}
         target_memory_paths = set(plan.get("target_memory_paths") or [])
-        for cue in session.get("cue_annotations") or []:
+        cue_annotations = session.get("cue_annotations") or []
+        for cue in cue_annotations:
             idx = cue.get("turn_index", -1)
             if not (0 <= idx < len(turns)):
                 flag("cue_index_out_of_range", f"cue turn_index {idx}")
@@ -129,6 +130,8 @@ class DialogueValidator:
             linked = cue.get("linked_memory_path")
             if linked is not None and linked not in target_memory_paths:
                 flag("cue_linked_path_not_target", f"linked_memory_path '{linked}' not in target_memory_paths")
+        if plan.get("must_include_cues") and not cue_annotations:
+            flag("missing_cue_annotation", "must_include_cues present but cue_annotations is empty")
 
         status = session.get("event_status_after_session", "no_event")
         session_type = session.get("session_type", "")

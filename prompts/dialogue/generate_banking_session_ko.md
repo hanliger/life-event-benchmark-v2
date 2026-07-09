@@ -19,6 +19,7 @@
 - 반드시 자연스럽게 포함할 단서 표현: {must_include_cues}
 - 절대 등장하면 안 되는 표현: {must_not_include_terms}
 - cue_annotations에서 연결 가능한 memory path: {target_memory_paths}
+- 구조화된 사실 컨텍스트: {structured_context}
 
 ## 대화 규칙
 1. 고객은 은행 업무를 보러 온 것이지 자기 인생을 설명하러 온 것이 아닙니다.
@@ -43,6 +44,7 @@
 17. 현재 고객 상태와 충돌하는 세부사항을 만들지 않습니다. 예를 들어 retired/unemployed/student/homemaker 고객에게 월급일·급여 받는 계좌를 말하게 하지 않고, owner/jeonse/family_home 고객에게 월세·집주인 납부를 말하게 하지 않습니다.
 18. 오프라인 지점/창구 상황처럼 쓰지 않습니다. 다음 표현과 장면은 금지합니다: 창구, 영업점, 방문, 안내 창구, 모시겠습니다, 신분증 지참, 실물 신분증, 신청서 작성, 서명, 출력, 우편 발송, 우편 배송, 배송, 방문 수령, 창구 수령, 실물 수령. 필요한 확인은 앱 인증, 본인인증, 확인 버튼, 메뉴 이동, 알림/문자 안내처럼 비대면 흐름으로 표현합니다.
 19. 절대 등장하면 안 되는 표현과 금지 표현은 user와 assistant 양쪽 모두에 적용됩니다. assistant의 선택지, 예시, 확인 질문에도 넣지 않습니다.
+20. 구조화된 사실 컨텍스트의 event.params, session_memory_updates, event_memory_updates, persona_state, current_memory와 충돌하는 주소·금액·가족관계·고용·주거 정보를 만들지 않습니다. 제공되지 않은 구체값은 새로 만들지 말고 일반 표현을 사용합니다.
 
 ## 출력 형식 (JSON만 출력)
 {

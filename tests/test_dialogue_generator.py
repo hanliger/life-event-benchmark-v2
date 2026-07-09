@@ -429,3 +429,53 @@ def test_validator_flags_missing_required_cue_annotation():
     violations = generator.validator.validate_session(session)
 
     assert "missing_cue_annotation" in {violation["code"] for violation in violations}
+
+
+def test_validator_requires_required_cue_in_user_turn():
+    generator = DialogueGenerator(paths=RepoPaths.default())
+    session = {
+        "turns": [
+            {"speaker": "user", "text": "여러 건을 정리할 게 좀 있어서요."},
+            {"speaker": "assistant", "text": "부의금 정리 때문에 확인이 필요하신 거군요."},
+        ],
+        "event_status_after_session": "weak_signal",
+        "session_type": "weak_signal_evidence",
+        "mapped_action": "FA-01",
+        "cue_annotations": [{"turn_index": 0, "cue_type": "generic", "linked_memory_path": None}],
+        "plan": {
+            "must_include_cues": ["부의금 정리"],
+            "must_not_include_terms": [],
+            "target_memory_paths": [],
+        },
+    }
+
+    violations = generator.validator.validate_session(session)
+
+    codes = {violation["code"] for violation in violations}
+    assert "required_cue_not_in_user_turn" in codes
+    assert "required_cue_not_annotated" in codes
+
+
+def test_validator_requires_required_cue_in_annotated_user_turn():
+    generator = DialogueGenerator(paths=RepoPaths.default())
+    session = {
+        "turns": [
+            {"speaker": "user", "text": "새 주소로 안내문 받는 곳도 바꿔야 할 것 같아요."},
+            {"speaker": "assistant", "text": "네, 안내문 수령 주소 확인을 도와드리겠습니다."},
+            {"speaker": "user", "text": "그럼 알림도 같이 설정해 주세요."},
+            {"speaker": "assistant", "text": "네, 알림 설정도 확인하겠습니다."},
+        ],
+        "event_status_after_session": "occurred",
+        "session_type": "occurred_evidence",
+        "mapped_action": "FA-01",
+        "cue_annotations": [{"turn_index": 2, "cue_type": "wrong_turn", "linked_memory_path": "housing.address"}],
+        "plan": {
+            "must_include_cues": ["새 주소"],
+            "must_not_include_terms": [],
+            "target_memory_paths": ["housing.address"],
+        },
+    }
+
+    violations = generator.validator.validate_session(session)
+
+    assert "required_cue_not_annotated" in {violation["code"] for violation in violations}

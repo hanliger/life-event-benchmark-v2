@@ -92,6 +92,7 @@ class DialogueValidator:
                 break
 
         visible = " ".join(t.get("text", "") for t in turns)
+        user_text = " ".join(t.get("text", "") for t in turns if t.get("speaker") == "user")
         assistant_text = " ".join(t.get("text", "") for t in turns if t.get("speaker") == "assistant")
 
         # leakage: skip labels that are substrings of this session's own
@@ -121,12 +122,18 @@ class DialogueValidator:
         plan = session.get("plan") or {}
         target_memory_paths = set(plan.get("target_memory_paths") or [])
         cue_annotations = session.get("cue_annotations") or []
+        annotated_user_texts: list[str] = []
         for cue in cue_annotations:
             idx = cue.get("turn_index", -1)
             if not (0 <= idx < len(turns)):
                 flag("cue_index_out_of_range", f"cue turn_index {idx}")
             elif turns[idx]["speaker"] != "user":
                 flag("cue_not_user_turn", f"cue at turn {idx} is not a user turn")
+            else:
+                annotated_user_texts.append(turns[idx].get("text", ""))
+                cue_text = cue.get("cue_text")
+                if cue_text and cue_text not in turns[idx].get("text", ""):
+                    flag("cue_text_not_in_annotated_turn", f"cue_text '{cue_text}' absent from turn {idx}")
             linked = cue.get("linked_memory_path")
             if linked is not None and linked not in target_memory_paths:
                 flag("cue_linked_path_not_target", f"linked_memory_path '{linked}' not in target_memory_paths")
@@ -140,6 +147,10 @@ class DialogueValidator:
         for cue in plan.get("must_include_cues") or []:
             if cue and cue not in visible:
                 flag("missing_required_cue", f"cue '{cue}' absent")
+            if cue and cue in visible and cue not in user_text:
+                flag("required_cue_not_in_user_turn", f"cue '{cue}' absent from user turns")
+            if cue and cue in visible and not any(cue in text for text in annotated_user_texts):
+                flag("required_cue_not_annotated", f"cue '{cue}' not present in any annotated user turn")
         for term in plan.get("must_not_include_terms") or []:
             if term and term in visible:
                 flag("forbidden_term", f"term '{term}' present")

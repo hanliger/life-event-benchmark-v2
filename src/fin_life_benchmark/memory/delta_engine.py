@@ -29,6 +29,7 @@ _ALLOWED_OPS_BY_STATUS: dict[EventStatus, set[MemoryOperation]] = {
         MemoryOperation.ARCHIVE,
         MemoryOperation.NEEDS_VERIFICATION,
         MemoryOperation.REACTIVATE,
+        MemoryOperation.SET_NOT_APPLICABLE,
         MemoryOperation.NO_UPDATE,
     },
     EventStatus.CANCELLED: {MemoryOperation.CLEAR_PENDING, MemoryOperation.NO_UPDATE},
@@ -69,6 +70,8 @@ class DeltaEngine:
             return latest is not None and latest.status == CellStatus.NEEDS_VERIFICATION
         if update.operation == MemoryOperation.ARCHIVE:
             return latest is None or latest.status in {CellStatus.HISTORICAL, CellStatus.CANCELLED}
+        if update.operation == MemoryOperation.SET_NOT_APPLICABLE:
+            return latest is not None and latest.status == CellStatus.NOT_APPLICABLE
         if update.operation == MemoryOperation.CLEAR_PENDING:
             return not any(
                 cell.status == CellStatus.PENDING
@@ -79,6 +82,38 @@ class DeltaEngine:
                 for cell in memory.history(update.path)
             )
         return False
+
+    def _normalize_housing_operation(
+        self,
+        memory: FinancialMemoryState,
+        instance: EventInstance,
+        to_status: EventStatus,
+        path: str,
+        op: MemoryOperation,
+    ) -> MemoryOperation | None:
+        """Keep rent-only memory paths inapplicable outside wolse.
+
+        Jeonse has a deposit/contract but no monthly rent amount/payee. Owner
+        and other non-wolse residence states likewise must not carry current
+        rent fields just because a move/rental event touched housing memory.
+        """
+        if path not in {"housing.rent_amount", "housing.rent_payee"}:
+            return op
+
+        if instance.event_id == "housing_rental_contract":
+            contract_type = instance.params.get("new_contract_type")
+            if contract_type != "wolse":
+                if to_status == EventStatus.UPCOMING:
+                    return None
+                if to_status == EventStatus.OCCURRED:
+                    return MemoryOperation.SET_NOT_APPLICABLE
+
+        if instance.event_id == "housing_move" and path == "housing.rent_payee":
+            residence = memory.current_value("housing.residence_status")
+            if residence != "wolse":
+                return MemoryOperation.SET_NOT_APPLICABLE
+
+        return op
 
     def apply_transition(
         self,
@@ -102,6 +137,9 @@ class DeltaEngine:
         allowed = _ALLOWED_OPS_BY_STATUS[to_status]
         for spec in specs:
             op = MemoryOperation(spec["operation"])
+            op = self._normalize_housing_operation(memory, instance, to_status, spec["path"], op)
+            if op is None:
+                continue
             if op not in allowed:
                 raise ValueError(
                     f"{instance.event_id}.{hook}: operation '{op.value}' not allowed for status {to_status.value}"

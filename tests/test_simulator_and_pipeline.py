@@ -7,12 +7,15 @@ from fin_life_benchmark.benchmark.item_builder import ItemBuilder
 from fin_life_benchmark.dialogue.evidence_planner import EvidencePlanner
 from fin_life_benchmark.dialogue.generator import DialogueGenerator
 from fin_life_benchmark.fsm.event_lifecycle import sample_event_params
+from fin_life_benchmark.fsm.models import EventInstance, EventStatus
 from fin_life_benchmark.fsm.life_state_machine import LifeStateMachine
 from fin_life_benchmark.fsm.registry import load_life_event_templates
 from fin_life_benchmark.gold.prefix_gold_exporter import export_prefix_gold
 from fin_life_benchmark.io import RepoPaths, load_yaml
 from fin_life_benchmark.locale import load_locale
+from fin_life_benchmark.memory.delta_engine import DeltaEngine
 from fin_life_benchmark.memory.initial_state_generator import build_initial_memory
+from fin_life_benchmark.memory.models import CellStatus, FinancialMemoryState
 from fin_life_benchmark.persona.models import HouseholdState, HousingState, NormalizedPersona, OccupationState
 from fin_life_benchmark.trajectory.models import LifeState
 from fin_life_benchmark.trajectory.simulator import TrajectorySimulator
@@ -63,6 +66,32 @@ def test_lifecycle_history_is_ordered_and_valid():
         assert statuses[-1] in {"occurred", "cancelled", "weak_signal", "upcoming"}
 
 
+def test_dialogue_structured_context_is_prefix_safe():
+    trajectory = _simulate(seed=13, horizon=8)
+    paths = RepoPaths.default()
+    locale = load_locale("ko_KR", paths)
+    templates = load_life_event_templates(paths)
+    planner = EvidencePlanner(templates, locale, paths)
+
+    plans = planner.build_plans(trajectory, seed=0)
+    checked = 0
+    for plan in plans:
+        event = plan.structured_context.get("event")
+        if event is None:
+            continue
+        checked += 1
+        history = event["status_history"]
+        assert history
+        assert all(item["month_index"] <= plan.month_index for item in history)
+        assert event["status"] == history[-1]["status"]
+        assert event["status"] == plan.event_status_after_session
+        assert all(
+            update["month_index"] <= plan.month_index
+            for update in plan.structured_context["event_memory_updates"]
+        )
+    assert checked > 0
+
+
 def test_family_death_requires_existing_dependent():
     templates = load_life_event_templates()
     template = templates["relationship_family_death"]
@@ -106,6 +135,65 @@ def test_dependent_change_never_exceeds_four_dependents():
 
     assert params["dependent_delta"] == -1
     assert params["dependents_after"] == 3
+
+
+def test_jeonse_rental_contract_keeps_rent_fields_not_applicable():
+    memory = FinancialMemoryState()
+    memory.set_initial("housing.residence_status", "jeonse")
+    memory.set_initial("housing.contract_type", "jeonse")
+    memory.set_initial("housing.rent_amount", None, status=CellStatus.NOT_APPLICABLE)
+    memory.set_initial("housing.rent_payee", None, status=CellStatus.NOT_APPLICABLE)
+    instance = EventInstance(
+        event_instance_id="ev_rental",
+        event_id="housing_rental_contract",
+        label_ko="전세·월세 계약/갱신",
+        domain="housing",
+        params={"new_contract_type": "jeonse", "new_rent_amount": 0, "new_payee": "집주인"},
+    )
+
+    DeltaEngine().apply_transition(memory, instance, EventStatus.OCCURRED, month_index=3, rng=random.Random(0))
+
+    assert memory.latest("housing.rent_amount").status == CellStatus.NOT_APPLICABLE
+    assert memory.latest("housing.rent_payee").status == CellStatus.NOT_APPLICABLE
+
+
+def test_forced_duplicate_event_start_is_blocked_by_pending_instance():
+    paths = RepoPaths.default()
+    locale = load_locale("ko_KR", paths)
+    templates = load_life_event_templates(paths)
+    sim_config = {
+        "global_hazard_scale": 0.0,
+        "max_concurrent_active_events": 4,
+        "max_events_per_trajectory": 12,
+        "min_months_between_event_starts": 0,
+        "snapshot_every_transition": True,
+    }
+    simulator = TrajectorySimulator(templates, locale, sim_config)
+    persona = _persona()  # wolse renter, so rental_contract guards pass
+    memory = build_initial_memory(persona, locale, seed=2)
+    actions = build_initial_actions(persona, memory, locale, seed=2)
+
+    trajectory = simulator.simulate(
+        persona,
+        memory,
+        actions,
+        horizon_years=2,
+        seed=2,
+        trajectory_id="traj_duplicate_forced",
+        forced_events=[("housing_rental_contract", 0), ("housing_rental_contract", 0)],
+    )
+
+    rental_starts = [
+        instance.start_month
+        for instance in trajectory.life_event_instances
+        if instance.event_id == "housing_rental_contract"
+    ]
+    assert rental_starts[0] == 0
+    assert len(rental_starts) == len(set(rental_starts))
+    assert all(
+        later - earlier >= templates["housing_rental_contract"].cooldown_months
+        for earlier, later in zip(rental_starts, rental_starts[1:])
+    )
 
 
 def test_end_to_end_mock_pipeline_in_memory():

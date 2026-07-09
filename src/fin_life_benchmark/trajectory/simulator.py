@@ -126,6 +126,23 @@ class TrajectorySimulator:
                 pending.append((sched_month, instance, status))
             last_start_month = month
 
+        def active_or_pending_instances() -> list[EventInstance]:
+            """Instances that should block another start of the same event.
+
+            A newly forced instance can have due transitions scheduled for the
+            current month while its status is still NO_EVENT until due_now is
+            processed. Treat pending instances as active for guard purposes so
+            episode injection cannot start duplicate same-event instances in
+            the same tick.
+            """
+            pending_ids = {instance.event_instance_id for _, instance, _ in pending}
+            return [
+                i
+                for i in instances
+                if i.status in {EventStatus.WEAK_SIGNAL, EventStatus.UPCOMING}
+                or i.event_instance_id in pending_ids
+            ]
+
         def process_transition(instance: EventInstance, to_status: EventStatus, month: int, age: int, step: TrajectoryStep) -> None:
             # Re-verify state guards at the OCCURRED transition: an event may
             # have started validly but been overtaken by a concurrent event
@@ -171,7 +188,7 @@ class TrajectorySimulator:
                 process_transition(instance, to_status, month, age, step)
             pending = [p for p in pending if p[0] != month]
 
-            active = [i for i in instances if i.status in {EventStatus.WEAK_SIGNAL, EventStatus.UPCOMING}]
+            active = active_or_pending_instances()
 
             # 2a. forced event starts (episode-guided coverage). Bypass hazard,
             # respect guards; retry on later months if the guard is not yet met.
@@ -185,7 +202,7 @@ class TrajectorySimulator:
                     continue  # unknown event id — drop
                 if self.fsm.guards_pass(template, life_state, age, month, last_end_month, active):
                     start_instance(template, month, force_occur=True)
-                    active = [i for i in instances if i.status in {EventStatus.WEAK_SIGNAL, EventStatus.UPCOMING}]
+                    active = active_or_pending_instances()
                 elif month < horizon_months - 1:
                     still_queued.append((event_id, month + 1))  # retry next month
                 # else: horizon reached, guard never met -> drop

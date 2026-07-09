@@ -146,13 +146,23 @@ class EvidencePlanner:
         unique_paths = list(dict.fromkeys(target_paths))
         event_context = None
         if instance is not None:
+            visible_history = [
+                item
+                for item in instance.status_history
+                if item.month_index <= month_index
+            ]
+            status_at_session = (
+                self._enum_value(visible_history[-1].status)
+                if visible_history
+                else self._enum_value(instance.status)
+            )
             event_context = {
                 "event_id": instance.event_id,
                 "domain": instance.domain,
-                "status": self._enum_value(instance.status),
+                "status": status_at_session,
                 "status_history": [
                     {"status": self._enum_value(item.status), "month_index": item.month_index, "age": item.age}
-                    for item in instance.status_history
+                    for item in visible_history
                 ],
                 "params": dict(instance.params),
             }
@@ -166,6 +176,7 @@ class EvidencePlanner:
             "event_memory_updates": [
                 self._memory_update_context(update, update_month)
                 for update_month, update in event_updates
+                if update_month <= month_index
             ],
             "current_memory": {
                 path: self._memory_cell_context(memory, path)

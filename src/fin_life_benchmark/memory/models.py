@@ -22,6 +22,7 @@ class MemoryOperation(str, Enum):
     SET_PENDING = "set_pending"
     CLEAR_PENDING = "clear_pending"
     REACTIVATE = "reactivate"
+    SET_NOT_APPLICABLE = "set_not_applicable"
     NO_UPDATE = "no_update"
 
 
@@ -162,6 +163,11 @@ class FinancialMemoryState(BaseModel):
                     cell.status = CellStatus.CURRENT
                     cell.valid_until = None
                     break
+        elif op == MemoryOperation.SET_NOT_APPLICABLE:
+            if latest is not None and latest.status != CellStatus.NOT_APPLICABLE:
+                latest.status = CellStatus.HISTORICAL
+                latest.valid_until = month
+            _append(None, CellStatus.NOT_APPLICABLE)
         elif op == MemoryOperation.NO_UPDATE:
             pass
         return update

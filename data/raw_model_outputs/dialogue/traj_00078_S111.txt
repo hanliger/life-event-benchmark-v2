@@ -1,0 +1,45 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "월세 자동이체 등록하고 싶은데"},
+    {"speaker": "assistant", "text": "네, 도와드리겠습니다. 먼저 이체하실 출금 계좌를 알려주시겠어요?"},
+    {"speaker": "user", "text": "제 주거래 계좌요 그걸로"},
+    {"speaker": "assistant", "text": "확인했습니다. 받으시는 분 계좌번호도 입력 부탁드립니다."},
+    {"speaker": "user", "text": "집주인 계좌 있어요, 방금 넣었어요"},
+    {"speaker": "assistant", "text": "매달 이체하실 금액은 얼마로 설정할까요?"},
+    {"speaker": "user", "text": "오십만원이요"},
+    {"speaker": "assistant", "text": "이체 날짜는 매월 며칠로 하시겠어요?"},
+    {"speaker": "user", "text": "25일로 해주세요"},
+    {"speaker": "assistant", "text": "이체 시 메모나 용도를 남기실 수 있는데, 입력하시겠어요?"},
+    {"speaker": "user", "text": "어 그거 회사 경비 처리용 이체 이런 거 말하는 거예요?"},
+    {"speaker": "assistant", "text": "네, 그런 것도 포함해서 자유롭게 원하시는 문구를 적으실 수 있습니다."},
+    {"speaker": "user", "text": "아 그건 아니고 그냥 월세라고 적을게요"},
+    {"speaker": "assistant", "text": "알겠습니다, 메모는 월세로 입력해드리겠습니다."},
+    {"speaker": "user", "text": "네"},
+    {"speaker": "assistant", "text": "이체 시작일은 이번 달부터 할까요, 다음 달부터 할까요?"},
+    {"speaker": "user", "text": "다음 달부터요"},
+    {"speaker": "assistant", "text": "확인했습니다. 계좌 잔액 부족 시 알림을 받으실지 설정할 수 있는데 필요하신가요?"},
+    {"speaker": "user", "text": "네 알림 받을게요"},
+    {"speaker": "assistant", "text": "알겠습니다. 지금까지 설정하신 내용 확인 부탁드립니다. 계좌와 금액, 날짜 맞을까요?"},
+    {"speaker": "user", "text": "네 맞아요"},
+    {"speaker": "assistant", "text": "등록 전에 본인인증 한 번 진행해주셔야 합니다. 앱에서 인증 버튼 눌러주시겠어요?"},
+    {"speaker": "user", "text": "했어요"},
+    {"speaker": "assistant", "text": "확인됐습니다. 이 설정으로 등록 진행할까요?"},
+    {"speaker": "user", "text": "네 해주세요"},
+    {"speaker": "assistant", "text": "등록 완료됐습니다. 다음 이체일 전에 알림 문자 보내드릴게요."},
+    {"speaker": "user", "text": "네 감사합니다"},
+    {"speaker": "assistant", "text": "혹시 더 도와드릴 부분 있으실까요?"},
+    {"speaker": "user", "text": "아니요 없어요"},
+    {"speaker": "assistant", "text": "네, 이용해주셔서 감사합니다. 좋은 하루 되세요."}
+  ],
+  "cue_annotations": [
+    {"turn_index": 10, "cue_type": "expense_purpose_mention", "linked_memory_path": null}
+  ],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

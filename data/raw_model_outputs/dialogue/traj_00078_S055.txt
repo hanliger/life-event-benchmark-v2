@@ -1,0 +1,9 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "모임통장 만들고 싶어요"},
+    {"speaker": "assistant", "text": "네, 모임통장 개설 도와드리겠습니다. 어떤 용도로 사용하실 예정인가요?"},
+    {"speaker": "user", "text": "같이 쓰는 통장 하나 만들려고요"},
+    {"speaker": "assistant", "text": "알겠습니다. 참여 인원은 몇 분이신가요?"},
+    {"speaker": "user", "text": "두 명이요, 둘이 생활비 나눠 쓰려고"},
+    {"speaker": "assistant", "text": "두 분이 함께 사용하시는 목적

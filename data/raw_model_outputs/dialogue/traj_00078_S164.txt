@@ -1,0 +1,41 @@
+{
+  "turns": [
+    {"speaker": "user", "text": "이체확인증 좀 발급받고 싶은데요"},
+    {"speaker": "assistant", "text": "네, 이체확인증 발급 도와드리겠습니다. 어떤 거래에 대한 확인증이 필요하신가요?"},
+    {"speaker": "user", "text": "저번주에 한 이체건이요"},
+    {"speaker": "assistant", "text": "거래 조회를 위해 대략적인 날짜나 금액 알려주시겠어요?"},
+    {"speaker": "user", "text": "한 5일 전쯤이고 30만원이요"},
+    {"speaker": "assistant", "text": "잠시만요, 조회해볼게요. 거래내역 확인 위해 본인인증 먼저 진행해주세요."},
+    {"speaker": "user", "text": "네 했어요"},
+    {"speaker": "assistant", "text": "확인 감사합니다. 5일 전 30만원 이체 내역 3건이 조회되는데, 받는 분 성함 기억나세요?"},
+    {"speaker": "user", "text": "박준호요"},
+    {"speaker": "assistant", "text": "박준호님 앞으로 이체된 내역 찾았습니다. 해당 건 맞으신가요?"},
+    {"speaker": "user", "text": "네 맞아요 그거"},
+    {"speaker": "assistant", "text": "네, 확인증 용도가 어떻게 되시는지 여쭤봐도 될까요? 제출처에 따라 양식이 다를 수 있어서요"},
+    {"speaker": "user", "text": "그냥 개인적으로 필요해서요"},
+    {"speaker": "assistant", "text": "알겠습니다. 그러면 기본 양식으로 발급해드릴게요. 파일 형태는 PDF로 괜찮으신가요?"},
+    {"speaker": "user", "text": "네 좋아요"},
+    {"speaker": "assistant", "text": "확인증에 계좌번호 전체가 보이는 게 괜찮으신지, 아니면 일부 마스킹 처리할지 선택해주세요"},
+    {"speaker": "user", "text": "그냥 다 보여도 돼요"},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 앱 메뉴 내 거래내역 조회 화면에서 확인증 발급 버튼 눌러드리겠습니다. 잠시만요"},
+    {"speaker": "user", "text": "네"},
+    {"speaker": "assistant", "text": "발급 처리 중입니다. 완료되면 알림으로 안내드릴게요"},
+    {"speaker": "user", "text": "얼마나 걸려요"},
+    {"speaker": "assistant", "text": "보통 1분 이내로 완료됩니다. 잠시만 기다려주세요"},
+    {"speaker": "user", "text": "네 기다릴게요"},
+    {"speaker": "assistant", "text": "확인증 발급이 완료되었습니다. 앱 내 문서함에서 확인 가능하십니다"},
+    {"speaker": "user", "text": "어디서 봐요 정확히"},
+    {"speaker": "assistant", "text": "메인 화면 우측 상단 메뉴에서 '내 문서함' 들어가시면 방금 발급된 확인증 확인하실 수 있습니다"},
+    {"speaker": "user", "text": "아 찾았어요 감사합니다"},
+    {"speaker": "assistant", "text": "네, 확인 잘 하셨나요? 혹시 다른 거래 건도 필요하신가요?"},
+    {"speaker": "user", "text": "아니요 이거면 충분해요"},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 이용해주셔서 감사합니다. 추가로 필요하신 사항 있으시면 언제든 문의해주세요"}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}

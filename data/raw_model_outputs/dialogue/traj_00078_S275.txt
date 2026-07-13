@@ -1,0 +1,43 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "예금 금리 좀 확인하고 싶은데"},
+    {"speaker": "assistant", "text": "안녕하세요, 고객님. 예금 상품 금리 조회 도와드리겠습니다. 정기예금과 자유적금 중 어떤 상품을 보고 계신가요?"},
+    {"speaker": "user", "text": "정기예금이요"},
+    {"speaker": "assistant", "text": "네, 정기예금 메뉴로 안내해드릴게요. 예치 기간은 어느 정도로 생각하고 계신가요?"},
+    {"speaker": "user", "text": "한 1년 정도"},
+    {"speaker": "assistant", "text": "1년 만기 기준으로 현재 기본금리는 연 3.2%입니다. 우대조건 적용 시 최대 3.5%까지 가능해요."},
+    {"speaker": "user", "text": "우대조건이 뭔데"},
+    {"speaker": "assistant", "text": "앱 자동이체 등록이나 첫 거래 고객 조건이 있어요. 자세한 조건 화면 보여드릴까요?"},
+    {"speaker": "user", "text": "어 보여줘"},
+    {"speaker": "assistant", "text": "네, 화면에 우대금리 상세 조건 띄워드렸습니다. 확인 부탁드립니다."},
+    {"speaker": "user", "text": "이거 조건 맞추기 좀 까다롭네"},
+    {"speaker": "assistant", "text": "그러시면 기본금리만으로도 가입 가능하니 참고해주세요. 다른 예치기간도 비교해드릴까요?"},
+    {"speaker": "user", "text": "6개월이랑도 비교해줘"},
+    {"speaker": "assistant", "text": "6개월 기준 기본금리는 연 2.8%입니다. 1년보다는 조금 낮은 편이에요."},
+    {"speaker": "user", "text": "그럼 1년이 낫겠다"},
+    {"speaker": "assistant", "text": "네, 금액대별로도 금리 차이가 있는지 확인해드릴까요?"},
+    {"speaker": "user", "text": "어 그것도 궁금해"},
+    {"speaker": "assistant", "text": "1000만원 미만은 기본금리, 이상 구간은 소폭 우대금리가 적용됩니다. 예치 예정 금액이 어느 정도 되시나요?"},
+    {"speaker": "user", "text": "한 500 정도 생각중이야"},
+    {"speaker": "assistant", "text": "그 금액이면 기본금리 3.2% 구간에 해당하세요. 세전 이자로 계산해서 예상 수령액 보여드릴까요?"},
+    {"speaker": "user", "text": "응 보여줘"},
+    {"speaker": "assistant", "text": "네, 화면에 예상 이자 금액 띄워드렸습니다. 세후 금액도 함께 표시되어 있어요."},
+    {"speaker": "user", "text": "괜찮네 이 정도면"},
+    {"speaker": "assistant", "text": "다행이네요. 혹시 다른 은행 상품과 비교도 필요하실까요?"},
+    {"speaker": "user", "text": "아니 됐어 이거면 충분해"},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 가입은 오늘 바로 진행하실 건가요, 아니면 조회만 하고 넘어가실 건가요?"},
+    {"speaker": "user", "text": "오늘은 조회만 할게"},
+    {"speaker": "assistant", "text": "네, 확인하신 내용은 메뉴에서 언제든 다시 조회 가능합니다. 추가 문의 있으실까요?"},
+    {"speaker": "user", "text": "아니 없어 고마워"},
+    {"speaker": "assistant", "text": "네, 이용해주셔서 감사합니다. 좋은 하루 보내세요."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

@@ -1,0 +1,45 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "급여일 알림 설정하고 싶은데 어떻게 해요?"},
+    {"speaker": "assistant", "text": "네, 고객님. 매월 특정 날짜에 알려드리는 알림 서비스인데요, 어떤 계좌로 설정해드릴까요?"},
+    {"speaker": "user", "text": "음... 그냥 매달 돈 넣는 날 알고 싶어서요"},
+    {"speaker": "assistant", "text": "정기적으로 이체하시는 날짜를 알려드리는 알림으로 설정해드리면 될까요?"},
+    {"speaker": "user", "text": "네 맞아요, 여행 경비 모으는 통장에 넣는 날이요"},
+    {"speaker": "assistant", "text": "알겠습니다. 매달 며칠에 알림 받으시겠어요?"},
+    {"speaker": "user", "text": "25일로 해주세요"},
+    {"speaker": "assistant", "text": "25일에 알림 보내드리도록 설정할게요. 알림은 앱 푸시로 받으시겠어요, 문자로 받으시겠어요?"},
+    {"speaker": "user", "text": "앱 푸시로 해주세요"},
+    {"speaker": "assistant", "text": "네, 앱 푸시 알림으로 설정하겠습니다. 알림 받으실 계좌는 여행 경비 모으는 통장 맞을까요?"},
+    {"speaker": "user", "text": "네 맞아요"},
+    {"speaker": "assistant", "text": "확인했습니다. 계좌 목록에서 해당 계좌 선택해주시겠어요?"},
+    {"speaker": "user", "text": "잠깐, 계좌 목록 어디서 봐요?"},
+    {"speaker": "assistant", "text": "메인 화면에서 계좌 관리 메뉴로 들어가시면 확인 가능하세요."},
+    {"speaker": "user", "text": "아 찾았어요, 이거 맞죠?"},
+    {"speaker": "assistant", "text": "네 맞습니다. 그 계좌로 진행할게요."},
+    {"speaker": "user", "text": "네 이제 어떻게 해요?"},
+    {"speaker": "assistant", "text": "확인 버튼 눌러주시면 알림 설정이 완료됩니다."},
+    {"speaker": "user", "text": "눌렀어요"},
+    {"speaker": "assistant", "text": "감사합니다. 매달 25일에 알림 보내드리겠습니다."},
+    {"speaker": "user", "text": "혹시 나중에 날짜 바꿀 수 있어요?"},
+    {"speaker": "assistant", "text": "네, 언제든 알림 설정 메뉴에서 날짜 변경 가능하세요."},
+    {"speaker": "user", "text": "알겠어요, 근데 이거 계좌에서 돈 자동으로 나가는 건 아니죠?"},
+    {"speaker": "assistant", "text": "맞습니다, 이 알림은 이체를 실행하지 않고 알려드리는 기능만이에요. 실제 이체는 고객님이 직접 진행해주셔야 해요."},
+    {"speaker": "user", "text": "오 그럼 안심이네요"},
+    {"speaker": "assistant", "text": "네, 알림만 받으시고 이체 여부는 고객님이 확인 후 결정하시면 됩니다."},
+    {"speaker": "user", "text": "알겠어요 다른 계좌도 알림 추가할 수 있어요?"},
+    {"speaker": "assistant", "text": "네, 알림 설정 메뉴에서 계좌를 추가로 등록하실 수 있으세요."},
+    {"speaker": "user", "text": "네 알겠습니다 감사해요"},
+    {"speaker": "assistant", "text": "네, 도움 필요하시면 언제든 말씀해주세요."}
+  ],
+  "cue_annotations": [
+    {"turn_index": 4, "cue_type": "life_event_signal", "linked_memory_path": null}
+  ],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

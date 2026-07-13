@@ -1,0 +1,24 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "급여 이체 우대 되는 통장 있어요? 신청하고 싶은데"},
+    {"speaker": "assistant", "text": "네, 급여 이체 우대 서비스 안내 도와드릴게요. 현재 정기적으로 급여성 입금이 있으신가요?"},
+    {"speaker": "user", "text": "어... 매달 들어오는 돈은 있는데 제 월급은 아니고"},
+    {"speaker": "assistant", "text": "어떤 용도의 입금인지 여쭤봐도 될까요?"},
+    {"speaker": "user", "text": "회사 경비 처리용 이체로 들어오는 거예요"},
+    {"speaker": "assistant", "text": "그렇다면 개인 급여 이체 조건과는 조금 다를 수 있어요. 입금 주체가 근로소득 지급이 아니라 경비 정산 명목이신 거죠?"},
+    {"speaker": "user", "text": "네 맞아요, 정기적으로 들어오긴 하는데"},
+    {"speaker": "assistant", "text": "확인 감사합니다. 급여 이체 우대는 근로소득 급여 입금 건에 한해 적용되는 서비스라, 경비 정산성 입금은 대상에서 제외될 수 있어요."},
+    {"speaker": "user", "text": "아 그래요? 그럼 안되는 거예요?"},
+    {"speaker": "assistant", "text": "네, 아쉽지만 현재 입금 성격으로는 급여 이체 우대 신청이 어려울 것 같아요. 다만 다른 이체 우대 상품은 있는데 안내드릴까요?"},
+    {"speaker": "user", "text": "네 알려주세요"},
+    {"speaker": "assistant", "text": "자동이체 우대나 마케팅 동의 우대 조건이 있는 상품이 있어요, 살펴보실래요?"},
+    {"speaker": "user", "text": "그건 뭐가 좋은데요"},
+    {"speaker": "assistant", "text": "월 이체 실적 충족 시 이자 우대나 수수료 면제 혜택이 있어요. 계좌 종류 알려드릴까요?"},
+    {"speaker": "user", "text": "네"},
+    {"speaker": "assistant", "text": "자유입출금 통장 기준으로 안내드릴게요. 신청 진행해드릴까요?"},
+    {"speaker": "user", "text": "근데 그거 신청하면 뭐 서류 내야되나요"},
+    {"speaker": "assistant", "text": "아니요, 앱에서 본인인증만 하시면 바로 신청 가능해요."},
+    {"speaker": "user", "text": "오 편하네 그럼 신청할래요"},
+    {"speaker": "assistant", "text": "네, 메뉴에서 자동이체 우대 신청 눌러주시면 본인인증 화면 뜰 거예요."},
+    {"speaker": "user", "text":

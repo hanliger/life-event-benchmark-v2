@@ -1,0 +1,41 @@
+{
+  "turns": [
+    {"speaker": "user", "text": "이체확인증 발급하고 싶은데 여기서 되나요"},
+    {"speaker": "assistant", "text": "네 가능합니다. 어떤 거래에 대한 확인증이 필요하신가요?"},
+    {"speaker": "user", "text": "지난주에 보낸 이체 건이요"},
+    {"speaker": "assistant", "text": "거래일자나 대략적인 금액 기억나시나요? 조회에 참고하겠습니다"},
+    {"speaker": "user", "text": "한 일주일 전쯤이고 금액은 정확히는 기억 안나요"},
+    {"speaker": "assistant", "text": "그럼 최근 이체 내역에서 확인해드릴게요. 잠시만요"},
+    {"speaker": "user", "text": "네"},
+    {"speaker": "assistant", "text": "최근 일주일 내 이체 내역 몇 건 나오는데 받는 분 성함이나 은행 알 수 있을까요?"},
+    {"speaker": "user", "text": "그냥 개인한테 보낸거예요 이름은 기억나요 김민수"},
+    {"speaker": "assistant", "text": "확인했습니다. 김민수님께 이체하신 건 맞으신가요?"},
+    {"speaker": "user", "text": "네 맞아요 그거"},
+    {"speaker": "assistant", "text": "해당 거래로 이체확인증 발급 진행하겠습니다. 본인인증 먼저 부탁드릴게요"},
+    {"speaker": "user", "text": "인증 어떻게 해요"},
+    {"speaker": "assistant", "text": "화면에 뜨는 본인인증 버튼 눌러주시면 됩니다"},
+    {"speaker": "user", "text": "했어요"},
+    {"speaker": "assistant", "text": "확인되었습니다. 확인증에 표시될 용도는 선택하실 수 있는데 특별히 필요하신 용도 있으신가요?"},
+    {"speaker": "user", "text": "그냥 개인 증빙용이면 될 것 같아요"},
+    {"speaker": "assistant", "text": "알겠습니다. 개인 증빙용으로 설정해서 진행하겠습니다"},
+    {"speaker": "user", "text": "네 감사합니다"},
+    {"speaker": "assistant", "text": "이체확인증 발급이 완료되었습니다. 앱 내 문서함에서 바로 확인 가능하세요"},
+    {"speaker": "user", "text": "문서함이 어디있어요"},
+    {"speaker": "assistant", "text": "메인 화면 하단 메뉴에서 전체메뉴 누르시고 문서함 들어가시면 됩니다"},
+    {"speaker": "user", "text": "아 찾았어요 감사합니다"},
+    {"speaker": "assistant", "text": "네 확인하셨으면 다행입니다. 저장이나 다운로드도 그 화면에서 가능하세요"},
+    {"speaker": "user", "text": "이거 나중에 또 필요하면 다시 받을 수 있나요"},
+    {"speaker": "assistant", "text": "네 동일한 거래 건이면 문서함에서 언제든 다시 확인 및 다운로드 가능합니다"},
+    {"speaker": "user", "text": "알겠습니다 그럼 이건 됐고"},
+    {"speaker": "assistant", "text": "네 더 필요하신 업무 있으실까요?"},
+    {"speaker": "user", "text": "아니요 이거면 끝이에요"},
+    {"speaker": "assistant", "text": "네 이용해주셔서 감사합니다. 좋은 하루 되세요"}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}

@@ -1,0 +1,43 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "이체확인증 발급받고 싶은데 어떻게 해요"},
+    {"speaker": "assistant", "text": "안녕하세요. 이체확인증 발급 도와드리겠습니다. 먼저 어떤 거래에 대한 확인증인지 확인이 필요한데요, 발급 대상 거래일자를 알 수 있을까요?"},
+    {"speaker": "user", "text": "지난주 화요일에 보낸 거요"},
+    {"speaker": "assistant", "text": "네, 거래내역 조회 메뉴에서 해당 날짜 이체 건을 찾아드릴게요. 받으신 분 이름이나 계좌 뒷자리 알려주실 수 있을까요?"},
+    {"speaker": "user", "text": "김민수라는 사람한테 보낸거예요"},
+    {"speaker": "assistant", "text": "확인했습니다. 화요일자 김민수님 이체 내역 한 건 조회되는데 이 건이 맞으실까요?"},
+    {"speaker": "user", "text": "네 맞아요 그거"},
+    {"speaker": "assistant", "text": "감사합니다. 이체확인증은 앱 내 본인인증 후 즉시 발급 가능합니다. 지금 본인인증 진행하시겠어요?"},
+    {"speaker": "user", "text": "네 할게요"},
+    {"speaker": "assistant", "text": "본인인증 화면으로 이동해드렸습니다. 인증 완료되시면 알려주세요."},
+    {"speaker": "user", "text": "했어요 완료됐어요"},
+    {"speaker": "assistant", "text": "확인됐습니다. 이체확인증에 표시될 용도는 기본값 그대로 두시면 되는데 특별히 필요하신 용도가 있으신가요?"},
+    {"speaker": "user", "text": "그냥 기본으로 해주세요"},
+    {"speaker": "assistant", "text": "네, 기본 양식으로 진행하겠습니다. 확인증 파일은 앱 내 문서보관함에 저장되고 알림으로도 안내드릴 예정인데 괜찮으실까요?"},
+    {"speaker": "user", "text": "네 그렇게 해주세요"},
+    {"speaker": "assistant", "text": "확인 버튼 눌러주시면 발급이 진행됩니다. 눌러주셨나요?"},
+    {"speaker": "user", "text": "눌렀어요"},
+    {"speaker": "assistant", "text": "이체확인증 발급이 완료되었습니다. 문서보관함에서 바로 확인 가능하시고 필요하시면 파일로 저장하거나 공유도 가능합니다."},
+    {"speaker": "user", "text": "저장은 어떻게 해요"},
+    {"speaker": "assistant", "text": "문서보관함에서 해당 확인증 옆 다운로드 아이콘 눌러주시면 기기에 저장됩니다. 확인해보시겠어요?"},
+    {"speaker": "user", "text": "아 됐네요 저장했어요"},
+    {"speaker": "assistant", "text": "잘 처리되었습니다. 혹시 다른 날짜 이체 건도 확인증이 필요하신가요?"},
+    {"speaker": "user", "text": "아니요 이거 하나면 돼요"},
+    {"speaker": "assistant", "text": "네 알겠습니다. 발급하신 확인증은 문서보관함에서 언제든 다시 열람 가능하십니다."},
+    {"speaker": "user", "text": "네 알겠어요"},
+    {"speaker": "assistant", "text": "혹시 발급받은 확인증 내용에 오류나 수정이 필요한 부분 있으신가요?"},
+    {"speaker": "user", "text": "없어요 잘 나왔어요"},
+    {"speaker": "assistant", "text": "다행입니다. 더 필요하신 업무 있으실까요?"},
+    {"speaker": "user", "text": "아니요 이거면 끝이에요"},
+    {"speaker": "assistant", "text": "네, 이용해 주셔서 감사합니다. 좋은 하루 보내세요."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

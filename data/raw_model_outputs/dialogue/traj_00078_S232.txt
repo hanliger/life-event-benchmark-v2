@@ -1,0 +1,43 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요, 입금 알림 설정하고 싶어서요"},
+    {"speaker": "assistant", "text": "안녕하세요 고객님, 입금 알림 설정 도와드리겠습니다. 어떤 계좌에 설정하시겠어요?"},
+    {"speaker": "user", "text": "제 주거래 계좌요"},
+    {"speaker": "assistant", "text": "네, 등록된 계좌 목록에서 확인해 드릴게요. 잠시만요."},
+    {"speaker": "user", "text": "네"},
+    {"speaker": "assistant", "text": "확인했습니다. 입출금 통장 하나가 조회되는데 이 계좌로 진행할까요?"},
+    {"speaker": "user", "text": "네 그거 맞아요"},
+    {"speaker": "assistant", "text": "알겠습니다. 알림 방식은 앱 푸시와 문자 중 어떤 걸로 받으실래요?"},
+    {"speaker": "user", "text": "둘 다 되나요"},
+    {"speaker": "assistant", "text": "네, 두 가지 동시에 설정 가능합니다. 둘 다로 설정해드릴까요?"},
+    {"speaker": "user", "text": "네 그렇게 해주세요"},
+    {"speaker": "assistant", "text": "설정했습니다. 알림 받으실 최소 입금 금액도 지정하실 수 있는데 원하시나요?"},
+    {"speaker": "user", "text": "그건 왜 필요해요"},
+    {"speaker": "assistant", "text": "소액 입금은 제외하고 일정 금액 이상만 알림 받고 싶으실 때 유용합니다. 설정 안 하시면 전체 입금 건에 대해 알림 갑니다."},
+    {"speaker": "user", "text": "아 그럼 그냥 전체로 할게요"},
+    {"speaker": "assistant", "text": "네, 최소 금액 제한 없이 전체 입금 알림으로 설정하겠습니다."},
+    {"speaker": "user", "text": "네 감사합니다"},
+    {"speaker": "assistant", "text": "혹시 알림 받으실 연락처는 지금 등록된 번호 그대로 사용하시나요?"},
+    {"speaker": "user", "text": "네 그거 맞아요"},
+    {"speaker": "assistant", "text": "확인했습니다. 이제 본인인증 한번 진행해주시면 설정이 최종 반영됩니다."},
+    {"speaker": "user", "text": "인증 어떻게 해요"},
+    {"speaker": "assistant", "text": "화면에 뜨는 본인인증 버튼 눌러주시고 간편비밀번호 입력하시면 됩니다."},
+    {"speaker": "user", "text": "했어요"},
+    {"speaker": "assistant", "text": "확인되었습니다. 입금 알림이 정상적으로 설정되었습니다."},
+    {"speaker": "user", "text": "다른 계좌도 설정할 수 있어요"},
+    {"speaker": "assistant", "text": "네, 보유하신 다른 계좌 선택하셔서 동일하게 설정 가능합니다. 추가로 진행하시겠어요?"},
+    {"speaker": "user", "text": "아니요 지금은 이거 하나만요"},
+    {"speaker": "assistant", "text": "알겠습니다. 그럼 오늘은 이 계좌 알림 설정만 완료된 걸로 안내드릴게요."},
+    {"speaker": "user", "text": "네 수고하세요"},
+    {"speaker": "assistant", "text": "네, 이용해주셔서 감사합니다. 좋은 하루 보내세요."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

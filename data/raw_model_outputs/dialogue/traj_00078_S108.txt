@@ -1,0 +1,43 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "급여계좌 등록하고 싶은데요"},
+    {"speaker": "assistant", "text": "네, 안내해 드릴게요. 급여 이체가 실제로 들어오는 계좌를 등록하시는 절차인데, 어떤 계좌로 등록하실 예정이세요?"},
+    {"speaker": "user", "text": "지금 쓰는 입출금 계좌요"},
+    {"speaker": "assistant", "text": "확인했습니다. 해당 계좌로 정기적인 급여 입금 내역이 있으신가요?"},
+    {"speaker": "user", "text": "음 그게 좀 애매한데"},
+    {"speaker": "assistant", "text": "어떤 부분이 애매하신지 여쭤봐도 될까요?"},
+    {"speaker": "user", "text": "매달 들어오긴 하는데 회사 경비 처리용 이체라서요"},
+    {"speaker": "assistant", "text": "말씀 감사합니다. 그렇다면 급여성 입금이 아니라 경비 처리 목적의 이체로 보이는데, 급여계좌 등록 조건에는 실제 급여 입금 이력이 필요합니다."},
+    {"speaker": "user", "text": "아 그럼 안되는건가"},
+    {"speaker": "assistant", "text": "네, 현재 내역만으로는 급여계좌 혜택 적용이 어려울 수 있어요. 다른 정기 입금 내역이 있으신가요?"},
+    {"speaker": "user", "text": "딱히 없어요 요즘"},
+    {"speaker": "assistant", "text": "알겠습니다. 그럼 지금은 일반 입출금 계좌로 두시고, 추후 정기 급여 입금이 생기면 그때 등록하시는 게 나을 것 같아요."},
+    {"speaker": "user", "text": "그럼 지금 신청은 못하는거죠"},
+    {"speaker": "assistant", "text": "네, 급여성 입금 이력이 확인되지 않아 지금은 등록이 어렵습니다. 대신 해당 계좌를 자동이체 관리용으로는 등록해드릴 수 있어요."},
+    {"speaker": "user", "text": "그건 뭔데요"},
+    {"speaker": "assistant", "text": "이체 내역을 카테고리별로 정리해서 보여주는 기능이에요. 경비 처리용 이체도 따로 확인하실 수 있고요."},
+    {"speaker": "user", "text": "오 그럼 그거라도 해주세요"},
+    {"speaker": "assistant", "text": "네, 앱 메뉴에서 자동이체 관리 등록 진행해드릴게요. 본인인증 먼저 진행해주시겠어요?"},
+    {"speaker": "user", "text": "네 했어요"},
+    {"speaker": "assistant", "text": "확인됐습니다. 해당 계좌를 이체 관리용으로 등록 완료했습니다."},
+    {"speaker": "user", "text": "급여계좌 등록은 나중에 다시 해도 되죠"},
+    {"speaker": "assistant", "text": "그럼요, 정기 급여 입금 내역이 3개월 이상 쌓이면 다시 신청하실 수 있습니다."},
+    {"speaker": "user", "text": "알겠습니다"},
+    {"speaker": "assistant", "text": "혹시 지금 등록하신 이체 관리 기능에 대해 더 궁금하신 점 있으세요?"},
+    {"speaker": "user", "text": "아니요 됐어요"},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 필요하실 때 다시 문의해주세요."},
+    {"speaker": "user", "text": "네 수고하세요"},
+    {"speaker": "assistant", "text": "감사합니다. 좋은 하루 보내세요."}
+  ],
+  "cue_annotations": [
+    {"turn_index": 6, "cue_type": "explicit_purpose_statement", "linked_memory_path": null}
+  ],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

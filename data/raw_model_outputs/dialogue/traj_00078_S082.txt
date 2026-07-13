@@ -1,0 +1,41 @@
+{
+  "turns": [
+    {"speaker": "user", "text": "거래내역 좀 확인하고 싶은데요"},
+    {"speaker": "assistant", "text": "안녕하세요 고객님. 어느 계좌의 거래내역을 확인하시겠어요?"},
+    {"speaker": "user", "text": "그냥 쓰는 입출금 통장이요"},
+    {"speaker": "assistant", "text": "네, 조회 기간은 어떻게 설정해드릴까요?"},
+    {"speaker": "user", "text": "최근 한달치만 보여주세요"},
+    {"speaker": "assistant", "text": "확인했습니다. 최근 1개월 거래내역을 화면에 표시해드릴게요."},
+    {"speaker": "user", "text": "근데 왜 며칠 전 거는 안 나와요"},
+    {"speaker": "assistant", "text": "일부 거래는 처리 지연으로 하루 정도 늦게 반영될 수 있습니다. 특정 날짜를 찾으시나요?"},
+    {"speaker": "user", "text": "네 지난주 화요일이요"},
+    {"speaker": "assistant", "text": "해당 날짜로 조회 범위를 조정해드릴게요. 잠시만 기다려주세요."},
+    {"speaker": "user", "text": "아 나왔다 감사합니다"},
+    {"speaker": "assistant", "text": "다행입니다. 더 확인하고 싶으신 거래가 있으신가요?"},
+    {"speaker": "user", "text": "이거 금액별로 정렬도 돼요?"},
+    {"speaker": "assistant", "text": "네, 조회 화면 상단 메뉴에서 금액순 정렬을 선택하실 수 있습니다."},
+    {"speaker": "user", "text": "오 편하네"},
+    {"speaker": "assistant", "text": "필요하시면 거래내역을 파일로 저장하는 기능도 있습니다. 이용해보시겠어요?"},
+    {"speaker": "user", "text": "그럼 좋죠 어떻게 해요"},
+    {"speaker": "assistant", "text": "조회 화면 우측 상단 저장 버튼을 누르시면 파일 형식으로 다운로드 가능합니다."},
+    {"speaker": "user", "text": "해봤는데 잘 되네요"},
+    {"speaker": "assistant", "text": "잘 되셨다니 다행입니다. 혹시 특정 거래처만 따로 모아보고 싶으신 내역이 있으신가요?"},
+    {"speaker": "user", "text": "아니 그냥 전체적으로 보고 싶었어요"},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 전체 내역 확인하시는 데 불편한 점은 없으신가요?"},
+    {"speaker": "user", "text": "없어요 근데 이체한 것도 여기 다 나오는거죠"},
+    {"speaker": "assistant", "text": "네, 이체 내역도 입출금 거래내역에 함께 표시됩니다."},
+    {"speaker": "user", "text": "오케이 알겠어요"},
+    {"speaker": "assistant", "text": "혹시 다른 계좌 거래내역도 확인해드릴까요?"},
+    {"speaker": "user", "text": "아니요 이거면 충분해요"},
+    {"speaker": "assistant", "text": "알겠습니다. 필요하실 때 언제든 다시 조회하실 수 있습니다."},
+    {"speaker": "user", "text": "네 감사합니다"},
+    {"speaker": "assistant", "text": "이용해주셔서 감사합니다. 좋은 하루 되세요."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}

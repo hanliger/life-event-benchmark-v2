@@ -1,0 +1,43 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "입금될 때마다 알림 오게 설정하고 싶은데"},
+    {"speaker": "assistant", "text": "네, 입출금 알림 설정 도와드리겠습니다. 알림 받으실 계좌를 말씀해 주시겠어요?"},
+    {"speaker": "user", "text": "그냥 쓰는 통장 있어 그거로"},
+    {"speaker": "assistant", "text": "메뉴에서 계좌 목록 보여드릴게요. 화면에 뜨는 계좌 중에 선택해 주시면 됩니다."},
+    {"speaker": "user", "text": "어 이거 맞아"},
+    {"speaker": "assistant", "text": "네, 해당 계좌로 확인했습니다. 알림은 문자와 앱 푸시 중 어떤 방식으로 받으시겠어요?"},
+    {"speaker": "user", "text": "앱 푸시로 할래"},
+    {"speaker": "assistant", "text": "알겠습니다. 입금 시 앱 푸시 알림 설정으로 진행할게요. 출금 알림도 함께 받으시겠어요?"},
+    {"speaker": "user", "text": "출금은 필요 없고 입금만"},
+    {"speaker": "assistant", "text": "네, 입금 알림만 활성화하겠습니다. 알림 받을 최소 금액 기준도 설정 가능한데 원하시나요?"},
+    {"speaker": "user", "text": "그건 뭔데"},
+    {"speaker": "assistant", "text": "예를 들어 만원 이상 입금될 때만 알림 받도록 설정하는 기능입니다. 소액도 다 알림 받으실지 확인해 볼게요."},
+    {"speaker": "user", "text": "아 그럼 그냥 다 받을래 소액도"},
+    {"speaker": "assistant", "text": "네, 금액 제한 없이 전체 입금 알림으로 설정하겠습니다. 진행해도 될까요?"},
+    {"speaker": "user", "text": "응 해줘"},
+    {"speaker": "assistant", "text": "본인인증 한 번 진행해 주시면 바로 적용됩니다. 인증 화면 띄워드릴게요."},
+    {"speaker": "user", "text": "어 했어"},
+    {"speaker": "assistant", "text": "확인되었습니다. 입금 알림 설정이 완료되었습니다. 이제부터 입금 시마다 앱 푸시로 안내드립니다."},
+    {"speaker": "user", "text": "오케이 잘됐나 확인은 어디서 해"},
+    {"speaker": "assistant", "text": "마이페이지 내 알림 설정 메뉴에서 현재 설정 상태 확인하실 수 있습니다."},
+    {"speaker": "user", "text": "어 방금 봤는데 잘 켜져있네"},
+    {"speaker": "assistant", "text": "네, 정상적으로 반영된 것 확인했습니다. 혹시 다른 계좌도 같이 알림 설정 원하시나요?"},
+    {"speaker": "user", "text": "아니 지금은 이거 하나면 돼"},
+    {"speaker": "assistant", "text": "알겠습니다. 필요하시면 언제든 추가 설정 도와드릴게요."},
+    {"speaker": "user", "text": "이거 요금 같은거 붙어?"},
+    {"speaker": "assistant", "text": "아니요, 입출금 알림 서비스는 별도 수수료 없이 무료로 제공됩니다."},
+    {"speaker": "user", "text": "오 다행이네"},
+    {"speaker": "assistant", "text": "네, 편하게 이용하시면 됩니다. 추가로 궁금하신 부분 있으실까요?"},
+    {"speaker": "user", "text": "아니 없어 고마워"},
+    {"speaker": "assistant", "text": "네, 이용해 주셔서 감사합니다. 좋은 하루 보내세요."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

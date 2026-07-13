@@ -1,0 +1,43 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "예금 금리 좀 확인하고 싶은데요"},
+    {"speaker": "assistant", "text": "안녕하세요, 고객님. 예금 금리 조회 도와드리겠습니다. 정기예금과 자유적금 중 어떤 상품이 궁금하신가요?"},
+    {"speaker": "user", "text": "정기예금이요"},
+    {"speaker": "assistant", "text": "네, 정기예금 기준으로 안내드릴게요. 예치 기간은 어느 정도 생각하고 계신가요?"},
+    {"speaker": "user", "text": "그냥 1년짜리로 보고 있어요"},
+    {"speaker": "assistant", "text": "1년 만기 정기예금 기준 현재 기본 금리는 연 3.2%입니다. 우대조건 적용 시 최대 3.5%까지 가능합니다."},
+    {"speaker": "user", "text": "우대조건 뭐 있어요"},
+    {"speaker": "assistant", "text": "앱 알림 수신 동의, 자동이체 등록, 첫 거래 여부 등에 따라 우대금리가 달라집니다. 자동이체 등록하신 계좌 있으신가요?"},
+    {"speaker": "user", "text": "그런 건 없어요"},
+    {"speaker": "assistant", "text": "알겠습니다. 그러면 앱 알림 수신 동의만으로도 0.1%p 우대가 적용됩니다. 신청 화면에서 바로 확인 가능하세요."},
+    {"speaker": "user", "text": "그럼 최종 금리는 3.3%인거죠?"},
+    {"speaker": "assistant", "text": "네, 알림 수신 동의만 적용하시면 연 3.3%로 계산됩니다. 다른 우대조건 추가하시면 더 올라갈 수 있어요."},
+    {"speaker": "user", "text": "예치 금액에 따라 금리 달라지나요"},
+    {"speaker": "assistant", "text": "예치 금액과는 무관하게 동일한 금리가 적용되는 상품입니다. 다만 일부 특판 상품은 금액별로 차등 적용될 수 있어요."},
+    {"speaker": "user", "text": "특판 상품도 있어요?"},
+    {"speaker": "assistant", "text": "네, 현재 진행 중인 특판 정기예금이 있는데 12개월 기준 연 3.6%입니다. 가입 조건 안내드릴까요?"},
+    {"speaker": "user", "text": "조건이 뭔데요"},
+    {"speaker": "assistant", "text": "신규 고객 또는 최근 1년 내 정기예금 미가입 고객 대상이며, 최소 예치금은 100만원입니다."},
+    {"speaker": "user", "text": "저는 조건 되는거 같은데"},
+    {"speaker": "assistant", "text": "확인해보니 해당 조건에 부합하시네요. 특판 상품 가입 원하시면 상품 상세 화면으로 이동해드릴까요?"},
+    {"speaker": "user", "text": "일단 금리만 알고 싶었어요 가입은 나중에"},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 특판 정기예금은 12개월 연 3.6%, 일반 정기예금은 우대 적용 시 최대 3.5%로 안내드렸습니다."},
+    {"speaker": "user", "text": "6개월짜리는 얼마예요"},
+    {"speaker": "assistant", "text": "6개월 만기 정기예금 기본 금리는 연 2.8%이며, 우대 적용 시 최대 3.1%까지 가능합니다."},
+    {"speaker": "user", "text": "그럼 1년짜리가 더 낫네"},
+    {"speaker": "assistant", "text": "네, 기간이 길수록 금리가 조금 더 높게 책정되어 있습니다. 참고하시면 좋을 것 같습니다."},
+    {"speaker": "user", "text": "알겠어요 확인했으니 됐어요"},
+    {"speaker": "assistant", "text": "네, 확인 도와드렸습니다. 추가로 궁금하신 사항 있으시면 언제든 말씀해주세요."},
+    {"speaker": "user", "text": "네 없어요 감사합니다"},
+    {"speaker": "assistant", "text": "감사합니다, 고객님. 좋은 하루 보내세요."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

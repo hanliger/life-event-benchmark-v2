@@ -1,0 +1,43 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "예금 금리 좀 알아보려고요"},
+    {"speaker": "assistant", "text": "안녕하세요 고객님. 예금 상품 금리 조회 도와드리겠습니다. 정기예금과 자유적금 중 어떤 상품이 궁금하신가요?"},
+    {"speaker": "user", "text": "정기예금이요"},
+    {"speaker": "assistant", "text": "네, 정기예금 기준으로 안내드릴게요. 예치 기간은 어느 정도 생각하고 계세요?"},
+    {"speaker": "user", "text": "6개월이나 1년 정도"},
+    {"speaker": "assistant", "text": "현재 6개월 기본 금리는 연 3.1%, 12개월은 연 3.5%입니다. 목돈 굴리기 상품 기준이에요."},
+    {"speaker": "user", "text": "우대금리 같은 것도 있어요?"},
+    {"speaker": "assistant", "text": "네, 앱 가입이나 자동이체 등록 조건 충족 시 최대 0.3%p 추가 우대가 가능합니다. 자동이체 등록해두신 거 있으세요?"},
+    {"speaker": "user", "text": "요즘 이체할 게 딱히 없어서 없어요"},
+    {"speaker": "assistant", "text": "그러시면 우대금리 조건 중 앱 알림 수신 동의나 첫 거래 조건으로도 일부 충족하실 수 있어요. 확인해보시겠어요?"},
+    {"speaker": "user", "text": "그거 어떻게 확인해요"},
+    {"speaker": "assistant", "text": "앱 메인화면에서 예금상품 상세페이지 들어가시면 우대조건 체크리스트가 나와요. 거기서 본인인증 후 충족 여부 확인 가능합니다."},
+    {"speaker": "user", "text": "아 알겠어요 한번 봐야겠네"},
+    {"speaker": "assistant", "text": "네, 조건 확인하시고 궁금하신 점 있으면 다시 말씀해주세요. 예치금 규모도 대략 생각하고 계신가요?"},
+    {"speaker": "user", "text": "천만원 정도요"},
+    {"speaker": "assistant", "text": "천만원 기준으로 12개월 예치하시면 우대금리 적용 전 이자는 약 35만원 수준입니다. 세전 기준이에요."},
+    {"speaker": "user", "text": "세후로는 얼마나 돼요"},
+    {"speaker": "assistant", "text": "일반과세 15.4% 적용하면 대략 29만원 정도로 예상됩니다. 정확한 금액은 가입 시점 금리로 재계산됩니다."},
+    {"speaker": "user", "text": "지금이랑 나중에 금리 다를 수도 있어요?"},
+    {"speaker": "assistant", "text": "네, 예금 금리는 시장 상황에 따라 매일 변동될 수 있어서 가입 시점 고시금리가 최종 적용됩니다."},
+    {"speaker": "user", "text": "그럼 지금 가입하는 게 나을까요"},
+    {"speaker": "assistant", "text": "금리 전망은 저희가 단정해서 말씀드리기 어려운 부분이라, 원하시면 현재 조건으로 가입 진행해드릴 수 있어요. 진행해볼까요?"},
+    {"speaker": "user", "text": "아직은 그냥 알아보는 거예요"},
+    {"speaker": "assistant", "text": "네 알겠습니다. 그럼 오늘은 금리 정보 조회로만 마무리해도 괜찮을까요?"},
+    {"speaker": "user", "text": "네 그렇게 해주세요"},
+    {"speaker": "assistant", "text": "혹시 다른 예금 상품 금리도 비교해서 보내드릴까요?"},
+    {"speaker": "user", "text": "그럼 좋죠"},
+    {"speaker": "assistant", "text": "네, 앱 알림으로 주요 정기예금 상품 금리 비교표 보내드리겠습니다."},
+    {"speaker": "user", "text": "네 감사합니다"},
+    {"speaker": "assistant", "text": "네, 확인 도와드려서 좋았습니다. 추가로 필요한 사항 있으면 언제든 다시 문의해주세요."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

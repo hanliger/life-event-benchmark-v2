@@ -1,0 +1,27 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "관리비 자동납부 등록하고 싶어요"},
+    {"speaker": "assistant", "text": "네, 관리비 자동납부 등록 도와드리겠습니다. 출금하실 계좌를 선택해 주세요."},
+    {"speaker": "user", "text": "지금 쓰는 입출금 계좌로 할게요"},
+    {"speaker": "assistant", "text": "확인했습니다. 해당 계좌로 진행하겠습니다. 관리비 납부처는 등록되어 있는 게 있으신가요?"},
+    {"speaker": "user", "text": "아니요 새로 등록해야 해요. 계약 만기가 다가와서 이번에 다시 계약했거든요"},
+    {"speaker": "assistant", "text": "그렇군요. 새 계약에 맞춰 관리비 납부처 정보를 등록해드릴게요. 관리비는 어디로 납부하시나요?"},
+    {"speaker": "user", "text": "관리사무소로 내는데 계좌번호는 문자로 받았어요"},
+    {"speaker": "assistant", "text": "네, 문자로 받으신 계좌번호를 입력해 주시면 등록 진행하겠습니다."},
+    {"speaker": "user", "text": "계좌번호 입력했어요 이 정도면 되나요"},
+    {"speaker": "assistant", "text": "확인했습니다. 매월 관리비로 출금될 금액도 설정해 주세요."},
+    {"speaker": "user", "text": "월세는 백만원인데 관리비는 따로 십만원 정도 낼 것 같아요"},
+    {"speaker": "assistant", "text": "확인했습니다. 관리비 자동납부 금액은 매월 10만원으로 설정할게요. 납부일은 언제로 하시겠어요?"},
+    {"speaker": "user", "text": "매달 25일로 해주세요"},
+    {"speaker": "assistant", "text": "네, 매월 25일에 등록하신 계좌에서 관리비가 자동으로 출금되도록 설정하겠습니다. 진행해도 될까요?"},
+    {"speaker": "user", "text": "네 진행해주세요"},
+    {"speaker": "assistant", "text": "등록이 완료되었습니다. 이번 달부터 자동으로 관리비가 출금될 예정입니다."},
+    {"speaker": "user", "text": "첫 출금은 언제부터예요"},
+    {"speaker": "assistant", "text": "이번 달 25일부터 첫 출금이 진행됩니다. 출금 전에 알림으로 안내드릴게요."},
+    {"speaker": "user", "text": "네 알겠어요"},
+    {"speaker": "assistant", "text": "혹시 기존에 다른 관리비 자동납부가 등록되어 있었나요? 있다면 해지 도와드릴 수 있어요."},
+    {"speaker": "user", "text": "예전 집 관리비는 이미 안 나가고 있어요"},
+    {"speaker": "assistant", "text": "네, 확인했습니다. 별도로 정리하실 내역은 없으신 것 같네요."},
+    {"speaker": "user", "text": "네 없어요"},
+    {"speaker": "assistant", "text": "등록하신 계좌와 금액

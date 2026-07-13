@@ -1,0 +1,45 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "이체 좀 하려고 하는데 급하게"},
+    {"speaker": "assistant", "text": "네 고객님 어떤 계좌로 얼마 보내실지 알려주시겠어요"},
+    {"speaker": "user", "text": "조의금 보낼 데가 있어서 300만원 정도"},
+    {"speaker": "assistant", "text": "네 수취인 계좌 정보 입력해주시면 확인 도와드릴게요"},
+    {"speaker": "user", "text": "계좌번호는 있는데 이름 확인이 필요해서"},
+    {"speaker": "assistant", "text": "수취인 성함이랑 은행명 알려주시면 조회해볼게요"},
+    {"speaker": "user", "text": "국민은행이고 이름은 문자로 받은거 그대로 넣을게"},
+    {"speaker": "assistant", "text": "네 입력해주시면 예금주명 확인해서 알려드리겠습니다"},
+    {"speaker": "user", "text": "확인됐어?"},
+    {"speaker": "assistant", "text": "네 예금주명 일치합니다 이체 진행 전에 한도 확인해드릴까요"},
+    {"speaker": "user", "text": "어 한도 얼마나 되는지"},
+    {"speaker": "assistant", "text": "1일 이체한도는 500만원으로 설정되어 있고 이번 이체는 문제없이 가능합니다"},
+    {"speaker": "user", "text": "그럼 바로 보내줘"},
+    {"speaker": "assistant", "text": "네 이체는 본인인증 절차 거친 후 진행됩니다 인증 진행해주시겠어요"},
+    {"speaker": "user", "text": "어 했어"},
+    {"speaker": "assistant", "text": "확인했습니다 이체 최종 확인 버튼 눌러주시면 완료됩니다"},
+    {"speaker": "user", "text": "눌렀어"},
+    {"speaker": "assistant", "text": "이체가 정상적으로 완료되었습니다 문자로도 안내드렸습니다"},
+    {"speaker": "user", "text": "어 근데 그 문자 받는 번호 말고 다른 걸로 좀 바꾸고 싶은데"},
+    {"speaker": "assistant", "text": "네 알림 수신 정보 변경 도와드릴까요 어떤 부분 변경하시겠어요"},
+    {"speaker": "user", "text": "다음 달에 새 주소로 옮길 예정이라 그것도 미리 좀 바꿔두려고"},
+    {"speaker": "assistant", "text": "네 주소 변경은 본인인증 후 앱에서 바로 수정 가능합니다 지금 진행해드릴까요"},
+    {"speaker": "user", "text": "어 근데 아직 확정은 아니라서 나중에 할게"},
+    {"speaker": "assistant", "text": "알겠습니다 나중에 마이페이지에서 언제든 변경 가능하십니다"},
+    {"speaker": "user", "text": "응 그럼 오늘은 이체만 된거 맞지?"},
+    {"speaker": "assistant", "text": "네 방금 이체 건은 정상 처리 완료됐습니다"},
+    {"speaker": "user", "text": "알겠어 고마워"},
+    {"speaker": "assistant", "text": "네 추가로 도와드릴 거 있으실까요"},
+    {"speaker": "user", "text": "아니 없어 됐어"},
+    {"speaker": "assistant", "text": "네 이용해주셔서 감사합니다 좋은 하루 되세요"}
+  ],
+  "cue_annotations": [
+    {"turn_index": 20, "cue_type": "새 주소", "linked_memory_path": "housing.address"}
+  ],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

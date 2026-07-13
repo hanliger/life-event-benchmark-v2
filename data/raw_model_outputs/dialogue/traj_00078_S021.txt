@@ -1,0 +1,41 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요 예금 금리 좀 보려고요"},
+    {"speaker": "assistant", "text": "안녕하세요 고객님. 정기예금 금리 조회 도와드리겠습니다. 예치 기간은 어느 정도 생각하고 계세요?"},
+    {"speaker": "user", "text": "한 1년 정도요"},
+    {"speaker": "assistant", "text": "1년 만기 정기예금 기준으로는 기본금리 연 3.2% 적용됩니다. 우대조건 확인해드릴까요?"},
+    {"speaker": "user", "text": "네 우대조건 뭐 있어요"},
+    {"speaker": "assistant", "text": "자동이체 등록이나 첫거래 고객 조건 충족 시 최대 0.3%p 추가 적용됩니다. 현재 앱에서 자동이체 이용 중이신가요?"},
+    {"speaker": "user", "text": "아니요 그건 없어요"},
+    {"speaker": "assistant", "text": "그러면 기본금리 3.2%만 적용되는 상품으로 안내드릴게요. 다른 기간도 비교해보시겠어요?"},
+    {"speaker": "user", "text": "6개월이랑 2년도 볼 수 있어요?"},
+    {"speaker": "assistant", "text": "6개월은 연 2.8%, 2년은 연 3.5%입니다. 기간이 길수록 금리가 조금 더 높습니다."},
+    {"speaker": "user", "text": "2년이 낫네요 근데 중도해지하면 어떻게 돼요"},
+    {"speaker": "assistant", "text": "중도해지 시에는 약정금리 대신 중도해지이율이 적용되어 이자가 줄어듭니다. 해지 시점에 따라 이율이 달라져요."},
+    {"speaker": "user", "text": "많이 줄어드는 편이에요?"},
+    {"speaker": "assistant", "text": "예치 초기에 해지하실수록 이율이 낮아집니다. 3개월 이내는 연 0.5% 수준으로 적용될 수 있어요."},
+    {"speaker": "user", "text": "그럼 좀 신중하게 생각해야겠네요"},
+    {"speaker": "assistant", "text": "네 맞습니다. 목돈을 얼마나 오래 넣어두실 수 있는지 먼저 정하시는 게 좋아요. 예치 금액도 정하셨나요?"},
+    {"speaker": "user", "text": "한 오백 정도 생각하고 있어요"},
+    {"speaker": "assistant", "text": "500만원 기준으로 2년 상품 이용 시 세전 이자 약 35만원 정도 예상됩니다. 참고해주세요."},
+    {"speaker": "user", "text": "오 나쁘지 않네요"},
+    {"speaker": "assistant", "text": "네 다른 은행 특판 상품도 궁금하시면 앱 내 예금 비교 메뉴에서 확인 가능합니다. 안내해드릴까요?"},
+    {"speaker": "user", "text": "그럼 좋죠 어디서 봐요"},
+    {"speaker": "assistant", "text": "홈 화면에서 예금·적금 탭으로 이동하시면 상단에 금리비교 메뉴가 있습니다. 눌러보시겠어요?"},
+    {"speaker": "user", "text": "네 찾았어요 여기 특판도 있네요"},
+    {"speaker": "assistant", "text": "네 특판 상품은 한도가 있어서 조기 마감될 수 있습니다. 조건 꼼꼼히 확인해보세요."},
+    {"speaker": "user", "text": "알겠어요 좀 더 비교해볼게요"},
+    {"speaker": "assistant", "text": "네 천천히 살펴보시고 가입 전 궁금하신 점 있으면 다시 문의해주세요."},
+    {"speaker": "user", "text": "네 감사합니다"},
+    {"speaker": "assistant", "text": "네 오늘 이용해주셔서 감사합니다. 좋은 하루 보내세요."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

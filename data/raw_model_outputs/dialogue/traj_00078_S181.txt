@@ -1,0 +1,39 @@
+{
+  "turns": [
+    {"speaker": "user", "text": "예금 금리 좀 보려는데요"},
+    {"speaker": "assistant", "text": "네, 고객님. 정기예금과 자유적립예금 중 어떤 상품이 궁금하신가요?"},
+    {"speaker": "user", "text": "정기예금이요"},
+    {"speaker": "assistant", "text": "확인해 드리겠습니다. 예치 기간은 어느 정도로 생각하고 계신가요?"},
+    {"speaker": "user", "text": "한 6개월이나 1년 정도"},
+    {"speaker": "assistant", "text": "6개월 기준 연 3.1%, 12개월 기준 연 3.4% 적용됩니다. 우대금리 조건도 안내드릴까요?"},
+    {"speaker": "user", "text": "네 궁금해요"},
+    {"speaker": "assistant", "text": "앱 자동이체 등록이나 첫거래 고객 조건 충족 시 최대 0.3%p 추가됩니다. 조건 확인해 드릴까요?"},
+    {"speaker": "user", "text": "저는 해당사항 있나요"},
+    {"speaker": "assistant", "text": "고객님 계좌 기록상 신규 거래 조건은 충족되지 않는 상태입니다. 다른 우대 항목도 확인해 드릴까요?"},
+    {"speaker": "user", "text": "아뇨 됐어요 그냥 기본금리로"},
+    {"speaker": "assistant", "text": "알겠습니다. 그럼 12개월 기준 연 3.4% 기본금리로 안내드릴게요. 예치금액은 대략 정하셨나요?"},
+    {"speaker": "user", "text": "한 500 정도 생각중"},
+    {"speaker": "assistant", "text": "500만원 예치 시 12개월 만기 예상 이자는 세전 약 17만원입니다. 참고로 세금 우대는 별도 신청이 필요합니다."},
+    {"speaker": "user", "text": "세금 우대는 뭐예요"},
+    {"speaker": "assistant", "text": "일정 조건 충족 시 이자소득세 일부를 감면받는 제도입니다. 신청하시면 앱에서 바로 조회 가능합니다."},
+    {"speaker": "user", "text": "그건 나중에 볼게요"},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 다른 은행 상품과 비교해 보실 수 있게 금리 비교 메뉴도 있는데 확인해 드릴까요?"},
+    {"speaker": "user", "text": "그냥 여기 금리만 알면 돼요"},
+    {"speaker": "assistant", "text": "네, 그럼 현재 안내드린 3.4% 기준으로 정리해 드리겠습니다. 혹시 3년 만기 상품도 궁금하신가요?"},
+    {"speaker": "user", "text": "아니요 짧게 볼게요"},
+    {"speaker": "assistant", "text": "알겠습니다. 6개월과 12개월 금리만 참고하시면 되겠네요. 지금 바로 가입 진행해 드릴까요?"},
+    {"speaker": "user", "text": "아직 결정은 안했어요"},
+    {"speaker": "assistant", "text": "네, 확인만 도와드린 걸로 하겠습니다. 필요하실 때 다시 문의 주시면 됩니다."},
+    {"speaker": "user", "text": "네 알겠어요"},
+    {"speaker": "assistant", "text": "혹시 다른 궁금하신 상품이나 금리도 더 확인해 드릴까요?"},
+    {"speaker": "user", "text": "아뇨 오늘은 여기까지요"},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 좋은 하루 보내세요."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}

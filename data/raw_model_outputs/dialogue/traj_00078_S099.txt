@@ -1,0 +1,8 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "급여계좌 등록하고 싶은데요"},
+    {"speaker": "assistant", "text": "네 고객님, 급여계좌 등록 도와드릴게요. 현재 급여가 입금되는 계좌가 있으신가요?"},
+    {"speaker": "user", "text": "음 그게... 지금은 따로 없어요"},
+    {"speaker": "assistant", "text": "급여계좌 등록은 급여 입금 내역이 확인돼야 진행할 수 있는데요, 현재 정기적으로 급여가 들어오는 계좌가 없으신 거죠?"},
+    {"speaker": "user", "text": "네 지

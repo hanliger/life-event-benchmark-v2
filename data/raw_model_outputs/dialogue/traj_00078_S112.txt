@@ -1,0 +1,43 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "병원비 좀 이체하려는데요"},
+    {"speaker": "assistant", "text": "네, 병원비 이체 도와드리겠습니다. 어느 계좌에서 이체하실까요?"},
+    {"speaker": "user", "text": "제 주거래 계좌요"},
+    {"speaker": "assistant", "text": "확인했습니다. 이체하실 금액은 얼마인가요?"},
+    {"speaker": "user", "text": "35만원이요"},
+    {"speaker": "assistant", "text": "받는 분 계좌번호나 병원 정보를 알려주시겠어요?"},
+    {"speaker": "user", "text": "어 잠시만요, 문자로 온 거 찾아볼게요"},
+    {"speaker": "assistant", "text": "네, 천천히 확인해주세요."},
+    {"speaker": "user", "text": "찾았어요, 계좌번호 불러드릴게요"},
+    {"speaker": "assistant", "text": "네 말씀해주세요."},
+    {"speaker": "user", "text": "이거 맞나 한번 봐주세요"},
+    {"speaker": "assistant", "text": "확인되었습니다. 병원비 35만원, 알려주신 계좌로 이체 진행할까요?"},
+    {"speaker": "user", "text": "네 근데 그전에 하나 더 물어볼 게 있는데"},
+    {"speaker": "assistant", "text": "네 말씀해주세요."},
+    {"speaker": "user", "text": "요즘 동호회 회비도 매달 나가는데 그것도 정기이체로 바꿀 수 있나요"},
+    {"speaker": "assistant", "text": "네, 정기이체 등록은 별도 메뉴에서 가능합니다. 다만 지금은 병원비 이체부터 먼저 진행해드릴까요?"},
+    {"speaker": "user", "text": "아 네 그거 먼저요"},
+    {"speaker": "assistant", "text": "알겠습니다. 이체 전 본인인증 한번 진행해주시겠어요?"},
+    {"speaker": "user", "text": "네 했어요"},
+    {"speaker": "assistant", "text": "확인되었습니다. 이체 금액과 계좌 다시 한번 확인 부탁드립니다."},
+    {"speaker": "user", "text": "네 맞아요 그대로 진행해주세요"},
+    {"speaker": "assistant", "text": "네, 다만 이체는 고객님 최종 확인 후 실행됩니다. 앱에서 확인 버튼 눌러주시겠어요?"},
+    {"speaker": "user", "text": "눌렀어요"},
+    {"speaker": "assistant", "text": "이체가 정상적으로 접수되었습니다. 문자로 결과 안내드릴게요."},
+    {"speaker": "user", "text": "넵 감사합니다"},
+    {"speaker": "assistant", "text": "참고로 동호회 회비 정기이체는 이체 메뉴에서 언제든 등록 가능합니다."},
+    {"speaker": "user", "text": "아 네 나중에 해볼게요"},
+    {"speaker": "assistant", "text": "네, 필요하실 때 다시 문의 주세요. 오늘 병원비 이체 도와드려 감사합니다."}
+  ],
+  "cue_annotations": [
+    {"turn_index": 14, "cue_type": "recurring_payment_mention", "linked_memory_path": null}
+  ],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

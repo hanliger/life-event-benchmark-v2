@@ -1,0 +1,43 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요 거래내역 조회하려고 하는데요"},
+    {"speaker": "assistant", "text": "안녕하세요 고객님. 어느 계좌의 거래내역을 확인해 드릴까요?"},
+    {"speaker": "user", "text": "입출금 통장이요 주로 쓰는 거"},
+    {"speaker": "assistant", "text": "네, 등록된 입출금 계좌 확인해 보겠습니다. 조회하실 기간을 말씀해 주시겠어요?"},
+    {"speaker": "user", "text": "이번 달이랑 저번 달 정도요"},
+    {"speaker": "assistant", "text": "최근 2개월 내역으로 조회해 드리겠습니다. 잠시만 기다려 주세요."},
+    {"speaker": "user", "text": "네"},
+    {"speaker": "assistant", "text": "확인됐습니다. 화면에 최근 2개월 거래내역 보여드릴게요. 전체 내역 보시겠어요, 아니면 입금이나 출금만 따로 보시겠어요?"},
+    {"speaker": "user", "text": "전체로 보여주세요"},
+    {"speaker": "assistant", "text": "네, 전체 내역으로 화면 띄워드렸습니다. 특정 거래 하나 찾으시는 건가요?"},
+    {"speaker": "user", "text": "그냥 요즘 돈 어디로 나가는지 확인하려고요"},
+    {"speaker": "assistant", "text": "그럼 지출 항목별로 정리해서 보여드릴 수도 있는데, 원하시면 카테고리별 요약도 함께 보여드릴까요?"},
+    {"speaker": "user", "text": "오 그거 좋네요 보여주세요"},
+    {"speaker": "assistant", "text": "네, 카테고리별 요약 화면 띄워드렸습니다. 생활비, 통신비, 기타 항목으로 나뉘어 있어요."},
+    {"speaker": "user", "text": "생각보다 많이 나갔네요"},
+    {"speaker": "assistant", "text": "네, 그러실 수 있습니다. 혹시 특정 날짜 이후로 다시 좁혀서 보시겠어요?"},
+    {"speaker": "user", "text": "아니 괜찮아요 그냥 전체적으로 보면 되니까"},
+    {"speaker": "assistant", "text": "알겠습니다. 그럼 필요하시면 화면 아래 다운로드 버튼으로 내역 저장도 가능합니다."},
+    {"speaker": "user", "text": "그건 어떻게 하는 거예요"},
+    {"speaker": "assistant", "text": "화면 하단의 저장 아이콘 누르시면 파일 형태로 내역을 받으실 수 있습니다. 눌러보시겠어요?"},
+    {"speaker": "user", "text": "네 눌러봤어요"},
+    {"speaker": "assistant", "text": "잘 되셨나요? 저장 완료 알림 뜨는지 확인해 주시겠어요?"},
+    {"speaker": "user", "text": "네 떴어요 감사합니다"},
+    {"speaker": "assistant", "text": "확인해 주셔서 감사합니다. 혹시 다른 계좌 내역도 함께 보시겠어요?"},
+    {"speaker": "user", "text": "아뇨 이거면 됐어요"},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 오늘 조회하신 내역은 마이페이지에서도 다시 확인 가능합니다."},
+    {"speaker": "user", "text": "아 그래요? 편하네요"},
+    {"speaker": "assistant", "text": "네, 필요하실 때 언제든 이용해 주시면 됩니다. 더 도와드릴 부분 있으실까요?"},
+    {"speaker": "user", "text": "아니요 없어요 수고하세요"},
+    {"speaker": "assistant", "text": "네, 이용해 주셔서 감사합니다. 좋은 하루 보내세요."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

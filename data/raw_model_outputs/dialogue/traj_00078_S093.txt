@@ -1,0 +1,41 @@
+{
+  "turns": [
+    {"speaker": "user", "text": "예금 금리 좀 보려고요"},
+    {"speaker": "assistant", "text": "안녕하세요, 고객님. 예금 상품 금리 조회 도와드리겠습니다. 정기예금과 자유적금 중 어떤 상품이 궁금하신가요?"},
+    {"speaker": "user", "text": "정기예금이요"},
+    {"speaker": "assistant", "text": "네, 정기예금 기준으로 안내드릴게요. 예치 기간은 어느 정도 생각하고 계신가요?"},
+    {"speaker": "user", "text": "1년 정도"},
+    {"speaker": "assistant", "text": "1년 기준 정기예금 기본금리는 연 3.2%입니다. 우대조건 충족 시 최대 3.6%까지 적용 가능해요."},
+    {"speaker": "user", "text": "우대조건이 뭔데요"},
+    {"speaker": "assistant", "text": "앱 알림 수신 동의, 자동이체 등록, 첫 거래 고객 여부 등에 따라 추가 금리가 붙습니다. 자세한 조건 보여드릴까요?"},
+    {"speaker": "user", "text": "네 보여줘요"},
+    {"speaker": "assistant", "text": "알림 동의 시 0.1%, 자동이체 등록 시 0.2%, 신규 고객 우대 0.1%가 적용됩니다. 최대 0.4%까지 중복 가능해요."},
+    {"speaker": "user", "text": "자동이체는 어떤 거 말하는 거예요"},
+    {"speaker": "assistant", "text": "정기적으로 일정 금액을 이 계좌로 자동이체 설정하시면 우대금리 조건이 충족됩니다. 현재 등록된 자동이체는 없으신 것 같아요."},
+    {"speaker": "user", "text": "아 그럼 그건 패스"},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 그럼 기본금리와 알림 동의 우대만 적용해서 안내드릴까요?"},
+    {"speaker": "user", "text": "네 그정도만"},
+    {"speaker": "assistant", "text": "그럼 연 3.3% 적용됩니다. 1000만 원 기준 1년 만기 시 세전 이자는 약 33만 원이에요."},
+    {"speaker": "user", "text": "다른 은행도 비슷해요?"},
+    {"speaker": "assistant", "text": "타 은행 금리는 저희가 직접 안내드리긴 어렵지만, 시중은행 평균은 3~3.5% 수준으로 알려져 있어요."},
+    {"speaker": "user", "text": "그럼 여기가 나쁘지 않네"},
+    {"speaker": "assistant", "text": "네, 우대조건까지 고려하시면 경쟁력 있는 편입니다. 가입 고려해 보시겠어요?"},
+    {"speaker": "user", "text": "일단 좀 더 보고요"},
+    {"speaker": "assistant", "text": "네, 천천히 확인하셔도 됩니다. 금리 변동 알림 받아보시겠어요?"},
+    {"speaker": "user", "text": "그거 좋네요 해줘요"},
+    {"speaker": "assistant", "text": "금리 변동 알림 신청 완료했습니다. 변동 시 앱 알림으로 안내드릴게요."},
+    {"speaker": "user", "text": "이자는 언제 지급돼요"},
+    {"speaker": "assistant", "text": "만기 시 일시 지급이 기본이며, 월 이자 지급형으로도 변경 가능합니다. 어떤 방식이 편하실까요?"},
+    {"speaker": "user", "text": "만기 지급이 편해요"},
+    {"speaker": "assistant", "text": "네, 만기 일시 지급 방식으로 참고해두겠습니다. 추가로 궁금하신 사항 있으실까요?"},
+    {"speaker": "user", "text": "아니요 이정도면 됐어요"},
+    {"speaker": "assistant", "text": "네, 오늘 정기예금 금리 조회 도와드렸습니다. 필요하실 때 다시 문의 주세요."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}

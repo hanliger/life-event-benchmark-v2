@@ -1,0 +1,43 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "생활비 정기송금 하나 설정하려고"},
+    {"speaker": "assistant", "text": "네, 도와드릴게요. 어떤 계좌로 보내실 예정이신가요?"},
+    {"speaker": "user", "text": "이번엔 아이 이름으로 계좌 하나 만들어서 거기로도 좀 보내려고"},
+    {"speaker": "assistant", "text": "알겠습니다. 먼저 본인인증 진행해 주시겠어요?"},
+    {"speaker": "user", "text": "어 방금 했어"},
+    {"speaker": "assistant", "text": "확인됐습니다. 기존에 등록된 생활비 이체 계좌가 있으신가요?"},
+    {"speaker": "user", "text": "응 있어. 근데 이번엔 새 계좌 하나 추가하는거야"},
+    {"speaker": "assistant", "text": "네, 새 계좌로 보낼 금액과 주기를 알려주시겠어요?"},
+    {"speaker": "user", "text": "매달 20일에 30만원 정도"},
+    {"speaker": "assistant", "text": "출금은 어떤 계좌에서 진행할까요?"},
+    {"speaker": "user", "text": "그냥 내 계좌에서 나가면 돼"},
+    {"speaker": "assistant", "text": "출금이 발생하는 설정이라 최종 확인은 고객님께서 직접 진행해 주셔야 해요."},
+    {"speaker": "user", "text": "그래 알았어"},
+    {"speaker": "assistant", "text": "기존 이체는 그대로 유지하고 새 이체만 추가할까요?"},
+    {"speaker": "user", "text": "응 기존건 그대로 두고 새거만 추가해줘"},
+    {"speaker": "assistant", "text": "등록 진행할게요. 계좌번호 다시 확인 부탁드려요."},
+    {"speaker": "user", "text": "계좌번호 어디서 확인하면 돼"},
+    {"speaker": "assistant", "text": "메뉴에서 계좌 등록 화면 들어가시면 본인인증 후 바로 확인하실 수 있어요."},
+    {"speaker": "user", "text": "아 됐다 확인했어"},
+    {"speaker": "assistant", "text": "좋습니다. 확인 버튼 눌러주시면 이체가 등록돼요."},
+    {"speaker": "user", "text": "눌렀어"},
+    {"speaker": "assistant", "text": "등록 완료됐습니다. 매달 20일에 자동으로 이체될 예정이에요."},
+    {"speaker": "user", "text": "알림 문자는 언제 와"},
+    {"speaker": "assistant", "text": "설정 완료 즉시 알림 문자로 안내드려요."},
+    {"speaker": "user", "text": "오 왔다 고마워"},
+    {"speaker": "assistant", "text": "네, 확인 감사합니다. 추가로 필요한 거 있으실까요?"},
+    {"speaker": "user", "text": "아니 이제 됐어"},
+    {"speaker": "assistant", "text": "네, 도움이 필요하시면 언제든 다시 문의해 주세요."}
+  ],
+  "cue_annotations": [
+    {"turn_index": 2, "cue_type": "explicit_reference", "linked_memory_path": "household.children"}
+  ],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

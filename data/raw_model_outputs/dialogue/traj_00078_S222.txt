@@ -1,0 +1,43 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "입금될 때 알림 오게 설정하고 싶은데"},
+    {"speaker": "assistant", "text": "네, 입금 알림 설정 도와드릴게요. 어떤 계좌에 설정하시겠어요?"},
+    {"speaker": "user", "text": "그냥 쓰는 통장 하나 있어요"},
+    {"speaker": "assistant", "text": "확인했습니다. 앱 메인 화면에서 계좌 선택하시면 알림 설정 메뉴가 나와요."},
+    {"speaker": "user", "text": "어디 들어가야 되는지 모르겠는데"},
+    {"speaker": "assistant", "text": "계좌 조회 화면에서 오른쪽 위 톱니바퀴 아이콘 눌러주시면 됩니다."},
+    {"speaker": "user", "text": "아 찾았다"},
+    {"speaker": "assistant", "text": "네, 그 안에 입출금 알림이라는 항목이 있을 거예요. 눌러주세요."},
+    {"speaker": "user", "text": "눌렀어요 근데 종류가 여러개네"},
+    {"speaker": "assistant", "text": "입금 알림, 출금 알림 따로 있어요. 입금만 받으시겠어요, 둘 다 받으시겠어요?"},
+    {"speaker": "user", "text": "입금만이요"},
+    {"speaker": "assistant", "text": "네, 입금 알림만 활성화하시고 저장 버튼 눌러주시면 됩니다."},
+    {"speaker": "user", "text": "저장 눌렀는데 뭐 확인하라고 뜨는데"},
+    {"speaker": "assistant", "text": "본인인증 화면일 거예요. 간편 비밀번호나 지문으로 확인해주세요."},
+    {"speaker": "user", "text": "됐어요 설정된거 맞나요"},
+    {"speaker": "assistant", "text": "네, 정상적으로 적용됐습니다. 이제 입금 발생 시 문자와 앱 알림으로 안내드려요."},
+    {"speaker": "user", "text": "소액도 다 오나요"},
+    {"speaker": "assistant", "text": "금액 상관없이 입금 건마다 알림 발송됩니다. 원하시면 최소 금액 설정도 가능해요."},
+    {"speaker": "user", "text": "그건 어떻게 하는거예요"},
+    {"speaker": "assistant", "text": "같은 알림 설정 메뉴 안에 기준 금액 입력란이 있어요. 그 이상 입금될 때만 받으실 수 있습니다."},
+    {"speaker": "user", "text": "아 그럼 그건 그냥 다 받는걸로 할게요"},
+    {"speaker": "assistant", "text": "네, 그럼 현재 설정 그대로 두시면 됩니다."},
+    {"speaker": "user", "text": "혹시 나중에 해지하려면 어떻게 해요"},
+    {"speaker": "assistant", "text": "같은 메뉴에서 알림 항목 꺼주시면 바로 해지됩니다. 별도 절차 없어요."},
+    {"speaker": "user", "text": "알겠어요"},
+    {"speaker": "assistant", "text": "네, 다른 계좌도 알림 설정 원하시면 말씀해주세요."},
+    {"speaker": "user", "text": "아니 이거 하나면 돼요"},
+    {"speaker": "assistant", "text": "네, 처리 완료됐습니다. 더 궁금하신 점 있으실까요?"},
+    {"speaker": "user", "text": "없어요 감사합니다"},
+    {"speaker": "assistant", "text": "네, 이용해주셔서 감사합니다. 좋은 하루 되세요."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

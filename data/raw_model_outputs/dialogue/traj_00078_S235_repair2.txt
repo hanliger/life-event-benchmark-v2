@@ -1,0 +1,40 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요, 모임통장 하나 만들고 싶어서요"},
+    {"speaker": "assistant", "text": "네 고객님, 모임통장 개설 도와드리겠습니다. 함께 쓰실 인원은 몇 명인가요?"},
+    {"speaker": "user", "text": "저랑 같이 쓰는 통장 만들려고요. 사람은 둘이에요"},
+    {"speaker": "assistant", "text": "두 분이 함께 이용하시는 계좌로 개설해드리면 될까요?"},
+    {"speaker": "user", "text": "네 맞아요"},
+    {"speaker": "assistant", "text": "알겠습니다. 한 분이 개설 후 상대방을 초대하는 방식이 일반적인데 이렇게 진행할까요?"},
+    {"speaker": "user", "text": "네 그게 편할 것 같아요"},
+    {"speaker": "assistant", "text": "좋습니다. 이 계좌는 주로 어떤 용도로 쓰실 예정인가요?"},
+    {"speaker": "user", "text": "공동 생활비 관리하려고요"},
+    {"speaker": "assistant", "text": "확인했습니다. 매달 정기적으로 넣으실 금액이 있으신가요?"},
+    {"speaker": "user", "text": "네 30만원 정도씩 넣을 것 같아요"},
+    {"speaker": "assistant", "text": "자동이체 설정 도와드릴까요?"},
+    {"speaker": "user", "text": "네 해주세요"},
+    {"speaker": "assistant", "text": "이체일은 언제로 하시겠어요?"},
+    {"speaker": "user", "text": "매달 25일로 해주세요"},
+    {"speaker": "assistant", "text": "네 25일로 자동이체 설정해드렸습니다. 알림 문자도 받아보시겠어요?"},
+    {"speaker": "user", "text": "네 좋아요"},
+    {"speaker": "assistant", "text": "설정 완료됐습니다. 모임통장 개설과 자동이체까지 모두 마무리됐어요. 추가로 필요하신 게 있을까요?"},
+    {"speaker": "user", "text": "아니요 이제 됐어요 감사합니다"},
+    {"speaker": "assistant", "text": "네 이용해주셔서 감사합니다. 좋은 하루 보내세요"}
+  ],
+  "cue_annotations": [
+    {
+      "turn_index": 2,
+      "speaker": "user",
+      "cue_text": "같이 쓰는 통장",
+      "memory_path": "household.spouse_or_partner"
+    },
+    {
+      "turn_index": 8,
+      "speaker": "user",
+      "cue_text": "공동 생활비",
+      "memory_path": "household.marital_status"
+    }
+  ]
+}
+```

@@ -1,0 +1,43 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "수취인 등록하려는데 어떻게 해"},
+    {"speaker": "assistant", "text": "안녕하세요. 이체 메뉴에서 수취인 등록 도와드리겠습니다. 등록하실 분 은행이랑 계좌번호 알고 계신가요?"},
+    {"speaker": "user", "text": "응 계좌번호는 있어"},
+    {"speaker": "assistant", "text": "네 그럼 은행명이랑 계좌번호 순서대로 입력해주시겠어요?"},
+    {"speaker": "user", "text": "국민은행이고 번호는 문자로 받은거 보고 칠게"},
+    {"speaker": "assistant", "text": "네 천천히 입력해주세요. 예금주명도 함께 확인 부탁드립니다"},
+    {"speaker": "user", "text": "예금주는 친구 이름이야"},
+    {"speaker": "assistant", "text": "알겠습니다. 입력하신 계좌 예금주명과 실제 예금주가 일치하는지 자동으로 확인됩니다. 잠시만 기다려주세요"},
+    {"speaker": "user", "text": "ok"},
+    {"speaker": "assistant", "text": "확인 완료됐습니다. 수취인 별칭은 어떻게 설정해드릴까요?"},
+    {"speaker": "user", "text": "그냥 친구 이름으로 해줘"},
+    {"speaker": "assistant", "text": "네 별칭 설정 완료했습니다. 이 계좌로 이체 예정이 있으신가요?"},
+    {"speaker": "user", "text": "어 친구한테 빌린 돈 상환하려고 등록해두는거야"},
+    {"speaker": "assistant", "text": "네 알겠습니다. 등록은 지금 완료되지만 실제 송금은 확인 후 별도로 진행하셔야 합니다"},
+    {"speaker": "user", "text": "그건 알아 등록만 먼저 하려고"},
+    {"speaker": "assistant", "text": "네 수취인 등록이 정상적으로 완료됐습니다. 등록 내역은 이체 메뉴에서 바로 확인 가능합니다"},
+    {"speaker": "user", "text": "한도 같은거 따로 설정해야돼?"},
+    {"speaker": "assistant", "text": "이체 한도는 계좌 전체 기준으로 적용되어 수취인별로 별도 설정은 없습니다"},
+    {"speaker": "user", "text": "아 그렇구나"},
+    {"speaker": "assistant", "text": "네 혹시 지금 바로 송금까지 진행하시겠어요?"},
+    {"speaker": "user", "text": "아니 오늘은 등록만 하고 친구한테 빌린 돈 상환은 나중에 할게"},
+    {"speaker": "assistant", "text": "알겠습니다. 나중에 송금하실 때는 이체 메뉴에서 등록된 수취인 선택하시면 바로 진행 가능합니다"},
+    {"speaker": "user", "text": "오 편하네"},
+    {"speaker": "assistant", "text": "네 필요하실 때 간편하게 이용하실 수 있습니다"},
+    {"speaker": "user", "text": "수취인 여러명 등록할 수도 있어?"},
+    {"speaker": "assistant", "text": "네 제한 없이 여러 명 등록 가능합니다"},
+    {"speaker": "user", "text": "알겠어 오늘은 이거면 됐어"},
+    {"speaker": "assistant", "text": "네 도움 필요하시면 언제든 다시 말씀해주세요. 좋은 하루 되세요"}
+  ],
+  "cue_annotations": [
+    {"turn_index": 6, "cue_type": "financial_purpose", "linked_memory_path": null}
+  ],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

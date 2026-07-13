@@ -1,0 +1,45 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요 관리비 자동납부 신청하려고요"},
+    {"speaker": "assistant", "text": "네 고객님 관리비 자동납부 신청 도와드리겠습니다. 어떤 계좌에서 출금되게 하시겠어요?"},
+    {"speaker": "user", "text": "제 입출금 통장에서요"},
+    {"speaker": "assistant", "text": "확인했습니다. 관리비 청구서에 나온 관리사무소 계좌번호 알고 계신가요?"},
+    {"speaker": "user", "text": "네 있어요 알려드릴게요"},
+    {"speaker": "assistant", "text": "계좌번호 입력해주시면 등록 도와드리겠습니다"},
+    {"speaker": "user", "text": "123-456-789012 여기요"},
+    {"speaker": "assistant", "text": "확인했습니다. 매달 며칠에 납부되도록 설정할까요?"},
+    {"speaker": "user", "text": "매달 25일로 해주세요"},
+    {"speaker": "assistant", "text": "네 25일로 등록 진행하겠습니다. 금액은 고지서 금액대로 자동 청구되나요, 아니면 고정 금액인가요?"},
+    {"speaker": "user", "text": "고정 금액은 아니고 그때그때 청구서대로요"},
+    {"speaker": "assistant", "text": "알겠습니다. 청구서 연동 자동납부로 등록해드리겠습니다. 등록 전에 본인인증 한번 진행해주시겠어요?"},
+    {"speaker": "user", "text": "네 했어요"},
+    {"speaker": "assistant", "text": "확인됐습니다. 그럼 관리비 자동납부는 이대로 등록해드릴까요?"},
+    {"speaker": "user", "text": "네 등록해주세요. 아 근데 그거 말고 하나 더 있는데"},
+    {"speaker": "assistant", "text": "네 말씀해주세요"},
+    {"speaker": "user", "text": "회사 경비 처리용 이체도 하나 해야되는데 이것도 자동이체로 설정 되나요"},
+    {"speaker": "assistant", "text": "그건 별도로 정기이체 등록이 필요합니다. 매달 같은 금액으로 나가는 건가요?"},
+    {"speaker": "user", "text": "아니 그건 그때그때 달라서 그냥 한번씩 보내는거예요"},
+    {"speaker": "assistant", "text": "그러면 자동이체보다는 그때그때 직접 이체하시는 게 나을 것 같습니다. 관리비 자동납부만 우선 등록해드릴까요?"},
+    {"speaker": "user", "text": "네 그거만 해주세요"},
+    {"speaker": "assistant", "text": "등록 진행하겠습니다. 출금일에 잔액 부족하면 알림 문자 받으시겠어요?"},
+    {"speaker": "user", "text": "네 받을게요"},
+    {"speaker": "assistant", "text": "알겠습니다. 문자 알림도 함께 설정했습니다. 등록 완료 전에 최종 확인 한번 부탁드립니다"},
+    {"speaker": "user", "text": "확인했어요"},
+    {"speaker": "assistant", "text": "관리비 자동납부 등록이 완료되었습니다. 다음 달 25일부터 적용됩니다"},
+    {"speaker": "user", "text": "네 감사합니다"},
+    {"speaker": "assistant", "text": "혹시 다른 문의 있으신가요?"},
+    {"speaker": "user", "text": "아니요 없어요"},
+    {"speaker": "assistant", "text": "네 이용해주셔서 감사합니다. 좋은 하루 보내세요"}
+  ],
+  "cue_annotations": [
+    {"turn_index": 16, "cue_type": "회사 경비 처리용 이체", "linked_memory_path": null}
+  ],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

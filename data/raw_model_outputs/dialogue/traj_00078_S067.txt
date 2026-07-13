@@ -1,0 +1,43 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "거래내역 좀 확인하고 싶은데"},
+    {"speaker": "assistant", "text": "네, 어떤 계좌 거래내역을 조회해드릴까요?"},
+    {"speaker": "user", "text": "그냥 주거래 계좌요"},
+    {"speaker": "assistant", "text": "확인했습니다. 조회 기간은 어떻게 설정해드릴까요?"},
+    {"speaker": "user", "text": "이번 달꺼만 보면 될듯"},
+    {"speaker": "assistant", "text": "네 이번 달 1일부터 오늘까지 조회해드리겠습니다. 잠시만요."},
+    {"speaker": "user", "text": "알겠어"},
+    {"speaker": "assistant", "text": "조회 완료됐습니다. 총 12건의 거래내역이 있는데 전체 목록 보여드릴까요?"},
+    {"speaker": "user", "text": "응 보여줘"},
+    {"speaker": "assistant", "text": "화면에 표시했습니다. 입출금 내역 중 특정 항목 자세히 보고 싶으신 거 있으세요?"},
+    {"speaker": "user", "text": "카드값 나간거 언제 나갔는지 보고싶어"},
+    {"speaker": "assistant", "text": "카드대금 출금 내역은 15일에 처리된 것으로 확인됩니다. 금액은 앱에서 바로 확인 가능합니다."},
+    {"speaker": "user", "text": "어 맞다 그거 확인했어 고마워"},
+    {"speaker": "assistant", "text": "네, 다른 거래도 궁금하신 부분 있으실까요?"},
+    {"speaker": "user", "text": "통신비도 얼마 나갔는지 보고싶은데"},
+    {"speaker": "assistant", "text": "통신비 자동이체는 20일에 출금된 내역이 있습니다. 상세내역 눌러서 확인 가능합니다."},
+    {"speaker": "user", "text": "오 알겠어"},
+    {"speaker": "assistant", "text": "혹시 이 내역들을 따로 저장하거나 내보내기 하시겠어요?"},
+    {"speaker": "user", "text": "그냥 pdf로 받을수있어?"},
+    {"speaker": "assistant", "text": "네, 조회내역을 pdf로 저장 가능합니다. 저장 버튼 눌러드릴까요?"},
+    {"speaker": "user", "text": "어 눌러줘"},
+    {"speaker": "assistant", "text": "저장 완료했습니다. 앱 다운로드함에서 확인하실 수 있습니다."},
+    {"speaker": "user", "text": "오케이 확인해볼게"},
+    {"speaker": "assistant", "text": "네, 혹시 특정 기간 더 조회하고 싶으신 거 있으세요?"},
+    {"speaker": "user", "text": "지난달 것도 한번 보고싶은데"},
+    {"speaker": "assistant", "text": "지난달 1일부터 말일까지 설정해서 조회해드릴까요?"},
+    {"speaker": "user", "text": "어 그렇게 해줘"},
+    {"speaker": "assistant", "text": "네, 조회했습니다. 총 18건 내역 확인되시고 화면에 띄워드렸습니다."},
+    {"speaker": "user", "text": "고마워 이제 됐어"},
+    {"speaker": "assistant", "text": "네, 도움 필요하시면 언제든 다시 말씀해주세요."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

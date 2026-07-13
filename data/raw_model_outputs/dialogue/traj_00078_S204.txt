@@ -1,0 +1,43 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "예금 금리 좀 확인하고 싶은데"},
+    {"speaker": "assistant", "text": "안녕하세요, 고객님. 어떤 예금 상품 금리를 확인해 드릴까요?"},
+    {"speaker": "user", "text": "그냥 지금 파는 정기예금 중에 괜찮은 거"},
+    {"speaker": "assistant", "text": "현재 판매 중인 정기예금 목록을 화면에 띄워드릴게요. 예치 기간은 어느 정도 생각하고 계세요?"},
+    {"speaker": "user", "text": "한 6개월 정도?"},
+    {"speaker": "assistant", "text": "6개월 기준으로는 연 3.1% 상품이 가장 조건이 좋습니다. 1년 기준은 3.4%인데 참고로 안내드려요."},
+    {"speaker": "user", "text": "1년은 좀 부담스러운데"},
+    {"speaker": "assistant", "text": "그러시면 6개월 상품 위주로 안내드릴게요. 예치하실 대략적인 금액도 알려주시면 이자 예상액 계산해 드릴 수 있어요."},
+    {"speaker": "user", "text": "한 500 정도 생각중"},
+    {"speaker": "assistant", "text": "500만 원 기준 6개월 예치 시 세전 이자는 약 7만 7천 원 정도입니다. 세후로는 조금 더 낮아져요."},
+    {"speaker": "user", "text": "생각보다 적네"},
+    {"speaker": "assistant", "text": "단기 상품이라 금액 대비 이자는 크지 않은 편이에요. 혹시 더 긴 기간도 함께 비교해 드릴까요?"},
+    {"speaker": "user", "text": "그럼 1년도 한번 보여줘"},
+    {"speaker": "assistant", "text": "1년 기준 500만 원 예치 시 세전 이자는 약 17만 원 정도 됩니다. 중도 해지 시 금리는 낮아진다는 점도 참고하세요."},
+    {"speaker": "user", "text": "중도해지하면 얼마나 깎여"},
+    {"speaker": "assistant", "text": "가입 후 경과 기간에 따라 다르지만 보통 기본 금리의 절반 이하로 적용됩니다. 정확한 수치는 상품 상세 화면에서 확인 가능해요."},
+    {"speaker": "user", "text": "요즘 돈 나갈 데가 많아서 좀 걱정되긴 해"},
+    {"speaker": "assistant", "text": "그러시면 유동성을 고려해서 자유입출금이 가능한 예금도 함께 살펴보시겠어요?"},
+    {"speaker": "user", "text": "그런 것도 금리가 있나"},
+    {"speaker": "assistant", "text": "네, 파킹통장 형태로 연 2.3% 정도 금리를 제공하는 상품이 있습니다. 수시 입출금이 가능해요."},
+    {"speaker": "user", "text": "오 그건 괜찮은데"},
+    {"speaker": "assistant", "text": "해당 상품은 앱 메뉴에서 바로 확인하실 수 있습니다. 가입 조건도 함께 안내해 드릴까요?"},
+    {"speaker": "user", "text": "어 조건이 뭔데"},
+    {"speaker": "assistant", "text": "별도 자격 조건 없이 신규 가입 가능하고, 예치 한도는 5천만 원까지입니다."},
+    {"speaker": "user", "text": "그럼 나도 가입 가능하겠네"},
+    {"speaker": "assistant", "text": "네, 가능하십니다. 다만 실제 가입은 본인인증 후 진행되며 지금 바로 신청하시겠어요?"},
+    {"speaker": "user", "text": "아니 오늘은 그냥 금리만 보려고 했어"},
+    {"speaker": "assistant", "text": "알겠습니다. 오늘 확인하신 금리 정보는 마이페이지에서도 다시 조회하실 수 있어요."},
+    {"speaker": "user", "text": "어 그럼 됐어"},
+    {"speaker": "assistant", "text": "네, 추가로 궁금하신 점 있으시면 언제든 다시 문의해 주세요."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

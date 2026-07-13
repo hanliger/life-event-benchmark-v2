@@ -1,0 +1,10 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "수취인 등록 하고 싶은데요"},
+    {"speaker": "assistant", "text": "네 고객님, 등록하실 수취인의 계좌 정보 알려주시겠어요?"},
+    {"speaker": "user", "text": "제 다른 계좌인데요, 국민은행이고 이름은 제성오예요"},
+    {"speaker": "assistant", "text": "계좌번호도 함께 알려주시겠어요?"},
+    {"speaker": "user", "text": "123-456-789012 이거요"},
+    {"speaker": "assistant", "text": "확인했습니다. 등록하시는 이유가 있으신가요? 자주 이용하실 계좌인지 여쭤봅니다"},
+    {"speaker": "user", "text": "다음 달부터 대성엔지니어링 다니

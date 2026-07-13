@@ -1,0 +1,43 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요 예금 금리 좀 알아보려고요"},
+    {"speaker": "assistant", "text": "안녕하세요 고객님. 어떤 예금 상품 금리를 확인해드릴까요?"},
+    {"speaker": "user", "text": "그냥 일반 정기예금이요"},
+    {"speaker": "assistant", "text": "네, 정기예금 기본금리는 가입 기간에 따라 다른데요. 어느 정도 기간으로 생각하고 계세요?"},
+    {"speaker": "user", "text": "한 6개월 정도"},
+    {"speaker": "assistant", "text": "6개월 정기예금 기본금리는 연 3.0%입니다. 우대조건 충족 시 최대 3.3%까지 가능해요."},
+    {"speaker": "user", "text": "우대조건이 뭔데요"},
+    {"speaker": "assistant", "text": "자동이체 등록이나 앱 첫거래 등 조건이 있는데요, 혹시 이 앱으로 처음 거래하시는 건가요?"},
+    {"speaker": "user", "text": "아니요 계좌는 있어요"},
+    {"speaker": "assistant", "text": "그러시면 자동이체 등록 조건으로 우대금리 받으실 수 있어요. 등록하실 계좌 있으신가요?"},
+    {"speaker": "user", "text": "지금은 딱히 없어서 그냥 기본금리로 볼래요"},
+    {"speaker": "assistant", "text": "알겠습니다. 그럼 3.0% 기준으로 안내드릴게요. 예치금액은 어느 정도 생각하고 계세요?"},
+    {"speaker": "user", "text": "오백만원 정도"},
+    {"speaker": "assistant", "text": "500만원, 6개월 기준으로 계산하면 만기 시 이자는 세전 약 7만5천원 정도예요."},
+    {"speaker": "user", "text": "세후로는 얼마예요"},
+    {"speaker": "assistant", "text": "이자소득세 15.4% 제외하면 세후 약 6만3천원 정도 받으실 수 있어요."},
+    {"speaker": "user", "text": "1년으로 하면 얼마나 달라져요"},
+    {"speaker": "assistant", "text": "1년 정기예금 기본금리는 연 3.5%로 조금 더 높아요. 같은 금액이면 세전 이자는 약 17만5천원이에요."},
+    {"speaker": "user", "text": "오 차이 꽤 나네요"},
+    {"speaker": "assistant", "text": "네, 기간이 길수록 금리가 높은 편이에요. 다른 상품도 비교해드릴까요?"},
+    {"speaker": "user", "text": "어떤거 있어요"},
+    {"speaker": "assistant", "text": "자유적립식 예금도 있는데 금리는 조금 낮지만 매달 자유롭게 넣으실 수 있어요."},
+    {"speaker": "user", "text": "그건 됐고 정기예금이 나은거같아요"},
+    {"speaker": "assistant", "text": "네, 그럼 정기예금 기준으로 안내드렸습니다. 가입 원하시면 메뉴에서 바로 신청 가능해요."},
+    {"speaker": "user", "text": "지금 바로 가입은 안하고 좀 더 생각해볼게요"},
+    {"speaker": "assistant", "text": "네, 천천히 결정하셔도 됩니다. 금리는 앱 메인화면 상품 안내에서 언제든 다시 확인 가능하세요."},
+    {"speaker": "user", "text": "네 알겠습니다"},
+    {"speaker": "assistant", "text": "혹시 더 궁금하신 점 있으실까요?"},
+    {"speaker": "user", "text": "아니요 없어요 감사합니다"},
+    {"speaker": "assistant", "text": "네, 이용해주셔서 감사합니다. 좋은 하루 보내세요."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

@@ -1,0 +1,39 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "대출 잔액 좀 확인하고 싶은데요"},
+    {"speaker": "assistant", "text": "네 고객님, 본인인증 먼저 진행해 주시겠어요?"},
+    {"speaker": "user", "text": "네 했어요"},
+    {"speaker": "assistant", "text": "확인 감사합니다. 잠시만요, 대출 조회 메뉴로 안내해 드릴게요"},
+    {"speaker": "user", "text": "네"},
+    {"speaker": "assistant", "text": "현재 등록된 대출 내역이 조회되지 않는데, 다른 상품으로 가입하신 게 있으실까요?"},
+    {"speaker": "user", "text": "음 없을걸요, 근데 왜 이렇게 나오지"},
+    {"speaker": "assistant", "text": "저희 앱에서는 저희 은행 대출만 조회가 가능해서요, 타 은행 대출이시면 여기선 안 보일 수 있어요"},
+    {"speaker": "user", "text": "아 그렇구나 알겠어요"},
+    {"speaker": "assistant", "text": "네, 대출 관련해서 다른 문의 있으실까요?"},
+    {"speaker": "user", "text": "요즘 나가는 돈이 좀 있어서 대출 하나 알아볼까 했거든요"},
+    {"speaker": "assistant", "text": "혹시 어떤 목적으로 필요하신지 여쭤봐도 될까요?"},
+    {"speaker": "user", "text": "매달 양육비 정기이체 하는 게 있어서요, 그거 때문에 좀 빠듯해서"},
+    {"speaker": "assistant", "text": "네, 그런 정기이체 항목이 있으시면 지출 관리 차원에서 대출 상담도 도움이 될 수 있어요"},
+    {"speaker": "user", "text": "근데 아직 확실히 정해진 건 아니라서요"},
+    {"speaker": "assistant", "text": "네 알겠습니다, 확정되시면 다시 문의 주셔도 돼요"},
+    {"speaker": "user", "text": "일단 대출은 지금 없는 거 맞죠?"},
+    {"speaker": "assistant", "text": "네, 현재 저희 은행 기준으로는 보유하신 대출이 없으신 걸로 조회됩니다"},
+    {"speaker": "user", "text": "그럼 마이너스통장 같은 것도 없는 거예요?"},
+    {"speaker": "assistant", "text": "네, 마이너스통장이나 신용대출 모두 조회되는 내역이 없으세요"},
+    {"speaker": "user", "text": "알겠어요, 그럼 새로 하나 알아봐야겠네"},
+    {"speaker": "assistant", "text": "필요하시면 대출 상품 안내 메뉴로 연결해 드릴 수 있는데 해보시겠어요?"},
+    {"speaker": "user", "text": "아직은 됐어요, 좀 더 생각해보고요"},
+    {"speaker": "assistant", "text": "네, 언제든 다시 문의 주세요"},
+    {"speaker": "user", "text": "혹시 이거 확인한 거 어디서 다시 볼 수 있어요?"},
+    {"speaker": "assistant", "text": "네, 앱 메인화면 자산 조회 메뉴에서 대출 현황 다시 확인하실 수 있어요"},
+    {"speaker": "user", "text": "아 거기서 보면 되는구나"},
+    {"speaker": "assistant", "text": "네 맞습니다, 이용에 참고해 주세요"},
+    {"speaker": "user", "text": "네 알겠어요 감사합니다"},
+    {"speaker": "assistant", "text": "네 고객님, 좋은 하루 되세요"}
+  ],
+  "cue_annotations": [
+    {"turn_index": 12, "cue_text": "양육비 정기이체", "linked_memory_path": "household.child_support_arrangement"}
+  ]
+}
+```

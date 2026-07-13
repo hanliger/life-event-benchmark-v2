@@ -1,0 +1,41 @@
+{
+  "turns": [
+    {"speaker": "user", "text": "이체확인증 발급받고 싶은데 어떻게 해요"},
+    {"speaker": "assistant", "text": "안녕하세요 고객님, 이체확인증 발급 도와드릴게요. 확인이 필요한 이체 건의 날짜를 알려주시겠어요?"},
+    {"speaker": "user", "text": "음 지난주 화요일쯤이요"},
+    {"speaker": "assistant", "text": "네, 거래내역에서 해당 날짜 이체 건 조회해볼게요. 받는 분 이름이나 금액 기억나시나요?"},
+    {"speaker": "user", "text": "금액은 30만원이었어요"},
+    {"speaker": "assistant", "text": "확인했습니다. 화요일자 30만원 이체 내역이 하나 있는데 이 건 맞으실까요?"},
+    {"speaker": "user", "text": "네 그거 맞아요"},
+    {"speaker": "assistant", "text": "본인인증 먼저 진행해주시겠어요? 앱 하단 인증 버튼 눌러주시면 됩니다"},
+    {"speaker": "user", "text": "했어요"},
+    {"speaker": "assistant", "text": "확인됐습니다. 이체확인증은 PDF 형태로 발급되는데, 용도 선택이 필요해요. 개인 보관용으로 하시나요?"},
+    {"speaker": "user", "text": "네 그냥 제가 쓸 용도예요"},
+    {"speaker": "assistant", "text": "알겠습니다. 그럼 일반 보관용으로 발급 진행하겠습니다. 화면에 표시되는 내용 확인 부탁드려요"},
+    {"speaker": "user", "text": "이름이랑 계좌번호 맞게 나오네요"},
+    {"speaker": "assistant", "text": "네 맞습니다. 확인 버튼 눌러주시면 바로 발급됩니다"},
+    {"speaker": "user", "text": "눌렀어요"},
+    {"speaker": "assistant", "text": "발급 완료되었습니다. 앱 내 문서함에서 확인하실 수 있어요"},
+    {"speaker": "user", "text": "이거 저장도 되나요"},
+    {"speaker": "assistant", "text": "네, 문서함에서 다운로드 버튼 눌러 기기에 저장 가능하십니다"},
+    {"speaker": "user", "text": "혹시 여러 장 필요하면 또 받을 수 있어요"},
+    {"speaker": "assistant", "text": "네, 필요하실 때마다 같은 방법으로 재발급 가능합니다. 횟수 제한은 없어요"},
+    {"speaker": "user", "text": "다행이네요 요즘 서류 낼 데가 많아서"},
+    {"speaker": "assistant", "text": "네 편하게 이용하시면 됩니다. 혹시 다른 날짜 이체 건도 확인 필요하실까요?"},
+    {"speaker": "user", "text": "아니요 이거면 됐어요"},
+    {"speaker": "assistant", "text": "네 알겠습니다. 발급된 확인증에 이체 일시와 금액 잘 표시됐는지 한 번 더 확인해보세요"},
+    {"speaker": "user", "text": "네 잘 나왔어요"},
+    {"speaker": "assistant", "text": "다행입니다. 혹시 발급 파일에 수정이나 재발급 필요하시면 언제든 다시 요청 주세요"},
+    {"speaker": "user", "text": "네 알겠습니다"},
+    {"speaker": "assistant", "text": "네 오늘 이체확인증 발급 도와드렸습니다. 추가로 궁금하신 점 있으실까요?"},
+    {"speaker": "user", "text": "아니요 없어요 감사합니다"},
+    {"speaker": "assistant", "text": "네 이용해주셔서 감사합니다. 좋은 하루 보내세요"}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}

@@ -1,0 +1,45 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "예금 금리 좀 보려는데"},
+    {"speaker": "assistant", "text": "안녕하세요, 고객님. 예금 금리 조회 도와드리겠습니다. 정기예금과 자유적금 중 어떤 상품이 궁금하신가요?"},
+    {"speaker": "user", "text": "정기예금"},
+    {"speaker": "assistant", "text": "네, 정기예금 기준으로 안내드릴게요. 가입 예정 기간은 어느 정도로 생각하고 계세요?"},
+    {"speaker": "user", "text": "1년 정도"},
+    {"speaker": "assistant", "text": "1년 만기 정기예금 기준 현재 기본 금리는 연 3.2%입니다. 우대조건 적용 시 최대 3.5%까지 가능해요."},
+    {"speaker": "user", "text": "우대조건이 뭔데"},
+    {"speaker": "assistant", "text": "앱 자동이체 등록이나 급여성 입금 실적, 첫거래 우대 등이 있는데요, 고객님은 급여이체 조건은 해당 안 될 수 있어요. 다른 조건들 안내해드릴까요?"},
+    {"speaker": "user", "text": "어 나 지금 소득 없어서 급여이체는 패스"},
+    {"speaker": "assistant", "text": "네, 그럼 앱 자동이체 등록이나 첫거래 우대 위주로 안내드릴게요. 저희 앱에서 자동이체 하나 등록하시면 0.1%p 추가돼요."},
+    {"speaker": "user", "text": "자동이체는 뭘 등록하면 되는데"},
+    {"speaker": "assistant", "text": "공과금 자동납부나 카드대금 자동이체 등록하시면 우대조건에 해당됩니다. 등록 여부는 확인해드릴까요?"},
+    {"speaker": "user", "text": "일단 금리만 더 볼게"},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 6개월 만기 기준도 같이 보여드릴까요?"},
+    {"speaker": "user", "text": "그래 그것도"},
+    {"speaker": "assistant", "text": "6개월 만기 정기예금은 기본 금리 연 2.8%, 우대 적용 시 최대 3.1%입니다."},
+    {"speaker": "user", "text": "1년이 낫네"},
+    {"speaker": "assistant", "text": "네, 기간이 길수록 금리가 조금 더 높게 책정되어 있어요. 예상 이자 계산도 도와드릴까요?"},
+    {"speaker": "user", "text": "얼마 넣을지 아직 안 정했어"},
+    {"speaker": "assistant", "text": "그러시면 참고용으로 1000만원 기준 예상 이자 보여드려도 될까요?"},
+    {"speaker": "user", "text": "어 보여줘"},
+    {"speaker": "assistant", "text": "1000만원, 1년, 기본 금리 3.2% 적용 시 세전 이자는 약 32만원입니다."},
+    {"speaker": "user", "text": "생각보다 짜네"},
+    {"speaker": "assistant", "text": "요즘 시중 금리 수준이 다들 비슷해요. 다른 은행 특판 상품도 궁금하시면 안내해드릴 수 있어요."},
+    {"speaker": "user", "text": "아니 여기 걸로 할게"},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 그럼 가입은 나중에 금액 정하시면 앱에서 바로 진행하실 수 있어요."},
+    {"speaker": "user", "text": "가입할 때 뭐 필요해"},
+    {"speaker": "assistant", "text": "본인인증만 완료하시면 되고, 별도 서류는 필요 없습니다. 앱 내 인증 절차로 바로 진행 가능해요."},
+    {"speaker": "user", "text": "오 편하네"},
+    {"speaker": "assistant", "text": "네, 편하게 이용하실 수 있어요. 더 궁금하신 점 있으실까요?"},
+    {"speaker": "user", "text": "아니 이거면 됐어"},
+    {"speaker": "assistant", "text": "네, 오늘 문의 도와드려서 감사합니다. 필요하실 때 다시 이용해 주세요."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

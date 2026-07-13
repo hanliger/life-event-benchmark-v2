@@ -1,0 +1,23 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요 대출 잔액 좀 확인하려고요"},
+    {"speaker": "assistant", "text": "네 고객님, 본인인증 먼저 진행해주시겠어요?"},
+    {"speaker": "user", "text": "네 인증했어요"},
+    {"speaker": "assistant", "text": "확인됐습니다. 등록된 대출 내역 조회해드릴게요, 잠시만요."},
+    {"speaker": "user", "text": "네"},
+    {"speaker": "assistant", "text": "조회 결과 현재 활성화된 대출 내역이 없으신 걸로 나옵니다. 혹시 다른 대출 상품이 있으신가요?"},
+    {"speaker": "user", "text": "아 진짜요? 예전에 하나 있었던 거 같은데"},
+    {"speaker": "assistant", "text": "네, 과거 상환 완료된 대출 이력은 있지만 현재 잔액은 0원으로 확인됩니다."},
+    {"speaker": "user", "text": "알겠어요 그럼 잔액은 없는 거네요"},
+    {"speaker": "assistant", "text": "네 맞습니다. 혹시 추가로 확인하실 사항 있으신가요?"},
+    {"speaker": "user", "text": "요즘 고정지출을 줄이려고 이것저것 보고 있어서요"},
+    {"speaker": "assistant", "text": "그러시군요. 고정 지출 관련해서는 자동이체 내역도 확인해드릴까요?"},
+    {"speaker": "user", "text": "네 그럼 자동이체 목록도 좀 보여주세요"},
+    {"speaker": "assistant", "text": "네, 현재 등록된 자동이체 내역 조회해드릴게요. 잠시만요."},
+    {"speaker": "user", "text": "네"},
+    {"speaker": "assistant", "text": "조회 완료됐습니다. 총 3건의 자동이체가 등록되어 있으신데, 목록 보여드릴까요?"},
+    {"speaker": "user", "text": "네 보여주세요"},
+    {"speaker": "assistant", "text": "통신비, 보험료, 회비 항목으로 등록되어 있습니다."},
+    {"speaker": "user", "text": "흠 이거 중에 좀 줄일 수 있는게 있을지 고민이에요"},
+    {"speaker": "assistant", "text": "네, 필요하시면 자동이체 해지나 변

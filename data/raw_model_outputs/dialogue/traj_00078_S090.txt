@@ -1,0 +1,41 @@
+{
+  "turns": [
+    {"speaker": "user", "text": "거래내역 좀 보려는데"},
+    {"speaker": "assistant", "text": "네, 조회 도와드리겠습니다. 어떤 계좌 내역을 확인하실까요?"},
+    {"speaker": "user", "text": "그냥 주거래 계좌요"},
+    {"speaker": "assistant", "text": "주거래 계좌 확인했습니다. 조회 기간은 어떻게 설정해드릴까요?"},
+    {"speaker": "user", "text": "최근 한 달치"},
+    {"speaker": "assistant", "text": "최근 1개월 거래내역 조회해드리겠습니다. 잠시만요."},
+    {"speaker": "user", "text": "ㅇㅋ"},
+    {"speaker": "assistant", "text": "조회 완료됐습니다. 총 12건 거래 있으시네요. 화면에서 확인 가능하십니다."},
+    {"speaker": "user", "text": "이체한 거만 따로 볼 수 있나"},
+    {"speaker": "assistant", "text": "네, 거래유형 필터에서 '이체'만 선택하시면 됩니다. 적용해드릴까요?"},
+    {"speaker": "user", "text": "네 해줘요"},
+    {"speaker": "assistant", "text": "이체 내역만 필터링했습니다. 총 5건 확인되네요."},
+    {"speaker": "user", "text": "출금 내역은 따로 안뜨나"},
+    {"speaker": "assistant", "text": "출금 항목은 필터에서 '출금'으로 다시 선택하시면 됩니다. 변경해드릴까요?"},
+    {"speaker": "user", "text": "네"},
+    {"speaker": "assistant", "text": "출금 내역으로 변경했습니다. 확인해보세요."},
+    {"speaker": "user", "text": "이거 저장은 어떻게 해요"},
+    {"speaker": "assistant", "text": "화면 상단 다운로드 버튼 누르시면 파일로 저장 가능합니다."},
+    {"speaker": "user", "text": "pdf로도 돼요?"},
+    {"speaker": "assistant", "text": "네, PDF와 엑셀 두 가지 형식 지원합니다. 어떤 걸로 하시겠어요?"},
+    {"speaker": "user", "text": "pdf로 할게요"},
+    {"speaker": "assistant", "text": "PDF로 저장 완료됐습니다. 다운로드 목록에서 확인 가능하십니다."},
+    {"speaker": "user", "text": "지난달 것도 볼 수 있나"},
+    {"speaker": "assistant", "text": "네, 조회 기간을 지난달로 변경해드릴까요?"},
+    {"speaker": "user", "text": "네 부탁해요"},
+    {"speaker": "assistant", "text": "지난달 거래내역으로 조회 완료했습니다. 총 9건 확인되네요."},
+    {"speaker": "user", "text": "이 정도면 됐어요"},
+    {"speaker": "assistant", "text": "네, 추가로 필요하신 조회 있으시면 말씀해주세요."},
+    {"speaker": "user", "text": "없어요 됐어요"},
+    {"speaker": "assistant", "text": "네, 확인 도와드렸습니다. 좋은 하루 되세요."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}

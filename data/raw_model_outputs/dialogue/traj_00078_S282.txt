@@ -1,0 +1,41 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "거래내역 좀 조회하고 싶은데"},
+    {"speaker": "assistant", "text": "네, 도와드리겠습니다. 어느 계좌 내역을 확인하실까요?"},
+    {"speaker": "user", "text": "그냥 주거래 계좌요"},
+    {"speaker": "assistant", "text": "확인했습니다. 조회 기간은 어떻게 설정해드릴까요?"},
+    {"speaker": "user", "text": "최근 한 달치만"},
+    {"speaker": "assistant", "text": "최근 1개월 거래내역을 화면에 띄워드렸습니다. 확인 가능하신가요?"},
+    {"speaker": "user", "text": "어 보이네 근데 이거 다운로드도 되나"},
+    {"speaker": "assistant", "text": "네, 화면 상단의 다운로드 버튼을 누르시면 PDF나 엑셀 파일로 저장하실 수 있습니다."},
+    {"speaker": "user", "text": "엑셀로 받을게"},
+    {"speaker": "assistant", "text": "엑셀 파일로 전송해드렸습니다. 다운로드 목록에서 확인해보세요."},
+    {"speaker": "user", "text": "오케이 확인했어"},
+    {"speaker": "assistant", "text": "혹시 특정 거래 내역만 따로 찾으시는 것도 있으신가요?"},
+    {"speaker": "user", "text": "이체한 내역만 따로 볼 수 있나"},
+    {"speaker": "assistant", "text": "네, 거래유형 필터에서 '이체'를 선택하시면 해당 내역만 걸러서 보실 수 있습니다."},
+    {"speaker": "user", "text": "그렇게 해줘"},
+    {"speaker": "assistant", "text": "적용해드렸습니다. 이체 내역만 화면에 표시됩니다."},
+    {"speaker": "user", "text": "생각보다 많이 나갔네"},
+    {"speaker": "assistant", "text": "필요하시면 월별 합계도 함께 보여드릴 수 있습니다. 확인해보시겠어요?"},
+    {"speaker": "user", "text": "어 그거 보여줘"},
+    {"speaker": "assistant", "text": "월별 합계 내역을 화면에 표시했습니다. 이번 달과 지난달 비교도 함께 보이실 겁니다."},
+    {"speaker": "user", "text": "고정으로 나가는 거는 뭐가 있는지 알수있나"},
+    {"speaker": "assistant", "text": "네, 정기적으로 발생한 거래는 '자동이체' 항목에서 따로 확인하실 수 있습니다. 보여드릴까요?"},
+    {"speaker": "user", "text": "응 보여줘"},
+    {"speaker": "assistant", "text": "자동이체 내역 목록입니다. 통신비, 관리비 등이 포함되어 있습니다."},
+    {"speaker": "user", "text": "음 확인했고 이 정도면 될 것 같아"},
+    {"speaker": "assistant", "text": "네, 더 필요하신 조회 항목 있으실까요?"},
+    {"speaker": "user", "text": "아니 이걸로 충분해"},
+    {"speaker": "assistant", "text": "알겠습니다. 조회 화면은 계속 열어두었으니 필요하실 때 다시 확인하실 수 있습니다. 이용해주셔서 감사합니다."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

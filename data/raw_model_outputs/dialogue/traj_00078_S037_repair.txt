@@ -1,0 +1,38 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "상환 시뮬레이션 좀 해보고 싶은데요"},
+    {"speaker": "assistant", "text": "네 고객님. 어떤 대출 상품을 기준으로 시뮬레이션 도와드릴까요?"},
+    {"speaker": "user", "text": "아직 대출은 없고 신용대출 받을까 고민 중이에요"},
+    {"speaker": "assistant", "text": "네 그러시군요. 대출 금액과 기간을 알려주시면 예상 상환액 계산해드릴게요"},
+    {"speaker": "user", "text": "금액은 아직 정확히 모르겠고 대략 얼마 정도 가능한지부터 보고 싶어요"},
+    {"speaker": "assistant", "text": "현재 재직 상태 알려주실 수 있나요? 한도 산출에 참고됩니다"},
+    {"speaker": "user", "text": "지금은 일 안 하고 있어요"},
+    {"speaker": "assistant", "text": "네 알겠습니다. 소득 증빙 없이도 대략적인 시뮬레이션은 가능한데 원하시는 대출 금액대를 말씀해주시겠어요"},
+    {"speaker": "user", "text": "한 2000만원 정도 생각하고 있어요"},
+    {"speaker": "assistant", "text": "상환 기간은 어느 정도로 생각하세요?"},
+    {"speaker": "user", "text": "3년 정도로 해볼게요"},
+    {"speaker": "assistant", "text": "금리는 신용도에 따라 다른데 일단 평균 금리로 계산해드릴까요?"},
+    {"speaker": "user", "text": "네 그렇게 해주세요"},
+    {"speaker": "assistant", "text": "계산해보니 매달 약 60만원 정도 상환하시면 됩니다. 참고로 확인해보시겠어요?"},
+    {"speaker": "user", "text": "음 그 정도면 매달 나가는 임대료 날짜랑 겹쳐서 부담될 것 같아요"},
+    {"speaker": "assistant", "text": "임대료 납부일과 상환일이 겹치면 부담되실 수 있어요. 상환일을 다른 날짜로 조정 가능한데 원하시는 날짜 있으세요?"},
+    {"speaker": "user", "text": "임대료가 이번 달 안에 오를 예정이라 그거 계산해서 날짜 잡고 싶어요"},
+    {"speaker": "assistant", "text": "네 임대료가 오를 예정이시군요. 정확한 인상 금액 아시면 알려주시겠어요?"},
+    {"speaker": "user", "text": "한 100만원 정도로 오른다고 들었어요"},
+    {"speaker": "assistant", "text": "알겠습니다. 그럼 그 부분 감안해서 상환액 다시 계산해드릴까요?"},
+    {"speaker": "user", "text": "네 부탁드려요"},
+    {"speaker": "assistant", "text": "임대료 인상분 반영하면 월 지출이 늘어나는데 상환 금액을 줄이거나 기간을 늘리는 방법이 있어요. 어떤 게 더 편하세요?"},
+    {"speaker": "user", "text": "기간 늘리는 쪽으로 해주세요"},
+    {"speaker": "assistant", "text": "네 4년으로 늘리면 월 상환액이 약 45만원으로 줄어듭니다"},
+    {"speaker": "user", "text": "그 정도면 괜찮을 것 같아요"},
+    {"speaker": "assistant", "text": "임대료 오르는 날짜 기준으로 상환일도 맞춰드릴까요?"},
+    {"speaker": "user", "text": "네 그렇게 해주세요"},
+    {"speaker": "assistant", "text": "알겠습니다. 다만 실제 대출 실행 시에는 정확한 심사 결과에 따라 달라질 수 있는 점 참고 부탁드립니다"},
+    {"speaker": "user", "text": "네 알겠습니다"},
+    {"speaker": "assistant", "text": "시뮬레이션 결과는 저장해드렸고 필요하시면 언제든 다시 확인 가능합니다. 다른 도움 필요하신가요?"},
+    {"speaker": "user", "text": "아니요 여기까지요"},
+    {"speaker": "assistant", "text": "네 오늘 상담 이용해주셔서 감사합니다. 좋은 하루 되세요"}
+  ]
+}
+```

@@ -1,0 +1,45 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "이체할 때 수취인 등록하고 싶은데 어떻게 해요"},
+    {"speaker": "assistant", "text": "네, 수취인 등록 도와드릴게요. 먼저 등록하실 계좌의 은행명 알려주시겠어요?"},
+    {"speaker": "user", "text": "국민은행이요"},
+    {"speaker": "assistant", "text": "계좌번호도 입력해 주세요."},
+    {"speaker": "user", "text": "잠깐만요 찾아볼게요"},
+    {"speaker": "assistant", "text": "천천히 확인해 주세요."},
+    {"speaker": "user", "text": "110-123-456789 이거요"},
+    {"speaker": "assistant", "text": "확인했습니다. 예금주명도 함께 입력하시면 자동 조회로 확인해 드릴게요."},
+    {"speaker": "user", "text": "박지훈이요"},
+    {"speaker": "assistant", "text": "예금주 확인 결과 일치합니다. 이 계좌를 수취인으로 등록할까요?"},
+    {"speaker": "user", "text": "네 등록해주세요"},
+    {"speaker": "assistant", "text": "수취인 별칭은 어떻게 지정할까요? 예를 들어 '지훈이'처럼요."},
+    {"speaker": "user", "text": "그냥 친구라고 해주세요"},
+    {"speaker": "assistant", "text": "네, '친구'로 저장하겠습니다. 등록 후 바로 이체하실 예정인가요?"},
+    {"speaker": "user", "text": "네 친구한테 빌린 돈 상환하려고요"},
+    {"speaker": "assistant", "text": "알겠습니다. 등록만 먼저 완료해드리고 이체는 고객님 확인 후 진행하겠습니다."},
+    {"speaker": "user", "text": "네 그럼 등록 끝난거예요?"},
+    {"speaker": "assistant", "text": "본인인증 한 번만 더 진행해 주시면 등록이 완료됩니다."},
+    {"speaker": "user", "text": "인증 어디서 해요"},
+    {"speaker": "assistant", "text": "화면에 뜬 인증 버튼 눌러주시면 됩니다."},
+    {"speaker": "user", "text": "눌렀어요"},
+    {"speaker": "assistant", "text": "확인되었습니다. 수취인 등록이 정상 완료되었습니다."},
+    {"speaker": "user", "text": "오 됐네요 이제 이체도 바로 되나요"},
+    {"speaker": "assistant", "text": "네, 등록된 수취인으로 바로 이체 진행 가능합니다. 금액 입력하시겠어요?"},
+    {"speaker": "user", "text": "20만원이요"},
+    {"speaker": "assistant", "text": "20만 원 입력했습니다. 이체 확인 버튼 눌러주시면 진행됩니다."},
+    {"speaker": "user", "text": "눌렀습니다"},
+    {"speaker": "assistant", "text": "이체가 정상적으로 완료되었습니다. 알림 문자로도 안내드렸어요."},
+    {"speaker": "user", "text": "네 확인했어요 감사합니다"},
+    {"speaker": "assistant", "text": "네, 이용해 주셔서 감사합니다. 추가로 도와드릴 일 있으면 말씀해 주세요."}
+  ],
+  "cue_annotations": [
+    {"turn_index": 14, "cue_type": "weak_lexical_cue", "linked_memory_path": null}
+  ],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

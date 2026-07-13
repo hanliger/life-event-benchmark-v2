@@ -1,0 +1,18 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요, 모임통장 하나 만들고 싶어서요"},
+    {"speaker": "assistant", "text": "네 고객님, 모임통장 개설 도와드리겠습니다. 함께 쓰실 인원은 몇 명인가요?"},
+    {"speaker": "user", "text": "저랑 같이 쓰는 통장 만들려고요. 사람은 둘이에요"},
+    {"speaker": "assistant", "text": "두 분이 함께 이용하시는 계좌로 개설해드리면 될까요?"},
+    {"speaker": "user", "text": "네 맞아요"},
+    {"speaker": "assistant", "text": "알겠습니다. 공동명의보다 한 분이 개설 후 상대방을 초대하는 방식이 일반적인데 이렇게 진행할까요?"},
+    {"speaker": "user", "text": "네 그게 편할 것 같아요"},
+    {"speaker": "assistant", "text": "좋습니다. 이 계좌는 주로 어떤 용도로 쓰실 예정인가요?"},
+    {"speaker": "user", "text": "공동 생활비 관리하려고요"},
+    {"speaker": "assistant", "text": "확인했습니다. 매달 정기적으로 넣으실 금액이 있으신가요?"},
+    {"speaker": "user", "text": "네 30만원 정도씩 넣을 것 같아요"},
+    {"speaker": "assistant", "text": "자동이체 설정 도와드릴까요?"},
+    {"speaker": "user", "text": "네 해주세요"},
+    {"speaker": "assistant", "text": "이체일은 언제로 하시겠어요?"},
+    {"spe

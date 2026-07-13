@@ -1,0 +1,46 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요, 거래내역 좀 조회하려고요"},
+    {"speaker": "assistant", "text": "네, 어떤 계좌의 거래내역을 확인해드릴까요?"},
+    {"speaker": "user", "text": "그냥 제 주거래 계좌요"},
+    {"speaker": "assistant", "text": "조회 기간은 어떻게 설정해드릴까요?"},
+    {"speaker": "user", "text": "최근 두 달치 정도 보고 싶어요"},
+    {"speaker": "assistant", "text": "네, 본인인증 먼저 진행해주시겠어요? 앱에서 인증 버튼 눌러주시면 됩니다"},
+    {"speaker": "user", "text": "인증했어요"},
+    {"speaker": "assistant", "text": "확인됐습니다. 잠시만 기다려주세요, 최근 두 달 거래내역 불러오는 중입니다"},
+    {"speaker": "user", "text": "당분간 들어오는 돈이 줄어서 좀 자세히 보고 싶어서요"},
+    {"speaker": "assistant", "text": "네, 입출금 내역 하나씩 확인하실 수 있게 리스트로 보여드릴게요"},
+    {"speaker": "user", "text": "네 고마워요"},
+    {"speaker": "assistant", "text": "입금 내역과 출금 내역 중 어느 쪽부터 보여드릴까요?"},
+    {"speaker": "user", "text": "입금 내역부터요"},
+    {"speaker": "assistant", "text": "최근 두 달간 입금 내역 정리해드렸습니다. 확인해보시겠어요?"},
+    {"speaker": "user", "text": "네 확인했어요, 근데 예전보다 확실히 적네요"},
+    {"speaker": "assistant", "text": "네, 조회하신 기간 기준으로 입금 건수가 줄어든 걸로 보입니다"},
+    {"speaker": "user", "text": "혹시 정기적으로 들어오던 게 끊긴 것도 볼 수 있어요?"},
+    {"speaker": "assistant", "text": "네, 정기 입금 패턴 변경 내역도 함께 확인 가능합니다. 보여드릴까요?"},
+    {"speaker": "user", "text": "네 보여주세요"},
+    {"speaker": "assistant", "text": "특정 항목이 최근 들어오지 않는 것으로 확인됩니다. 자세한 내역은 화면에서 확인 가능합니다"},
+    {"speaker": "user", "text": "아 그거 맞는 거 같아요"},
+    {"speaker": "assistant", "text": "추가로 다른 기간이나 계좌 조회 필요하실까요?"},
+    {"speaker": "user", "text": "아니요 이 정도면 충분해요"},
+    {"speaker": "assistant", "text": "혹시 정기이체나 자동납부 내역도 확인해드릴까요?"},
+    {"speaker": "user", "text": "아 그건 나중에 할게요"},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 필요하실 때 다시 말씀해주세요"},
+    {"speaker": "user", "text": "네 감사합니다"},
+    {"speaker": "assistant", "text": "조회하신 거래내역은 앱 메뉴에서 다시 확인 가능합니다. 더 필요하신 사항 있으실까요?"},
+    {"speaker": "user", "text": "없어요, 이만 끝낼게요"},
+    {"speaker": "assistant", "text": "네, 이용해주셔서 감사합니다. 좋은 하루 되세요"}
+  ],
+  "cue_annotations": [
+    {"turn_index": 8, "cue_type": "income_reduction_statement", "linked_memory_path": "employment.income_stability"},
+    {"turn_index": 16, "cue_type": "regular_deposit_stopped", "linked_memory_path": "employment.employment_status"}
+  ],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

@@ -1,0 +1,43 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "관리비 자동납부 신청하려는데 어떻게 해요"},
+    {"speaker": "assistant", "text": "안녕하세요 고객님. 관리비 자동납부 등록 도와드리겠습니다. 등록하실 관리비 납부처가 아파트 관리사무소인가요, 아니면 오피스텔인가요?"},
+    {"speaker": "user", "text": "오피스텔이요 원룸"},
+    {"speaker": "assistant", "text": "네 확인했습니다. 자동납부 출금 계좌는 어느 계좌로 지정하시겠어요?"},
+    {"speaker": "user", "text": "그냥 지금 쓰는 입출금 통장으로요"},
+    {"speaker": "assistant", "text": "알겠습니다. 해당 계좌 정보 화면에 떠 있는데 맞는지 확인 부탁드립니다."},
+    {"speaker": "user", "text": "네 맞아요"},
+    {"speaker": "assistant", "text": "출금일은 매월 며칠로 지정하시겠어요?"},
+    {"speaker": "user", "text": "25일이요 그날쯤 돈 들어와서"},
+    {"speaker": "assistant", "text": "네 25일로 설정하겠습니다. 관리비 청구 금액은 매달 변동되는 것으로 자동 반영할까요, 고정 금액으로 하시겠어요?"},
+    {"speaker": "user", "text": "변동으로 해주세요 매달 조금씩 다르니까"},
+    {"speaker": "assistant", "text": "네 확인했습니다. 그럼 잔액이 부족할 경우 알림 문자를 받으시겠어요?"},
+    {"speaker": "user", "text": "네 그거 필요해요"},
+    {"speaker": "assistant", "text": "알림 신청하겠습니다. 요즘 계좌 잔액 관리하실 때 참고하시면 좋을 것 같네요. 혹시 자동이체 목록에 다른 항목도 추가하시겠어요?"},
+    {"speaker": "user", "text": "아 그건 안해도 돼요 요새 친구한테 빌린 돈 상환하느라 정신없어서"},
+    {"speaker": "assistant", "text": "네 알겠습니다. 그럼 관리비 자동납부 항목만 우선 등록해드릴게요."},
+    {"speaker": "user", "text": "네 그거면 충분해요"},
+    {"speaker": "assistant", "text": "등록 진행하겠습니다. 신청 전에 최종 확인 화면 한번 보여드릴게요. 확인 버튼 눌러주시겠어요?"},
+    {"speaker": "user", "text": "눌렀어요"},
+    {"speaker": "assistant", "text": "감사합니다. 본인인증 한번 더 진행해주시면 등록 완료됩니다."},
+    {"speaker": "user", "text": "인증했어요"},
+    {"speaker": "assistant", "text": "확인되었습니다. 관리비 자동납부 등록이 정상적으로 완료되었습니다."},
+    {"speaker": "user", "text": "오 빠르네요 감사합니다"},
+    {"speaker": "assistant", "text": "네 첫 출금은 이번달 25일에 진행될 예정입니다. 문자로도 다시 안내드릴게요."},
+    {"speaker": "user", "text": "네 알겠어요"},
+    {"speaker": "assistant", "text": "혹시 궁금하신 다른 사항 있으실까요?"},
+    {"speaker": "user", "text": "아니요 이거면 됐어요"},
+    {"speaker": "assistant", "text": "네 알겠습니다. 이용해주셔서 감사합니다. 좋은 하루 되세요."}
+  ],
+  "cue_annotations": [
+    {"turn_index": 7, "cue_type": "financial_context", "linked_memory_path": null}
+  ],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

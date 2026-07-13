@@ -1,0 +1,43 @@
+{
+  "turns": [
+    {"speaker": "user", "text": "상환 시뮬레이션 좀 해보고 싶어요"},
+    {"speaker": "assistant", "text": "네, 어떤 대출 상품 기준으로 시뮬레이션 도와드릴까요?"},
+    {"speaker": "user", "text": "소액 신용대출로 한번 보려구요"},
+    {"speaker": "assistant", "text": "희망하시는 대출 금액과 기간을 알려주시겠어요?"},
+    {"speaker": "user", "text": "500만원에 12개월이요"},
+    {"speaker": "assistant", "text": "계산해보면 원리금균등 기준 월 약 43만원 상환 예상됩니다."},
+    {"speaker": "user", "text": "금리 좀 낮게도 볼 수 있나요"},
+    {"speaker": "assistant", "text": "네, 우대금리 적용 시 예상 금리 구간으로 다시 계산해드릴 수 있어요. 진행할까요?"},
+    {"speaker": "user", "text": "네 근데 요즘 우편물 수령지 변경할 수도 있어서 미리 물어보고 싶어요"},
+    {"speaker": "assistant", "text": "네, 알림 수신 주소는 앱에서 별도로 변경 가능하세요. 시뮬레이션과는 별개로 진행하실 수 있어요."},
+    {"speaker": "user", "text": "어디서 바꾸는거예요"},
+    {"speaker": "assistant", "text": "마이페이지 내 개인정보 관리 메뉴에서 본인인증 후 변경하실 수 있어요."},
+    {"speaker": "user", "text": "알겠어요 일단 시뮬레이션 결과부터 저장할 수 있나요"},
+    {"speaker": "assistant", "text": "네, 결과 화면 하단 저장 버튼으로 앱 내 보관함에 저장 가능합니다."},
+    {"speaker": "user", "text": "원리금균등이랑 원금균등 차이가 뭐예요"},
+    {"speaker": "assistant", "text": "원리금균등은 매달 동일 금액을, 원금균등은 초반에 더 많이 상환하고 점차 줄어드는 방식이에요."},
+    {"speaker": "user", "text": "그럼 원금균등으로도 계산해주세요"},
+    {"speaker": "assistant", "text": "네, 원금균등 기준으로는 첫 달 약 46만원, 이후 점차 감소하는 결과 나옵니다."},
+    {"speaker": "user", "text": "이거 중도상환수수료도 포함된거예요"},
+    {"speaker": "assistant", "text": "아니요, 이 시뮬레이션은 이자와 원금만 반영된 예상치이고 수수료는 별도예요."},
+    {"speaker": "user", "text": "그럼 실제 신청할 때도 이 숫자랑 똑같이 나오나요"},
+    {"speaker": "assistant", "text": "실제 심사 결과에 따라 금리나 한도가 달라질 수 있어서 참고용으로만 봐주세요."},
+    {"speaker": "user", "text": "알겠어요 오늘은 그냥 참고만 할게요"},
+    {"speaker": "assistant", "text": "네, 필요하실 때 언제든 다시 이용하실 수 있어요."},
+    {"speaker": "user", "text": "참고로 아까 그 알림 주소 변경은 바로 적용되나요"},
+    {"speaker": "assistant", "text": "변경 신청하시면 임시 저장 상태로 먼저 반영되고, 확정 처리는 조금 더 걸릴 수 있어요."},
+    {"speaker": "user", "text": "아 그렇구나 알겠어요"},
+    {"speaker": "assistant", "text": "네, 더 궁금하신 점 있으실까요?"},
+    {"speaker": "user", "text": "아니요 이제 됐어요"},
+    {"speaker": "assistant", "text": "네, 오늘 상담 도움 되셨길 바라고 이용해주셔서 감사합니다."}
+  ],
+  "cue_annotations": [
+    {"turn_index": 8, "cue_type": "weak_signal_mention", "linked_memory_path": "housing.address"}
+  ],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}

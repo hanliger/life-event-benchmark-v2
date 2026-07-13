@@ -1,0 +1,45 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "이체확인증 좀 받고 싶은데 어떻게 해요"},
+    {"speaker": "assistant", "text": "네, 이체확인증 발급 도와드릴게요. 어떤 거래에 대한 확인증이 필요하신가요?"},
+    {"speaker": "user", "text": "지난주에 보낸 이체 하나요, 회사 경비 처리용 이체였거든요"},
+    {"speaker": "assistant", "text": "네 확인했습니다. 정확한 이체 일자나 금액 알려주시겠어요?"},
+    {"speaker": "user", "text": "음 지난주 화요일이었고 금액은 정확히 기억 안나요"},
+    {"speaker": "assistant", "text": "거래내역에서 찾아드릴게요. 본인인증 먼저 진행해주시겠어요?"},
+    {"speaker": "user", "text": "네 했어요"},
+    {"speaker": "assistant", "text": "확인됐습니다. 지난주 화요일 이체 내역이 몇 건 있는데, 받는 분 이름 기억나세요?"},
+    {"speaker": "user", "text": "어 거래처 이름이었던 것 같은데 정확히는..."},
+    {"speaker": "assistant", "text": "그럼 금액대로 좁혀볼게요, 대략 얼마 정도였나요?"},
+    {"speaker": "user", "text": "십만원 정도였던 거 같아요"},
+    {"speaker": "assistant", "text": "찾았습니다. 화요일 오후에 십일만원 이체 내역 있으신데 이게 맞으실까요?"},
+    {"speaker": "user", "text": "네 맞는 거 같아요"},
+    {"speaker": "assistant", "text": "확인증에 회사 경비 처리용이라는 문구 넣어드릴까요, 아니면 기본 양식으로 드릴까요?"},
+    {"speaker": "user", "text": "그냥 기본 양식이면 될 거 같아요"},
+    {"speaker": "assistant", "text": "네 알겠습니다. 발급 방식은 앱에서 바로 다운로드 가능한데 괜찮으실까요?"},
+    {"speaker": "user", "text": "네 그게 편해요"},
+    {"speaker": "assistant", "text": "확인증 PDF로 생성해드릴게요, 잠시만 기다려주세요."},
+    {"speaker": "user", "text": "네"},
+    {"speaker": "assistant", "text": "생성 완료됐습니다. 앱 알림함에서 확인 가능하세요."},
+    {"speaker": "user", "text": "오 감사합니다"},
+    {"speaker": "assistant", "text": "혹시 이 확인증을 다른 용도로도 쓰실 계획 있으세요?"},
+    {"speaker": "user", "text": "그냥 경비 처리 서류로만 쓸 거예요"},
+    {"speaker": "assistant", "text": "네 알겠습니다. 추가로 필요하신 확인증 더 있으실까요?"},
+    {"speaker": "user", "text": "아니요 이거면 충분해요"},
+    {"speaker": "assistant", "text": "네 그럼 발급 완료로 처리하겠습니다."},
+    {"speaker": "user", "text": "근데 이거 재발급도 나중에 가능해요?"},
+    {"speaker": "assistant", "text": "네, 언제든 앱에서 같은 방식으로 재발급 가능하십니다."},
+    {"speaker": "user", "text": "알겠습니다 감사해요"},
+    {"speaker": "assistant", "text": "네, 이용해주셔서 감사합니다. 좋은 하루 되세요."}
+  ],
+  "cue_annotations": [
+    {"turn_index": 2, "cue_type": "expense_type_mention", "linked_memory_path": null}
+  ],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

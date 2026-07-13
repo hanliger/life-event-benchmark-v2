@@ -1,0 +1,43 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "최근 거래내역 좀 확인하고 싶은데요"},
+    {"speaker": "assistant", "text": "네, 조회하실 계좌를 선택해주시겠어요?"},
+    {"speaker": "user", "text": "월세 나가는 계좌요. 근데 금액이 좀 달라진 거 같아서"},
+    {"speaker": "assistant", "text": "확인해드릴게요. 최근 3개월 이내 내역 보여드리면 될까요?"},
+    {"speaker": "user", "text": "네 그정도면 돼요"},
+    {"speaker": "assistant", "text": "조회했습니다. 이번 달 이체 금액이 이전보다 커진 게 보이시나요?"},
+    {"speaker": "user", "text": "네 백만원으로 늘었더라고요"},
+    {"speaker": "assistant", "text": "혹시 이체 대상이나 주소지가 변경되신 건가요?"},
+    {"speaker": "user", "text": "네 기존 주소와 새 주소가 달라서 그런 거 같아요"},
+    {"speaker": "assistant", "text": "그러시군요. 등록된 주소 정보도 함께 확인해드릴까요?"},
+    {"speaker": "user", "text": "네 확인해주세요"},
+    {"speaker": "assistant", "text": "현재 등록 주소는 변경 처리된 상태로 나옵니다. 거래내역상 이체일도 함께 확인해드릴까요?"},
+    {"speaker": "user", "text": "네 언제부터 늘었는지 보고싶어요"},
+    {"speaker": "assistant", "text": "이번 달 이체분부터 금액이 조정되어 나갔습니다."},
+    {"speaker": "user", "text": "아 그럼 그거 때문이었네"},
+    {"speaker": "assistant", "text": "네 맞습니다. 혹시 이체 금액이나 계좌 자체를 변경하시겠어요?"},
+    {"speaker": "user", "text": "아니요 지금은 조회만 하려고요"},
+    {"speaker": "assistant", "text": "알겠습니다. 그럼 조회 화면 그대로 유지해드릴게요."},
+    {"speaker": "user", "text": "근데 예전 주소로 나간 내역도 있나요?"},
+    {"speaker": "assistant", "text": "네, 이전 이체 내역도 함께 조회 가능합니다. 보여드릴까요?"},
+    {"speaker": "user", "text": "네 보여주세요"},
+    {"speaker": "assistant", "text": "확인했습니다. 이전 금액대로 나간 내역이 여러 건 보이네요."},
+    {"speaker": "user", "text": "다행이다 헷갈릴뻔했네요"},
+    {"speaker": "assistant", "text": "필요하시면 최근 6개월 내역까지도 조회 가능합니다."},
+    {"speaker": "user", "text": "아 그정도면 충분해요"},
+    {"speaker": "assistant", "text": "네 알겠습니다. 추가로 궁금하신 점 있으실까요?"},
+    {"speaker": "user", "text": "아니요 됐어요 감사합니다"},
+    {"speaker": "assistant", "text": "네 이용해주셔서 감사합니다. 좋은 하루 되세요."}
+  ],
+  "cue_annotations": [
+    {"turn_index": 8, "cue_type": "address_change_reference", "linked_memory_path": "housing.address"}
+  ],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

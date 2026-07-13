@@ -1,0 +1,43 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "예금 금리 좀 확인하고 싶은데요"},
+    {"speaker": "assistant", "text": "안녕하세요 고객님, 예금 금리 조회 도와드리겠습니다. 정기예금과 자유적립예금 중 어떤 상품이 궁금하신가요?"},
+    {"speaker": "user", "text": "정기예금이요"},
+    {"speaker": "assistant", "text": "네, 정기예금 기준으로 안내드릴게요. 예치 기간은 어느 정도 생각하고 계세요?"},
+    {"speaker": "user", "text": "한 1년 정도"},
+    {"speaker": "assistant", "text": "1년 만기 기준 기본금리는 연 3.2%입니다. 우대조건 충족 시 최대 3.5%까지 적용 가능해요."},
+    {"speaker": "user", "text": "우대조건이 뭔데요"},
+    {"speaker": "assistant", "text": "저희 앱으로 자동이체 등록하거나 첫거래 고객이면 우대금리가 붙습니다. 혹시 저희 은행 거래 이력이 있으신가요?"},
+    {"speaker": "user", "text": "거래는 좀 있어요 오래전부터"},
+    {"speaker": "assistant", "text": "그러시면 기존고객 우대 조건도 확인해드릴게요. 예치금액은 어느 정도로 생각하세요?"},
+    {"speaker": "user", "text": "한 500 정도 넣으려고"},
+    {"speaker": "assistant", "text": "500만원 기준으로 계산해드리면 세전 이자는 연 16만원 정도예요. 이자소득세 제외하면 실수령액은 조금 줄어들어요."},
+    {"speaker": "user", "text": "세금 얼마나 떼요"},
+    {"speaker": "assistant", "text": "일반과세 기준 15.4% 원천징수됩니다. 비과세종합저축 대상이시면 세금 없이 받으실 수도 있어요."},
+    {"speaker": "user", "text": "그건 조건이 어떻게 돼요"},
+    {"speaker": "assistant", "text": "만 65세 이상이나 기초생활수급자 등 특정 대상만 해당돼요. 고객님은 일반과세로 안내드릴게요."},
+    {"speaker": "user", "text": "네 그럼 됐어요"},
+    {"speaker": "assistant", "text": "다른 은행 상품이랑 비교해보고 싶으신 건 아니시죠?"},
+    {"speaker": "user", "text": "일단 여기 금리만 보려구요"},
+    {"speaker": "assistant", "text": "네, 참고로 6개월 만기는 연 2.9%, 2년 만기는 연 3.4%입니다."},
+    {"speaker": "user", "text": "2년이 더 낫나"},
+    {"speaker": "assistant", "text": "장기로 두실수록 금리는 높지만 중도해지 시 이자 손해가 있어요. 자금 계획은 어느 정도 여유 있으세요?"},
+    {"speaker": "user", "text": "당장은 안 쓸 것 같긴 한데"},
+    {"speaker": "assistant", "text": "그러면 1년이나 2년 상품도 괜찮으실 것 같아요. 금리 변동 알림도 받아보실래요?"},
+    {"speaker": "user", "text": "그건 뭔데요"},
+    {"speaker": "assistant", "text": "금리 변동 시 앱 알림으로 안내해드리는 서비스예요. 신청하시면 만기 전에도 확인하실 수 있어요."},
+    {"speaker": "user", "text": "아 그럼 신청할게요"},
+    {"speaker": "assistant", "text": "네, 알림 설정 완료했습니다. 예금 가입은 오늘 진행하실 건가요?"},
+    {"speaker": "user", "text": "아뇨 일단 좀 더 생각해볼게요"},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 필요하실 때 다시 문의 주세요."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

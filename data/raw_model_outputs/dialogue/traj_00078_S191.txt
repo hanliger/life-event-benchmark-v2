@@ -1,0 +1,43 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "대출 잔액 좀 확인하고 싶은데요"},
+    {"speaker": "assistant", "text": "안녕하세요 고객님. 대출 잔액 조회 도와드리겠습니다. 본인인증 먼저 진행해 주시겠어요?"},
+    {"speaker": "user", "text": "네 잠시만요"},
+    {"speaker": "assistant", "text": "확인 감사합니다. 인증이 완료되었습니다. 조회하실 대출 상품명을 알고 계신가요?"},
+    {"speaker": "user", "text": "그게.. 정확히는 모르겠고 그냥 대출이라고만"},
+    {"speaker": "assistant", "text": "네, 고객님 계좌 기준으로 전체 대출 내역을 조회해보겠습니다. 잠시만 기다려 주세요."},
+    {"speaker": "user", "text": "네"},
+    {"speaker": "assistant", "text": "확인 결과 고객님 명의로 등록된 대출 상품이 현재 없는 것으로 나옵니다."},
+    {"speaker": "user", "text": "어 진짜요? 이상하네"},
+    {"speaker": "assistant", "text": "혹시 어떤 계기로 대출 잔액을 확인하려 하셨는지 여쭤봐도 될까요?"},
+    {"speaker": "user", "text": "친구한테 빌린 돈 상환하려는데 통장에 이체 내역이 대출처럼 찍혀서요"},
+    {"speaker": "assistant", "text": "아 그러시면 은행 대출과는 별개로 개인 간 송금이나 이체 내역일 수 있습니다. 거래내역 조회 메뉴에서 확인 가능합니다."},
+    {"speaker": "user", "text": "아 그럼 대출은 아닌 거네요"},
+    {"speaker": "assistant", "text": "네, 저희 시스템상 대출로 분류된 내역은 없고 일반 이체 거래로 보입니다."},
+    {"speaker": "user", "text": "그럼 그 이체 내역은 어디서 봐요"},
+    {"speaker": "assistant", "text": "메인 화면에서 거래내역 조회 메뉴로 이동하시면 최근 이체 기록을 확인하실 수 있습니다."},
+    {"speaker": "user", "text": "아 알겠어요 근데 진짜 대출 신청한 적 없는데 왜 헷갈렸지"},
+    {"speaker": "assistant", "text": "간혹 이체 항목명이 비슷하게 표시되어 혼동되실 수 있습니다. 항목 상세보기에서 거래 유형을 다시 확인해보시면 명확해지실 거예요."},
+    {"speaker": "user", "text": "네 그럼 대출 관련해서는 진짜 없는 거 맞죠?"},
+    {"speaker": "assistant", "text": "네, 현재 기준으로 고객님 명의의 대출 상품은 조회되지 않습니다."},
+    {"speaker": "user", "text": "알겠어요 근데 혹시 나중에 대출 필요하면 여기서 신청도 되나요"},
+    {"speaker": "assistant", "text": "네, 필요하실 때 대출 상품 메뉴에서 조건 확인 후 신청 가능합니다. 지금 신청 도와드릴까요?"},
+    {"speaker": "user", "text": "아니 지금은 필요없고 그냥 궁금해서요"},
+    {"speaker": "assistant", "text": "네 알겠습니다. 필요하실 때 언제든 다시 문의해 주세요."},
+    {"speaker": "user", "text": "네 그럼 오늘은 이 정도만 확인하면 될 것 같아요"},
+    {"speaker": "assistant", "text": "네, 대출 잔액은 없는 것으로 확인되었고 이체 내역은 거래내역 메뉴에서 확인 가능하다는 점 안내드렸습니다."},
+    {"speaker": "user", "text": "네 감사합니다"},
+    {"speaker": "assistant", "text": "감사합니다 고객님. 추가 문의 있으시면 언제든 다시 이용해 주세요."}
+  ],
+  "cue_annotations": [
+    {"turn_index": 10, "cue_type": "explicit_mention", "linked_memory_path": null}
+  ],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

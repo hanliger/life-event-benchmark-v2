@@ -1,0 +1,41 @@
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요 이체확인증 좀 발급받고 싶은데요"},
+    {"speaker": "assistant", "text": "네, 어떤 이체 건의 확인증이 필요하신지 확인해드릴게요. 이체하신 날짜를 알려주시겠어요?"},
+    {"speaker": "user", "text": "지난주 화요일에 보낸거요"},
+    {"speaker": "assistant", "text": "정확한 확인을 위해 이체내역을 함께 조회해볼게요. 어떤 계좌에서 보내신 건가요?"},
+    {"speaker": "user", "text": "그냥 제 주계좌요"},
+    {"speaker": "assistant", "text": "확인했습니다. 화면에 지난주 화요일 이체내역이 두 건 보이는데, 금액을 알려주시면 정확히 찾아드릴게요."},
+    {"speaker": "user", "text": "오십만원 보낸거요"},
+    {"speaker": "assistant", "text": "네 해당 건 확인됐습니다. 이체확인증 발급 목적을 여쭤봐도 될까요? 용도에 따라 양식이 조금 다릅니다."},
+    {"speaker": "user", "text": "그냥 개인적으로 증빙용으로 필요해서요"},
+    {"speaker": "assistant", "text": "알겠습니다. 일반 증빙용 양식으로 준비해드릴게요. 앱에서 바로 확인 가능한데 진행해드릴까요?"},
+    {"speaker": "user", "text": "네 해주세요"},
+    {"speaker": "assistant", "text": "본인인증 먼저 진행해주시겠어요? 화면에 인증 요청 보내드렸습니다."},
+    {"speaker": "user", "text": "네 방금 했어요"},
+    {"speaker": "assistant", "text": "확인됐습니다. 이체확인증 화면에 표시해드렸는데, 파일 형태로도 받아보실 수 있어요. 어떤 형태가 편하세요?"},
+    {"speaker": "user", "text": "PDF로 받을게요"},
+    {"speaker": "assistant", "text": "네 PDF 파일로 생성해서 앱 내 문서보관함에 저장해드렸습니다. 확인해보시겠어요?"},
+    {"speaker": "user", "text": "네 확인했어요 잘 나오네요"},
+    {"speaker": "assistant", "text": "다행입니다. 혹시 이 확인증을 다른 곳에 제출하실 때 받는 곳 이름이 필요할 수도 있는데, 넣어드릴까요?"},
+    {"speaker": "user", "text": "아 그럼 넣어주세요"},
+    {"speaker": "assistant", "text": "어디로 제출하실 건지 알려주시면 그 이름으로 넣어드릴게요."},
+    {"speaker": "user", "text": "그냥 개인 용도라 제 이름으로 해주세요"},
+    {"speaker": "assistant", "text": "네 알겠습니다. 신청자 성명으로 표기해서 다시 생성해드릴게요."},
+    {"speaker": "user", "text": "네 감사합니다"},
+    {"speaker": "assistant", "text": "확인증 다시 저장해드렸습니다. 추가로 필요한 이체 건이 더 있으실까요?"},
+    {"speaker": "user", "text": "아니요 이거 하나면 돼요"},
+    {"speaker": "assistant", "text": "알겠습니다. 나중에 다른 날짜 건도 필요하시면 이체내역 메뉴에서 바로 발급 가능하시니 참고해주세요."},
+    {"speaker": "user", "text": "네 알겠어요"},
+    {"speaker": "assistant", "text": "오늘 도와드린 내용은 이체확인증 발급이었습니다. 다른 문의 있으시면 말씀해주세요."},
+    {"speaker": "user", "text": "없어요 수고하세요"},
+    {"speaker": "assistant", "text": "네, 좋은 하루 보내세요. 감사합니다."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}

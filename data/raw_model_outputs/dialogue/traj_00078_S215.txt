@@ -1,0 +1,41 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "예금 금리 좀 알아보려고요"},
+    {"speaker": "assistant", "text": "안녕하세요. 예금 금리 조회 도와드릴게요. 어떤 종류의 예금을 찾으시나요? 정기예금인가요, 자유입출금인가요?"},
+    {"speaker": "user", "text": "정기예금이요"},
+    {"speaker": "assistant", "text": "네, 정기예금 기준으로 안내드릴게요. 예치 기간은 어느 정도 생각하고 계세요?"},
+    {"speaker": "user", "text": "한 6개월이나 1년 정도"},
+    {"speaker": "assistant", "text": "현재 6개월 정기예금은 연 3.1%, 12개월은 연 3.4% 적용되고 있습니다. 가입 예정 금액대도 참고할까요?"},
+    {"speaker": "user", "text": "그냥 대략적인 금리만 궁금했어요"},
+    {"speaker": "assistant", "text": "알겠습니다. 금액에 따라 우대금리가 추가될 수 있어서 여쭤봤어요. 참고로 500만원 이상 가입 시 0.1%p 우대가 붙습니다."},
+    {"speaker": "user", "text": "오 그렇구나 그럼 500 넘으면 3.5%인가"},
+    {"speaker": "assistant", "text": "네, 12개월 기준으로 우대 적용하면 연 3.5%가 됩니다. 다른 은행 상품이랑 비교하시는 중이신가요?"},
+    {"speaker": "user", "text": "그냥 요즘 금리 어느정도인지 보고 있어요"},
+    {"speaker": "assistant", "text": "네, 최근 시장 금리가 소폭 하락하는 추세라 지금 가입하시는 것도 나쁘지 않아요. 앱에서 바로 가입도 가능한데 필요하시면 도와드릴까요?"},
+    {"speaker": "user", "text": "일단은 그냥 알아보는 거라 아직 안 할래요"},
+    {"speaker": "assistant", "text": "네, 편하게 알아보세요. 혹시 자유적립식 상품도 궁금하신가요?"},
+    {"speaker": "user", "text": "그건 뭔데요"},
+    {"speaker": "assistant", "text": "매달 자유롭게 금액을 넣을 수 있는 적립식 예금이에요. 금리는 12개월 기준 연 3.2% 정도입니다."},
+    {"speaker": "user", "text": "정기예금이 더 높네"},
+    {"speaker": "assistant", "text": "맞아요, 목돈을 한 번에 넣으시는 정기예금이 지금은 금리가 조금 더 유리합니다."},
+    {"speaker": "user", "text": "그럼 그냥 정기예금으로 생각해볼게요"},
+    {"speaker": "assistant", "text": "네, 나중에 가입하실 때 앱 메인에서 예금 메뉴로 들어가시면 바로 신청 가능합니다."},
+    {"speaker": "user", "text": "혹시 중도해지하면 금리 어떻게 돼요"},
+    {"speaker": "assistant", "text": "중도해지 시에는 약정 금리 대신 중도해지 금리가 적용되는데, 보통 만기 금리보다 낮아집니다. 기간에 따라 차등 적용돼요."},
+    {"speaker": "user", "text": "아 그럼 웬만하면 만기까지 두는 게 낫겠네요"},
+    {"speaker": "assistant", "text": "네, 만기까지 유지하시는 게 금리 측면에서는 유리합니다."},
+    {"speaker": "user", "text": "알겠어요 참고할게요"},
+    {"speaker": "assistant", "text": "네, 더 궁금하신 예금 상품이나 조건 있으시면 언제든 다시 물어보세요."},
+    {"speaker": "user", "text": "네 이 정도면 충분해요"},
+    {"speaker": "assistant", "text": "네, 확인 도와드려서 좋았습니다. 좋은 하루 보내세요."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

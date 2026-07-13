@@ -1,0 +1,43 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "모임통장 만들려고 하는데 어떻게 해요"},
+    {"speaker": "assistant", "text": "네, 모임통장 개설 도와드리겠습니다. 모임 인원은 몇 명이신가요?"},
+    {"speaker": "user", "text": "한 다섯명 정도요"},
+    {"speaker": "assistant", "text": "알겠습니다. 모임통장 용도를 선택해주셔야 하는데요, 몇 가지 중에서 고르시면 됩니다"},
+    {"speaker": "user", "text": "회사 경비 처리용 이체는 아니고 그냥 친목모임 회비용이에요"},
+    {"speaker": "assistant", "text": "네 친목모임으로 설정할게요. 모임 이름은 어떻게 하시겠어요?"},
+    {"speaker": "user", "text": "음 그냥 마포 모임 이렇게 할게요"},
+    {"speaker": "assistant", "text": "네 확인했습니다. 모임장은 본인으로 설정될 예정인데 맞으실까요?"},
+    {"speaker": "user", "text": "네 맞아요"},
+    {"speaker": "assistant", "text": "매달 정기적으로 회비를 걷으실 계획이신가요?"},
+    {"speaker": "user", "text": "네 다들 조금씩 모아서 쓰려고요"},
+    {"speaker": "assistant", "text": "회비 자동이체 설정도 가능한데 지금 하시겠어요?"},
+    {"speaker": "user", "text": "그건 나중에 할게요 일단 통장만 만들래요"},
+    {"speaker": "assistant", "text": "네 알겠습니다. 통장 개설 후 앱에서 회비 자동이체 메뉴로 설정하실 수 있어요. 이체 한도는 어느 정도로 두시겠어요?"},
+    {"speaker": "user", "text": "한도는 그냥 기본으로 해주세요"},
+    {"speaker": "assistant", "text": "네 기본 한도로 설정하겠습니다. 모임원 초대는 어떻게 하시겠어요, 전화번호로 초대 가능합니다"},
+    {"speaker": "user", "text": "네 그럼 전화번호로 할게요"},
+    {"speaker": "assistant", "text": "알겠습니다. 초대할 모임원 번호를 입력해주시면 문자로 초대 링크 발송해드립니다"},
+    {"speaker": "user", "text": "네 입력했어요"},
+    {"speaker": "assistant", "text": "확인했습니다. 모임통장 알림 설정도 하시겠어요? 입출금 내역 알림 받으실 수 있어요"},
+    {"speaker": "user", "text": "네 알림은 켜주세요"},
+    {"speaker": "assistant", "text": "네 알림 설정 완료했습니다. 출금 시 모임장 승인이 필요하도록 설정하시겠어요?"},
+    {"speaker": "user", "text": "네 그게 좋을 것 같아요"},
+    {"speaker": "assistant", "text": "네 승인 필요로 설정하겠습니다. 마지막으로 본인인증 한 번 더 진행해주시면 개설이 완료됩니다"},
+    {"speaker": "user", "text": "네 인증했어요"},
+    {"speaker": "assistant", "text": "확인되었습니다. 모임통장 개설이 완료되었습니다. 앱 메인화면에서 확인 가능하세요"},
+    {"speaker": "user", "text": "네 감사합니다"},
+    {"speaker": "assistant", "text": "네 이용해주셔서 감사합니다. 추가 문의 있으시면 언제든 말씀해주세요"}
+  ],
+  "cue_annotations": [
+    {"turn_index": 4, "cue_type": "회사 경비 처리용 이체", "linked_memory_path": null}
+  ],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

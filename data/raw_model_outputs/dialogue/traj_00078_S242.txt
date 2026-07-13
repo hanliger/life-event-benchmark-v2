@@ -1,0 +1,45 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "생활비 정기송금 좀 설정하려고요"},
+    {"speaker": "assistant", "text": "네, 정기송금 등록 도와드릴게요. 어느 계좌에서 어느 계좌로 보내실 건가요?"},
+    {"speaker": "user", "text": "제 주거래 계좌에서 다른 은행 계좌로요"},
+    {"speaker": "assistant", "text": "타행 계좌로 등록 가능합니다. 받으실 분 계좌번호랑 은행명 알려주세요"},
+    {"speaker": "user", "text": "잠깐만요 찾아볼게요"},
+    {"speaker": "assistant", "text": "천천히 확인해주세요"},
+    {"speaker": "user", "text": "국민은행이고 번호는 문자로 다시 보내드릴게요"},
+    {"speaker": "assistant", "text": "네, 확인되는 대로 등록 진행하겠습니다. 매달 이체하실 금액은 얼마로 할까요?"},
+    {"speaker": "user", "text": "한 40만원 정도요"},
+    {"speaker": "assistant", "text": "알겠습니다. 이체 날짜는 매달 며칠로 설정할까요?"},
+    {"speaker": "user", "text": "그냥 25일로 해주세요"},
+    {"speaker": "assistant", "text": "네, 매달 25일 40만원 자동이체로 설정하겠습니다. 시작일은 언제부터로 할까요?"},
+    {"speaker": "user", "text": "이번 달부터요"},
+    {"speaker": "assistant", "text": "확인했습니다. 참고로 이번 건은 생활비 목적으로 등록되는 게 맞으실까요?"},
+    {"speaker": "user", "text": "네 맞아요, 그냥 매달 쓸 돈이에요"},
+    {"speaker": "assistant", "text": "알겠습니다. 혹시 이번 한 번만 별도로 보내실 금액이 있으신가요?"},
+    {"speaker": "user", "text": "아 맞다 친구한테 빌린 돈 상환할 것도 있는데 그건 따로 보내야겠네요"},
+    {"speaker": "assistant", "text": "네, 정기송금과는 별도로 일반 이체로 진행하시면 됩니다. 그 건은 지금 같이 처리해드릴까요?"},
+    {"speaker": "user", "text": "아니요 그건 나중에 따로 할게요"},
+    {"speaker": "assistant", "text": "알겠습니다. 그럼 정기송금 등록만 먼저 진행하겠습니다"},
+    {"speaker": "user", "text": "네 그거만 해주세요"},
+    {"speaker": "assistant", "text": "등록 전 최종 확인 부탁드립니다. 매달 25일 40만원, 국민은행 계좌로 이체 맞으실까요?"},
+    {"speaker": "user", "text": "네 맞아요"},
+    {"speaker": "assistant", "text": "본인인증 화면으로 이동할게요. 인증 완료 후 등록이 진행됩니다"},
+    {"speaker": "user", "text": "네 했어요"},
+    {"speaker": "assistant", "text": "확인되었습니다. 정기송금 등록이 완료되었고 첫 이체일은 이번 달 25일입니다"},
+    {"speaker": "user", "text": "네 알겠습니다"},
+    {"speaker": "assistant", "text": "등록 내역은 알림으로도 안내드릴게요. 다른 문의 있으신가요?"},
+    {"speaker": "user", "text": "아니요 없어요"},
+    {"speaker": "assistant", "text": "네, 이용해주셔서 감사합니다. 좋은 하루 보내세요"}
+  ],
+  "cue_annotations": [
+    {"turn_index": 8, "cue_type": "친구한테 빌린 돈 상환", "linked_memory_path": null}
+  ],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

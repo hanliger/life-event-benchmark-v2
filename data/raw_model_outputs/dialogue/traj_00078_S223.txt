@@ -1,0 +1,41 @@
+{
+  "turns": [
+    {"speaker": "user", "text": "예금 금리 좀 보려는데"},
+    {"speaker": "assistant", "text": "네, 확인 도와드릴게요. 정기예금 말씀이신가요, 아니면 자유적립식 상품인가요?"},
+    {"speaker": "user", "text": "정기예금이요"},
+    {"speaker": "assistant", "text": "정기예금 메뉴로 안내드릴게요. 예치 기간은 어느 정도 생각하고 계세요?"},
+    {"speaker": "user", "text": "한 6개월 정도"},
+    {"speaker": "assistant", "text": "6개월 기준으로는 기본금리 연 3.1%입니다. 우대조건 충족 시 최대 3.4%까지 가능합니다."},
+    {"speaker": "user", "text": "우대조건이 뭔데"},
+    {"speaker": "assistant", "text": "앱 로그인 이벤트 참여나 자동이체 등록 시 우대금리가 적용돼요. 자세한 항목은 상품 상세 화면에서 확인 가능합니다."},
+    {"speaker": "user", "text": "자동이체는 없는데"},
+    {"speaker": "assistant", "text": "그러시면 기본금리 3.1%로 안내드릴게요. 1년 만기는 3.5% 기본금리입니다."},
+    {"speaker": "user", "text": "1년이 더 낫나"},
+    {"speaker": "assistant", "text": "금리 면에서는 1년이 더 유리하지만, 자금 필요 시점을 고려하시는 게 좋아요. 예치 예정 금액은 어느 정도세요?"},
+    {"speaker": "user", "text": "한 500 정도"},
+    {"speaker": "assistant", "text": "500만원 기준으로 계산하면 1년 만기 시 세전 이자는 약 17만 5천원입니다."},
+    {"speaker": "user", "text": "생각보다 적네"},
+    {"speaker": "assistant", "text": "네, 금액이 크지 않으면 이자 체감은 적을 수 있어요. 다른 상품도 비교해드릴까요?"},
+    {"speaker": "user", "text": "다른 거 뭐 있어"},
+    {"speaker": "assistant", "text": "회전정기예금은 금리가 조금 낮지만 중도 재예치가 자유로운 편이에요. 유동성 필요하시면 이것도 고려해보세요."},
+    {"speaker": "user", "text": "유동성은 딱히 필요없어"},
+    {"speaker": "assistant", "text": "그러시면 일반 정기예금이 더 적합하실 것 같아요. 금리 우대 조건 중 급여이체는 해당 안 되실 것 같고, 다른 조건 확인해드릴까요?"},
+    {"speaker": "user", "text": "어 그건 상관없어"},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 그럼 마케팅 정보 수신 동의 시 소폭 우대되는 조건도 있는데 참고하실래요?"},
+    {"speaker": "user", "text": "그 정도는 괜찮네"},
+    {"speaker": "assistant", "text": "그럼 최종적으로 3.2% 정도 적용 가능하실 것 같아요. 가입은 지금 진행하시겠어요, 아니면 좀 더 보실래요?"},
+    {"speaker": "user", "text": "일단 좀 더 볼게"},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 상품 상세 화면은 예금 메뉴에서 계속 확인 가능하세요."},
+    {"speaker": "user", "text": "ㅇㅋ 알겠어"},
+    {"speaker": "assistant", "text": "혹시 다른 금리 상품도 더 안내해드릴까요?"},
+    {"speaker": "user", "text": "아니 됐어 고마워"},
+    {"speaker": "assistant", "text": "네, 필요하실 때 다시 문의해주세요. 좋은 하루 보내세요."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}

@@ -1,0 +1,36 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "거래내역 좀 확인하려고 하는데요"},
+    {"speaker": "assistant", "text": "네, 어느 계좌 거래내역 조회 도와드릴까요?"},
+    {"speaker": "user", "text": "그냥 제 주거래 계좌요, 최근 3개월치요"},
+    {"speaker": "assistant", "text": "네 조회해드리겠습니다. 화면에 본인인증 뜨면 한번 진행 부탁드릴게요"},
+    {"speaker": "user", "text": "했어요"},
+    {"speaker": "assistant", "text": "확인됐습니다. 최근 3개월 거래내역 띄워드렸어요. 특정 거래 찾으시는 거 있으세요?"},
+    {"speaker": "user", "text": "매달 나가는 이체 하나 있는데 그게 맞는지 확인하려고요"},
+    {"speaker": "assistant", "text": "네 말씀해주시면 확인 도와드릴게요. 어떤 항목이신가요?"},
+    {"speaker": "user", "text": "30만원씩 매달 같은 날 나가는 거요"},
+    {"speaker": "assistant", "text": "조회해보니 매월 정기이체로 30만원이 나가고 있네요. 이 이체 관련해서 궁금하신 부분 있으신가요?"},
+    {"speaker": "user", "text": "네 그거 언제부터 나갔는지 확인하고 싶어서요"},
+    {"speaker": "assistant", "text": "최근 이체 내역 기준으로 몇 차례 나간 걸로 보이는데, 정확한 시작 시점 확인해드릴까요?"},
+    {"speaker": "user", "text": "네 부탁드려요"},
+    {"speaker": "assistant", "text": "확인해보니 최근에 새로 등록된 정기이체로 보입니다. 계속 유지하실 건가요, 아니면 변경 원하세요?"},
+    {"speaker": "user", "text": "일단 유지할 거예요, 그건 계속 나가야 되는 거라서"},
+    {"speaker": "assistant", "text": "네 알겠습니다. 별도로 변경 원하시면 언제든 다시 말씀해주세요"},
+    {"speaker": "user", "text": "요즘 생활비 따로 관리하고 있어서 이 계좌는 다른 용도로 쓰려고요"},
+    {"speaker": "assistant", "text": "네 계좌 용도 구분해서 쓰고 계시는군요. 혹시 거래내역 중에 확인하고 싶은 다른 항목도 있으신가요?"},
+    {"speaker": "user", "text": "카드값이랑 공과금 나간 것도 한번 보고 싶어요"},
+    {"speaker": "assistant", "text": "네 카드대금이랑 공과금 항목도 조회해드릴게요, 잠시만요"},
+    {"speaker": "user", "text": "네"},
+    {"speaker": "assistant", "text": "확인해보니 카드대금은 이번 달 두 건, 공과금은 한 건 나갔습니다. 세부내역 보여드릴까요?"},
+    {"speaker": "user", "text": "네 보여주세요"},
+    {"speaker": "assistant", "text": "화면에 띄워드렸습니다. 혹시 이 중에 잘못 나간 것 같은 항목 있으세요?"},
+    {"speaker": "user", "text": "아니요 다 맞는 거 같아요"},
+    {"speaker": "assistant", "text": "네 확인 감사합니다. 거래내역 조회는 여기까지 도와드리면 될까요?"},
+    {"speaker": "user", "text": "네 그거면 됐어요"},
+    {"speaker": "assistant", "text": "혹시 이체 내역 관련해서 나중에 변경 원하시면 정기이체 메뉴에서 직접 확인 가능하세요"},
+    {"speaker": "user", "text": "네 알겠습니다"},
+    {"speaker": "assistant", "text": "네 오늘 이용해주셔서 감사합니다. 좋은 하루 되세요"}
+  ],
+  "cue_annotations": [
+    {"turn_index": 8, "cue_type": "recurring_transfer_amount", "lin

@@ -1,0 +1,43 @@
+{
+  "turns": [
+    {"speaker": "user", "text": "생활비 계좌 하나 새로 만들고 싶은데요"},
+    {"speaker": "assistant", "text": "네, 생활비 관리용 입출금 계좌 개설 도와드리겠습니다. 현재 사용 중인 주거래 계좌가 있으신가요?"},
+    {"speaker": "user", "text": "네 있어요 근데 그거랑 따로 관리하고 싶어서요"},
+    {"speaker": "assistant", "text": "알겠습니다. 그럼 새 입출금 계좌를 개설하고, 기존 계좌에서 매달 일정 금액을 이체하는 방식으로 도와드릴까요?"},
+    {"speaker": "user", "text": "네 그게 편할 거 같아요"},
+    {"speaker": "assistant", "text": "월 이체 금액은 얼마로 설정하시겠어요?"},
+    {"speaker": "user", "text": "한 60만원 정도요"},
+    {"speaker": "assistant", "text": "네, 매달 60만원 자동이체로 설정하겠습니다. 이체일은 언제로 하시겠어요?"},
+    {"speaker": "user", "text": "딱히 정해둔 날이 없어서 그냥 1일로 해주세요"},
+    {"speaker": "assistant", "text": "네, 매월 1일로 설정하겠습니다. 계좌 개설 먼저 진행할까요?"},
+    {"speaker": "user", "text": "네 해주세요"},
+    {"speaker": "assistant", "text": "본인인증 먼저 진행해주세요. 앱 화면에 인증 요청 보내드렸습니다."},
+    {"speaker": "user", "text": "했어요"},
+    {"speaker": "assistant", "text": "확인되었습니다. 계좌 개설이 완료되었고 자동이체도 등록되었습니다. 추가로 확인하실 사항 있으신가요?"},
+    {"speaker": "user", "text": "이번 달은 좀 더 빼야 될 거 같은데"},
+    {"speaker": "assistant", "text": "이번 달만 이체 금액을 조정하시겠다는 말씀이신가요?"},
+    {"speaker": "user", "text": "네 친구한테 빌린 돈 상환할 게 있어서 이번 달만 좀 더 필요해요"},
+    {"speaker": "assistant", "text": "네, 이번 달 이체 금액을 얼마로 변경해드릴까요?"},
+    {"speaker": "user", "text": "한 100만원으로 해주세요"},
+    {"speaker": "assistant", "text": "이번 달 1회에 한해 100만원으로 변경 신청하시는 게 맞으실까요? 확인 후 진행됩니다."},
+    {"speaker": "user", "text": "네 맞아요"},
+    {"speaker": "assistant", "text": "확인 버튼 눌러주시면 이번 달분만 100만원으로 처리되고 다음 달부터는 원래대로 60만원 적용됩니다."},
+    {"speaker": "user", "text": "네 확인했어요"},
+    {"speaker": "assistant", "text": "변경 완료되었습니다. 문자로도 안내 드렸습니다. 다른 문의 있으신가요?"},
+    {"speaker": "user", "text": "이 계좌에 알림도 설정되나요?"},
+    {"speaker": "assistant", "text": "네, 입출금 알림 설정 가능합니다. 문자 알림과 앱 알림 중 어떤 걸로 받으시겠어요?"},
+    {"speaker": "user", "text": "앱 알림으로 해주세요"},
+    {"speaker": "assistant", "text": "네, 앱 알림으로 설정 완료했습니다. 이제 입출금 내역 발생 시 바로 알림 받으실 수 있습니다."},
+    {"speaker": "user", "text": "네 감사합니다"},
+    {"speaker": "assistant", "text": "네, 도움이 필요하시면 언제든 다시 문의해주세요."}
+  ],
+  "cue_annotations": [
+    {"turn_index": 16, "cue_type": "life_state_hint", "linked_memory_path": null}
+  ],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}

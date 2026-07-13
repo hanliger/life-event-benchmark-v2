@@ -1,0 +1,39 @@
+{
+  "turns": [
+    {"speaker": "user", "text": "거래내역 좀 확인하고 싶은데"},
+    {"speaker": "assistant", "text": "네, 어떤 계좌의 거래내역을 조회해 드릴까요?"},
+    {"speaker": "user", "text": "그냥 주계좌로"},
+    {"speaker": "assistant", "text": "확인했습니다. 조회하실 기간은 어떻게 설정해 드릴까요?"},
+    {"speaker": "user", "text": "최근 한 달치만"},
+    {"speaker": "assistant", "text": "네, 최근 1개월 거래내역 조회해 드리겠습니다. 잠시만요."},
+    {"speaker": "user", "text": "오케이"},
+    {"speaker": "assistant", "text": "조회 완료됐습니다. 화면에 목록 뜨는데 보이시나요?"},
+    {"speaker": "user", "text": "어 보여 근데 항목이 너무 많다"},
+    {"speaker": "assistant", "text": "필요하시면 입금이나 출금만 따로 골라서 보실 수 있어요. 어떤 걸로 걸러 드릴까요?"},
+    {"speaker": "user", "text": "출금만 보고 싶어"},
+    {"speaker": "assistant", "text": "네, 출금 내역만 필터링해서 다시 보여드릴게요."},
+    {"speaker": "user", "text": "고마워"},
+    {"speaker": "assistant", "text": "이번 달 출금 건수가 좀 되는데, 특정 금액대만 따로 보시겠어요?"},
+    {"speaker": "user", "text": "만원 이상만"},
+    {"speaker": "assistant", "text": "네, 만원 이상 출금 내역만 다시 정렬해 드릴게요."},
+    {"speaker": "user", "text": "어 됐다"},
+    {"speaker": "assistant", "text": "혹시 이 내역 엑셀 파일로도 받아보실 수 있는데 필요하신가요?"},
+    {"speaker": "user", "text": "어 그거 좋다 부탁해"},
+    {"speaker": "assistant", "text": "네, 파일 생성해서 앱 내 알림함으로 보내드릴게요. 확인되시면 알려주세요."},
+    {"speaker": "user", "text": "왔다 확인했어"},
+    {"speaker": "assistant", "text": "잘 받으셨다니 다행입니다. 혹시 특정 거래 하나 자세히 보고 싶은 것도 있으신가요?"},
+    {"speaker": "user", "text": "아니 이 정도면 됐어"},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 다른 계좌 내역도 필요하시면 말씀해 주세요."},
+    {"speaker": "user", "text": "지금은 없고 나중에"},
+    {"speaker": "assistant", "text": "네, 필요하실 때 언제든 이용해 주세요."},
+    {"speaker": "user", "text": "고맙다 이만"},
+    {"speaker": "assistant", "text": "네, 좋은 하루 보내세요. 이용해 주셔서 감사합니다."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}

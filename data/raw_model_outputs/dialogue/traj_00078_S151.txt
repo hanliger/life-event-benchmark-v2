@@ -1,0 +1,43 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요 예금 금리 좀 보려고요"},
+    {"speaker": "assistant", "text": "안녕하세요 고객님, 예금 금리 조회 도와드리겠습니다. 정기예금과 자유적금 중 어떤 상품 보실까요?"},
+    {"speaker": "user", "text": "정기예금이요"},
+    {"speaker": "assistant", "text": "네, 현재 정기예금 기본금리는 기간별로 다르게 적용됩니다. 예치 기간은 어느 정도 생각하세요?"},
+    {"speaker": "user", "text": "한 1년 정도로"},
+    {"speaker": "assistant", "text": "1년 만기 정기예금 기본금리는 연 3.2%입니다. 우대금리 조건 확인해드릴까요?"},
+    {"speaker": "user", "text": "네 우대조건이 뭐예요"},
+    {"speaker": "assistant", "text": "우대금리는 급여이체 실적, 자동이체 등록, 카드 실적 등에 따라 최대 0.3%p까지 추가됩니다."},
+    {"speaker": "user", "text": "저는 그런 실적은 없을 것 같은데"},
+    {"speaker": "assistant", "text": "그러시면 기본금리 3.2%로 가입 가능하십니다. 혹시 목돈 예치 방식과 자동이체 적립 방식 중 어느 쪽 원하세요?"},
+    {"speaker": "user", "text": "목돈으로 한번에 넣는 거요"},
+    {"speaker": "assistant", "text": "네, 목돈예치형은 첫 가입 시 원하시는 금액을 한 번에 넣고 만기까지 유지하는 방식입니다. 예상 예치 금액대는 어느 정도세요?"},
+    {"speaker": "user", "text": "한 오백 정도 생각하고 있어요"},
+    {"speaker": "assistant", "text": "500만원 기준으로 1년 만기 시 세전 이자는 약 16만원 정도 예상됩니다."},
+    {"speaker": "user", "text": "오 나쁘지 않네요"},
+    {"speaker": "assistant", "text": "다른 은행 대비 경쟁력 있는 편입니다. 2년, 3년 만기 금리도 비교해드릴까요?"},
+    {"speaker": "user", "text": "네 궁금해요"},
+    {"speaker": "assistant", "text": "2년 만기는 연 3.4%, 3년 만기는 연 3.5%로 기간이 길수록 소폭 상승합니다."},
+    {"speaker": "user", "text": "그럼 3년이 제일 유리한 거네요"},
+    {"speaker": "assistant", "text": "금리면에서는 유리하지만 중도해지 시 이자가 낮아지는 점 참고하셔야 합니다."},
+    {"speaker": "user", "text": "아 그럼 중간에 빼면 손해겠네"},
+    {"speaker": "assistant", "text": "네, 중도해지금리는 경과 기간에 따라 기본금리보다 낮게 적용됩니다. 자금 계획 여유 있으신 기간으로 선택하시는 게 좋습니다"},
+    {"speaker": "user", "text": "그럼 1년으로 하는 게 나을 것 같아요"},
+    {"speaker": "assistant", "text": "네, 1년 만기 상품이 유동성 면에서 편하실 수 있습니다. 오늘 바로 가입 진행하시겠어요?"},
+    {"speaker": "user", "text": "아니 일단 금리만 확인하려고 한 거예요"},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 조회하신 금리 정보는 앱 내 예금 상품 메뉴에서 언제든 다시 확인 가능합니다."},
+    {"speaker": "user", "text": "네 알겠어요 나중에 다시 볼게요"},
+    {"speaker": "assistant", "text": "네, 필요하실 때 다시 문의 주세요. 추가로 궁금하신 점 있으실까요?"},
+    {"speaker": "user", "text": "아니요 이걸로 됐어요"},
+    {"speaker": "assistant", "text": "네, 이용해 주셔서 감사합니다. 좋은 하루 보내세요."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

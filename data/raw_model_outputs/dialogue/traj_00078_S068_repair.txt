@@ -1,0 +1,45 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요 병원비 이체하려고 하는데요"},
+    {"speaker": "assistant", "text": "안녕하세요 고객님. 병원비 이체 도와드릴게요. 이체하실 계좌를 먼저 알려주시겠어요?"},
+    {"speaker": "user", "text": "제 입출금 계좌에서 보내면 돼요"},
+    {"speaker": "assistant", "text": "네 확인했습니다. 이체받는 병원 계좌번호나 수취인명 알려주시겠어요?"},
+    {"speaker": "user", "text": "잠깐만요 문자로 온 계좌번호 찾아볼게요"},
+    {"speaker": "assistant", "text": "천천히 확인해주세요."},
+    {"speaker": "user", "text": "찾았어요 불러드릴게요"},
+    {"speaker": "assistant", "text": "네 말씀해주세요."},
+    {"speaker": "user", "text": "123456-78-901234 이거고 수취인은 병원 이름으로 되어있어요"},
+    {"speaker": "assistant", "text": "확인했습니다. 이체 금액은 얼마로 진행할까요?"},
+    {"speaker": "user", "text": "35만원이요"},
+    {"speaker": "assistant", "text": "네 35만원 이체 준비됐습니다. 본인인증 먼저 진행해주시겠어요?"},
+    {"speaker": "user", "text": "네 잠시만요"},
+    {"speaker": "assistant", "text": "인증 완료되면 이체 확인 버튼 눌러주시면 됩니다."},
+    {"speaker": "user", "text": "완료했어요"},
+    {"speaker": "assistant", "text": "이체 진행 도와드리겠습니다. 최종 확인 화면 뜨면 한번 더 확인 부탁드려요."},
+    {"speaker": "user", "text": "네 확인했어요 보내주세요"},
+    {"speaker": "assistant", "text": "병원비 이체 처리됐습니다. 이체 완료 문자 곧 받으실 거예요."},
+    {"speaker": "user", "text": "감사합니다 근데 하나 더 물어볼게 있는데"},
+    {"speaker": "assistant", "text": "네 말씀해주세요."},
+    {"speaker": "user", "text": "동호회 회비 정기이체 매달 나가는 거 있는데 그거 날짜 좀 바꾸고 싶어서요"},
+    {"speaker": "assistant", "text": "네 정기이체 변경 도와드릴 수 있어요. 어떤 계좌에서 나가는 이체인지 확인 부탁드려요."},
+    {"speaker": "user", "text": "지금 이체한 계좌랑 같은 계좌에요"},
+    {"speaker": "assistant", "text": "확인했습니다. 이체일을 몇 일로 변경 원하세요?"},
+    {"speaker": "user", "text": "25일로 바꿔주세요"},
+    {"speaker": "assistant", "text": "네 변경 내용 확인 후 진행해드릴게요. 화면에 뜬 변경 확인 버튼 눌러주시겠어요?"},
+    {"speaker": "user", "text": "눌렀어요"},
+    {"speaker": "assistant", "text": "변경 완료됐습니다. 다음 회차부터 25일에 이체될 예정이에요."},
+    {"speaker": "user", "text": "네 감사합니다"},
+    {"speaker": "assistant", "text": "네 오늘 병원비 이체와 정기이체 변경 모두 처리 완료됐습니다. 이용해주셔서 감사합니다."}
+  ],
+  "cue_annotations": [
+    {"turn_index": 20, "cue_type": "routine_transfer_mention", "linked_memory_path": null}
+  ],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

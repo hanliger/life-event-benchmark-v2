@@ -1,0 +1,41 @@
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요 거래내역 좀 조회하려고요"},
+    {"speaker": "assistant", "text": "안녕하세요 고객님. 어느 계좌의 거래내역을 확인해 드릴까요?"},
+    {"speaker": "user", "text": "그냥 주계좌요"},
+    {"speaker": "assistant", "text": "네, 주거래 계좌 기준으로 확인해 드리겠습니다. 조회 기간은 어떻게 설정해 드릴까요?"},
+    {"speaker": "user", "text": "최근 한달치 보여주세요"},
+    {"speaker": "assistant", "text": "네 최근 1개월 거래내역 조회해 드리겠습니다. 본인인증 먼저 진행해 주시겠어요?"},
+    {"speaker": "user", "text": "네 잠시만요"},
+    {"speaker": "assistant", "text": "천천히 진행해 주세요. 앱 화면에서 인증 완료되면 알려주세요."},
+    {"speaker": "user", "text": "했어요"},
+    {"speaker": "assistant", "text": "확인되었습니다. 최근 1개월간 총 12건의 거래가 조회됩니다. 목록으로 보여드릴까요?"},
+    {"speaker": "user", "text": "네 부탁드려요"},
+    {"speaker": "assistant", "text": "네, 입출금 내역 화면으로 이동해 드렸습니다. 혹시 특정 날짜나 금액대로 좁혀서 볼까요?"},
+    {"speaker": "user", "text": "이번 달 초에 좀 큰 금액 나간거 있는데 그거 확인하고 싶어요"},
+    {"speaker": "assistant", "text": "네, 이번 달 1일부터 10일 사이 출금 내역만 필터링해 드릴게요. 잠시만요."},
+    {"speaker": "user", "text": "네"},
+    {"speaker": "assistant", "text": "확인해 보니 해당 기간에 출금 건이 두 건 있네요. 하나는 자동이체, 하나는 카드 결제로 표시됩니다."},
+    {"speaker": "user", "text": "자동이체 그거 뭔지 자세히 볼 수 있어요?"},
+    {"speaker": "assistant", "text": "네, 상세보기 눌러드리면 이체처와 금액이 나옵니다. 화면 확인해 주시겠어요?"},
+    {"speaker": "user", "text": "아 이거 통신비였네요 맞네요"},
+    {"speaker": "assistant", "text": "네, 확인 도와드려서 다행입니다. 다른 거래내역도 더 확인하시겠어요?"},
+    {"speaker": "user", "text": "아니요 이거면 됐어요"},
+    {"speaker": "assistant", "text": "네, 그럼 조회는 여기까지 도와드리겠습니다. 거래내역은 필요하실 때 언제든 앱에서 다시 확인 가능합니다."},
+    {"speaker": "user", "text": "혹시 거래내역 화면 저장이나 캡처도 가능한가요"},
+    {"speaker": "assistant", "text": "네, 화면 캡처 기능으로 저장 가능하시고 필요하시면 파일 형태로 내보내기도 지원됩니다."},
+    {"speaker": "user", "text": "오 그럼 파일로 받아볼게요"},
+    {"speaker": "assistant", "text": "네, 파일 다운로드 메뉴로 이동해 드렸습니다. 원하시는 형식 선택해 주세요."},
+    {"speaker": "user", "text": "pdf로 할게요"},
+    {"speaker": "assistant", "text": "네, PDF 파일 생성 완료되었습니다. 앱 내 저장함에서 확인 가능하십니다."},
+    {"speaker": "user", "text": "네 감사합니다"},
+    {"speaker": "assistant", "text": "네, 도움 드려 기쁩니다. 추가로 궁금하신 점 있으시면 언제든 문의해 주세요."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}

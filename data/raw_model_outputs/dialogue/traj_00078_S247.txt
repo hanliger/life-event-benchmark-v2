@@ -1,0 +1,43 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "이체확인증 발급받고 싶은데"},
+    {"speaker": "assistant", "text": "안녕하세요. 이체확인증 발급 도와드리겠습니다. 어떤 이체 건에 대한 확인증이 필요하신가요?"},
+    {"speaker": "user", "text": "지난주에 보낸 거 하나"},
+    {"speaker": "assistant", "text": "네, 이체 내역 조회 화면으로 안내드릴게요. 정확한 날짜나 금액 기억하시나요?"},
+    {"speaker": "user", "text": "정확히는 모르겠고 화요일쯔음이었나"},
+    {"speaker": "assistant", "text": "그럼 최근 일주일 이체 내역을 먼저 보여드릴까요?"},
+    {"speaker": "user", "text": "어 그렇게 해줘"},
+    {"speaker": "assistant", "text": "잠시만요, 내역 불러오는 중입니다. 화면에 화요일 이체 건이 두 개 보이는데 확인해 주시겠어요?"},
+    {"speaker": "user", "text": "그중에 금액 좀 큰 거"},
+    {"speaker": "assistant", "text": "네, 해당 이체 건 선택하셨습니다. 이 건으로 확인증 발급 진행할까요?"},
+    {"speaker": "user", "text": "응 맞아 그거"},
+    {"speaker": "assistant", "text": "발급 전에 본인인증 한 번 진행해 주셔야 합니다. 앱에서 인증 요청 보내드릴게요."},
+    {"speaker": "user", "text": "인증 왔다 확인했어"},
+    {"speaker": "assistant", "text": "확인 감사합니다. 확인증은 PDF 파일로 저장되는데, 파일 형태로 받으시겠어요 아니면 화면에서 바로 보시겠어요?"},
+    {"speaker": "user", "text": "파일로 받을래"},
+    {"speaker": "assistant", "text": "네, 파일 저장 방식으로 진행하겠습니다. 받으실 이메일 주소 등록되어 있는 걸로 보내드릴까요?"},
+    {"speaker": "user", "text": "응 그거로 해줘"},
+    {"speaker": "assistant", "text": "알겠습니다. 등록된 이메일로 확인증 발송 준비하겠습니다. 발송 전에 이체 상세 내용 한 번 더 확인해 주시겠어요?"},
+    {"speaker": "user", "text": "금액이랑 받는 사람 이름 맞으면 됐어"},
+    {"speaker": "assistant", "text": "네, 화면에 표시된 금액과 수취인명 맞는지 확인 부탁드립니다."},
+    {"speaker": "user", "text": "맞네 이거"},
+    {"speaker": "assistant", "text": "확인 감사합니다. 이체확인증 발급 및 이메일 발송 진행하겠습니다."},
+    {"speaker": "user", "text": "얼마나 걸려"},
+    {"speaker": "assistant", "text": "보통 몇 분 안에 도착합니다. 발송 완료되면 앱 알림으로도 안내드릴게요."},
+    {"speaker": "user", "text": "오 알겠어"},
+    {"speaker": "assistant", "text": "확인증 발송이 완료되었습니다. 이메일 확인해 보시겠어요?"},
+    {"speaker": "user", "text": "잠깐만... 왔다 잘 받았어"},
+    {"speaker": "assistant", "text": "네, 정상적으로 수신 확인되었습니다. 다른 이체 건도 확인증 필요하신가요?"},
+    {"speaker": "user", "text": "아니 이거면 됐어"},
+    {"speaker": "assistant", "text": "네, 이체확인증 발급 도와드렸습니다. 추가 문의 있으시면 언제든 말씀해 주세요."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

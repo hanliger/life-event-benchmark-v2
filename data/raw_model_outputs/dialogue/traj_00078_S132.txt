@@ -1,0 +1,39 @@
+{
+  "turns": [
+    {"speaker": "user", "text": "입금 알림 설정하고 싶은데"},
+    {"speaker": "assistant", "text": "네, 안내드리겠습니다. 알림을 받으실 계좌를 먼저 선택해 주시겠어요?"},
+    {"speaker": "user", "text": "주거래 통장으로"},
+    {"speaker": "assistant", "text": "확인했습니다. 알림은 앱 푸시와 문자 중 어떤 방식으로 받으시겠어요?"},
+    {"speaker": "user", "text": "푸시로 할게"},
+    {"speaker": "assistant", "text": "네, 앱 푸시 알림으로 설정하겠습니다. 입금 금액과 관계없이 모든 건에 대해 알림 받으시겠어요?"},
+    {"speaker": "user", "text": "그냥 다 받을래"},
+    {"speaker": "assistant", "text": "알겠습니다. 전체 입금 건에 대해 알림을 받도록 설정하겠습니다. 출금 알림도 함께 받으시겠어요?"},
+    {"speaker": "user", "text": "그건 필요없어"},
+    {"speaker": "assistant", "text": "네, 입금 알림만 설정해드리겠습니다. 본인인증 먼저 진행해 주시겠어요?"},
+    {"speaker": "user", "text": "어떻게 하면 돼"},
+    {"speaker": "assistant", "text": "화면에 표시되는 본인인증 버튼 눌러주시면 됩니다. 진행해 주시겠어요?"},
+    {"speaker": "user", "text": "했어"},
+    {"speaker": "assistant", "text": "확인되었습니다. 알림 설정을 저장하겠습니다. 잠시만 기다려 주세요."},
+    {"speaker": "user", "text": "응"},
+    {"speaker": "assistant", "text": "설정이 완료되었습니다. 이제 입금 발생 시 앱 푸시로 알림을 받으실 수 있습니다."},
+    {"speaker": "user", "text": "다른 계좌도 되나"},
+    {"speaker": "assistant", "text": "네, 가능합니다. 추가로 설정하실 계좌가 있으신가요?"},
+    {"speaker": "user", "text": "아니 그냥 궁금해서 물어본거야"},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 필요하실 때 언제든 계좌 목록에서 추가하실 수 있습니다."},
+    {"speaker": "user", "text": "혹시 알림 문구도 바꿀 수 있어"},
+    {"speaker": "assistant", "text": "기본 문구는 고정되어 있고 별도 수정은 지원되지 않습니다."},
+    {"speaker": "user", "text": "아 그렇구나 알겠어"},
+    {"speaker": "assistant", "text": "네, 혹시 알림 시간대 설정도 원하시나요?"},
+    {"speaker": "user", "text": "그건 필요없어 그냥 이대로 할게"},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 현재 설정 그대로 유지하겠습니다."},
+    {"speaker": "user", "text": "고마워 이거면 됐어"},
+    {"speaker": "assistant", "text": "네, 도움이 필요하시면 언제든 다시 문의해 주세요. 좋은 하루 되세요."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}

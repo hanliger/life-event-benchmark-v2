@@ -1,0 +1,43 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요 거래내역 좀 확인하려고요"},
+    {"speaker": "assistant", "text": "네 고객님 어떤 계좌의 거래내역을 확인하시겠어요?"},
+    {"speaker": "user", "text": "그냥 제일 많이 쓰는 입출금 계좌요"},
+    {"speaker": "assistant", "text": "네 확인했습니다. 조회하실 기간을 알려주시겠어요?"},
+    {"speaker": "user", "text": "최근 한 달치요"},
+    {"speaker": "assistant", "text": "최근 1개월 거래내역 조회해드리겠습니다 잠시만요"},
+    {"speaker": "user", "text": "네 기다릴게요"},
+    {"speaker": "assistant", "text": "조회 완료됐습니다 화면에 목록 보이실 거예요"},
+    {"speaker": "user", "text": "어 근데 너무 많은데 정렬 좀 바꿀 수 있어요"},
+    {"speaker": "assistant", "text": "네 상단 필터에서 최신순 또는 금액순으로 변경 가능합니다"},
+    {"speaker": "user", "text": "금액순으로 해볼게요"},
+    {"speaker": "assistant", "text": "네 적용해드렸습니다 확인해보세요"},
+    {"speaker": "user", "text": "오 이제 보기 편하네요"},
+    {"speaker": "assistant", "text": "다행입니다 혹시 특정 거래처만 따로 검색해드릴까요"},
+    {"speaker": "user", "text": "네 편의점 쪽 지출이 얼마나 되나 궁금해요"},
+    {"speaker": "assistant", "text": "검색어 입력하시면 해당 내역만 필터링해드릴 수 있어요"},
+    {"speaker": "user", "text": "편의점이라고 검색하면 되나요"},
+    {"speaker": "assistant", "text": "네 검색창에 입력하시면 관련 거래 자동으로 잡힙니다"},
+    {"speaker": "user", "text": "아 진짜 뜨네요 생각보다 많이 썼네"},
+    {"speaker": "assistant", "text": "네 월별 합계도 하단에서 확인 가능합니다"},
+    {"speaker": "user", "text": "그거 좋네요 이번 달이랑 저번달 비교도 되나요"},
+    {"speaker": "assistant", "text": "네 상단 기간 비교 버튼 누르시면 두 달 비교 그래프 보실 수 있어요"},
+    {"speaker": "user", "text": "오 좋다 한번 눌러볼게요"},
+    {"speaker": "assistant", "text": "네 천천히 확인해보세요"},
+    {"speaker": "user", "text": "이거 내역 따로 저장해둘 수 있어요?"},
+    {"speaker": "assistant", "text": "네 화면 하단 저장 버튼으로 파일 다운로드 가능합니다"},
+    {"speaker": "user", "text": "그럼 그렇게 저장해둘게요"},
+    {"speaker": "assistant", "text": "네 저장 완료되면 알림으로 안내드립니다"},
+    {"speaker": "user", "text": "네 감사합니다 이제 됐어요"},
+    {"speaker": "assistant", "text": "네 도움 드려서 다행입니다 더 필요하신 사항 있으시면 말씀해주세요"}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

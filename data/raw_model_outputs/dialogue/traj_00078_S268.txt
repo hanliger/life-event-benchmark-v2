@@ -1,0 +1,43 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "오늘 지인 아버님 상 때문에 부의금 좀 보내려고요"},
+    {"speaker": "assistant", "text": "네, 조의금 이체 도와드리겠습니다. 받으실 분 계좌번호 알려주시겠어요?"},
+    {"speaker": "user", "text": "국민은행 123456-78-901234 이에요"},
+    {"speaker": "assistant", "text": "확인했습니다. 예금주 성함도 알려주시겠어요?"},
+    {"speaker": "user", "text": "김민수님이요"},
+    {"speaker": "assistant", "text": "이체하실 금액은 얼마로 할까요?"},
+    {"speaker": "user", "text": "십만원으로 부탁드려요"},
+    {"speaker": "assistant", "text": "네, 보내는 분 표시는 본인 이름으로 할까요, 다른 문구로 할까요?"},
+    {"speaker": "user", "text": "그냥 제 이름으로요"},
+    {"speaker": "assistant", "text": "확인했습니다. 이체 전에 최근 계좌 내역도 한 번 보여드릴까요?"},
+    {"speaker": "user", "text": "네 보여주세요"},
+    {"speaker": "assistant", "text": "네, 최근 이체 내역 화면입니다. 확인하시고 필요하신 부분 말씀해 주세요."},
+    {"speaker": "user", "text": "아 맞다 이번 달 동호회 회비 정기이체는 날짜 그대로 나가는거죠?"},
+    {"speaker": "assistant", "text": "네, 등록해두신 정기이체는 기존 설정대로 그대로 진행됩니다. 변경 원하시면 별도로 말씀해 주세요."},
+    {"speaker": "user", "text": "아니에요 그냥 확인만 한거예요"},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 그럼 조의금 이체 계속 진행할까요?"},
+    {"speaker": "user", "text": "네 진행해주세요"},
+    {"speaker": "assistant", "text": "이체 진행을 위해 본인인증이 필요합니다. 앱에서 인증 버튼 눌러주시겠어요?"},
+    {"speaker": "user", "text": "네 눌렀어요"},
+    {"speaker": "assistant", "text": "확인되었습니다. 이체 정보 다시 한번 확인해드릴게요. 국민은행 김민수님 계좌로 십만원 이체, 맞으실까요?"},
+    {"speaker": "user", "text": "네 맞아요"},
+    {"speaker": "assistant", "text": "이체는 고객님 최종 확인 후 실행됩니다. 확인 버튼 눌러주시겠어요?"},
+    {"speaker": "user", "text": "눌렀어요"},
+    {"speaker": "assistant", "text": "이체가 접수되었습니다. 완료 알림은 문자로 안내드릴게요."},
+    {"speaker": "user", "text": "네 감사합니다"},
+    {"speaker": "assistant", "text": "혹시 더 도와드릴 부분 있으실까요?"},
+    {"speaker": "user", "text": "아니요 이거면 됐어요"},
+    {"speaker": "assistant", "text": "네, 이용해주셔서 감사합니다. 좋은 하루 되세요."}
+  ],
+  "cue_annotations": [
+    {"turn_index": 12, "cue_type": "financial_habit_mention", "linked_memory_path": null}
+  ],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

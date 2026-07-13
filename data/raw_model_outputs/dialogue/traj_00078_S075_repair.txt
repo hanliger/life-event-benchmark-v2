@@ -1,0 +1,43 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "예금 금리 좀 보고 싶은데"},
+    {"speaker": "assistant", "text": "네, 어떤 예금 상품 금리를 확인해드릴까요? 정기예금인지 자유적립식인지 말씀해주세요."},
+    {"speaker": "user", "text": "정기예금이요"},
+    {"speaker": "assistant", "text": "정기예금 메뉴로 안내드릴게요. 가입 기간은 어느 정도 생각하고 계세요?"},
+    {"speaker": "user", "text": "한 6개월 정도"},
+    {"speaker": "assistant", "text": "6개월 기준으로 현재 기본금리는 연 3.1%이고, 우대조건 충족 시 최대 3.4%까지 적용됩니다."},
+    {"speaker": "user", "text": "우대조건은 뭔데"},
+    {"speaker": "assistant", "text": "앱을 통한 첫 가입, 자동이체 등록, 마케팅 수신 동의 시 각각 0.1%p씩 추가됩니다."},
+    {"speaker": "user", "text": "자동이체는 안 걸어놨는데 그래도 되나"},
+    {"speaker": "assistant", "text": "자동이체 조건 없이도 가입 가능하시고, 그 부분만 우대금리에서 빠지게 됩니다."},
+    {"speaker": "user", "text": "1년짜리는 얼마인지"},
+    {"speaker": "assistant", "text": "1년 기준 기본금리는 연 3.3%이며 우대 적용 시 최대 3.6%입니다."},
+    {"speaker": "user", "text": "차이가 크네 1년이 낫나"},
+    {"speaker": "assistant", "text": "금리는 1년이 더 높지만, 자금을 언제 다시 쓰실지도 고려하시면 좋을 것 같아요."},
+    {"speaker": "user", "text": "요즘 여유자금이 크게 없어서 짧게 넣는게 나을듯"},
+    {"speaker": "assistant", "text": "네, 그러시면 6개월 상품이 유동성 면에서 더 적합하실 것 같습니다."},
+    {"speaker": "user", "text": "최소 가입금액도 있나"},
+    {"speaker": "assistant", "text": "네, 최소 가입금액은 10만원부터 가능하고 상한선은 따로 없습니다."},
+    {"speaker": "user", "text": "중도해지하면 금리 깎이나"},
+    {"speaker": "assistant", "text": "네, 중도해지 시에는 약정금리 대신 중도해지 금리가 적용되어 낮아지게 됩니다."},
+    {"speaker": "user", "text": "그럼 급하게 뺄 거면 손해겠네"},
+    {"speaker": "assistant", "text": "맞습니다, 만기까지 유지하시는 게 금리 측면에서는 유리합니다."},
+    {"speaker": "user", "text": "알겠어 일단 6개월로 생각해볼게"},
+    {"speaker": "assistant", "text": "네, 가입 원하실 때 정기예금 메뉴에서 바로 진행하실 수 있어요."},
+    {"speaker": "user", "text": "그때 다시 물어봐도 되지"},
+    {"speaker": "assistant", "text": "네, 언제든 다시 문의 주시면 안내드리겠습니다."},
+    {"speaker": "user", "text": "어 오늘은 이거만 확인하면 될 듯"},
+    {"speaker": "assistant", "text": "네, 확인하신 금리 정보는 정기예금 메뉴에서 언제든 다시 조회 가능하십니다."},
+    {"speaker": "user", "text": "고마워 이만 끝낼게"},
+    {"speaker": "assistant", "text": "네, 이용해주셔서 감사합니다. 좋은 하루 보내세요."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

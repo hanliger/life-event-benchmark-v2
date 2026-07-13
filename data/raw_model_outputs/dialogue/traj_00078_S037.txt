@@ -1,0 +1,6 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "상환 시뮬레이션 좀 해보고 싶은데요"},
+    {"speaker": "assistant", "text": "네 고객님. 어떤 대출 상품을 기준으로 시뮬레이션 도와드릴까요?"},
+    {"speaker": "user", "text": "아직 대출은 없고 신

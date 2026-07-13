@@ -1,0 +1,14 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "대출 잔액 좀 확인하고 싶은데요"},
+    {"speaker": "assistant", "text": "네 고객님, 본인인증 먼저 진행해 주시겠어요?"},
+    {"speaker": "user", "text": "네 했어요"},
+    {"speaker": "assistant", "text": "확인 감사합니다. 잠시만요, 대출 조회 메뉴로 안내해 드릴게요"},
+    {"speaker": "user", "text": "네"},
+    {"speaker": "assistant", "text": "현재 등록된 대출 내역이 조회되지 않는데, 다른 상품으로 가입하신 게 있으실까요?"},
+    {"speaker": "user", "text": "음 없을걸요, 근데 왜 이렇게 나오지"},
+    {"speaker": "assistant", "text": "저희 앱에서는 저희 은행 대출만 조회가 가능해서요, 타 은행 대출이시면 여기선 안 보일 수 있어요"},
+    {"speaker": "user", "text": "아 그렇구나 알겠어요"},
+    {"speaker": "assistant", "text": "네, 대출 관련해서 다른 문의 있으실까요?"},
+    {"speaker": "user", "text": "요즘 나가는 돈이 좀 있어서 대출

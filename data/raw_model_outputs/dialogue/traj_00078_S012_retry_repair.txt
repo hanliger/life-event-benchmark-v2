@@ -1,0 +1,28 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "수취인 등록 좀 할게요"},
+    {"speaker": "assistant", "text": "네 고객님, 수취인으로 등록하실 계좌번호나 예금주명 알려주시겠어요?"},
+    {"speaker": "user", "text": "대성엔지니어링 총무팀 계좌요, 급여 이체 관련이라"},
+    {"speaker": "assistant", "text": "확인했습니다. 해당 계좌를 수취인으로 등록해드릴까요?"},
+    {"speaker": "user", "text": "네 등록해주세요"},
+    {"speaker": "assistant", "text": "등록 처리했습니다. 혹시 급여계좌도 함께 관리하시겠어요?"},
+    {"speaker": "user", "text": "아 맞다 이번에 새로 회사 들어가서 재직 정보 등록도 해야 하는데"},
+    {"speaker": "assistant", "text": "네, 재직 정보는 마이페이지에서 바로 등록하실 수 있어요. 먼저 진행할까요?"},
+    {"speaker": "user", "text": "네 해주세요"},
+    {"speaker": "assistant", "text": "회사명이랑 입사 시기 확인 부탁드려요"},
+    {"speaker": "user", "text": "대성엔지니어링이고 얼마 전부터 다니고 있어요"},
+    {"speaker": "assistant", "text": "확인했습니다. 급여일은 언제로 등록할까요?"},
+    {"speaker": "user", "text": "매달 월급 들어오는 날이 25일이에요"},
+    {"speaker": "assistant", "text": "네 25일로 등록하겠습니다. 급여계좌도 등록하시겠어요?"},
+    {"speaker": "user", "text": "네 급여계좌 등록도 같이 해주세요"},
+    {"speaker": "assistant", "text": "어떤 계좌를 급여계좌로 지정하시겠어요?"},
+    {"speaker": "user", "text": "아까 등록한 수취인 말고 제 명의 계좌로요"},
+    {"speaker": "assistant", "text": "네, 본인 명의 계좌 확인을 위해 본인인증 부탁드려요"},
+    {"speaker": "user", "text": "네 했어요"},
+    {"speaker": "assistant", "text": "확인됐습니다. 급여계좌 등록 완료했습니다"},
+    {"speaker": "user", "text": "네 감사합니다"},
+    {"speaker": "assistant", "text": "네 고객님, 수취인 등록이랑 재직 정보, 급여계좌까지 모두 잘 처리됐습니다. 좋은 하루 되세요"}
+  ]
+}
+```

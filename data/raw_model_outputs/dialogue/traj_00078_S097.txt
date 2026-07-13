@@ -1,0 +1,45 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요 월세 자동이체 때문에 문의드리려고요"},
+    {"speaker": "assistant", "text": "네 고객님 어떤 도움이 필요하실까요"},
+    {"speaker": "user", "text": "계약 만기가 다가와서 이번에 다시 확인해보려고요"},
+    {"speaker": "assistant", "text": "네 현재 등록되어 있는 정기이체 내역 조회해드릴까요"},
+    {"speaker": "user", "text": "네 부탁드려요"},
+    {"speaker": "assistant", "text": "확인했습니다 매달 자동이체가 설정되어 있고 이번 달 이체도 이미 처리됐네요"},
+    {"speaker": "user", "text": "아 벌써 나갔어요?"},
+    {"speaker": "assistant", "text": "네 지난주에 정상적으로 이체 완료됐습니다"},
+    {"speaker": "user", "text": "금액은 그대로 나간거 맞죠"},
+    {"speaker": "assistant", "text": "네 이전과 동일한 금액으로 이체됐습니다"},
+    {"speaker": "user", "text": "받는사람도 똑같이 집주인 앞으로 간거죠"},
+    {"speaker": "assistant", "text": "네 등록되어 있는 수취인 그대로 이체됐습니다"},
+    {"speaker": "user", "text": "다행이네요 혹시 이체일 변경도 가능한가요"},
+    {"speaker": "assistant", "text": "네 가능합니다 다만 출금일이 변경되면 다음 회차부터 적용되는데 진행해드릴까요"},
+    {"speaker": "user", "text": "언제로 바꿀 수 있는지부터 알려주세요"},
+    {"speaker": "assistant", "text": "매월 1일에서 25일 사이로 설정 가능하십니다"},
+    {"speaker": "user", "text": "그럼 25일로 바꿔주세요"},
+    {"speaker": "assistant", "text": "네 변경 사항은 고객님 확인 후 다음 회차부터 적용됩니다 진행하시겠어요"},
+    {"speaker": "user", "text": "네 진행해주세요"},
+    {"speaker": "assistant", "text": "본인인증 먼저 진행해주시겠어요"},
+    {"speaker": "user", "text": "네 했어요"},
+    {"speaker": "assistant", "text": "확인됐습니다 이체일을 25일로 변경 처리하겠습니다"},
+    {"speaker": "user", "text": "감사합니다"},
+    {"speaker": "assistant", "text": "변경 완료되면 알림으로 안내드리겠습니다"},
+    {"speaker": "user", "text": "네 확인할게요"},
+    {"speaker": "assistant", "text": "추가로 궁금하신 점 있으실까요"},
+    {"speaker": "user", "text": "아니요 없어요"},
+    {"speaker": "assistant", "text": "네 오늘도 이용해주셔서 감사합니다"}
+  ],
+  "cue_annotations": [
+    {"turn_index": 2, "cue_type": "contract_expiry_signal", "linked_memory_path": "housing.contract_type"},
+    {"turn_index": 6, "cue_type": "transfer_completed_evidence", "linked_memory_path": null},
+    {"turn_index": 8, "cue_type": "amount_confirmation", "linked_memory_path": "housing.rent_amount"}
+  ],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

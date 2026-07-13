@@ -1,0 +1,45 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "이체확인증 발급받고 싶은데요"},
+    {"speaker": "assistant", "text": "네, 도와드리겠습니다. 어떤 거래 건에 대한 확인증이 필요하신가요?"},
+    {"speaker": "user", "text": "얼마 전에 보낸 이체 하나요, 회사 경비 처리용 이체라서 증빙이 필요해서요"},
+    {"speaker": "assistant", "text": "확인 도와드릴게요. 이체하신 날짜 대략 기억나세요?"},
+    {"speaker": "user", "text": "이번 달 초쯤이었던 것 같아요"},
+    {"speaker": "assistant", "text": "감사합니다. 계좌 내역에서 조회해볼게요, 잠시만요"},
+    {"speaker": "user", "text": "네"},
+    {"speaker": "assistant", "text": "확인했습니다. 3일에 나가신 이체 건 맞으실까요?"},
+    {"speaker": "user", "text": "네 맞아요 그거예요"},
+    {"speaker": "assistant", "text": "해당 거래 건으로 확인증 발급 도와드릴게요. 수신인 정보도 포함해서 발급해드리면 될까요?"},
+    {"speaker": "user", "text": "네 그렇게 해주세요"},
+    {"speaker": "assistant", "text": "알겠습니다. 발급 형식은 PDF로 앱 내에서 바로 다운로드 가능한데 괜찮으실까요?"},
+    {"speaker": "user", "text": "네 그게 편해요"},
+    {"speaker": "assistant", "text": "확인 절차 진행할게요. 본인인증 한 번 부탁드립니다"},
+    {"speaker": "user", "text": "인증했어요"},
+    {"speaker": "assistant", "text": "확인 감사합니다. 지금 바로 이체확인증 발급 가능한데 진행할까요?"},
+    {"speaker": "user", "text": "네 바로 해주세요"},
+    {"speaker": "assistant", "text": "발급 완료했습니다. 화면 하단 다운로드 버튼 눌러주시면 저장 가능하세요"},
+    {"speaker": "user", "text": "이거 회사 경비 처리용으로 제출해도 문제없는 거죠?"},
+    {"speaker": "assistant", "text": "네, 공식 이체 내역과 수신인 정보가 포함된 문서라 증빙용으로 사용하실 수 있습니다"},
+    {"speaker": "user", "text": "발급 수수료는 없나요"},
+    {"speaker": "assistant", "text": "이체확인증 발급은 무료로 제공되고 있습니다"},
+    {"speaker": "user", "text": "혹시 나중에 또 필요하면 재발급도 되나요"},
+    {"speaker": "assistant", "text": "네, 동일 거래 건에 대해서는 언제든 메뉴에서 재발급 가능하십니다"},
+    {"speaker": "user", "text": "알겠어요 지금 파일 저장할게요"},
+    {"speaker": "assistant", "text": "네, 저장 후 파일함에서 확인 가능하세요"},
+    {"speaker": "user", "text": "저장했어요 잘 되네요"},
+    {"speaker": "assistant", "text": "확인 감사합니다. 다른 도움 필요하신 부분 있으실까요?"},
+    {"speaker": "user", "text": "아니요 이거면 됐어요 감사합니다"},
+    {"speaker": "assistant", "text": "네, 이용해주셔서 감사합니다. 좋은 하루 보내세요"}
+  ],
+  "cue_annotations": [
+    {"turn_index": 2, "cue_type": "explicit_context_mention", "linked_memory_path": null}
+  ],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

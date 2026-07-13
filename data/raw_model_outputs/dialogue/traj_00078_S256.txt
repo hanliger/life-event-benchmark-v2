@@ -1,0 +1,41 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "예금 금리 좀 알아보려고요"},
+    {"speaker": "assistant", "text": "네 어떤 예금 상품 알아보고 계신가요? 정기예금, 자유적금 등 종류가 있어요"},
+    {"speaker": "user", "text": "그냥 정기예금이요"},
+    {"speaker": "assistant", "text": "알겠습니다. 예치하실 금액대가 어느 정도 되시나요?"},
+    {"speaker": "user", "text": "한 천만원 정도 생각중"},
+    {"speaker": "assistant", "text": "예치 기간은 얼마로 생각하고 계세요?"},
+    {"speaker": "user", "text": "1년이요"},
+    {"speaker": "assistant", "text": "1년 기준 기본금리는 연 3.2%로 안내드려요"},
+    {"speaker": "user", "text": "우대금리 조건 같은건 없어요"},
+    {"speaker": "assistant", "text": "자동이체 신청하시면 0.2%p 추가되고, 앱 마케팅 동의하시면 0.1%p 더 붙어요"},
+    {"speaker": "user", "text": "그거 다 하면 얼마나 되는거예요"},
+    {"speaker": "assistant", "text": "최대 연 3.5%까지 가능하십니다"},
+    {"speaker": "user", "text": "다른데도 비교해보고 싶은데 여기서 볼수 있나요"},
+    {"speaker": "assistant", "text": "네 앱 내 금리비교 메뉴에서 은행별 정기예금 금리 확인 가능하세요"},
+    {"speaker": "user", "text": "오 그거 편하네 어디서 봐요"},
+    {"speaker": "assistant", "text": "메인화면 하단 상품몰 들어가시면 예금금리비교 탭 있어요"},
+    {"speaker": "user", "text": "중도에 해지하면 손해 많이 봐요"},
+    {"speaker": "assistant", "text": "중도해지 시 약정금리 대신 중도해지이율이 적용돼서 이자가 많이 줄어들어요"},
+    {"speaker": "user", "text": "그렇구나 알겠어요"},
+    {"speaker": "assistant", "text": "더 궁금하신 부분 있으신가요?"},
+    {"speaker": "user", "text": "세금우대 되는 상품도 있나요"},
+    {"speaker": "assistant", "text": "비과세종합저축 같은 상품은 있는데 가입 자격 조건이 있으세요"},
+    {"speaker": "user", "text": "저는 그거 해당 안될수도 있겠네요"},
+    {"speaker": "assistant", "text": "앱에서 자격 확인 가능하세요, 자격조회 메뉴 들어가시면 바로 나와요"},
+    {"speaker": "user", "text": "그럼 그냥 기본 정기예금으로 할게요"},
+    {"speaker": "assistant", "text": "네 신청하실 때 본인인증만 하시면 바로 가입 진행되세요"},
+    {"speaker": "user", "text": "네 알겠어요 나중에 신청할게요"},
+    {"speaker": "assistant", "text": "네 필요하실 때 다시 찾아주세요, 좋은 하루 되세요"}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

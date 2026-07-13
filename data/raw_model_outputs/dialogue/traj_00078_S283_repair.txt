@@ -1,0 +1,43 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "예금 금리 좀 보고 싶은데"},
+    {"speaker": "assistant", "text": "네, 확인 도와드릴게요. 찾으시는 상품이 정기예금인가요 아니면 자유입금식인가요?"},
+    {"speaker": "user", "text": "정기예금이요"},
+    {"speaker": "assistant", "text": "정기예금 기준으로 안내드릴게요. 예치 기간은 어느 정도 생각하고 계세요?"},
+    {"speaker": "user", "text": "한 6개월이나 1년 정도"},
+    {"speaker": "assistant", "text": "현재 6개월 기준 연 3.1%, 1년 기준 연 3.4% 적용되고 있어요. 참고로 가입 금액에 따라 우대금리도 다를 수 있어요."},
+    {"speaker": "user", "text": "우대금리는 뭐 조건 있어?"},
+    {"speaker": "assistant", "text": "앱으로 가입하시면 온라인 전용 우대 0.1%가 추가되고, 자동이체 등록 시 0.1%가 더 붙어요."},
+    {"speaker": "user", "text": "나 지금 자동이체 걸 계좌가 딱히 없는데"},
+    {"speaker": "assistant", "text": "괜찮아요, 자동이체 없이도 온라인 가입 우대만 적용해서 진행하실 수 있어요."},
+    {"speaker": "user", "text": "그럼 1년으로 하면 최종 금리 얼마나 돼?"},
+    {"speaker": "assistant", "text": "온라인 우대 포함하면 연 3.5% 정도로 확인돼요. 세전 기준이에요."},
+    {"speaker": "user", "text": "세금 떼면 실수령은 어느 정도야?"},
+    {"speaker": "assistant", "text": "이자소득세 15.4% 제외하면 실질 수익률은 약 연 2.96% 정도로 보시면 돼요."},
+    {"speaker": "user", "text": "가입 최소 금액은 얼마야"},
+    {"speaker": "assistant", "text": "정기예금은 최소 10만원부터 가입 가능하세요."},
+    {"speaker": "user", "text": "중도에 빼면 손해 많이 봐?"},
+    {"speaker": "assistant", "text": "네, 중도 해지 시에는 약정금리보다 낮은 중도해지금리가 적용돼서 이자가 크게 줄어들어요."},
+    {"speaker": "user", "text": "그럼 급하게 뺄 일 없게 짧게 하는 게 낫겠네"},
+    {"speaker": "assistant", "text": "네, 자금 계획이 유동적이시면 6개월이나 3개월 상품도 고려해보시는 게 좋아요."},
+    {"speaker": "user", "text": "3개월은 금리 얼마야"},
+    {"speaker": "assistant", "text": "3개월 기준으로는 연 2.7% 적용되고 있어요."},
+    {"speaker": "user", "text": "음 그럼 1년이 낫겠다"},
+    {"speaker": "assistant", "text": "네, 금리 면에서는 1년 상품이 유리하세요. 자금을 그 기간 동안 묶어두실 수 있는지만 고려하시면 될 것 같아요."},
+    {"speaker": "user", "text": "당장 큰돈 쓸 일은 없어서 괜찮을 듯"},
+    {"speaker": "assistant", "text": "그러시면 1년 정기예금으로 진행해보시는 걸 추천드려요. 지금 바로 가입 메뉴로 이동해드릴까요?"},
+    {"speaker": "user", "text": "일단 금리만 확인하고 싶었어 나중에 할게"},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 금리 정보는 앱 메인 화면에서도 언제든 다시 확인하실 수 있어요."},
+    {"speaker": "user", "text": "응 고마워"},
+    {"speaker": "assistant", "text": "네, 도움 되셨으면 좋겠어요. 추가로 궁금한 점 있으시면 언제든 말씀해주세요."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

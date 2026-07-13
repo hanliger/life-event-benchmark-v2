@@ -1,0 +1,46 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "거래내역 좀 확인하고 싶은데요"},
+    {"speaker": "assistant", "text": "네, 조회하실 기간을 알려주시겠어요?"},
+    {"speaker": "user", "text": "최근 한 달치요"},
+    {"speaker": "assistant", "text": "확인했습니다. 최근 한 달 내 이체 내역이 여러 건 조회됩니다."},
+    {"speaker": "user", "text": "근데 매달 나가는 30만원짜리가 있던데 그게 뭔지 궁금해서요"},
+    {"speaker": "assistant", "text": "해당 거래의 적요 내용을 화면에서 확인해 보시겠어요?"},
+    {"speaker": "user", "text": "공동 생활비 라고 찍혀있는데 저는 이거 등록한 기억이 없어서요"},
+    {"speaker": "assistant", "text": "혹시 자동이체로 등록되어 있는 항목인지 확인해드릴까요?"},
+    {"speaker": "user", "text": "네 자동이체 맞는거같아요 최근에 생긴거같기도 하고"},
+    {"speaker": "assistant", "text": "언제부터 이 이체가 시작됐는지도 조회해드릴 수 있어요, 진행할까요?"},
+    {"speaker": "user", "text": "네 확인해주세요"},
+    {"speaker": "assistant", "text": "확인해보니 두 달 전부터 매달 같은 날짜에 나가고 있네요."},
+    {"speaker": "user", "text": "금액도 계속 똑같이 나간거예요?"},
+    {"speaker": "assistant", "text": "네, 매달 30만원으로 동일하게 이체되고 있습니다."},
+    {"speaker": "user", "text": "이번달 것도 나갔는지 궁금한데"},
+    {"speaker": "assistant", "text": "확인 결과 이번 달분도 이미 이체 완료된 상태예요."},
+    {"speaker": "user", "text": "아 네 확인했어요"},
+    {"speaker": "assistant", "text": "다른 거래내역도 더 확인해드릴까요?"},
+    {"speaker": "user", "text": "이 이체 내역 상세하게 파일로 받을수 있어요?"},
+    {"speaker": "assistant", "text": "네, 거래내역 메뉴에서 기간 설정 후 파일로 저장하실 수 있어요."},
+    {"speaker": "user", "text": "알겠어요 그리고 카드값도 같이 조회되나요"},
+    {"speaker": "assistant", "text": "네, 카드 이용내역도 같은 화면에서 함께 확인 가능합니다."},
+    {"speaker": "user", "text": "확인했어요 감사해요"},
+    {"speaker": "assistant", "text": "네, 더 궁금하신 내역 있으실까요?"},
+    {"speaker": "user", "text": "이 자동이체가 계속 나갈건지 좀 걱정되긴 하네요"},
+    {"speaker": "assistant", "text": "변경이나 해지를 원하시면 본인 확인 후 진행해드릴 수 있어요, 지금 처리해드릴까요?"},
+    {"speaker": "user", "text": "아뇨 일단 그냥 둘게요"},
+    {"speaker": "assistant", "text": "네, 알겠습니다. 필요하실 때 다시 말씀해주세요."},
+    {"speaker": "user", "text": "네 감사합니다"},
+    {"speaker": "assistant", "text": "네, 이용해주셔서 감사합니다. 좋은 하루 되세요."}
+  ],
+  "cue_annotations": [
+    {"turn_index": 6, "cue_type": "expense_label_mention", "linked_memory_path": "household.spouse_or_partner"},
+    {"turn_index": 8, "cue_type": "recent_change_signal", "linked_memory_path": "household.marital_status"}
+  ],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

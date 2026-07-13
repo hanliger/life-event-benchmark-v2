@@ -1,0 +1,7 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "대출 한도 좀 알아보고 싶은데요"},
+    {"speaker": "assistant", "text": "네 고객님, 대출 한도조회 도와드리겠습니다. 현재 소득 증빙이 가능한 상태이신가요?"},
+    {"speaker": "user", "text": "지금은 딱히 없는데 곧 생길 것 같아요"},
+    {"speaker": "assistant", "text": "그러시군요. 예정되신 

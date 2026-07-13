@@ -1,0 +1,44 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "거래내역 조회하려고 하는데요, 기간 지정해서 볼 수 있나요?"},
+    {"speaker": "assistant", "text": "네 가능합니다. 조회하실 기간을 알려주시겠어요?"},
+    {"speaker": "user", "text": "두 달 전부터 지금까지요"},
+    {"speaker": "assistant", "text": "확인했습니다. 등록된 계좌가 여러 개인데, 어떤 계좌로 조회해드릴까요?"},
+    {"speaker": "user", "text": "주거래 계좌요"},
+    {"speaker": "assistant", "text": "네 조회됐습니다. 해당 기간 중에 금액이 큰 이체 내역이 하나 보이는데 내용 확인해드릴까요?"},
+    {"speaker": "user", "text": "아 그거 잔금 이체한 거예요, 맞게 나온 건지 확인하려고요"},
+    {"speaker": "assistant", "text": "네 맞습니다. 이체일 기준으로 표시되고 있고요, 상세 내역 보여드릴까요?"},
+    {"speaker": "user", "text": "네 보여주세요"},
+    {"speaker": "assistant", "text": "이체 금액과 수취 계좌 정보가 화면에 표시된 내용과 일치하시나요?"},
+    {"speaker": "user", "text": "네 맞아요"},
+    {"speaker": "assistant", "text": "그 이후로 매달 같은 날짜에 나가는 이체도 하나 보이는데, 이것도 같이 확인해드릴까요?"},
+    {"speaker": "user", "text": "네 그거 대출 상환금일 거예요"},
+    {"speaker": "assistant", "text": "확인했습니다. 매달 정기적으로 빠져나가고 있네요. 이 내역도 조회 결과에 포함해서 정리해드릴까요?"},
+    {"speaker": "user", "text": "네 그렇게 해주세요"},
+    {"speaker": "assistant", "text": "네 정리해서 보여드렸습니다. 이 이체 내역 별도로 저장하시겠어요?"},
+    {"speaker": "user", "text": "저장이요? 어떻게 하는데요"},
+    {"speaker": "assistant", "text": "조회 화면에서 다운로드 버튼 누르시면 파일로 저장 가능합니다. 진행해드릴까요?"},
+    {"speaker": "user", "text": "네 해주세요"},
+    {"speaker": "assistant", "text": "저장 완료했습니다. 따로 조회하고 싶으신 거래가 더 있으실까요?"},
+    {"speaker": "user", "text": "아니요 이 정도면 됐어요"},
+    {"speaker": "assistant", "text": "네 알겠습니다. 조회 기간을 더 넓혀서 확인하실 부분이 있으실까요?"},
+    {"speaker": "user", "text": "아니 지금까지 걸로 충분해요"},
+    {"speaker": "assistant", "text": "네 확인했습니다. 거래내역 조회 결과는 화면 상단에서 언제든 다시 보실 수 있어요."},
+    {"speaker": "user", "text": "네 알겠어요"},
+    {"speaker": "assistant", "text": "추가로 확인하실 거래 있으실까요, 아니면 여기서 마무리해드릴까요?"},
+    {"speaker": "user", "text": "여기서 마무리해주세요"},
+    {"speaker": "assistant", "text": "네 알겠습니다. 거래내역 조회 도와드렸습니다. 좋은 하루 보내세요."}
+  ],
+  "cue_annotations": [
+    {"turn_index": 6, "cue_type": "잔금 이체", "linked_memory_path": "housing.mortgage_status"},
+    {"turn_index": 12, "cue_type": "정기 이체/대출 상환금 언급", "linked_memory_path": "financial_products.loans"}
+  ],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

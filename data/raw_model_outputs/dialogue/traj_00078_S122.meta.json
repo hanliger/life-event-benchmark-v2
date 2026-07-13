@@ -1,0 +1,16 @@
+{
+  "content_block_types": [
+    "thinking",
+    "text"
+  ],
+  "model": "claude-sonnet-5",
+  "provider": "anthropic",
+  "stop_reason": "end_turn",
+  "stop_sequence": null,
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "input_tokens": 2682,
+    "output_tokens": 3761
+  }
+}

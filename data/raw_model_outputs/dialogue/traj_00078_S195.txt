@@ -1,0 +1,43 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "이체확인증 발급받고 싶은데 어떻게 해요?"},
+    {"speaker": "assistant", "text": "안녕하세요. 이체확인증 발급 도와드리겠습니다. 확인하실 이체 건의 대략적인 날짜를 알려주시겠어요?"},
+    {"speaker": "user", "text": "지난주 화요일에 보낸 거요"},
+    {"speaker": "assistant", "text": "네, 지난주 화요일 이체 내역 확인해보겠습니다. 본인인증 먼저 진행해주시겠어요?"},
+    {"speaker": "user", "text": "네 잠시만요"},
+    {"speaker": "assistant", "text": "본인인증 완료되었습니다. 해당 날짜 이체 내역이 여러 건 조회되는데, 받는 분 이름이나 금액 기억나세요?"},
+    {"speaker": "user", "text": "한 30만원 정도였던 것 같은데"},
+    {"speaker": "assistant", "text": "확인해보니 화요일 오후에 30만원 이체 건이 하나 있네요. 이 건 맞으실까요?"},
+    {"speaker": "user", "text": "네 맞아요 그거"},
+    {"speaker": "assistant", "text": "감사합니다. 이체확인증은 앱 화면에서 바로 확인하실 수 있는데, PDF 파일로 받으시겠어요?"},
+    {"speaker": "user", "text": "네 pdf로 받을게요"},
+    {"speaker": "assistant", "text": "알겠습니다. 발급 목적을 선택해주셔야 하는데요, 일반 용도로 진행할까요?"},
+    {"speaker": "user", "text": "네 그냥 일반으로요"},
+    {"speaker": "assistant", "text": "확인했습니다. 화면에 이체확인증 미리보기가 뜰 텐데, 받는 분 계좌번호랑 금액 한번 확인 부탁드려요."},
+    {"speaker": "user", "text": "어 맞는 것 같아요"},
+    {"speaker": "assistant", "text": "네, 그럼 발급 버튼 눌러주시면 바로 저장되실 거예요."},
+    {"speaker": "user", "text": "눌렀어요"},
+    {"speaker": "assistant", "text": "확인되었습니다. 이체확인증 파일이 정상적으로 생성되었고, 갤러리나 파일함에 저장 가능하십니다."},
+    {"speaker": "user", "text": "저장은 어디서 하는거예요"},
+    {"speaker": "assistant", "text": "화면 하단에 저장 버튼 보이실 텐데 그거 눌러주시면 기기에 저장됩니다."},
+    {"speaker": "user", "text": "아 찾았어요 감사합니다"},
+    {"speaker": "assistant", "text": "네, 혹시 다른 이체 건도 확인증 필요하신가요?"},
+    {"speaker": "user", "text": "아니요 이거 하나면 돼요"},
+    {"speaker": "assistant", "text": "알겠습니다. 혹시 발급된 확인증에 문제 있으시면 다시 요청 가능하시니 참고해주세요."},
+    {"speaker": "user", "text": "네 알겠어요"},
+    {"speaker": "assistant", "text": "이체확인증 잘 저장되셨는지 한번 열어봐 주시겠어요?"},
+    {"speaker": "user", "text": "네 잘 열려요"},
+    {"speaker": "assistant", "text": "다행이네요. 다른 문의사항 없으시면 이대로 상담 종료하겠습니다."},
+    {"speaker": "user", "text": "네 없어요 수고하세요"},
+    {"speaker": "assistant", "text": "네, 이용해주셔서 감사합니다. 좋은 하루 보내세요."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

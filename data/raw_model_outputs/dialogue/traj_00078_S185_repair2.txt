@@ -1,0 +1,43 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "대출 상환 시뮬레이션 한번 해보고 싶은데요"},
+    {"speaker": "assistant", "text": "네, 도와드릴게요. 생각하시는 대출 금액이 어느 정도인가요?"},
+    {"speaker": "user", "text": "한 3000만원 정도로 해볼게요"},
+    {"speaker": "assistant", "text": "알겠습니다. 상환 기간은 몇 개월로 설정해드릴까요?"},
+    {"speaker": "user", "text": "일단 36개월로 해주세요"},
+    {"speaker": "assistant", "text": "상환 방식은 원리금균등, 원금균등 중 어떤 걸로 볼까요?"},
+    {"speaker": "user", "text": "그냥 기본으로 해주세요"},
+    {"speaker": "assistant", "text": "정확한 상환 일정 계산을 위해 등록된 정기 입금 예정일이 25일로 되어있는데, 맞으실까요?"},
+    {"speaker": "user", "text": "음... 그게 좀 애매해요. 요즘 새 입금명으로 들어오는 게 있어서 날짜가 좀 달라졌을 수도 있어요"},
+    {"speaker": "assistant", "text": "확인 감사합니다. 입금 예정일 정보는 실제 입금 내역 확인 후에 다시 반영해드릴 수 있어요. 이번 시뮬레이션은 기존 정보로 진행해도 괜찮으실까요?"},
+    {"speaker": "user", "text": "네 일단 그렇게 해주세요"},
+    {"speaker": "assistant", "text": "3000만원, 36개월 기준으로 월 상환액을 계산해드릴게요."},
+    {"speaker": "user", "text": "월 상환액이 얼마나 나와요?"},
+    {"speaker": "assistant", "text": "대략 월 87만원 정도로 예상됩니다."},
+    {"speaker": "user", "text": "좀 부담되네요. 기간 늘리면 어떻게 돼요?"},
+    {"speaker": "assistant", "text": "몇 개월로 다시 계산해드릴까요?"},
+    {"speaker": "user", "text": "60개월로 해주세요"},
+    {"speaker": "assistant", "text": "60개월 기준으로는 월 약 54만원 정도로 계산됩니다."},
+    {"speaker": "user", "text": "오 그정도면 괜찮네요"},
+    {"speaker": "assistant", "text": "이 시뮬레이션 결과를 저장해두거나, 대출 신청 메뉴로 이동해드릴까요?"},
+    {"speaker": "user", "text": "아니요 그냥 참고만 할게요"},
+    {"speaker": "assistant", "text": "알겠습니다. 나중에 입금 내역이 확실해지면 입금 예정일 정보를 업데이트하시면 더 정확한 시뮬레이션이 가능해요"},
+    {"speaker": "user", "text": "네 입금 확인되면 다시 해볼게요"},
+    {"speaker": "assistant", "text": "네, 입금 예정일 항목은 확인 필요 상태로 남겨둘게요"},
+    {"speaker": "user", "text": "네 알겠습니다"},
+    {"speaker": "assistant", "text": "혹시 더 필요한 시뮬레이션이나 문의사항 있으실까요?"},
+    {"speaker": "user", "text": "아니요 이거면 됐어요"},
+    {"speaker": "assistant", "text": "네, 상환 시뮬레이션 도와드렸습니다. 좋은 하루 되세요."}
+  ],
+  "cue_annotations": [
+    {"turn_index": 8, "cue_type": "weak_signal_mention", "linked_memory_path": "employment.salary_day"}
+  ],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

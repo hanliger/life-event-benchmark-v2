@@ -1,0 +1,43 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "이체확인증 발급받고 싶은데 어떻게 해요"},
+    {"speaker": "assistant", "text": "네 고객님 어떤 거래 건 확인증인지 말씀해주시겠어요"},
+    {"speaker": "user", "text": "지난주에 보낸 이체건이요"},
+    {"speaker": "assistant", "text": "정확한 날짜나 금액 기억나세요"},
+    {"speaker": "user", "text": "음 한 5일전인가 그럴걸요"},
+    {"speaker": "assistant", "text": "거래내역에서 조회해드릴게요 본인인증 먼저 진행해주세요"},
+    {"speaker": "user", "text": "네 했어요"},
+    {"speaker": "assistant", "text": "확인됐습니다 최근 이체내역 보여드릴까요"},
+    {"speaker": "user", "text": "네 보여주세요"},
+    {"speaker": "assistant", "text": "여기 3건 있는데 어떤 거래인지 골라주시겠어요"},
+    {"speaker": "user", "text": "두번째거요 15만원짜리"},
+    {"speaker": "assistant", "text": "네 해당 건으로 이체확인증 발급 도와드릴게요 용도는 뭐로 하시나요"},
+    {"speaker": "user", "text": "그냥 개인 증빙용이에요"},
+    {"speaker": "assistant", "text": "알겠습니다 파일 형식은 pdf로 해드릴까요"},
+    {"speaker": "user", "text": "네 pdf로 해주세요"},
+    {"speaker": "assistant", "text": "발급 완료됐습니다 앱에서 바로 확인 가능하세요"},
+    {"speaker": "user", "text": "어디서 봐요"},
+    {"speaker": "assistant", "text": "마이메뉴 이체확인증함에서 확인 가능합니다"},
+    {"speaker": "user", "text": "아 찾았어요 감사합니다"},
+    {"speaker": "assistant", "text": "네 혹시 다른 이체건도 필요하신가요"},
+    {"speaker": "user", "text": "아니요 이거 하나면 돼요"},
+    {"speaker": "assistant", "text": "네 알겠습니다 발급된 문서는 저장이나 전송도 가능합니다"},
+    {"speaker": "user", "text": "저장은 어떻게 해요"},
+    {"speaker": "assistant", "text": "문서 하단에 저장 버튼 눌러주시면 됩니다"},
+    {"speaker": "user", "text": "넵 눌렀어요"},
+    {"speaker": "assistant", "text": "잘 저장되셨나요"},
+    {"speaker": "user", "text": "네 잘됐어요"},
+    {"speaker": "assistant", "text": "다행입니다 추가로 궁금하신 점 있으실까요"},
+    {"speaker": "user", "text": "아니요 없어요 감사합니다"},
+    {"speaker": "assistant", "text": "네 이용해주셔서 감사합니다 좋은 하루 되세요"}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

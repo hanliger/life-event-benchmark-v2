@@ -1,0 +1,12 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요 거래내역 확인하려구요"},
+    {"speaker": "assistant", "text": "네 고객님 어떤 기간 거래내역을 원하세요?"},
+    {"speaker": "user", "text": "최근 한 달치만요"},
+    {"speaker": "assistant", "text": "네 확인했습니다 어떤 계좌로 조회해드릴까요?"},
+    {"speaker": "user", "text": "그냥 주거래 계좌요"},
+    {"speaker": "assistant", "text": "네 조회 도와드릴게요 잠시만요, 완료됐습니다 최근 한 달간 입출금 내역 보여드릴까요?"},
+    {"speaker": "user", "text": "네 보여주세요"},
+    {"speaker": "assistant", "text": "확인해보니 이번 달에 급여성 입금이 새로 들어왔는데 맞으실까요?"},
+    {"speaker": "user", "text": "아 네 얼마 전에 직장을

@@ -1,0 +1,43 @@
+```json
+{
+  "turns": [
+    {"speaker": "user", "text": "안녕하세요 예금 금리 좀 알아보려고요"},
+    {"speaker": "assistant", "text": "안녕하세요 고객님. 어떤 예금 상품 금리가 궁금하신가요? 정기예금인지 자유적금인지 말씀해 주세요."},
+    {"speaker": "user", "text": "정기예금이요 목돈 좀 넣어두려고"},
+    {"speaker": "assistant", "text": "네, 정기예금 기준으로 안내드릴게요. 예치 기간은 어느 정도 생각하고 계신가요?"},
+    {"speaker": "user", "text": "1년이나 6개월 중에 고민중이에요"},
+    {"speaker": "assistant", "text": "현재 1년 만기 기준으로는 연 3.35%, 6개월 만기는 연 3.10% 적용되고 있습니다. 우대조건 없이 기본 금리 기준입니다."},
+    {"speaker": "user", "text": "우대조건 붙으면 더 올라가요?"},
+    {"speaker": "assistant", "text": "네, 자동이체 등록이나 앱 첫 거래 조건 등을 만족하시면 최대 0.3%포인트까지 추가될 수 있습니다. 다만 조건별로 세부 기준이 달라요."},
+    {"speaker": "user", "text": "저는 지금 정기적으로 들어오는 돈이 없어서 그런 조건은 못맞출것같아요"},
+    {"speaker": "assistant", "text": "괜찮습니다. 기본 금리로도 가입 가능하시고, 우대조건은 선택 사항일 뿐입니다. 예치 금액대는 어느 정도로 생각하고 계신가요?"},
+    {"speaker": "user", "text": "천만원정도요"},
+    {"speaker": "assistant", "text": "천만원 기준이면 1년 만기 시 세전 이자가 약 33만 5천원 정도로 계산됩니다. 세후로는 약 28만원대가 예상됩니다."},
+    {"speaker": "user", "text": "다른 은행이랑 비교했을때 이게 괜찮은 편이에요?"},
+    {"speaker": "assistant", "text": "현재 시중 은행 평균과 비교하면 비슷하거나 약간 높은 수준입니다. 다만 타행 특판 상품은 더 높을 수도 있어요."},
+    {"speaker": "user", "text": "특판은 저희은행에 지금 없어요?"},
+    {"speaker": "assistant", "text": "지금은 특판 상품이 별도로 진행되고 있지 않습니다. 대신 앱 전용 정기예금은 기본보다 0.1%포인트 높게 적용됩니다."},
+    {"speaker": "user", "text": "앱전용은 조건이 뭐에요"},
+    {"speaker": "assistant", "text": "앱에서 신규 가입만 하면 되고 별도 자동이체나 카드 실적 조건은 없습니다. 가입 즉시 우대금리가 반영됩니다."},
+    {"speaker": "user", "text": "오 그럼 그게 낫겠네요"},
+    {"speaker": "assistant", "text": "네, 조건이 부담 없으신 분들께는 앱 전용 정기예금이 유리한 편입니다. 만기 자동해지 방식도 선택 가능합니다."},
+    {"speaker": "user", "text": "만기되면 자동으로 통장에 들어오는거죠?"},
+    {"speaker": "assistant", "text": "네, 만기일에 설정하신 계좌로 원금과 이자가 자동 입금되도록 설정하실 수 있습니다."},
+    {"speaker": "user", "text": "중간에 급하게 빼야하면 손해 많이 나요?"},
+    {"speaker": "assistant", "text": "중도해지 시에는 우대금리 적용이 사라지고 기본 예치기간별 낮은 금리로 재계산됩니다. 급하게 필요할 가능성이 있으면 기간을 짧게 잡는 것도 방법입니다."},
+    {"speaker": "user", "text": "음 그럼 일단 6개월로 알아볼게요"},
+    {"speaker": "assistant", "text": "네, 6개월 기준 앱 전용 정기예금 금리는 연 3.20%로 확인됩니다. 가입은 예금 메뉴에서 바로 진행 가능하십니다."},
+    {"speaker": "user", "text": "가입은 오늘 안해도 되죠?"},
+    {"speaker": "assistant", "text": "네, 오늘 바로 가입하지 않으셔도 괜찮습니다. 금리는 시장 상황에 따라 변동될 수 있으니 참고해 주세요."},
+    {"speaker": "user", "text": "네 알겠어요 좀더 생각해볼게요"},
+    {"speaker": "assistant", "text": "네, 편하실 때 다시 문의 주시면 안내드리겠습니다. 좋은 하루 보내세요."}
+  ],
+  "cue_annotations": [],
+  "quality_self_check": {
+    "no_direct_life_event_mention": true,
+    "no_assistant_label_leakage": true,
+    "financial_task_clear": true,
+    "turn_count_ok": true
+  }
+}
+```

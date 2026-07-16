@@ -58,10 +58,10 @@ Nemotron-Personas-Korea/data/*.parquet
 ```bash
 conda run -n life_event make normalize-personas \
   PERSONA_INPUT=/path/to/Nemotron-Personas-Korea \
-  LIMIT=5 SEED=42
+  AGE_QUOTAS="20-29:4 30-39:6 40-49:6 50-59:4" SEED=42
 ```
 
-`SAMPLE_RANDOM=1`이 기본이라 같은 `SEED`면 같은 persona 샘플이 재현됩니다.
+`RUN_ID`를 지정하지 않으면 `ko_KR_age20s4_30s6_40s6_50s4_seed<SEED>` 아래에 저장됩니다.
 
 ## LLM Config
 
@@ -92,7 +92,7 @@ HISTORY_FILTER_VALIDATORS=mock:mock-validator
 
 ```bash
 # persona 정규화
-conda run -n life_event make normalize-personas LIMIT=20 SEED=42
+conda run -n life_event make normalize-personas SEED=42
 
 # trajectory 생성
 conda run -n life_event make simulate-smoke NUM_TRAJ=5 HORIZON=10 SEED=42
@@ -116,9 +116,10 @@ conda run -n life_event make build-items
 
 ```bash
 conda run -n life_event python scripts/generate_dialogue_sessions.py \
-  --trajectories-dir data/generated/trajectories \
+  --trajectories-dir data/runs/ko_KR_age20s4_30s6_40s6_50s4_seed42/trajectories \
   --locale ko_KR \
-  --output-dir data/generated/sessions/llm_sample \
+  --output-dir data/runs/ko_KR_age20s4_30s6_40s6_50s4_seed42/dialogues/sessions \
+  --raw-output-dir data/runs/ko_KR_age20s4_30s6_40s6_50s4_seed42/dialogues/raw_outputs \
   --max-trajectories 1 \
   --max-sessions 20 \
   --overwrite \
@@ -138,7 +139,7 @@ conda run -n life_event python scripts/generate_dialogue_sessions.py \
 | `configs/generation/dialogue.yaml` | 세션 수, 턴 수, hard negative 비율, repair 횟수 |
 | `configs/registries/life_events.yaml` | 생애 사건, 발생 조건, lifecycle 설정 |
 
-현재 dialogue 기본값은 세션당 `28~32`턴이고, trajectory당 최대 `300`개 세션을 계획합니다. 현재 simulation 기본값은 `10년` horizon에서 사건이 더 자주 나오도록 `global_hazard_scale`을 올린 상태입니다.
+현재 dialogue 기본값은 세션당 `28~32`턴이고, trajectory당 최대 `300`개 세션을 계획합니다. canonical subgraph simulation은 고정 10년을 목표로 하지 않고, occurred event target을 채운 시점에 종료합니다. `global_hazard_scale`은 legacy/background hazard fallback에만 적용됩니다.
 
 ## Current Stabilization Notes
 
@@ -156,7 +157,7 @@ conda run -n life_event python scripts/generate_dialogue_sessions.py \
 - 출산/입양은 자녀 수와 부양가족 수가 각각 5명 미만일 때만 허용합니다.
 - 부양가족 사망은 부양가족이 있을 때만 허용합니다.
 - 교육 시작/유학은 이미 교육 상태인 persona에게 중복으로 발생하지 않도록 막습니다.
-- trajectory 밀도는 `configs/generation/simulation.yaml`에서 `max_events_per_trajectory: 15`, `global_hazard_scale: 6.0`, 기본 `HORIZON=10`으로 조정했습니다. 목표는 10년 trajectory에서 대략 10개 안팎의 event가 나오도록 하는 것입니다.
+- trajectory 밀도는 `configs/generation/simulation.yaml`의 event cap과 CLI `--target-occurred-events`로 조정합니다. 기본 canonical target은 trajectory당 occurred event 20개이며, persona가 지나치게 고령이 되는 경우 simulator가 경고합니다.
 
 ### 3. Dialogue generation quality
 
@@ -176,17 +177,19 @@ conda run -n life_event python scripts/generate_dialogue_sessions.py \
 
 | 경로 | 내용 |
 | --- | --- |
-| `data/personas/normalized/personas_ko_KR.jsonl` | 정규화된 persona |
-| `data/generated/trajectories/traj_*.json` | life-event trajectory |
-| `data/generated/sessions/sessions_traj_*.jsonl` | 최종 dialogue sessions |
-| `data/generated/sessions/errors_traj_*.jsonl` | `--continue-on-error` 실패 로그 |
-| `data/raw_model_outputs/dialogue/*.txt` | LLM 원문 출력 |
-| `data/raw_model_outputs/dialogue/*.meta.json` | provider metadata, stop reason, token usage |
-| `data/generated/quality_reports/*` | validation/audit 리포트 |
-| `data/generated/gold/prefix_gold.jsonl` | prefix별 gold state |
-| `data/generated/benchmark_items/*.jsonl` | Stage 1/2 benchmark item |
+| `data/runs/<RUN_ID>/manifest_<RUN_ID>.json` | run sampling manifest |
+| `data/runs/<RUN_ID>/inputs/personas_<RUN_ID>.jsonl` | 정규화된 persona |
+| `data/runs/<RUN_ID>/inputs/initial_states_<RUN_ID>.jsonl` | persona별 초기 memory/action |
+| `data/runs/<RUN_ID>/trajectories/traj_*.json` | life-event trajectory |
+| `data/runs/<RUN_ID>/dialogues/sessions/sessions_traj_*.jsonl` | 최종 dialogue sessions |
+| `data/runs/<RUN_ID>/dialogues/sessions/errors_traj_*.jsonl` | `--continue-on-error` 실패 로그 |
+| `data/runs/<RUN_ID>/dialogues/raw_outputs/*.txt` | LLM prompt/raw output |
+| `data/runs/<RUN_ID>/dialogues/raw_outputs/*.meta.json` | provider metadata, stop reason, token usage |
+| `data/runs/<RUN_ID>/quality_reports/*` | validation/audit 리포트 |
+| `data/runs/<RUN_ID>/gold/prefix_gold_<RUN_ID>.jsonl` | prefix별 gold state |
+| `data/runs/<RUN_ID>/benchmark_items/*.jsonl` | Stage 1/2 benchmark item |
 
-분석에는 `data/generated/sessions/*.jsonl`을 쓰고, LLM 디버깅에는 `data/raw_model_outputs/dialogue/`를 봅니다.
+분석에는 `data/runs/<RUN_ID>/dialogues/sessions/*.jsonl`을 쓰고, LLM 디버깅에는 같은 run의 `dialogues/raw_outputs/`를 봅니다.
 
 ## LLM Failure Handling
 
@@ -204,9 +207,10 @@ LLM 샘플을 다시 만들 때는 작은 규모부터 확인합니다.
 
 ```bash
 conda run -n life_event python scripts/generate_dialogue_sessions.py \
-  --trajectories-dir data/generated/trajectories \
+  --trajectories-dir data/runs/ko_KR_age20s4_30s6_40s6_50s4_seed42/trajectories \
   --locale ko_KR \
-  --output-dir data/generated/sessions/llm_sample \
+  --output-dir data/runs/ko_KR_age20s4_30s6_40s6_50s4_seed42/dialogues/sessions \
+  --raw-output-dir data/runs/ko_KR_age20s4_30s6_40s6_50s4_seed42/dialogues/raw_outputs \
   --max-trajectories 1 \
   --max-sessions 20 \
   --overwrite \
@@ -218,9 +222,9 @@ conda run -n life_event python scripts/generate_dialogue_sessions.py \
 
 생성 후 확인 순서:
 
-1. `data/generated/sessions/llm_sample/sessions_*.jsonl`에서 실제 저장된 session 수를 확인합니다.
-2. `data/generated/sessions/llm_sample/errors_*.jsonl`에서 실패 session과 error type을 확인합니다.
-3. `data/raw_model_outputs/dialogue/*.meta.json`에서 `stop_reason`, `content_block_types`, token usage를 봅니다.
+1. `data/runs/<RUN_ID>/dialogues/sessions/sessions_*.jsonl`에서 실제 저장된 session 수를 확인합니다.
+2. `data/runs/<RUN_ID>/dialogues/sessions/errors_*.jsonl`에서 실패 session과 error type을 확인합니다.
+3. `data/runs/<RUN_ID>/dialogues/raw_outputs/*.meta.json`에서 `stop_reason`, `content_block_types`, token usage를 봅니다.
 4. `make validate-dialogues`와 `make audit`으로 validator/audit 결과를 확인합니다.
 5. false positive가 보이면 prompt보다 validator rule을 먼저 좁힐 수 있는지 검토합니다.
 
@@ -236,8 +240,8 @@ conda run -n life_event python scripts/generate_dialogue_sessions.py \
 
 LLM raw output이 없거나 세션 수가 적음
 
-- `data/generated/sessions/errors_*.jsonl`을 먼저 봅니다.
-- provider metadata는 `data/raw_model_outputs/dialogue/*.meta.json`에 저장됩니다.
+- `data/runs/<RUN_ID>/dialogues/sessions/errors_*.jsonl`을 먼저 봅니다.
+- provider metadata는 `data/runs/<RUN_ID>/dialogues/raw_outputs/*.meta.json`에 저장됩니다.
 - 빈 응답이 반복되면 metadata의 `stop_reason`, `content_block_types`, `usage`를 확인합니다.
 
 ## Docs

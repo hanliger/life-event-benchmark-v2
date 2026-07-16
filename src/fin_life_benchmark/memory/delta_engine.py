@@ -100,18 +100,13 @@ class DeltaEngine:
         if path not in {"housing.rent_amount", "housing.rent_payee"}:
             return op
 
-        if instance.event_id == "housing_rental_contract":
-            contract_type = instance.params.get("new_contract_type")
-            if contract_type != "wolse":
+        if instance.event_id == "housing_move":
+            residence = instance.params.get("new_residence_status")
+            if residence != "wolse":
                 if to_status == EventStatus.UPCOMING:
                     return None
                 if to_status == EventStatus.OCCURRED:
                     return MemoryOperation.SET_NOT_APPLICABLE
-
-        if instance.event_id == "housing_move" and path == "housing.rent_payee":
-            residence = memory.current_value("housing.residence_status")
-            if residence != "wolse":
-                return MemoryOperation.SET_NOT_APPLICABLE
 
         return op
 
@@ -129,7 +124,8 @@ class DeltaEngine:
         hook = _HOOK_BY_STATUS.get(to_status)
         if hook is None:
             return []
-        template = self.registry.get(instance.event_id) or {}
+        template_id = instance.memory_delta_template_id or instance.event_id
+        template = self.registry.get(template_id) or {}
         hook_spec = template.get(hook) or {}
         specs = list(hook_spec.get("memory_updates") or []) + list(hook_spec.get("pending_memory") or [])
 

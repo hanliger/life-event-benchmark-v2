@@ -6,7 +6,7 @@ Example:
     --input-dir Nemotron-Personas-Korea \
     --locale ko_KR \
     --output data/personas/normalized/personas_ko_KR.jsonl \
-    --limit 20 --sample-random --seed 42
+    --limit 20 --min-age 18 --sample-random --seed 42
 """
 
 from __future__ import annotations
@@ -29,6 +29,18 @@ def main() -> int:
     parser.add_argument("--output", required=True)
     parser.add_argument("--limit", type=int, default=None, help="max personas (smoke runs)")
     parser.add_argument(
+        "--min-age",
+        type=int,
+        default=18,
+        help="minimum sampled persona age; defaults to 18",
+    )
+    parser.add_argument(
+        "--max-age",
+        type=int,
+        default=None,
+        help="optional maximum sampled persona age; unset means no upper bound",
+    )
+    parser.add_argument(
         "--sample-random",
         action="store_true",
         help="sample --limit personas reproducibly instead of taking the first rows",
@@ -44,6 +56,8 @@ def main() -> int:
         limit=args.limit,
         random_sample=args.sample_random,
         seed=args.seed,
+        min_age=args.min_age,
+        max_age=args.max_age,
     )
     for raw in tqdm(raw_iter, desc="normalize", total=args.limit):
         persona = normalize_persona(raw, locale=args.locale)

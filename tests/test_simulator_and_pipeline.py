@@ -6,7 +6,7 @@ from fin_life_benchmark.actions.initial_actions_generator import build_initial_a
 from fin_life_benchmark.benchmark.item_builder import ItemBuilder
 from fin_life_benchmark.dialogue.evidence_planner import EvidencePlanner
 from fin_life_benchmark.dialogue.generator import DialogueGenerator
-from fin_life_benchmark.fsm.event_lifecycle import sample_event_params
+from fin_life_benchmark.fsm.event_lifecycle import apply_occurred_to_life_state, sample_event_params
 from fin_life_benchmark.fsm.models import EventInstance, EventStatus
 from fin_life_benchmark.fsm.life_state_machine import LifeStateMachine
 from fin_life_benchmark.fsm.registry import load_life_event_templates
@@ -92,16 +92,14 @@ def test_dialogue_structured_context_is_prefix_safe():
     assert checked > 0
 
 
-def test_family_death_requires_existing_dependent():
+def test_family_death_only_removes_a_dependent_when_applicable():
     templates = load_life_event_templates()
     template = templates["relationship_family_death"]
-    fsm = LifeStateMachine(templates)
-
     no_dependents = LifeState(dependents_count=0)
-    assert not fsm.guards_pass(template, no_dependents, 45, 0, {}, [])
-
-    with_dependents = LifeState(dependents_count=1)
-    assert fsm.guards_pass(template, with_dependents, 45, 0, {}, [])
+    params = sample_event_params(template, no_dependents, load_locale("ko_KR"), random.Random(0))
+    assert params["was_dependent"] is False
+    apply_occurred_to_life_state(template.event_id, no_dependents, params)
+    assert no_dependents.dependents_count == 0
 
 
 def test_life_stage_invariant_guards():
@@ -112,7 +110,7 @@ def test_life_stage_invariant_guards():
     assert not fsm.guards_pass(marriage, LifeState(marital_status="separated"), 35, 0, {}, [])
     assert fsm.guards_pass(marriage, LifeState(marital_status="divorced"), 35, 0, {}, [])
 
-    childbirth = templates["relationship_childbirth_or_adoption"]
+    childbirth = templates["relationship_childbirth"]
     nearly_full_children = LifeState(marital_status="married", children_ages=[1, 3, 5, 7], dependents_count=3)
     assert not fsm.guards_pass(childbirth, nearly_full_children, 35, 0, {}, [])
     nearly_full_dependents = LifeState(marital_status="married", children_ages=[1, 3, 5], dependents_count=4)
@@ -125,30 +123,35 @@ def test_life_stage_invariant_guards():
     assert not fsm.guards_pass(templates["education_study_abroad"], in_school, 35, 0, {}, [])
 
 
-def test_dependent_change_never_exceeds_four_dependents():
+def test_dependent_addition_never_exceeds_four_dependents():
     paths = RepoPaths.default()
     locale = load_locale("ko_KR", paths)
     templates = load_life_event_templates(paths)
     state = LifeState(dependents_count=4)
 
-    params = sample_event_params(templates["relationship_dependent_change"], state, locale, random.Random(0))
-
-    assert params["dependent_delta"] == -1
-    assert params["dependents_after"] == 3
+    addition = templates["relationship_dependent_addition"]
+    assert not LifeStateMachine(templates).guards_pass(addition, state, 45, 0, {}, [])
 
 
-def test_jeonse_rental_contract_keeps_rent_fields_not_applicable():
+def test_jeonse_move_keeps_rent_fields_not_applicable():
     memory = FinancialMemoryState()
     memory.set_initial("housing.residence_status", "jeonse")
     memory.set_initial("housing.contract_type", "jeonse")
     memory.set_initial("housing.rent_amount", None, status=CellStatus.NOT_APPLICABLE)
     memory.set_initial("housing.rent_payee", None, status=CellStatus.NOT_APPLICABLE)
     instance = EventInstance(
-        event_instance_id="ev_rental",
-        event_id="housing_rental_contract",
-        label_ko="전세·월세 계약/갱신",
+        event_instance_id="ev_move",
+        event_id="housing_move",
+        label_ko="이사",
         domain="housing",
-        params={"new_contract_type": "jeonse", "new_rent_amount": 0, "new_payee": "집주인"},
+        params={
+            "new_address": "서울 마포구",
+            "new_residence_status": "jeonse",
+            "new_contract_type": "jeonse",
+            "new_rent_amount": 0,
+            "new_payee": "집주인",
+        },
+        memory_delta_template_id="housing_move",
     )
 
     DeltaEngine().apply_transition(memory, instance, EventStatus.OCCURRED, month_index=3, rng=random.Random(0))
@@ -169,7 +172,7 @@ def test_forced_duplicate_event_start_is_blocked_by_pending_instance():
         "snapshot_every_transition": True,
     }
     simulator = TrajectorySimulator(templates, locale, sim_config)
-    persona = _persona()  # wolse renter, so rental_contract guards pass
+    persona = _persona()
     memory = build_initial_memory(persona, locale, seed=2)
     actions = build_initial_actions(persona, memory, locale, seed=2)
 
@@ -180,20 +183,222 @@ def test_forced_duplicate_event_start_is_blocked_by_pending_instance():
         horizon_years=2,
         seed=2,
         trajectory_id="traj_duplicate_forced",
-        forced_events=[("housing_rental_contract", 0), ("housing_rental_contract", 0)],
+        forced_events=[("housing_move", 0), ("housing_move", 0)],
     )
 
-    rental_starts = [
+    move_starts = [
         instance.start_month
         for instance in trajectory.life_event_instances
-        if instance.event_id == "housing_rental_contract"
+        if instance.event_id == "housing_move"
     ]
-    assert rental_starts[0] == 0
-    assert len(rental_starts) == len(set(rental_starts))
+    assert move_starts[0] == 0
+    assert len(move_starts) == len(set(move_starts))
     assert all(
-        later - earlier >= templates["housing_rental_contract"].cooldown_months
-        for earlier, later in zip(rental_starts, rental_starts[1:])
+        later - earlier >= templates["housing_move"].cooldown_months
+        for earlier, later in zip(move_starts, move_starts[1:])
     )
+
+
+def test_month_zero_snapshot_records_post_transition_state():
+    paths = RepoPaths.default()
+    locale = load_locale("ko_KR", paths)
+    templates = load_life_event_templates(paths)
+    simulator = TrajectorySimulator(
+        templates,
+        locale,
+        {
+            "global_hazard_scale": 0.0,
+            "max_concurrent_active_events": 4,
+            "max_events_per_trajectory": 12,
+            "min_months_between_event_starts": 0,
+            "snapshot_every_transition": True,
+        },
+    )
+    persona = _persona()
+    persona.household.dependents_count = 1
+    memory = build_initial_memory(persona, locale, seed=42)
+    actions = build_initial_actions(persona, memory, locale, seed=42)
+
+    trajectory = simulator.simulate(
+        persona,
+        memory,
+        actions,
+        horizon_years=2,
+        seed=42,
+        trajectory_id="traj_month_zero_snapshot",
+        forced_events=[("relationship_family_death", 0)],
+    )
+
+    assert trajectory.initial_persona_state.life_state.dependents_count == 1
+    assert trajectory.state_snapshots["0"].life_state.dependents_count == 0
+    assert any(step.month_index == 0 for step in trajectory.timeline_steps)
+
+
+def test_occurred_event_crossing_age_guard_is_cancelled():
+    paths = RepoPaths.default()
+    locale = load_locale("ko_KR", paths)
+    base_templates = load_life_event_templates(paths)
+    from fin_life_benchmark.fsm.models import LifecycleConfig
+
+    templates = dict(base_templates)
+    templates["career_job_change"] = base_templates["career_job_change"].model_copy(
+        deep=True,
+        update={
+            "lifecycle": LifecycleConfig(
+                weak_signal_months=(1, 1),
+                upcoming_months=(1, 1),
+                p_skip_weak_signal=0.0,
+                p_skip_upcoming=0.0,
+                p_cancel_from_weak=0.0,
+                p_cancel_from_upcoming=0.0,
+            )
+        },
+    )
+    simulator = TrajectorySimulator(
+        templates,
+        locale,
+        {
+            "global_hazard_scale": 0.0,
+            "max_concurrent_active_events": 4,
+            "max_events_per_trajectory": 12,
+            "min_months_between_event_starts": 0,
+            "snapshot_every_transition": True,
+        },
+    )
+    persona = _persona()
+    persona.age = 65
+    persona.occupation_state.employment_status = "employed"
+    memory = build_initial_memory(persona, locale, seed=42)
+    actions = build_initial_actions(persona, memory, locale, seed=42)
+
+    trajectory = simulator.simulate(
+        persona,
+        memory,
+        actions,
+        horizon_years=2,
+        seed=42,
+        trajectory_id="traj_age_guard",
+        forced_events=[("career_job_change", 11)],
+    )
+
+    instance = next(i for i in trajectory.life_event_instances if i.event_id == "career_job_change")
+    assert instance.status.value == "cancelled"
+    assert instance.cancelled_month == 13
+
+
+def test_forced_events_respect_active_and_total_caps():
+    paths = RepoPaths.default()
+    locale = load_locale("ko_KR", paths)
+    templates = load_life_event_templates(paths)
+    simulator = TrajectorySimulator(
+        templates,
+        locale,
+        {
+            "global_hazard_scale": 0.0,
+            "max_concurrent_active_events": 1,
+            "max_events_per_trajectory": 2,
+            "min_months_between_event_starts": 0,
+            "snapshot_every_transition": True,
+        },
+    )
+    persona = _persona()
+    memory = build_initial_memory(persona, locale, seed=42)
+    actions = build_initial_actions(persona, memory, locale, seed=42)
+
+    trajectory = simulator.simulate(
+        persona,
+        memory,
+        actions,
+        horizon_years=2,
+        seed=42,
+        trajectory_id="traj_forced_caps",
+        forced_events=[("crisis_health_event", 0), ("crisis_accident_or_disaster", 0)],
+    )
+
+    assert len(trajectory.life_event_instances) <= 2
+    for month in range(trajectory.horizon_months):
+        active = sum(
+            instance.status_as_of(month).value in {"weak_signal", "upcoming"}
+            for instance in trajectory.life_event_instances
+        )
+        assert active <= 1
+
+
+def test_target_occurred_count_stops_trajectory():
+    paths = RepoPaths.default()
+    locale = load_locale("ko_KR", paths)
+    templates = load_life_event_templates(paths)
+    simulator = TrajectorySimulator(
+        templates,
+        locale,
+        {
+            "global_hazard_scale": 0.0,
+            "max_concurrent_active_events": 2,
+            "max_events_per_trajectory": 10,
+            "min_months_between_event_starts": 0,
+            "snapshot_every_transition": True,
+        },
+    )
+    persona = _persona()
+    memory = build_initial_memory(persona, locale, seed=42)
+    actions = build_initial_actions(persona, memory, locale, seed=42)
+    trajectory = simulator.simulate(
+        persona,
+        memory,
+        actions,
+        horizon_years=20,
+        seed=42,
+        trajectory_id="traj_target_count",
+        forced_events=[
+            ("crisis_health_event", 0),
+            ("crisis_health_event", 24),
+            ("crisis_health_event", 48),
+        ],
+        target_occurred_events=3,
+    )
+    assert sum(i.occurred_month is not None for i in trajectory.life_event_instances) == 3
+    assert trajectory.horizon_months < 240
+    assert trajectory.state_snapshots["0"] == trajectory.initial_persona_state
+
+
+def test_childbirth_can_repeat_after_cooldown():
+    paths = RepoPaths.default()
+    locale = load_locale("ko_KR", paths)
+    templates = load_life_event_templates(paths)
+    simulator = TrajectorySimulator(
+        templates,
+        locale,
+        {
+            "global_hazard_scale": 0.0,
+            "max_concurrent_active_events": 2,
+            "max_events_per_trajectory": 10,
+            "min_months_between_event_starts": 0,
+            "snapshot_every_transition": True,
+        },
+    )
+    persona = _persona()
+    persona.household.marital_status = "married"
+    memory = build_initial_memory(persona, locale, seed=42)
+    actions = build_initial_actions(persona, memory, locale, seed=42)
+    trajectory = simulator.simulate(
+        persona,
+        memory,
+        actions,
+        horizon_years=10,
+        seed=42,
+        trajectory_id="traj_repeat_childbirth",
+        forced_events=[
+            ("relationship_childbirth", 0),
+            ("relationship_childbirth", 36),
+            ("relationship_childbirth", 72),
+        ],
+        target_occurred_events=3,
+    )
+    births = [
+        i for i in trajectory.life_event_instances
+        if i.event_id == "relationship_childbirth" and i.occurred_month is not None
+    ]
+    assert len(births) == 3
 
 
 def test_end_to_end_mock_pipeline_in_memory():
@@ -262,16 +467,7 @@ def test_prefix_gold_dedup_roundtrips(tmp_path):
             assert rec["gold_life_events"] == last_events
 
 
-def test_episode_forced_events_are_guaranteed_and_impact_actions():
-    """Coverage path: forcing a home-purchase episode onto a wolse renter (who
-    has rent_autopay) must produce the occurred event AND a post_occurred
-    action impact on the rent action — the (event × matching action) pairing
-    the hazard sampler produces only rarely."""
-    from fin_life_benchmark.trajectory.episode_bridge import (
-        episode_scripted_events,
-        templates_for_event,
-    )
-
+def test_forced_event_is_guarded_and_impacts_actions():
     paths = RepoPaths.default()
     locale = load_locale("ko_KR", paths)
     templates = load_life_event_templates(paths)
@@ -283,25 +479,28 @@ def test_episode_forced_events_are_guaranteed_and_impact_actions():
     actions = build_initial_actions(persona, memory, locale, seed=1)
     assert any(a.type == "rent_autopay" for a in actions)
 
-    template_ids = templates_for_event(paths)["housing_home_purchase"]
-    forced = episode_scripted_events(
-        seed=1, horizon_months=144, start_age=persona.age,
-        template_ids=template_ids[:1], paths=paths,
-    )
-    assert any(eid == "housing_home_purchase" for eid, _ in forced)
-
     trajectory = simulator.simulate(
         persona, memory, actions, horizon_years=12, seed=1,
-        trajectory_id="traj_cov_test", forced_events=forced,
+        trajectory_id="traj_forced_test", forced_events=[("housing_home_purchase", 0)],
     )
     occurred = {i.event_id for i in trajectory.life_event_instances if i.status.value == "occurred"}
     assert "housing_home_purchase" in occurred
     impacts = [a for s in trajectory.timeline_steps for a in s.action_impacts]
     assert any(i.action_type == "rent_autopay" for i in impacts)
-    # forced events still respect guards: no divorce without marriage, etc.
+    # Forced/background events still respect guards: a divorce on this
+    # initially-single persona must be preceded by an occurred marriage.
+    marriage_months = [
+        instance.occurred_month
+        for instance in trajectory.life_event_instances
+        if instance.event_id == "relationship_marriage"
+        and instance.occurred_month is not None
+    ]
     for instance in trajectory.life_event_instances:
-        if instance.event_id == "relationship_divorce_or_separation":
-            raise AssertionError("guard bypassed: divorce on single persona")
+        if (
+            instance.event_id == "relationship_divorce_or_separation"
+            and instance.occurred_month is not None
+        ):
+            assert any(month < instance.occurred_month for month in marriage_months)
 
 
 def test_stage2_memory_mcq_builds_single_and_multi_hop_items():
@@ -316,6 +515,7 @@ def test_stage2_memory_mcq_builds_single_and_multi_hop_items():
                     "operation": "update",
                     "old_value": 10,
                     "new_value": 25,
+                    "evidence_turns": ["S001:0"],
                 }
             ],
             "gold_full_memory_state": {
@@ -336,12 +536,14 @@ def test_stage2_memory_mcq_builds_single_and_multi_hop_items():
                     "operation": "update",
                     "old_value": 10,
                     "new_value": 25,
+                    "evidence_turns": ["S001:0"],
                 },
                 {
                     "path": "housing.rent_payee",
                     "operation": "update",
                     "old_value": "기존 임대인",
                     "new_value": "새 임대인",
+                    "evidence_turns": ["S002:0"],
                 },
             ],
             "gold_full_memory_state": {

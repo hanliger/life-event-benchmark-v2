@@ -47,7 +47,8 @@ class ImpactEngine:
         hook = _HOOK_BY_STATUS.get(to_status)
         if hook is None:
             return []
-        template = self.registry.get(instance.event_id) or {}
+        template_id = instance.action_impact_template_id or instance.event_id
+        template = self.registry.get(template_id) or {}
         specs = (template.get(hook) or {}).get("action_impacts") or []
 
         impacts: list[ActionImpact] = []

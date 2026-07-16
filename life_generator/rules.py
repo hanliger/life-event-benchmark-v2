@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 from dataclasses import dataclass
 
 from life_event_graph import build_graphs
@@ -78,8 +79,16 @@ def timeline_events_from_episodes(episodes: tuple[EpisodeInstance, ...]) -> list
     return events
 
 
-def validate_episode_set(episodes: tuple[EpisodeInstance, ...]) -> tuple[bool, Rejection | None]:
-    state = GeneratorState()
+def validate_episode_set(
+    episodes: tuple[EpisodeInstance, ...],
+    initial_state: GeneratorState | None = None,
+) -> tuple[bool, Rejection | None]:
+    # Seed from the persona's month-0 state when provided so state-dependent
+    # arcs (a married person's divorce, an owner's home sale, an employed
+    # person's job change) are not over-rejected. Deep-copy because the
+    # validation loop mutates ``state`` and this may be called repeatedly with
+    # the same seed object. Default None preserves the blank-state behavior.
+    state = copy.deepcopy(initial_state) if initial_state is not None else GeneratorState()
     seen_episode_ids = {_source_template_id(episode) for episode in episodes}
     templates_by_id = {template.id: template for template in EPISODE_TEMPLATES}
 

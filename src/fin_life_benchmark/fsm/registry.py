@@ -36,6 +36,15 @@ def load_life_event_templates(paths: RepoPaths | None = None) -> dict[str, LifeE
             ),
             cooldown_months=int(spec.get("cooldown_months", 12)),
             base_rate_per_year=float(spec.get("base_rate_per_year", 0.05)),
+            sampling_multiplier=float(spec.get("sampling_multiplier", 1.0)),
+            repeat_policy=str(spec.get("repeat_policy", "repeatable")),
+            occurrence_scope=str(spec.get("occurrence_scope", "persona")),
+            max_occurrences=(
+                int(spec["max_occurrences"])
+                if spec.get("max_occurrences") is not None
+                else None
+            ),
+            sampling_source=str(spec.get("sampling_source", "event_or_subgraph")),
             age_weights=spec.get("age_weights") or {},
             requires_child_entry_age=bool(spec.get("requires_child_entry_age", False)),
             lifecycle=LifecycleConfig(**(spec.get("lifecycle") or {})),
@@ -45,6 +54,8 @@ def load_life_event_templates(paths: RepoPaths | None = None) -> dict[str, LifeE
             memory_delta_template_id=spec.get("memory_delta_template_id", event_id),
             action_impact_template_id=spec.get("action_impact_template_id", event_id),
             life_generator_node_ids=_as_list(spec.get("life_generator_node_ids")),
+            event_parameter_schema=spec.get("event_parameter_schema") or {},
+            parameter_guards=spec.get("parameter_guards") or {},
         )
         if template.active:
             templates[template.event_id] = template

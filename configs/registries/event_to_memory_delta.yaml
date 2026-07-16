@@ -65,7 +65,7 @@ relationship_divorce_or_separation:
     memory_updates:
       - path: household.marital_status
         operation: update
-        value_from: "literal:divorced"
+        value_from: "param:marital_status_after"
       - path: household.spouse_or_partner
         operation: archive
       - path: household.child_support_arrangement
@@ -160,11 +160,26 @@ housing_move:
       - path: housing.address
         operation: set_pending
         value_from: "param:new_address"
+      - path: housing.residence_status
+        operation: set_pending
+        value_from: "param:new_residence_status"
+      - path: housing.contract_type
+        operation: set_pending
+        value_from: "param:new_contract_type"
   on_occurred:
     memory_updates:
       - path: housing.address
         operation: update
         value_from: "param:new_address"
+      - path: housing.residence_status
+        operation: update
+        value_from: "param:new_residence_status"
+      - path: housing.contract_type
+        operation: update
+        value_from: "param:new_contract_type"
+      - path: housing.rent_amount
+        operation: update
+        value_from: "param:new_rent_amount"
       - path: housing.rent_payee
         operation: needs_verification
       - path: housing.maintenance_fee_payee
@@ -354,7 +369,10 @@ housing_home_sale_or_moveout:
     memory_updates:
       - path: housing.residence_status
         operation: update
-        value_from: "literal:jeonse"
+        value_from: "param:post_sale_residence_status"
+      - path: housing.contract_type
+        operation: update
+        value_from: "param:post_sale_contract_type"
       - path: housing.mortgage_status
         operation: update
         value_from: "literal:closed"
@@ -524,6 +542,29 @@ retirement_prep_start:
     memory_updates:
       - path: goals.retirement_goal
         operation: clear_pending
+
+retirement_start:
+  on_weak_signal: {memory_updates: [], pending_memory: []}
+  on_upcoming:
+    memory_updates:
+      - path: employment.employment_status
+        operation: needs_verification
+      - path: financial_products.pension_or_irp
+        operation: needs_verification
+  on_occurred:
+    memory_updates:
+      - path: employment.employment_status
+        operation: update
+        value_from: "literal:retired"
+      - path: employment.salary_day
+        operation: mark_stale
+      - path: employment.income_stability
+        operation: update
+        value_from: "literal:retired"
+      - path: financial_products.pension_or_irp
+        operation: needs_verification
+  on_cancelled:
+    memory_updates: []
 
 retirement_pension_start:
   on_weak_signal: {memory_updates: [], pending_memory: []}

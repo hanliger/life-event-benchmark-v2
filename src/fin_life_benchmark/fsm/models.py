@@ -53,6 +53,11 @@ class LifeEventTemplate(BaseModel):
     state_guards: StateGuard = Field(default_factory=StateGuard)
     cooldown_months: int = 12
     base_rate_per_year: float = 0.05
+    sampling_multiplier: float = 1.0
+    repeat_policy: str = "repeatable"  # once|repeatable
+    occurrence_scope: str = "persona"  # persona|household|per_child
+    max_occurrences: int | None = None
+    sampling_source: str = "event_or_subgraph"  # event_or_subgraph|subgraph_only|fixed_or_subgraph
     age_weights: dict[str, float] = Field(default_factory=dict)
     requires_child_entry_age: bool = False
     lifecycle: LifecycleConfig = Field(default_factory=LifecycleConfig)
@@ -62,6 +67,8 @@ class LifeEventTemplate(BaseModel):
     memory_delta_template_id: str = ""
     action_impact_template_id: str = ""
     life_generator_node_ids: list[str] = Field(default_factory=list)
+    event_parameter_schema: dict[str, Any] = Field(default_factory=dict)
+    parameter_guards: dict[str, Any] = Field(default_factory=dict)
 
     def age_weight(self, age: int) -> float:
         for bracket, weight in self.age_weights.items():
@@ -88,6 +95,11 @@ class EventInstance(BaseModel):
     occurred_month: int | None = None
     cancelled_month: int | None = None
     params: dict[str, Any] = Field(default_factory=dict)
+    # Keep the benchmark event ID stable while allowing multiple benchmark
+    # events to reuse an existing memory/action transition template.
+    memory_delta_template_id: str = ""
+    action_impact_template_id: str = ""
+    generation_source: str = "hazard"  # hazard|forced
 
     def status_as_of(self, month_index: int) -> EventStatus:
         status = EventStatus.NO_EVENT

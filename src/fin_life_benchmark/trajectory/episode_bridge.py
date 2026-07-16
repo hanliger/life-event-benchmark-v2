@@ -102,6 +102,7 @@ def scripted_events_from_path(
     reverse_map: dict[str, str],
     rng: random.Random,
     compress: bool = False,
+    base_age: int | None = None,
 ) -> list[tuple[str, int]]:
     """Convert a life_generator GeneratedLifePath into (benchmark_event_id,
     start_month) pairs anchored inside [0, horizon_months).
@@ -111,11 +112,18 @@ def scripted_events_from_path(
     scaled to fit [0, horizon_months) so every mapped event lands inside the
     horizon (ordering preserved, inter-event gaps shortened). Without it,
     events past the horizon are dropped. Coverage generation uses compress=True
-    so the target event is guaranteed to occur."""
+    so the target event is guaranteed to occur.
+
+    ``base_age`` is the person-age that maps to month 0. Default (None) rebases
+    to the earliest event age (legacy episode-mode behavior, persona-age
+    agnostic). Pass ``base_age=persona.age`` (subgraph mode) to anchor the
+    timeline to the persona's actual age: events before it become negative and
+    are dropped, events past the horizon are dropped, so the surviving arc is
+    exactly the slice that fits the person's life window."""
     events = list(path.events)
     if not events:
         return []
-    base_age = min(e.age for e in events)
+    base_age = base_age if base_age is not None else min(e.age for e in events)
     raw: list[tuple[str, int]] = []
     for event in events:
         benchmark_id = reverse_map.get(event.event_id)

@@ -1,0 +1,66 @@
+{
+  "strategy": "age_stratified",
+  "seed": 42,
+  "locale": "ko_KR",
+  "input_dir": "Nemotron-Personas-Korea",
+  "output": "data/runs/ko_KR_age20s4_30s6_40s6_50s4_seed42/inputs/personas_ko_KR_age20s4_30s6_40s6_50s4_seed42.jsonl",
+  "quotas": {
+    "20-29": 4,
+    "30-39": 6,
+    "40-49": 6,
+    "50-59": 4
+  },
+  "available_counts": {
+    "20-29": 135011,
+    "30-39": 149659,
+    "40-49": 175647,
+    "50-59": 198750
+  },
+  "sampled_count": 20,
+  "persona_ids": [
+    "p_5e8d9df03584",
+    "p_e59d3090a517",
+    "p_ba20d81ebde7",
+    "p_90d9542da2c4",
+    "p_a13bf7e107ce",
+    "p_57eb527f5138",
+    "p_9af25c927991",
+    "p_e12bc82b3ad5",
+    "p_279ec7a44378",
+    "p_702dd652ff75",
+    "p_f47b28561c3a",
+    "p_7ed134ba985e",
+    "p_9c4f26bb90bb",
+    "p_f09b95a852ad",
+    "p_b8c20bc99c0d",
+    "p_1bcf717903d8",
+    "p_3b386777f622",
+    "p_c2d5f9e29256",
+    "p_d86b1b7a14e2",
+    "p_8c9a673904c1"
+  ],
+  "age_counts": {
+    "20-29": 4,
+    "30-39": 6,
+    "40-49": 6,
+    "50-59": 4
+  },
+  "sex_counts_by_age_band": {
+    "20-29": {
+      "남자": 1,
+      "여자": 3
+    },
+    "30-39": {
+      "남자": 3,
+      "여자": 3
+    },
+    "40-49": {
+      "남자": 2,
+      "여자": 4
+    },
+    "50-59": {
+      "남자": 3,
+      "여자": 1
+    }
+  }
+}

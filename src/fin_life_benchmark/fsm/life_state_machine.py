@@ -65,7 +65,48 @@ class LifeStateMachine:
                 return False
         return True
 
+    def occurrence_guards_pass(
+        self,
+        template: LifeEventTemplate,
+        state: LifeState,
+        age: int,
+    ) -> bool:
+        """Check the guards that must still hold when an event occurs.
+
+        Start-time cooldown and active-instance checks are intentionally not
+        repeated here. Age and state guards are repeated because an event may
+        spend several months in weak/upcoming status while another event
+        changes the person's state or the person crosses an age boundary.
+        """
+        if not (template.age_guard.min_age <= age <= template.age_guard.max_age):
+            return False
+        return self.state_guards_pass(template, state)
+
     # -- hazard ---------------------------------------------------------------
+    def annual_propensity(
+        self,
+        template: LifeEventTemplate,
+        state: LifeState,
+        age: int,
+        persona: NormalizedPersona,
+    ) -> float:
+        """Relative, unclamped annual propensity used as a *selection weight*.
+
+        Same age/state/persona conditioning chain as ``monthly_hazard`` but
+        WITHOUT the ``/12`` and the ``[0, 0.5]`` clamp: this is a weight, not a
+        probability, and the clamp/constant would distort relative ordering.
+        The registry's ``sampling_multiplier`` is applied once after the
+        event-level hazard factors.
+        Used by the subgraph sampler to weight episodes by their entry event's
+        hazard (see trajectory.subgraph_bridge)."""
+        p = template.base_rate_per_year
+        p *= template.age_weight(age)
+        p *= self._state_modifier(template, state)
+        p *= self._persona_modifier(template, persona)
+        p *= template.sampling_multiplier
+        p *= self.global_hazard_scale
+        return p
+
     def monthly_hazard(
         self,
         template: LifeEventTemplate,
@@ -73,26 +114,18 @@ class LifeStateMachine:
         age: int,
         persona: NormalizedPersona,
     ) -> float:
-        p = template.base_rate_per_year / 12.0
-        p *= template.age_weight(age)
-        p *= self._state_modifier(template, state)
-        p *= self._persona_modifier(template, persona)
-        p *= self.global_hazard_scale
-        return max(0.0, min(0.5, p))
+        return max(0.0, min(0.5, self.annual_propensity(template, state, age, persona) / 12.0))
 
     def _state_modifier(self, template: LifeEventTemplate, state: LifeState) -> float:
-        # renters renegotiate contracts more; owners basically never do
-        if template.event_id == "housing_rental_contract":
-            return 1.0 if state.residence_status in {"wolse", "jeonse"} else 0.2
         if template.event_id == "housing_move" and state.home_owned:
             return 0.4
-        if template.event_id == "relationship_dependent_change" and state.dependents_count >= 2:
+        if template.event_id == "relationship_dependent_addition" and state.dependents_count >= 2:
             return 0.5
         return 1.0
 
     def _persona_modifier(self, template: LifeEventTemplate, persona: NormalizedPersona) -> float:
         # income stability influences job-loss / job-change propensity
-        if template.event_id == "career_resignation_or_job_loss":
+        if template.event_id == "career_employment_end":
             return 1.5 if persona.occupation_state.income_stability in {"variable", "unstable"} else 1.0
         if template.event_id == "career_job_change" and persona.age < 35:
             return 1.2

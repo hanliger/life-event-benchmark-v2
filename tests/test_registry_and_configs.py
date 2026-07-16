@@ -18,10 +18,12 @@ def test_mvp_events_have_full_delta_templates():
     deltas = load_yaml(paths.registries / "event_to_memory_delta.yaml")
     impacts = load_yaml(paths.registries / "event_to_action_impact.yaml")
     for event_id, template in templates.items():
-        assert event_id in deltas, f"missing delta template for {event_id}"
-        assert event_id in impacts, f"missing impact template for {event_id}"
+        delta_id = template.memory_delta_template_id or event_id
+        impact_id = template.action_impact_template_id or event_id
+        assert delta_id in deltas, f"missing delta template {delta_id} for {event_id}"
+        assert impact_id in impacts, f"missing impact template {impact_id} for {event_id}"
         if template.mvp:
-            occurred = deltas[event_id].get("on_occurred") or {}
+            occurred = deltas[delta_id].get("on_occurred") or {}
             assert occurred.get("memory_updates"), f"MVP event {event_id} lacks occurred memory updates"
 
 

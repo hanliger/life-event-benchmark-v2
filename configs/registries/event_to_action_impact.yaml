@@ -178,6 +178,18 @@ retirement_prep_start:
         expected_decision: ask_confirmation
         risk: high
 
+retirement_start:
+  on_occurred:
+    action_impacts:
+      - selector: {linked_memory_path: employment.salary_day}
+        impact_type: trigger_source_disappeared
+        expected_decision: ask_confirmation
+        risk: high
+      - selector: {label: pension_contribution}
+        impact_type: contribution_amount_may_change
+        expected_decision: ask_confirmation
+        risk: high
+
 retirement_pension_start:
   on_occurred:
     action_impacts:

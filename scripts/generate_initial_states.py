@@ -29,7 +29,13 @@ def main() -> int:
     parser.add_argument("--locale", default="ko_KR")
     parser.add_argument("--output", required=True)
     parser.add_argument("--limit", type=int, default=None)
-    parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=42,
+        help="seed for RNG-chosen initial-state fields; the resulting JSONL is "
+        "consumed directly by simulate_trajectories.py",
+    )
     args = parser.parse_args()
 
     locale = load_locale(args.locale)

@@ -79,12 +79,42 @@ def _iter_persona_file(path: Path) -> Iterator[dict[str, Any]]:
             yield record
 
 
-def _iter_random_parquet_personas(candidates: list[Path], limit: int, seed: int) -> Iterator[dict[str, Any]]:
+def _age_in_range(value: Any, min_age: int | None = None, max_age: int | None = None) -> bool:
+    try:
+        age = int(value)
+    except (TypeError, ValueError, OverflowError):
+        return False
+    if min_age is not None and age < min_age:
+        return False
+    if max_age is not None and age > max_age:
+        return False
+    return True
+
+
+def _iter_random_parquet_personas(
+    candidates: list[Path],
+    limit: int,
+    seed: int,
+    min_age: int | None = None,
+    max_age: int | None = None,
+) -> Iterator[dict[str, Any]]:
     import pandas as pd
     import pyarrow.parquet as pq
 
     row_counts = [(path, pq.ParquetFile(path).metadata.num_rows) for path in candidates]
-    total_rows = sum(count for _, count in row_counts)
+    eligible_indexes: dict[Path, list[int]] = {}
+    if min_age is not None or max_age is not None:
+        for path, _ in row_counts:
+            age_column = pq.ParquetFile(path).read(columns=["age"]).column("age").to_pylist()
+            eligible_indexes[path] = [
+                index for index, value in enumerate(age_column) if _age_in_range(value, min_age, max_age)
+            ]
+
+    eligible_counts = [
+        (path, len(eligible_indexes[path]) if (min_age is not None or max_age is not None) else count)
+        for path, count in row_counts
+    ]
+    total_rows = sum(count for _, count in eligible_counts)
     if total_rows <= 0:
         return
 
@@ -94,7 +124,7 @@ def _iter_random_parquet_personas(candidates: list[Path], limit: int, seed: int)
 
     cumulative: list[int] = []
     running = 0
-    for _, count in row_counts:
+    for _, count in eligible_counts:
         running += count
         cumulative.append(running)
 
@@ -102,8 +132,10 @@ def _iter_random_parquet_personas(candidates: list[Path], limit: int, seed: int)
     for global_index in sampled:
         file_index = bisect_right(cumulative, global_index)
         previous = cumulative[file_index - 1] if file_index else 0
-        path = row_counts[file_index][0]
+        path = eligible_counts[file_index][0]
         local_index = global_index - previous
+        if min_age is not None or max_age is not None:
+            local_index = eligible_indexes[path][local_index]
         if path not in frames:
             frames[path] = pd.read_parquet(path)
         yield frames[path].iloc[int(local_index)].to_dict()
@@ -115,12 +147,15 @@ def iter_raw_personas(
     *,
     random_sample: bool = False,
     seed: int = 42,
+    min_age: int | None = 18,
+    max_age: int | None = None,
 ) -> Iterator[dict[str, Any]]:
     """Load raw personas from parquet/jsonl/json/csv files under input_dir.
 
     By default records are yielded in file order for backwards compatibility.
     With random_sample=True, --limit-sized samples are drawn reproducibly from
-    all candidate files instead of taking the first rows.
+    all candidate files instead of taking the first rows. Age filters are
+    applied before sampling; by default only adult personas (18+) are eligible.
     """
     candidates = _persona_files(input_dir)
 
@@ -128,9 +163,13 @@ def iter_raw_personas(
         if limit is None:
             raise ValueError("random_sample=True requires limit")
         if all(path.suffix == ".parquet" for path in candidates):
-            yield from _iter_random_parquet_personas(candidates, limit=limit, seed=seed)
+            yield from _iter_random_parquet_personas(
+                candidates, limit=limit, seed=seed, min_age=min_age, max_age=max_age
+            )
             return
         records = [record for path in candidates for record in _iter_persona_file(path)]
+        if min_age is not None or max_age is not None:
+            records = [record for record in records if _age_in_range(record.get("age"), min_age, max_age)]
         rng = random.Random(seed)
         for record in rng.sample(records, min(limit, len(records))):
             yield record
@@ -141,6 +180,8 @@ def iter_raw_personas(
         if limit is not None and yielded >= limit:
             return
         for record in _iter_persona_file(path):
+            if not _age_in_range(record.get("age"), min_age, max_age):
+                continue
             yield record
             yielded += 1
             if limit is not None and yielded >= limit:

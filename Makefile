@@ -1,19 +1,30 @@
 PYTHON ?= python
-LIMIT ?= 5
+LIMIT ?= 20
 SEED ?= 42
 HORIZON ?= 10
 NUM_TRAJ ?= 5
+MAX_SESSIONS ?=
+TARGET_EVENTS ?= 20
+SAFETY_MAX_AGE ?= 120
+AGE_WARNING ?= 80
 EXECUTE ?= 0
-SAMPLE_RANDOM ?= 1
 PERSONA_INPUT ?= Nemotron-Personas-Korea
-RANDOM_SAMPLE_FLAGS := $(if $(filter 1 true yes,$(SAMPLE_RANDOM)),--sample-random --seed $(SEED),)
+AGE_QUOTAS ?= 20-29:4 30-39:6 40-49:6 50-59:4
+RUN_ID ?= ko_KR_age20s4_30s6_40s6_50s4_seed$(SEED)
+QUOTA_FLAGS := $(foreach quota,$(AGE_QUOTAS),--quota $(quota))
+SESSION_LIMIT_FLAGS := $(if $(MAX_SESSIONS),--max-sessions $(MAX_SESSIONS),)
 
-PERSONAS := data/personas/normalized/personas_ko_KR.jsonl
-TRAJ_DIR := data/generated/trajectories
-SESS_DIR := data/generated/sessions
-GOLD := data/generated/gold/prefix_gold.jsonl
-ITEMS_DIR := data/generated/benchmark_items
-QUALITY := data/generated/quality_reports
+RUN_DIR := data/runs/$(RUN_ID)
+INPUTS_DIR := $(RUN_DIR)/inputs
+PERSONAS := $(INPUTS_DIR)/personas_$(RUN_ID).jsonl
+INITIAL_STATES := $(INPUTS_DIR)/initial_states_$(RUN_ID).jsonl
+RUN_MANIFEST := $(RUN_DIR)/manifest_$(RUN_ID).json
+TRAJ_DIR := $(RUN_DIR)/trajectories
+SESS_DIR := $(RUN_DIR)/dialogues/sessions
+RAW_DIALOGUE_DIR := $(RUN_DIR)/dialogues/raw_outputs
+GOLD := $(RUN_DIR)/gold/prefix_gold_$(RUN_ID).jsonl
+ITEMS_DIR := $(RUN_DIR)/benchmark_items
+QUALITY := $(RUN_DIR)/quality_reports
 
 .PHONY: setup inventory normalize-personas initial-states simulate-smoke \
 	coverage-trajectories dialogue-smoke-dry dialogue-smoke validate-dialogues \
@@ -30,19 +41,23 @@ inventory:
 	@$(PYTHON) -c "import life_generator; print('life_generator importable')"
 
 normalize-personas:
-	$(PYTHON) scripts/normalize_personas.py \
+	$(PYTHON) scripts/sample_stratified_personas.py \
 		--input-dir $(PERSONA_INPUT) --locale ko_KR \
-		--output $(PERSONAS) --limit $(LIMIT) $(RANDOM_SAMPLE_FLAGS)
+		--output $(PERSONAS) $(QUOTA_FLAGS) --seed $(SEED) \
+		--summary-output $(RUN_MANIFEST)
 
 initial-states:
 	$(PYTHON) scripts/generate_initial_states.py \
 		--personas $(PERSONAS) --locale ko_KR \
-		--output $(TRAJ_DIR)/initial_states.jsonl --limit $(LIMIT)
+		--output $(INITIAL_STATES) --limit $(LIMIT)
 
 simulate-smoke:
 	$(PYTHON) scripts/simulate_trajectories.py \
 		--personas $(PERSONAS) --locale ko_KR \
+		--initial-states $(INITIAL_STATES) \
 		--num-trajectories $(NUM_TRAJ) --horizon-years $(HORIZON) \
+		--target-occurred-events $(TARGET_EVENTS) \
+		--safety-max-age $(SAFETY_MAX_AGE) --age-warning-threshold $(AGE_WARNING) \
 		--output-dir $(TRAJ_DIR) --seed $(SEED)
 
 # Coverage-driven trajectories to grow the rare post_occurred class
@@ -56,17 +71,20 @@ coverage-trajectories:
 dialogue-smoke-dry:
 	$(PYTHON) scripts/generate_dialogue_sessions.py \
 		--trajectories-dir $(TRAJ_DIR) --locale ko_KR \
-		--output-dir $(SESS_DIR) --max-trajectories $(NUM_TRAJ) --dry-run
+		--output-dir $(SESS_DIR) --raw-output-dir $(RAW_DIALOGUE_DIR) \
+		--max-trajectories $(NUM_TRAJ) $(SESSION_LIMIT_FLAGS) --dry-run
 
 dialogue-smoke:
 ifeq ($(EXECUTE),1)
 	$(PYTHON) scripts/generate_dialogue_sessions.py \
 		--trajectories-dir $(TRAJ_DIR) --locale ko_KR \
-		--output-dir $(SESS_DIR) --max-trajectories $(NUM_TRAJ) --overwrite --execute --continue-on-error
+		--output-dir $(SESS_DIR) --raw-output-dir $(RAW_DIALOGUE_DIR) \
+		--max-trajectories $(NUM_TRAJ) $(SESSION_LIMIT_FLAGS) --overwrite --execute --continue-on-error
 else
 	$(PYTHON) scripts/generate_dialogue_sessions.py \
 		--trajectories-dir $(TRAJ_DIR) --locale ko_KR \
-		--output-dir $(SESS_DIR) --max-trajectories $(NUM_TRAJ) --overwrite --mock
+		--output-dir $(SESS_DIR) --raw-output-dir $(RAW_DIALOGUE_DIR) \
+		--max-trajectories $(NUM_TRAJ) $(SESSION_LIMIT_FLAGS) --overwrite --mock
 endif
 
 validate-dialogues:
@@ -108,7 +126,4 @@ test:
 	$(PYTHON) -m pytest tests -q
 
 clean-generated:
-	rm -rf data/generated/trajectories/* data/generated/sessions/* \
-		data/generated/gold/* data/generated/benchmark_items/* \
-		data/generated/quality_reports/* data/raw_model_outputs/dialogue/* \
-		data/personas/normalized/*
+	rm -rf $(RUN_DIR)

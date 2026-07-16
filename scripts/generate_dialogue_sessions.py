@@ -4,8 +4,10 @@
 Examples:
   # mock (no API, default)
   python scripts/generate_dialogue_sessions.py \
-    --trajectories-dir data/generated/trajectories \
-    --locale ko_KR --output-dir data/generated/sessions --max-trajectories 3 --mock
+    --trajectories-dir data/runs/<RUN_ID>/trajectories \
+    --locale ko_KR --output-dir data/runs/<RUN_ID>/dialogues/sessions \
+    --raw-output-dir data/runs/<RUN_ID>/dialogues/raw_outputs \
+    --max-trajectories 3 --mock
 
   # dry-run: write prompts only
   python scripts/generate_dialogue_sessions.py ... --dry-run
@@ -44,6 +46,11 @@ def main() -> int:
     parser.add_argument("--trajectories-dir", required=True)
     parser.add_argument("--locale", default="ko_KR")
     parser.add_argument("--output-dir", required=True)
+    parser.add_argument(
+        "--raw-output-dir",
+        default=None,
+        help="where dry-run prompts and LLM raw outputs are written; default: data/raw_model_outputs/dialogue",
+    )
     parser.add_argument("--max-trajectories", type=int, default=None)
     parser.add_argument("--max-sessions", type=int, default=None, help="cap sessions per trajectory")
     parser.add_argument("--seed", type=int, default=0)
@@ -70,11 +77,14 @@ def main() -> int:
         client = LLMClient.from_env(provider=args.provider, model=args.model)
         if client.provider == "mock":
             raise SystemExit("--execute requires DEFAULT_LLM_PROVIDER=openai|anthropic in .env")
-        generator = DialogueGenerator(mode="llm", client=client, paths=paths)
+        raw_output_dir = Path(args.raw_output_dir) if args.raw_output_dir else None
+        generator = DialogueGenerator(mode="llm", client=client, paths=paths, raw_output_dir=raw_output_dir)
     elif args.dry_run:
-        generator = DialogueGenerator(mode="dry_run", paths=paths)
+        raw_output_dir = Path(args.raw_output_dir) if args.raw_output_dir else None
+        generator = DialogueGenerator(mode="dry_run", paths=paths, raw_output_dir=raw_output_dir)
     else:
-        generator = DialogueGenerator(mode="mock", paths=paths)
+        raw_output_dir = Path(args.raw_output_dir) if args.raw_output_dir else None
+        generator = DialogueGenerator(mode="mock", paths=paths, raw_output_dir=raw_output_dir)
 
     trajectory_files = sorted(Path(args.trajectories_dir).glob("traj_*.json"))
     if args.max_trajectories is not None:
@@ -132,7 +142,8 @@ def main() -> int:
                     error_handle.close()
 
     if args.dry_run:
-        print(f"dry-run: prompts written to {paths.raw_model_outputs / 'dialogue'}")
+        prompt_dir = Path(args.raw_output_dir) if args.raw_output_dir else paths.raw_model_outputs / "dialogue"
+        print(f"dry-run: prompts written to {prompt_dir}")
     else:
         print(f"wrote {total_sessions} sessions -> {output_dir}")
     return 0

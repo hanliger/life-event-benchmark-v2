@@ -75,9 +75,25 @@ class FinancialMemoryState(BaseModel):
         hist = self.history(path)
         return hist[-1] if hist else None
 
+    def committed(self, path: str) -> MemoryCell | None:
+        """Latest committed cell, excluding prospective/cancelled history.
+
+        A path may legitimately contain an existing committed value and a
+        newer pending proposal.  Mutation logic must therefore not use the
+        last appended cell as a synonym for the current committed fact.
+        """
+        for cell in reversed(self.history(path)):
+            if cell.status not in {
+                CellStatus.PENDING,
+                CellStatus.CANCELLED,
+                CellStatus.HISTORICAL,
+            }:
+                return cell
+        return None
+
     def current_value(self, path: str) -> Any:
-        cell = self.latest(path)
-        if cell is None or cell.status in {CellStatus.HISTORICAL, CellStatus.CANCELLED, CellStatus.NOT_APPLICABLE}:
+        cell = self.committed(path)
+        if cell is None or cell.status in {CellStatus.NOT_APPLICABLE, CellStatus.UNKNOWN}:
             return None
         return cell.value
 
@@ -101,12 +117,12 @@ class FinancialMemoryState(BaseModel):
         """Apply a MemoryUpdate, preserving history. Returns the update with
         old_value filled in."""
         hist = self.cells.setdefault(update.path, [])
-        latest = hist[-1] if hist else None
+        committed = self.committed(update.path)
         op = update.operation
         month = update.month_index
 
-        if latest is not None and update.old_value is None:
-            update.old_value = latest.value
+        if committed is not None and update.old_value is None:
+            update.old_value = committed.value
 
         def _append(value: Any, status: CellStatus, confidence: float = 1.0) -> None:
             hist.append(
@@ -122,51 +138,96 @@ class FinancialMemoryState(BaseModel):
                 )
             )
 
+        def _matching_pending() -> list[MemoryCell]:
+            return [
+                cell
+                for cell in hist
+                if cell.status == CellStatus.PENDING
+                and cell.source_event_instance_id == update.source_event_instance_id
+            ]
+
+        def _close_committed() -> None:
+            for cell in hist:
+                if cell.status in {
+                    CellStatus.CURRENT,
+                    CellStatus.NEEDS_VERIFICATION,
+                    CellStatus.STALE,
+                    CellStatus.NOT_APPLICABLE,
+                    CellStatus.UNKNOWN,
+                }:
+                    cell.status = CellStatus.HISTORICAL
+                    cell.valid_until = month
+
         if op in {MemoryOperation.CREATE, MemoryOperation.UPDATE}:
-            if latest is not None and latest.status in {
-                CellStatus.CURRENT,
-                CellStatus.NEEDS_VERIFICATION,
-                CellStatus.STALE,
-                CellStatus.NOT_APPLICABLE,
-                CellStatus.UNKNOWN,
-            }:
-                latest.status = CellStatus.HISTORICAL
-                latest.valid_until = month
-            _append(update.new_value, CellStatus.CURRENT)
+            pending = _matching_pending()
+            _close_committed()
+            if pending:
+                # Older duplicate proposals are retained as cancelled audit
+                # history; the most recent proposal becomes the committed fact.
+                for cell in pending[:-1]:
+                    cell.status = CellStatus.CANCELLED
+                    cell.valid_until = month
+                confirmed = pending[-1]
+                confirmed.value = update.new_value
+                confirmed.status = CellStatus.CURRENT
+                confirmed.confidence = 1.0
+                confirmed.valid_from = month
+                confirmed.valid_until = None
+                confirmed.source_event_instance_id = update.source_event_instance_id
+                confirmed.provenance = "event_delta"
+                confirmed.evidence_turns = list(update.evidence_turns)
+            else:
+                _append(update.new_value, CellStatus.CURRENT)
         elif op == MemoryOperation.MARK_STALE:
-            if latest is not None:
-                latest.status = CellStatus.STALE
-                latest.confidence = min(latest.confidence, 0.4)
+            if committed is not None:
+                committed.status = CellStatus.STALE
+                committed.confidence = min(committed.confidence, 0.4)
         elif op == MemoryOperation.ARCHIVE:
-            if latest is not None:
-                latest.status = CellStatus.HISTORICAL
-                latest.valid_until = month
+            if committed is not None:
+                committed.status = CellStatus.HISTORICAL
+                committed.valid_until = month
         elif op == MemoryOperation.NEEDS_VERIFICATION:
-            if latest is not None:
-                latest.status = CellStatus.NEEDS_VERIFICATION
-                latest.confidence = min(latest.confidence, 0.6)
+            if committed is not None:
+                committed.status = CellStatus.NEEDS_VERIFICATION
+                committed.confidence = min(committed.confidence, 0.6)
             else:
                 _append(None, CellStatus.NEEDS_VERIFICATION, confidence=0.3)
         elif op == MemoryOperation.SET_PENDING:
-            _append(update.new_value, CellStatus.PENDING, confidence=0.5)
+            pending = _matching_pending()
+            for cell in hist:
+                if cell.status == CellStatus.PENDING and cell not in pending:
+                    cell.status = CellStatus.CANCELLED
+                    cell.valid_until = month
+            if pending:
+                pending[-1].value = update.new_value
+                pending[-1].valid_from = month
+                pending[-1].evidence_turns = list(update.evidence_turns)
+            else:
+                _append(update.new_value, CellStatus.PENDING, confidence=0.5)
         elif op == MemoryOperation.CLEAR_PENDING:
             for cell in hist:
-                if cell.status == CellStatus.PENDING:
+                if (
+                    cell.status == CellStatus.PENDING
+                    and cell.source_event_instance_id == update.source_event_instance_id
+                ):
                     cell.status = CellStatus.CANCELLED
                     cell.valid_until = month
                 elif cell.status == CellStatus.NEEDS_VERIFICATION and cell.source_event_instance_id == update.source_event_instance_id:
                     cell.status = CellStatus.CURRENT
                     cell.confidence = 1.0
         elif op == MemoryOperation.REACTIVATE:
-            for cell in reversed(hist):
-                if cell.status == CellStatus.HISTORICAL:
-                    cell.status = CellStatus.CURRENT
-                    cell.valid_until = None
-                    break
+            candidate = next((cell for cell in reversed(hist) if cell.status == CellStatus.HISTORICAL), None)
+            if candidate is not None:
+                _close_committed()
+                candidate.status = CellStatus.CURRENT
+                candidate.valid_from = month
+                candidate.valid_until = None
         elif op == MemoryOperation.SET_NOT_APPLICABLE:
-            if latest is not None and latest.status != CellStatus.NOT_APPLICABLE:
-                latest.status = CellStatus.HISTORICAL
-                latest.valid_until = month
+            pending = _matching_pending()
+            for cell in pending:
+                cell.status = CellStatus.CANCELLED
+                cell.valid_until = month
+            _close_committed()
             _append(None, CellStatus.NOT_APPLICABLE)
         elif op == MemoryOperation.NO_UPDATE:
             pass

@@ -65,6 +65,142 @@ def _delta_issues(trajectory: Trajectory) -> list[dict[str, Any]]:
     return issues
 
 
+def _memory_history_issues(trajectory: Trajectory) -> list[dict[str, Any]]:
+    issues: list[dict[str, Any]] = []
+    snapshots = {
+        **trajectory.memory_snapshots,
+        **trajectory.ordered_memory_snapshots,
+    }
+    for cursor, memory in snapshots.items():
+        for path, history in memory.cells.items():
+            counts = {
+                status: sum(cell.status.value == status for cell in history)
+                for status in ("current", "pending")
+            }
+            if counts["current"] > 1 or counts["pending"] > 1:
+                issues.append(
+                    {
+                        "code": "duplicate_live_memory_cell",
+                        "cursor": cursor,
+                        "path": path,
+                        **counts,
+                    }
+                )
+            for cell in history:
+                if cell.status.value == "historical" and cell.valid_until is None:
+                    issues.append(
+                        {
+                            "code": "historical_cell_without_valid_until",
+                            "cursor": cursor,
+                            "path": path,
+                        }
+                    )
+    return issues
+
+
+def _event_utility_issues(trajectory: Trajectory) -> list[dict[str, Any]]:
+    updates_by_source: dict[str, int] = {}
+    impacts_by_source: dict[str, int] = {}
+    for step in trajectory.timeline_steps:
+        for update in step.memory_updates:
+            updates_by_source[update.source_event_instance_id or ""] = updates_by_source.get(
+                update.source_event_instance_id or "", 0
+            ) + 1
+        for impact in step.action_impacts:
+            impacts_by_source[impact.source_event_instance_id or ""] = impacts_by_source.get(
+                impact.source_event_instance_id or "", 0
+            ) + 1
+    return [
+        {
+            "code": "occurred_event_without_financial_delta",
+            "event_instance_id": instance.event_instance_id,
+            "event_id": instance.event_id,
+            "month_index": instance.occurred_month,
+        }
+        for instance in trajectory.life_event_instances
+        if instance.occurred_month is not None
+        and updates_by_source.get(instance.event_instance_id, 0) == 0
+        and impacts_by_source.get(instance.event_instance_id, 0) == 0
+    ]
+
+
+def _dialogue_grounding(
+    trajectories: list[Trajectory], sessions_dir: Path | None
+) -> dict[str, Any]:
+    if sessions_dir is None or not sessions_dir.exists():
+        return {"occurred_memory_updates": 0, "grounded_updates": 0, "grounding_rate": None, "issues": []}
+    sessions: dict[tuple[str, str, int], list[dict[str, Any]]] = {}
+    annotation_surface_issues: list[dict[str, Any]] = []
+    for path in sorted(sessions_dir.glob("sessions_*.jsonl")):
+        for session in read_jsonl(path):
+            key = (
+                session.get("trajectory_id") or "",
+                session.get("linked_event_instance_id") or "",
+                int(session.get("month_index", -1)),
+            )
+            sessions.setdefault(key, []).append(session)
+            for annotation in session.get("cue_annotations") or []:
+                if annotation.get("cue_type") != "memory_fact":
+                    continue
+                turn_index = int(annotation.get("turn_index", -1))
+                turns = session.get("turns") or []
+                cue_text = annotation.get("cue_text") or ""
+                if turn_index < 0 or turn_index >= len(turns) or cue_text not in turns[turn_index].get("text", ""):
+                    annotation_surface_issues.append(
+                        {
+                            "code": "memory_fact_annotation_not_visible",
+                            "trajectory_id": key[0],
+                            "session_id": session.get("session_id"),
+                            "path": annotation.get("linked_memory_path"),
+                        }
+                    )
+
+    total = 0
+    grounded = 0
+    issues = list(annotation_surface_issues)
+    for trajectory in trajectories:
+        for step in trajectory.timeline_steps:
+            for update in step.memory_updates:
+                if update.event_status != "occurred":
+                    continue
+                total += 1
+                candidates = sessions.get(
+                    (
+                        trajectory.trajectory_id,
+                        update.source_event_instance_id or "",
+                        int(update.month_index if update.month_index is not None else step.month_index),
+                    ),
+                    [],
+                )
+                match = any(
+                    annotation.get("cue_type") == "memory_fact"
+                    and annotation.get("linked_memory_path") == update.path
+                    and annotation.get("linked_memory_operation") == update.operation.value
+                    and annotation.get("linked_memory_value") == update.new_value
+                    for session in candidates
+                    for annotation in (session.get("cue_annotations") or [])
+                )
+                if match:
+                    grounded += 1
+                else:
+                    issues.append(
+                        {
+                            "code": "occurred_memory_update_not_dialogue_grounded",
+                            "trajectory_id": trajectory.trajectory_id,
+                            "event_instance_id": update.source_event_instance_id,
+                            "month_index": update.month_index,
+                            "path": update.path,
+                            "operation": update.operation.value,
+                        }
+                    )
+    return {
+        "occurred_memory_updates": total,
+        "grounded_updates": grounded,
+        "grounding_rate": round(grounded / total, 4) if total else None,
+        "issues": issues,
+    }
+
+
 def _is_active_valid(action: Any) -> bool:
     return action.status.value == "active" and action.validity_status == "valid"
 
@@ -151,25 +287,45 @@ def main() -> int:
     args = parser.parse_args()
 
     trajectory_reports = []
+    trajectories: list[Trajectory] = []
     for path in sorted(Path(args.trajectories_dir).glob("traj_*.json")):
         trajectory = Trajectory.model_validate(json.loads(path.read_text(encoding="utf-8")))
+        trajectories.append(trajectory)
         snapshot_invariant_issues = _snapshot_invariant_issues(trajectory)
+        memory_history_issues = _memory_history_issues(trajectory)
+        event_utility_issues = _event_utility_issues(trajectory)
         trajectory_reports.append(
             {
                 "trajectory_id": trajectory.trajectory_id,
                 "initial_consistency_issues": _initial_consistency_issues(trajectory),
                 "delta_issues": _delta_issues(trajectory),
                 "snapshot_invariant_issues": snapshot_invariant_issues,
+                "memory_history_issues": memory_history_issues,
+                "event_utility_issues": event_utility_issues,
             }
         )
 
     dialogue = _audit_dialogues(Path(args.sessions_dir) if args.sessions_dir else None)
+    grounding = _dialogue_grounding(
+        trajectories, Path(args.sessions_dir) if args.sessions_dir else None
+    )
+    needs_verification_cells = sum(
+        cell.status.value == "needs_verification"
+        for trajectory in trajectories
+        for memory in trajectory.ordered_memory_snapshots.values()
+        for history in memory.cells.values()
+        for cell in history
+    )
     report = {
         "trajectories": len(trajectory_reports),
         "trajectories_with_initial_issues": sum(bool(r["initial_consistency_issues"]) for r in trajectory_reports),
         "trajectories_with_delta_issues": sum(bool(r["delta_issues"]) for r in trajectory_reports),
         "trajectories_with_snapshot_invariant_issues": sum(bool(r["snapshot_invariant_issues"]) for r in trajectory_reports),
+        "trajectories_with_memory_history_issues": sum(bool(r["memory_history_issues"]) for r in trajectory_reports),
+        "occurred_events_without_financial_delta": sum(len(r["event_utility_issues"]) for r in trajectory_reports),
+        "needs_verification_cells": needs_verification_cells,
         "dialogue_summary": dialogue["summary"],
+        "dialogue_grounding": grounding,
         "trajectory_results": trajectory_reports,
         "dialogue_results": dialogue["results"],
     }

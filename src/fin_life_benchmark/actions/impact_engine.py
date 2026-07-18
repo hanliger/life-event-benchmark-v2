@@ -37,6 +37,18 @@ class ImpactEngine:
                 return False
         return bool(selector)
 
+    @staticmethod
+    def _conditions_match(spec: dict[str, Any], instance: EventInstance) -> bool:
+        conditions = spec.get("when") or {}
+        for name, expected in conditions.items():
+            actual = instance.params.get(name)
+            if isinstance(expected, list):
+                if actual not in expected:
+                    return False
+            elif actual != expected:
+                return False
+        return True
+
     def apply_transition(
         self,
         actions: list[StandingAction],
@@ -53,6 +65,8 @@ class ImpactEngine:
 
         impacts: list[ActionImpact] = []
         for spec in specs:
+            if not self._conditions_match(spec, instance):
+                continue
             selector = spec.get("selector") or {}
             expected = ActionDecisionEnum(spec.get("expected_decision", "ask_confirmation"))
             risk = spec.get("risk", "high")

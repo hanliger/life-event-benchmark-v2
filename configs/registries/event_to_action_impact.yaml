@@ -53,6 +53,17 @@ relationship_family_death:
         impact_type: destination_may_no_longer_exist
         expected_decision: ask_confirmation
         risk: high
+        when: {deceased_relation: parent}
+      - selector: {label: spouse_living_expense_transfer}
+        impact_type: destination_may_no_longer_exist
+        expected_decision: ask_confirmation
+        risk: high
+        when: {deceased_relation: spouse}
+      - selector: {label: child_education_saving}
+        impact_type: beneficiary_may_no_longer_exist
+        expected_decision: ask_confirmation
+        risk: high
+        when: {deceased_relation: child}
 
 housing_move:
   on_occurred:

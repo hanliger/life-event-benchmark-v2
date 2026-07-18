@@ -78,15 +78,6 @@ class ItemBuilder:
 
     # ------------------------------------------------------------- stage 2
     @staticmethod
-    def _initial_memory_by_traj(prefixes: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
-        initial: dict[str, dict[str, Any]] = {}
-        for prefix in prefixes:
-            traj = prefix["trajectory_id"]
-            if traj not in initial and prefix.get("gold_full_memory_state"):
-                initial[traj] = prefix["gold_full_memory_state"]
-        return initial
-
-    @staticmethod
     def _evidenced_updates(updates: list[dict[str, Any]]) -> list[dict[str, Any]]:
         return [update for update in updates if update.get("evidence_turns")]
 
@@ -94,10 +85,14 @@ class ItemBuilder:
     def _initial_memory_subset(initial_memory: dict[str, Any], paths: list[str]) -> dict[str, Any]:
         return {path: initial_memory.get(path) for path in paths}
 
-    def build_stage2(self, prefixes: list[dict[str, Any]], sessions_by_traj: dict) -> list[BenchmarkItem]:
+    def build_stage2(
+        self,
+        prefixes: list[dict[str, Any]],
+        sessions_by_traj: dict,
+        initial_memory_by_traj: dict[str, dict[str, Any]],
+    ) -> list[BenchmarkItem]:
         items: list[BenchmarkItem] = []
         seen_counts: dict[str, int] = {}
-        initial_by_traj = self._initial_memory_by_traj(prefixes)
         for prefix in prefixes:
             traj = prefix["trajectory_id"]
             updates = self._evidenced_updates(prefix["gold_memory_updates"])
@@ -108,7 +103,9 @@ class ItemBuilder:
                 continue
             seen_counts[traj] = n_updates
             new_updates = updates[previous:n_updates]
-            initial_memory = initial_by_traj.get(traj, {})
+            if traj not in initial_memory_by_traj:
+                raise ValueError(f"missing true initial memory for {traj}")
+            initial_memory = initial_memory_by_traj[traj]
             single = self._stage2_single_hop_item(prefix, new_updates, initial_memory)
             if single is not None:
                 items.append(single)

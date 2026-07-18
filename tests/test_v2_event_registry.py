@@ -53,6 +53,9 @@ def test_every_parameterized_event_samples_a_complete_valid_payload():
             children_ages=[7],
             children=[ChildState(child_id="child_001", age=7)],
         ),
+        "crisis_health_event": LifeState(),
+        "crisis_accident_or_disaster": LifeState(),
+        "crisis_financial_fraud": LifeState(),
     }
 
     assert set(states) == {

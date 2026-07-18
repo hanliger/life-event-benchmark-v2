@@ -14,32 +14,71 @@ from ..fsm.life_state_machine import LifeStateMachine
 
 def audit_single_session_recoverability(sessions: list[dict[str, Any]]) -> dict[str, Any]:
     evidence = [s for s in sessions if s.get("linked_event_instance_id")]
-    solvable = [
-        s for s in evidence
-        if (s.get("plan") or {}).get("desired_single_session_recoverability") == "high"
-    ]
+
+    def visible_annotations(session: dict[str, Any]) -> list[dict[str, Any]]:
+        turns = session.get("turns") or []
+        return [
+            cue for cue in (session.get("cue_annotations") or [])
+            if cue.get("cue_type") != "memory_fact"
+            and 0 <= int(cue.get("turn_index", -1)) < len(turns)
+            and turns[int(cue["turn_index"])].get("speaker") == "user"
+            and (cue.get("cue_text") or "") in turns[int(cue["turn_index"])].get("text", "")
+        ]
+
+    status_markers = {
+        "weak_signal": "확정된 건 아닌데",
+        "upcoming": "다음 달",
+        "occurred": "이번에",
+        "cancelled": "없던 일이 됐어요",
+    }
+    grounded = []
+    for session in evidence:
+        visible = " ".join(turn.get("text", "") for turn in session.get("turns") or [])
+        status = session.get("event_status_after_session")
+        marker = status_markers.get(status)
+        if visible_annotations(session) and (marker is None or marker in visible):
+            grounded.append(session)
     by_type = Counter(s["session_type"] for s in sessions)
     return {
         "total_sessions": len(sessions),
         "evidence_sessions": len(evidence),
-        "single_session_solvable": len(solvable),
-        "single_session_solvable_rate": round(len(solvable) / len(evidence), 4) if evidence else None,
+        "single_session_dialogue_grounded": len(grounded),
+        "single_session_dialogue_grounded_rate": round(len(grounded) / len(evidence), 4) if evidence else None,
         "sessions_by_type": dict(by_type),
     }
 
 
-def audit_full_prefix_recoverability(prefixes: list[dict[str, Any]]) -> dict[str, Any]:
+def audit_full_prefix_recoverability(
+    prefixes: list[dict[str, Any]], sessions: list[dict[str, Any]] | None = None
+) -> dict[str, Any]:
     events_seen: dict[str, dict[str, Any]] = {}
     for prefix in prefixes:
         for e in prefix["gold_life_events"]:
             events_seen[e["event_instance_id"]] = e
-    recoverable = [e for e in events_seen.values() if e.get("first_recoverable_session")]
+    declared_recoverable = [e for e in events_seen.values() if e.get("first_recoverable_session")]
+    grounded_event_ids: set[str] = set()
+    for session in sessions or []:
+        event_instance_id = session.get("linked_event_instance_id")
+        turns = session.get("turns") or []
+        if not event_instance_id:
+            continue
+        if any(
+            cue.get("cue_type") != "memory_fact"
+            and 0 <= int(cue.get("turn_index", -1)) < len(turns)
+            and turns[int(cue["turn_index"])].get("speaker") == "user"
+            and (cue.get("cue_text") or "") in turns[int(cue["turn_index"])].get("text", "")
+            for cue in (session.get("cue_annotations") or [])
+        ):
+            grounded_event_ids.add(event_instance_id)
+    recoverable = [e for key, e in events_seen.items() if key in grounded_event_ids] if sessions is not None else declared_recoverable
     occurred = [e for e in events_seen.values() if e["event_status"] == "occurred"]
     return {
         "distinct_gold_events": len(events_seen),
         "occurred_events": len(occurred),
         "cumulatively_recoverable": len(recoverable),
         "cumulative_recoverability_rate": round(len(recoverable) / len(events_seen), 4) if events_seen else None,
+        "gold_declared_recoverable": len(declared_recoverable),
+        "recoverability_basis": "visible_dialogue_annotations" if sessions is not None else "gold_declaration",
         "events_by_status": dict(Counter(e["event_status"] for e in events_seen.values())),
         "events_by_label": dict(Counter(e["life_event_label"] for e in events_seen.values())),
     }

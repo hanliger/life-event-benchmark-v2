@@ -3,7 +3,7 @@
 #
 # Each memory update item:
 #   path:        memory cell path (see financial_memory_schema.yaml)
-#   operation:   create|update|mark_stale|archive|needs_verification|
+#   operation:   create|update|mark_stale|archive|
 #                set_pending|clear_pending|reactivate|no_update
 #   value_from:  "param:<name>"  -> value from EventInstance.params
 #                "literal:<v>"   -> literal value
@@ -12,9 +12,9 @@
 #
 # Lifecycle policy (enforced by the delta engine regardless of what is
 # declared here):
-#   weak_signal -> only set_pending / needs_verification, all optional
-#   upcoming    -> only set_pending / needs_verification
-#   occurred    -> update / mark_stale / archive / needs_verification / create / reactivate
+#   weak_signal -> only set_pending, all optional
+#   upcoming    -> only set_pending
+#   occurred    -> update / mark_stale / archive / create / reactivate
 #   cancelled   -> only clear_pending / no_update
 
 relationship_marriage:
@@ -41,8 +41,6 @@ relationship_marriage:
       - path: household.spouse_or_partner
         operation: update
         value_from: "param:partner_ref"
-      - path: goals.housing_deposit_goal
-        operation: needs_verification
   on_cancelled:
     memory_updates:
       - path: household.marital_status
@@ -55,12 +53,15 @@ relationship_divorce_or_separation:
     memory_updates: []
     pending_memory:
       - path: household.child_support_arrangement
-        operation: needs_verification
+        operation: set_pending
+        value_from: "param:child_support_amount"
+        when: {has_child_support: true}
         optional: true
   on_upcoming:
     memory_updates:
       - path: household.marital_status
-        operation: needs_verification
+        operation: set_pending
+        value_from: "param:marital_status_after"
   on_occurred:
     memory_updates:
       - path: household.marital_status
@@ -69,7 +70,12 @@ relationship_divorce_or_separation:
       - path: household.spouse_or_partner
         operation: archive
       - path: household.child_support_arrangement
-        operation: needs_verification
+        operation: update
+        value_from: "param:child_support_amount"
+        when: {has_child_support: true}
+      - path: household.child_support_arrangement
+        operation: set_not_applicable
+        when: {has_child_support: false}
   on_cancelled:
     memory_updates:
       - path: household.marital_status
@@ -91,7 +97,8 @@ relationship_childbirth_or_adoption:
         operation: set_pending
         value_from: "param:children_after"
       - path: goals.child_education_goal
-        operation: needs_verification
+        operation: set_pending
+        value_from: "literal:active"
   on_occurred:
     memory_updates:
       - path: household.children
@@ -101,7 +108,8 @@ relationship_childbirth_or_adoption:
         operation: update
         value_from: "param:dependents_after"
       - path: goals.child_education_goal
-        operation: needs_verification
+        operation: update
+        value_from: "literal:active"
   on_cancelled:
     memory_updates:
       - path: household.children
@@ -114,12 +122,14 @@ relationship_dependent_change:
     memory_updates: []
     pending_memory:
       - path: household.dependents
-        operation: needs_verification
+        operation: set_pending
+        value_from: "param:dependents_after"
         optional: true
   on_upcoming:
     memory_updates:
       - path: household.dependents
-        operation: needs_verification
+        operation: set_pending
+        value_from: "param:dependents_after"
   on_occurred:
     memory_updates:
       - path: household.dependents
@@ -141,9 +151,21 @@ relationship_family_death:
       - path: household.dependents
         operation: update
         value_from: "param:dependents_after"
+        when: {was_dependent: true}
+      - path: household.marital_status
+        operation: update
+        value_from: "literal:widowed"
+        when: {deceased_relation: spouse}
       - path: household.spouse_or_partner
-        operation: needs_verification
-        optional: true
+        operation: set_not_applicable
+        when: {deceased_relation: spouse}
+      - path: household.children
+        operation: update
+        value_from: "param:children_after"
+        when: {deceased_relation: child}
+      - path: cashflow.recent_one_off_expense
+        operation: update
+        value_from: "param:one_off_expense"
   on_cancelled:
     memory_updates: []
 
@@ -181,9 +203,16 @@ housing_move:
         operation: update
         value_from: "param:new_rent_amount"
       - path: housing.rent_payee
-        operation: needs_verification
+        operation: update
+        value_from: "param:new_payee"
+        when: {has_rent_payment: true}
       - path: housing.maintenance_fee_payee
-        operation: needs_verification
+        operation: update
+        value_from: "param:new_maintenance_fee_payee"
+        when: {has_maintenance_fee: true}
+      - path: housing.maintenance_fee_payee
+        operation: set_not_applicable
+        when: {has_maintenance_fee: false}
   on_cancelled:
     memory_updates:
       - path: housing.address
@@ -194,7 +223,8 @@ housing_rental_contract:
     memory_updates: []
     pending_memory:
       - path: housing.contract_type
-        operation: needs_verification
+        operation: set_pending
+        value_from: "param:new_contract_type"
         optional: true
   on_upcoming:
     memory_updates:
@@ -213,7 +243,8 @@ housing_rental_contract:
         operation: update
         value_from: "param:new_rent_amount"
       - path: housing.rent_payee
-        operation: needs_verification
+        operation: update
+        value_from: "literal:landlord"
   on_cancelled:
     memory_updates:
       - path: housing.rent_amount
@@ -226,7 +257,8 @@ housing_home_purchase:
     memory_updates: []
     pending_memory:
       - path: housing.mortgage_status
-        operation: needs_verification
+        operation: set_pending
+        value_from: "literal:active"
         optional: true
   on_upcoming:
     memory_updates:
@@ -275,23 +307,28 @@ career_job_change:
     memory_updates: []
     pending_memory:
       - path: employment.salary_day
-        operation: needs_verification
+        operation: set_pending
+        value_from: "param:new_salary_day"
         optional: true
   on_upcoming:
     memory_updates:
       - path: employment.employer
-        operation: needs_verification
+        operation: set_pending
+        value_from: "param:new_employer"
       - path: employment.salary_account
-        operation: needs_verification
+        operation: set_pending
+        value_from: "param:new_salary_account"
   on_occurred:
     memory_updates:
       - path: employment.employer
         operation: update
         value_from: "param:new_employer"
       - path: employment.salary_day
-        operation: needs_verification
+        operation: update
+        value_from: "param:new_salary_day"
       - path: employment.salary_account
-        operation: needs_verification
+        operation: update
+        value_from: "param:new_salary_account"
       - path: employment.income_stability
         operation: update
         value_from: "literal:stable"
@@ -307,12 +344,14 @@ career_resignation_or_job_loss:
     memory_updates: []
     pending_memory:
       - path: employment.income_stability
-        operation: needs_verification
+        operation: set_pending
+        value_from: "literal:unstable"
         optional: true
   on_upcoming:
     memory_updates:
       - path: employment.employment_status
-        operation: needs_verification
+        operation: set_pending
+        value_from: "literal:unemployed"
   on_occurred:
     memory_updates:
       - path: employment.employment_status
@@ -359,7 +398,8 @@ housing_independence:
         operation: update
         value_from: "param:new_rent_amount"
       - path: housing.rent_payee
-        operation: needs_verification
+        operation: update
+        value_from: "literal:landlord"
   on_cancelled:
     memory_updates:
       - path: housing.address
@@ -370,7 +410,8 @@ housing_home_sale_or_moveout:
   on_upcoming:
     memory_updates:
       - path: housing.mortgage_status
-        operation: needs_verification
+        operation: set_pending
+        value_from: "literal:closed"
   on_occurred:
     memory_updates:
       - path: housing.properties
@@ -392,8 +433,6 @@ housing_home_sale_or_moveout:
         operation: set_not_applicable
       - path: housing.rent_payee
         operation: set_not_applicable
-      - path: financial_products.loans
-        operation: needs_verification
   on_cancelled:
     memory_updates: []
 
@@ -416,7 +455,8 @@ career_employment_or_return:
         operation: update
         value_from: "param:new_salary_day"
       - path: employment.salary_account
-        operation: needs_verification
+        operation: update
+        value_from: "param:new_salary_account"
       - path: employment.income_stability
         operation: update
         value_from: "literal:stable"
@@ -430,7 +470,8 @@ career_leave:
   on_upcoming:
     memory_updates:
       - path: employment.income_stability
-        operation: needs_verification
+        operation: set_pending
+        value_from: "literal:reduced"
   on_occurred:
     memory_updates:
       - path: employment.employment_status
@@ -453,7 +494,8 @@ career_startup_or_freelance:
   on_upcoming:
     memory_updates:
       - path: employment.employment_status
-        operation: needs_verification
+        operation: set_pending
+        value_from: "literal:self_employed"
   on_occurred:
     memory_updates:
       - path: employment.employment_status
@@ -476,7 +518,8 @@ career_business_closure:
   on_upcoming:
     memory_updates:
       - path: employment.income_stability
-        operation: needs_verification
+        operation: set_pending
+        value_from: "literal:unstable"
   on_occurred:
     memory_updates:
       - path: employment.employment_status
@@ -485,8 +528,6 @@ career_business_closure:
       - path: employment.income_stability
         operation: update
         value_from: "literal:unstable"
-      - path: financial_products.loans
-        operation: needs_verification
   on_cancelled:
     memory_updates: []
 
@@ -520,7 +561,8 @@ education_child_stage_entry:
         operation: update
         value_from: "param:new_stage"
       - path: goals.child_education_goal
-        operation: needs_verification
+        operation: update
+        value_from: "literal:active"
   on_cancelled:
     memory_updates:
       - path: education.child_education_stage
@@ -538,8 +580,6 @@ education_study_abroad:
       - path: education.self_education_status
         operation: update
         value_from: "literal:study_abroad"
-      - path: housing.address
-        operation: needs_verification
   on_cancelled:
     memory_updates:
       - path: education.self_education_status
@@ -550,14 +590,13 @@ retirement_prep_start:
   on_upcoming:
     memory_updates:
       - path: goals.retirement_goal
-        operation: needs_verification
+        operation: set_pending
+        value_from: "literal:planning"
   on_occurred:
     memory_updates:
       - path: goals.retirement_goal
         operation: update
         value_from: "literal:planning"
-      - path: financial_products.pension_or_irp
-        operation: needs_verification
   on_cancelled:
     memory_updates:
       - path: goals.retirement_goal
@@ -568,9 +607,12 @@ retirement_start:
   on_upcoming:
     memory_updates:
       - path: employment.employment_status
-        operation: needs_verification
+        operation: set_pending
+        value_from: "literal:retired"
       - path: financial_products.pension_or_irp
-        operation: needs_verification
+        operation: set_pending
+        value_from: "literal:receiving"
+        when: {pension_started_same_time: true}
   on_occurred:
     memory_updates:
       - path: employment.employment_status
@@ -582,7 +624,9 @@ retirement_start:
         operation: update
         value_from: "literal:retired"
       - path: financial_products.pension_or_irp
-        operation: needs_verification
+        operation: update
+        value_from: "literal:receiving"
+        when: {pension_started_same_time: true}
   on_cancelled:
     memory_updates: []
 
@@ -591,7 +635,8 @@ retirement_pension_start:
   on_upcoming:
     memory_updates:
       - path: financial_products.pension_or_irp
-        operation: needs_verification
+        operation: set_pending
+        value_from: "literal:receiving"
   on_occurred:
     memory_updates:
       - path: employment.employment_status
@@ -611,8 +656,9 @@ crisis_health_event:
     memory_updates: []
   on_occurred:
     memory_updates:
-      - path: goals.emergency_fund
-        operation: needs_verification
+      - path: cashflow.recent_one_off_expense
+        operation: update
+        value_from: "param:one_off_expense"
   on_cancelled:
     memory_updates: []
 
@@ -622,8 +668,9 @@ crisis_accident_or_disaster:
     memory_updates: []
   on_occurred:
     memory_updates:
-      - path: goals.emergency_fund
-        operation: needs_verification
+      - path: cashflow.recent_one_off_expense
+        operation: update
+        value_from: "param:one_off_expense"
   on_cancelled:
     memory_updates: []
 
@@ -633,9 +680,8 @@ crisis_financial_fraud:
     memory_updates: []
   on_occurred:
     memory_updates:
-      - path: financial_products.checking_accounts
-        operation: needs_verification
-      - path: financial_products.savings_accounts
-        operation: needs_verification
+      - path: cashflow.recent_one_off_expense
+        operation: update
+        value_from: "param:one_off_expense"
   on_cancelled:
     memory_updates: []

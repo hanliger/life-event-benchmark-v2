@@ -22,6 +22,7 @@ from fin_life_benchmark.validation.audits import audit_full_prefix_recoverabilit
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--prefix-gold", required=True)
+    parser.add_argument("--sessions-dir", default=None)
     parser.add_argument("--output-dir", default="data/generated/quality_reports")
     args = parser.parse_args()
 
@@ -29,7 +30,14 @@ def main() -> int:
     if not prefixes:
         raise SystemExit("empty prefix gold")
 
-    report = audit_full_prefix_recoverability(prefixes)
+    sessions = None
+    if args.sessions_dir:
+        sessions = [
+            row
+            for path in sorted(Path(args.sessions_dir).glob("sessions_*.jsonl"))
+            for row in read_jsonl(path)
+        ]
+    report = audit_full_prefix_recoverability(prefixes, sessions)
     out = Path(args.output_dir)
     write_report(report, out / "full_prefix_recoverability.json", "Full-Prefix Recoverability Audit",
                  out / "full_prefix_recoverability.md")

@@ -70,6 +70,96 @@ _OFFLINE_BANKING_TERMS = [
     "실물 수령",
 ]
 
+_MEMORY_LABELS_KO = {
+    "cashflow.recent_one_off_expense": "이번 일회성 지출",
+    "education.child_education_stage": "자녀 교육 단계",
+    "education.self_education_status": "본인 교육 상태",
+    "employment.employer": "직장",
+    "employment.employment_status": "고용 상태",
+    "employment.income_stability": "소득 안정성",
+    "employment.salary_account": "급여 계좌",
+    "employment.salary_day": "급여 입금 날짜",
+    "financial_products.loans": "대출 정보",
+    "financial_products.pension_or_irp": "연금 수령 상태",
+    "goals.child_education_goal": "자녀 교육 목표",
+    "goals.retirement_goal": "은퇴 준비 목표",
+    "household.child_support_arrangement": "양육비 약정",
+    "household.children": "자녀 나이",
+    "household.dependents": "부양가족 수",
+    "household.marital_status": "혼인 상태",
+    "household.spouse_or_partner": "배우자 정보",
+    "housing.address": "거주 주소",
+    "housing.contract_type": "주거 계약 유형",
+    "housing.maintenance_fee_payee": "관리비 납부처",
+    "housing.mortgage_status": "주택담보대출 상태",
+    "housing.primary_residence_property_id": "주 거주 주택",
+    "housing.properties": "보유 주택",
+    "housing.rent_amount": "월세 금액",
+    "housing.rent_payee": "월세 납부처",
+    "housing.residence_status": "주거 상태",
+}
+
+_VALUE_LABELS_KO = {
+    "active": "활성",
+    "closed": "종료",
+    "divorced": "혼인 관계 종료",
+    "employed": "재직",
+    "enrolled": "재학",
+    "family_home": "가족 주택 거주",
+    "jeonse": "전세",
+    "main_checking": "주거래 입출금 계좌",
+    "married": "기혼",
+    "owner": "자가",
+    "planning": "준비 중",
+    "receiving": "수령 중",
+    "reduced": "감소",
+    "retired": "퇴직 후 상태",
+    "self_employed": "자영업",
+    "separated": "별도 거주",
+    "stable": "안정",
+    "study_abroad": "해외 교육 과정",
+    "unemployed": "미재직",
+    "unstable": "불안정",
+    "widowed": "사별",
+    "wolse": "월세",
+}
+
+
+def _visible_memory_value(value: Any) -> str:
+    if isinstance(value, bool):
+        return "예" if value else "아니요"
+    if isinstance(value, int):
+        return f"{value:,}원"
+    if isinstance(value, list):
+        return ", ".join(_visible_memory_value(item) for item in value) if value else "없음"
+    if isinstance(value, dict):
+        if "amount_krw" in value:
+            category = {
+                "medical": "의료비",
+                "accident_or_disaster": "긴급 복구비",
+                "fraud_loss": "사기 피해액",
+                "funeral": "장례 비용",
+            }.get(value.get("category"), "비용")
+            return f"{category} {int(value['amount_krw']):,}원"
+        return ", ".join(f"{key}={item}" for key, item in sorted(value.items()))
+    return _VALUE_LABELS_KO.get(str(value), str(value))
+
+
+def _memory_fact_text(update: dict[str, Any]) -> str:
+    path = str(update.get("path"))
+    label = _MEMORY_LABELS_KO.get(path, path.replace(".", " "))
+    operation = str(update.get("operation"))
+    value = _visible_memory_value(update.get("new_value"))
+    if operation == "set_pending":
+        return f"{label}은 {value}(으)로 바뀔 예정이에요"
+    if operation == "clear_pending":
+        return f"말씀드렸던 {label} 변경 계획은 취소됐어요"
+    if operation in {"archive", "mark_stale"}:
+        return f"기존 {label} 정보는 이제 사용하지 않아요"
+    if operation == "set_not_applicable":
+        return f"{label}은 이제 해당되지 않아요"
+    return f"{label}은 지금 {value}예요"
+
 
 class LLMOutputValidationError(ValueError):
     """Raised when an LLM response is JSON but not a valid session payload."""
@@ -157,6 +247,7 @@ class DialogueGenerator:
         if leaked:
             safe_task = "자동이체 설정 확인"
 
+        memory_facts = list(plan.structured_context.get("session_memory_updates") or [])
         turns.append(Turn(speaker="user", text=f"{safe_task} 좀 하려고요"))
         turns.append(Turn(speaker="assistant", text=_ASSISTANT_QUESTIONS[0]))
 
@@ -168,18 +259,50 @@ class DialogueGenerator:
         for i, cue in enumerate(cue_texts):
             if cue is not None:
                 text = wrapper.format(cue=cue)
+                if i == 0 and memory_facts:
+                    text += ". " + ". ".join(_memory_fact_text(update) for update in memory_facts)
                 turns.append(Turn(speaker="user", text=text))
                 cues.append(
                     CueAnnotation(
                         turn_index=len(turns) - 1,
                         cue_type=_slugify(cue),
                         cue_text=cue,
-                        linked_memory_path=memory_paths[i % len(memory_paths)],
+                        linked_memory_path=None,
                     )
                 )
+                if i == 0:
+                    for update in memory_facts:
+                        fact_text = _memory_fact_text(update)
+                        cues.append(
+                            CueAnnotation(
+                                turn_index=len(turns) - 1,
+                                cue_type="memory_fact",
+                                cue_text=fact_text,
+                                linked_memory_path=update.get("path"),
+                                linked_memory_operation=update.get("operation"),
+                                linked_memory_value=update.get("new_value"),
+                            )
+                        )
             else:
                 turns.append(Turn(speaker="user", text=rng.choice(_FILLER_USER)))
             turns.append(Turn(speaker="assistant", text=_ASSISTANT_QUESTIONS[1 + i % (len(_ASSISTANT_QUESTIONS) - 1)]))
+
+        if memory_facts and not any(cue is not None for cue in cue_texts):
+            fact_turn_index = 2
+            turns[fact_turn_index].text += ". " + ". ".join(
+                _memory_fact_text(update) for update in memory_facts
+            )
+            for update in memory_facts:
+                cues.append(
+                    CueAnnotation(
+                        turn_index=fact_turn_index,
+                        cue_type="memory_fact",
+                        cue_text=_memory_fact_text(update),
+                        linked_memory_path=update.get("path"),
+                        linked_memory_operation=update.get("operation"),
+                        linked_memory_value=update.get("new_value"),
+                    )
+                )
 
         turns_min = int(self.cfg.get("turns_min", 7))
         turns_max = int(self.cfg.get("turns_max", 10))
@@ -363,6 +486,15 @@ class DialogueGenerator:
         if turns[-1].speaker != "assistant":
             raise LLMOutputValidationError("dialogue must end with an assistant turn")
         visible = " ".join(turn.text for turn in turns)
+        employment_status = _session_context_value(
+            plan, "employment.employment_status", persona.occupation_state.employment_status
+        )
+        if employment_status not in {"employed", "on_leave"}:
+            for term in ("월급", "급여일"):
+                if term in visible:
+                    raise LLMOutputValidationError(
+                        f"visible dialogue conflicts with employment_status={employment_status}: '{term}'"
+                    )
         residence_status = _session_context_value(plan, "housing.residence_status", persona.housing.residence_status)
         if residence_status != "wolse":
             for term in ("월세", "집주인"):
@@ -408,7 +540,6 @@ class DialogueGenerator:
                     linked_memory_path=linked_memory_path,
                 )
             )
-        cues = self._repair_cue_annotations(turns, cues, plan)
         if plan.must_include_cues and not cues:
             raise LLMOutputValidationError(
                 "cue_annotations must include at least one user-turn annotation "

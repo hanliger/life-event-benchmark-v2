@@ -33,9 +33,28 @@ def test_clear_pending_cancels_pending_cells():
     memory.apply(MemoryUpdate(path="household.marital_status", operation=MemoryOperation.CLEAR_PENDING, month_index=4))
     statuses = [c.status for c in memory.history("household.marital_status")]
     assert CellStatus.CANCELLED in statuses
-    assert memory.current_value("household.marital_status") is None  # last cell cancelled
-    # first (single) cell remains untouched historical record
+    assert memory.current_value("household.marital_status") == "single"
+    # Cancelling a proposal does not erase the committed fact.
     assert memory.history("household.marital_status")[0].value == "single"
+
+
+def test_pending_confirmation_closes_old_current_and_promotes_one_cell():
+    memory = _memory_with("housing.address", "옛주소")
+    source = "traj_ev001"
+    memory.apply(MemoryUpdate(
+        path="housing.address", operation=MemoryOperation.SET_PENDING,
+        new_value="새주소", month_index=3, source_event_instance_id=source,
+    ))
+    memory.apply(MemoryUpdate(
+        path="housing.address", operation=MemoryOperation.UPDATE,
+        new_value="새주소", month_index=5, source_event_instance_id=source,
+    ))
+    history = memory.history("housing.address")
+    assert sum(cell.status == CellStatus.CURRENT for cell in history) == 1
+    assert sum(cell.status == CellStatus.PENDING for cell in history) == 0
+    assert history[0].status == CellStatus.HISTORICAL
+    assert history[0].valid_until == 5
+    assert memory.current_value("housing.address") == "새주소"
 
 
 def test_delta_engine_rejects_commit_on_weak_signal():
@@ -44,7 +63,7 @@ def test_delta_engine_rejects_commit_on_weak_signal():
     for event_id, spec in engine.registry.items():
         weak = spec.get("on_weak_signal") or {}
         for item in (weak.get("memory_updates") or []) + (weak.get("pending_memory") or []):
-            assert item["operation"] in {"set_pending", "needs_verification", "no_update"}, event_id
+            assert item["operation"] in {"set_pending", "no_update"}, event_id
 
 
 def test_delta_engine_job_change_occurred():
@@ -55,13 +74,17 @@ def test_delta_engine_job_change_occurred():
     memory.set_initial("employment.income_stability", "stable")
     instance = EventInstance(
         event_instance_id="t_ev001", event_id="career_job_change", label_ko="이직/전근",
-        domain="employment", params={"new_employer": "새직장", "new_salary_day": 10},
+        domain="employment", params={
+            "new_employer": "새직장", "new_salary_day": 10,
+            "new_salary_account": "main_checking",
+        },
     )
     updates = engine.apply_transition(memory, instance, EventStatus.OCCURRED, 12, random.Random(0))
     assert memory.current_value("employment.employer") == "새직장"
     assert memory.historical_values("employment.employer") == ["구직장"]
-    salary_cell = memory.latest("employment.salary_day")
-    assert salary_cell.status == CellStatus.NEEDS_VERIFICATION
+    salary_cell = memory.committed("employment.salary_day")
+    assert salary_cell.status == CellStatus.CURRENT
+    assert salary_cell.value == 10
     assert any(u.operation == MemoryOperation.UPDATE for u in updates)
 
 
@@ -86,6 +109,25 @@ def test_delta_engine_skips_noop_update():
     assert updates == []
     assert len(memory.history("employment.employer")) == 1
     assert memory.current_value("employment.employer") == "같은직장"
+
+
+def test_equal_one_off_expenses_from_distinct_events_are_preserved():
+    engine = DeltaEngine()
+    memory = FinancialMemoryState()
+    memory.set_initial("cashflow.recent_one_off_expense", None, status=CellStatus.NOT_APPLICABLE)
+    expense = {"category": "medical", "amount_krw": 1500000}
+    for index in (1, 2):
+        instance = EventInstance(
+            event_instance_id=f"t_ev{index}", event_id="crisis_health_event",
+            label_ko="건강 사건", domain="crisis",
+            params={"one_off_expense": expense},
+        )
+        updates = engine.apply_transition(memory, instance, EventStatus.OCCURRED, index * 6)
+        assert len(updates) == 1
+    current = [cell for cell in memory.history("cashflow.recent_one_off_expense") if cell.status == CellStatus.CURRENT]
+    historical = [cell for cell in memory.history("cashflow.recent_one_off_expense") if cell.status == CellStatus.HISTORICAL]
+    assert len(current) == 1
+    assert len(historical) == 2
 
 
 def test_delta_engine_skips_repeated_needs_verification():

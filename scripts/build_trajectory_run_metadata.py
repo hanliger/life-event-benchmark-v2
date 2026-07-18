@@ -279,11 +279,19 @@ def main() -> int:
     checkpoints_path = run_dir / "gold" / "prefix_gold_checkpoints_15.jsonl"
     if sessions_dir.exists() and prefix_all_path.exists() and checkpoints_path.exists():
         session_files = sorted(sessions_dir.glob("sessions_traj_*.jsonl"))
+        session_generators = Counter(
+            row.get("generator", "unknown")
+            for path in session_files
+            for row in read_jsonl(path)
+        )
+        stage1_path = run_dir / "benchmark_items" / "stage1_event_status.jsonl"
+        stage2_path = run_dir / "benchmark_items" / "stage2_memory_mcq.jsonl"
         manifest["controlled_outputs"] = {
             "window_size_sessions": 15,
             "sessions": {
                 "path": "dialogues/sessions",
                 "count": sum(_line_count(path) for path in session_files),
+                "generator_distribution": dict(sorted(session_generators.items())),
             },
             "auxiliary_prefix_gold": {
                 "path": "gold/prefix_gold_all_sessions.jsonl",
@@ -295,9 +303,17 @@ def main() -> int:
                 "count": _line_count(checkpoints_path),
                 "sha256": _sha256(checkpoints_path),
             },
-            "stage1_items": {"path": "benchmark_items/stage1_event_status.jsonl"},
-            "stage2_items": {"path": "benchmark_items/stage2_memory_mcq.jsonl"},
-            "audit": {"path": "reports/v3_controlled_audit.json"},
+            "stage1_items": {
+                "path": "benchmark_items/stage1_event_status.jsonl",
+                "count": _line_count(stage1_path),
+                "sha256": _sha256(stage1_path),
+            },
+            "stage2_items": {
+                "path": "benchmark_items/stage2_memory_mcq.jsonl",
+                "count": _line_count(stage2_path),
+                "sha256": _sha256(stage2_path),
+            },
+            "audit": {"path": f"reports/{args.run_version}_controlled_audit.json"},
         }
     (run_dir / "manifest.json").write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"

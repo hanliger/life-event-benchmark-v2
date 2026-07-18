@@ -61,20 +61,45 @@ class DeltaEngine:
 
     @staticmethod
     def _is_noop(memory: FinancialMemoryState, update: MemoryUpdate) -> bool:
-        latest = memory.latest(update.path)
+        committed = memory.committed(update.path)
+        matching_pending = [
+            cell
+            for cell in memory.history(update.path)
+            if cell.status == CellStatus.PENDING
+            and cell.source_event_instance_id == update.source_event_instance_id
+        ]
         if update.operation in {MemoryOperation.CREATE, MemoryOperation.UPDATE}:
-            return latest is not None and latest.status == CellStatus.CURRENT and latest.value == update.new_value
+            # Repeated equal expenses are still distinct event facts; the
+            # source event and validity interval carry their identity.
+            if update.path == "cashflow.recent_one_off_expense":
+                return False
+            # Even an equal value must confirm/close a pending proposal.
+            return (
+                not matching_pending
+                and committed is not None
+                and committed.status == CellStatus.CURRENT
+                and committed.value == update.new_value
+            )
         if update.operation == MemoryOperation.MARK_STALE:
-            return latest is None or latest.status == CellStatus.STALE
+            return committed is None or committed.status == CellStatus.STALE
         if update.operation == MemoryOperation.NEEDS_VERIFICATION:
-            return latest is not None and latest.status == CellStatus.NEEDS_VERIFICATION
+            return committed is not None and committed.status == CellStatus.NEEDS_VERIFICATION
         if update.operation == MemoryOperation.ARCHIVE:
-            return latest is None or latest.status in {CellStatus.HISTORICAL, CellStatus.CANCELLED}
+            return committed is None
         if update.operation == MemoryOperation.SET_NOT_APPLICABLE:
-            return latest is not None and latest.status == CellStatus.NOT_APPLICABLE
+            return (
+                not matching_pending
+                and committed is not None
+                and committed.status == CellStatus.NOT_APPLICABLE
+            )
+        if update.operation == MemoryOperation.SET_PENDING:
+            return bool(matching_pending and matching_pending[-1].value == update.new_value)
         if update.operation == MemoryOperation.CLEAR_PENDING:
             return not any(
-                cell.status == CellStatus.PENDING
+                (
+                    cell.status == CellStatus.PENDING
+                    and cell.source_event_instance_id == update.source_event_instance_id
+                )
                 or (
                     cell.status == CellStatus.NEEDS_VERIFICATION
                     and cell.source_event_instance_id == update.source_event_instance_id
@@ -82,6 +107,19 @@ class DeltaEngine:
                 for cell in memory.history(update.path)
             )
         return False
+
+    @staticmethod
+    def _conditions_match(spec: dict[str, Any], instance: EventInstance) -> bool:
+        """Match an optional declarative equality filter against event params."""
+        conditions = spec.get("when") or {}
+        for name, expected in conditions.items():
+            actual = instance.params.get(name)
+            if isinstance(expected, list):
+                if actual not in expected:
+                    return False
+            elif actual != expected:
+                return False
+        return True
 
     def _normalize_housing_operation(
         self,
@@ -159,6 +197,8 @@ class DeltaEngine:
         applied: list[MemoryUpdate] = []
         allowed = _ALLOWED_OPS_BY_STATUS[to_status]
         for spec in specs:
+            if not self._conditions_match(spec, instance):
+                continue
             op = MemoryOperation(spec["operation"])
             op = self._normalize_housing_operation(memory, instance, to_status, spec["path"], op)
             if op is None:

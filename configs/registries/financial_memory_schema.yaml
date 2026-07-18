@@ -50,3 +50,6 @@ domains:
       - housing_deposit_goal
       - child_education_goal
       - retirement_goal
+  cashflow:
+    paths:
+      - recent_one_off_expense

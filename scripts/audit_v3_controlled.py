@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Audit the controlled-v3 trajectory/session/checkpoint invariants."""
+"""Audit controlled-run trajectory/session/checkpoint invariants."""
 
 from __future__ import annotations
 
@@ -12,6 +12,7 @@ from typing import Any
 import _bootstrap  # noqa: F401
 
 from fin_life_benchmark.io import read_jsonl
+from fin_life_benchmark.gold.prefix_gold_exporter import serialize_memory_state
 from fin_life_benchmark.validation.audits import write_report
 
 
@@ -19,6 +20,7 @@ def audit_v3(
     trajectories: list[dict[str, Any]],
     sessions: list[dict[str, Any]],
     checkpoints: list[dict[str, Any]],
+    stage2_items: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     issues: list[dict[str, Any]] = []
 
@@ -176,6 +178,17 @@ def audit_v3(
             row.get("status") in {"weak_signal", "upcoming"} for row in instances
         )
 
+    true_initial_mismatches = 0
+    for item in stage2_items or []:
+        trajectory = trajectories_by_id.get(item.get("trajectory_id"))
+        if trajectory is None:
+            true_initial_mismatches += 1
+            continue
+        expected = serialize_memory_state(trajectory["initial_financial_memory_state"])
+        for path, cell in ((item.get("metadata") or {}).get("initial_memory") or {}).items():
+            if cell != expected.get(path):
+                true_initial_mismatches += 1
+
     return {
         "passed": not issues,
         "trajectory_count": len(trajectories),
@@ -187,6 +200,7 @@ def audit_v3(
         "multi_property_trajectories": multi_property_trajectories,
         "max_properties_listed_in_one_trajectory": max_properties_listed,
         "issue_count": len(issues),
+        "stage2_true_initial_memory_mismatches": true_initial_mismatches,
         "issues": issues,
     }
 
@@ -197,18 +211,24 @@ def main() -> int:
     parser.add_argument("--sessions-dir", required=True)
     parser.add_argument("--checkpoints", required=True)
     parser.add_argument("--output-dir", required=True)
+    parser.add_argument("--run-version", default="v3")
+    parser.add_argument("--stage2-items", default=None)
     args = parser.parse_args()
 
     trajectories = [json.loads(path.read_text(encoding="utf-8")) for path in sorted(Path(args.trajectories_dir).glob("traj_*.json"))]
     sessions = [row for path in sorted(Path(args.sessions_dir).glob("sessions_traj_*.jsonl")) for row in read_jsonl(path)]
     checkpoints = list(read_jsonl(Path(args.checkpoints)))
-    report = audit_v3(trajectories, sessions, checkpoints)
+    stage2_items = list(read_jsonl(Path(args.stage2_items))) if args.stage2_items else None
+    report = audit_v3(trajectories, sessions, checkpoints, stage2_items)
+    if report["stage2_true_initial_memory_mismatches"]:
+        report["passed"] = False
+        report["issue_count"] += report["stage2_true_initial_memory_mismatches"]
     output_dir = Path(args.output_dir)
     write_report(
         report,
-        output_dir / "v3_controlled_audit.json",
-        "V3 Controlled Run Audit",
-        output_dir / "v3_controlled_audit.md",
+        output_dir / f"{args.run_version}_controlled_audit.json",
+        f"{args.run_version.upper()} Controlled Run Audit",
+        output_dir / f"{args.run_version}_controlled_audit.md",
     )
     print(json.dumps({key: report[key] for key in ("passed", "trajectory_count", "session_count", "checkpoint_count", "issue_count")}, ensure_ascii=False))
     return 0 if report["passed"] else 1

@@ -36,7 +36,7 @@ def _snapshot_at(
     return snapshots[best_key] if best_key is not None else None
 
 
-def _serialize_memory_state(memory: Any) -> dict[str, Any]:
+def serialize_memory_state(memory: Any) -> dict[str, Any]:
     """Compact view: path -> {value, status, historical_values}."""
     cells = memory.cells if hasattr(memory, "cells") else memory.get("cells", {})
     out: dict[str, Any] = {}
@@ -228,7 +228,7 @@ def export_prefix_gold(
                 gold_life_events=gold_events,
                 gold_memory_updates=gold_updates,
                 gold_action_decisions=gold_decisions,
-                gold_full_memory_state=_serialize_memory_state(memory_snap) if memory_snap else {},
+                gold_full_memory_state=serialize_memory_state(memory_snap) if memory_snap else {},
                 gold_full_action_state=[
                     a.model_dump(mode="json") if hasattr(a, "model_dump") else a for a in action_snap
                 ],

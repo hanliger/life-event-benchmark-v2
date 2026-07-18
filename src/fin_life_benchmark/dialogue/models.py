@@ -29,6 +29,8 @@ class CueAnnotation(BaseModel):
     cue_type: str
     cue_text: str | None = None
     linked_memory_path: str | None = None
+    linked_memory_operation: str | None = None
+    linked_memory_value: Any = None
 
 
 class DialogueGenerationPlan(BaseModel):

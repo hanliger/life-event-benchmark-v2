@@ -15,7 +15,7 @@ def _anthropic_supports_temperature(model: str) -> bool:
     lowered = model.lower()
     return not (
         lowered.startswith("claude-")
-        and any(family in lowered for family in ("sonnet-5", "fable-5", "mythos-5", "opus-4"))
+        and any(family in lowered for family in ("sonnet-5", "fable-5", "mythos-5", "opus-5"))
     )
 
 

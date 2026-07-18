@@ -55,16 +55,24 @@ def _format_initial_memory(memory: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def _load_sessions_by_id(sessions_dir: Path) -> dict[str, dict[str, Any]]:
-    sessions: dict[str, dict[str, Any]] = {}
+def _load_sessions_by_id(sessions_dir: Path) -> dict[tuple[str, str], dict[str, Any]]:
+    sessions: dict[tuple[str, str], dict[str, Any]] = {}
     for path in sorted(sessions_dir.glob("sessions_*.jsonl")):
         for session in read_jsonl(path):
-            sessions[session["session_id"]] = session
+            sessions[(session["trajectory_id"], session["session_id"])] = session
     return sessions
 
 
-def _visible_sessions(item: dict[str, Any], sessions_by_id: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
-    return [sessions_by_id[sid] for sid in item.get("visible_sessions", []) if sid in sessions_by_id]
+def _visible_sessions(
+    item: dict[str, Any],
+    sessions_by_id: dict[tuple[str, str], dict[str, Any]],
+) -> list[dict[str, Any]]:
+    trajectory_id = item["trajectory_id"]
+    return [
+        sessions_by_id[(trajectory_id, session_id)]
+        for session_id in item.get("visible_sessions", [])
+        if (trajectory_id, session_id) in sessions_by_id
+    ]
 
 
 def _build_stage2_prompt(item: dict[str, Any], sessions: list[dict[str, Any]]) -> str:

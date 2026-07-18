@@ -580,7 +580,13 @@ def test_stage2_memory_mcq_builds_single_and_multi_hop_items():
         },
     ]
 
-    items = ItemBuilder(seed=0).build_stage2(prefixes, {"traj_mem": []})
+    true_initial = {
+        "traj_mem": {
+            "employment.salary_day": {"value": 10, "status": "current", "historical_values": []},
+            "housing.rent_payee": {"value": "기존 임대인", "status": "current", "historical_values": []},
+        }
+    }
+    items = ItemBuilder(seed=0).build_stage2(prefixes, {"traj_mem": []}, true_initial)
     assert {item.stage for item in items} == {"stage2_memory_mcq"}
     assert {"single", "multi"} <= {item.metadata["hop_type"] for item in items}
 

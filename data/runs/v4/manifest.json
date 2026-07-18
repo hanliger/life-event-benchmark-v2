@@ -1,0 +1,228 @@
+{
+  "run_version": "v4",
+  "locale": "ko_KR",
+  "master_seed": 42,
+  "trajectory_seed_range": [
+    42,
+    61
+  ],
+  "persona_count": 20,
+  "age_distribution": {
+    "20s": 4,
+    "30s": 6,
+    "40s": 6,
+    "50s": 4
+  },
+  "target_occurred_events_per_trajectory": 20,
+  "inputs": {
+    "personas": {
+      "path": "inputs/personas.jsonl",
+      "sha256": "6a3408fe61a12fc1f2493d286908f7c6060fd5e6b674d511eb7461fb66cf66cc"
+    },
+    "initial_states": {
+      "path": "inputs/initial_states.jsonl",
+      "sha256": "5395334594e996f36aa40fbeeebdaf085cd2ba40fb4328d78577822c0aee1854"
+    },
+    "life_event_registry": {
+      "path": "configs/registries/life_events.yaml",
+      "sha256": "c2369b8324f684b95a1a800b225e23584cb493a9dae1cc18e5acc08a890e7c81"
+    }
+  },
+  "generation": {
+    "mode": "subgraph_with_guarded_hazard",
+    "one_trajectory_per_persona": true,
+    "sampling_policy": {
+      "global_hazard_scale": 4.5,
+      "preferred_horizon_months": [
+        120,
+        240
+      ]
+    },
+    "code_version": {
+      "commit": "bda6333c5256d8b8e9277f34d12b7799e57f5752",
+      "dirty": true
+    }
+  },
+  "trajectories": [
+    {
+      "trajectory_id": "traj_001",
+      "persona_id": "p_5e8d9df03584",
+      "seed": 42,
+      "occurred_events": 20,
+      "sha256": "41e84d96eaf3fdffdfb99f381c4be1a3017a02c321c2241b3a0730109b9d1ad2"
+    },
+    {
+      "trajectory_id": "traj_002",
+      "persona_id": "p_e59d3090a517",
+      "seed": 43,
+      "occurred_events": 20,
+      "sha256": "466f288c40b22035178b34a514476a62800d7b9781f9ab9af90617968ba56b4b"
+    },
+    {
+      "trajectory_id": "traj_003",
+      "persona_id": "p_ba20d81ebde7",
+      "seed": 44,
+      "occurred_events": 20,
+      "sha256": "7e414f34f658cf728f1f859ddaaef055d95042469af853a26e75bce3f9bf6dbb"
+    },
+    {
+      "trajectory_id": "traj_004",
+      "persona_id": "p_90d9542da2c4",
+      "seed": 45,
+      "occurred_events": 20,
+      "sha256": "d4bc1ad3385b82e6d03f0224c9763c53fbd1f7f053f8ae4d66a52f8884e278f6"
+    },
+    {
+      "trajectory_id": "traj_005",
+      "persona_id": "p_a13bf7e107ce",
+      "seed": 46,
+      "occurred_events": 20,
+      "sha256": "62514a64ece5c54179519fe0e461b085718fbb5d23fdcc4bdde3e6c239a04883"
+    },
+    {
+      "trajectory_id": "traj_006",
+      "persona_id": "p_57eb527f5138",
+      "seed": 47,
+      "occurred_events": 20,
+      "sha256": "9280dbf1be5a5dd5db0c181b8e0273e66eef51ec7d2dee8bcd0951556b8260fe"
+    },
+    {
+      "trajectory_id": "traj_007",
+      "persona_id": "p_9af25c927991",
+      "seed": 48,
+      "occurred_events": 20,
+      "sha256": "4e565af6cbf9d4ed7cd4c46cea4c3e0a2fa146c74c12ced8ae8ffd78481d25c7"
+    },
+    {
+      "trajectory_id": "traj_008",
+      "persona_id": "p_e12bc82b3ad5",
+      "seed": 49,
+      "occurred_events": 20,
+      "sha256": "aea4e20cd16b7601103a215407182fc3f10c308a846f937b19d495d69c40482b"
+    },
+    {
+      "trajectory_id": "traj_009",
+      "persona_id": "p_279ec7a44378",
+      "seed": 50,
+      "occurred_events": 20,
+      "sha256": "0ae87a9bbce6d866ef4c7a9b50ba9b84ac728d72e1e327c8564040df658dd2d6"
+    },
+    {
+      "trajectory_id": "traj_010",
+      "persona_id": "p_702dd652ff75",
+      "seed": 51,
+      "occurred_events": 20,
+      "sha256": "c1f7ac330a89063e0d00d3b62a4939020726f06cb7838859f0ed57f897a89f26"
+    },
+    {
+      "trajectory_id": "traj_011",
+      "persona_id": "p_f47b28561c3a",
+      "seed": 52,
+      "occurred_events": 20,
+      "sha256": "e64485bbd5a49c26e9414c6ce967c84eaeebf0c8f3a6ce09ca449eee68f48f7b"
+    },
+    {
+      "trajectory_id": "traj_012",
+      "persona_id": "p_7ed134ba985e",
+      "seed": 53,
+      "occurred_events": 20,
+      "sha256": "39f5303dc7591d5b3beea2bb85b63c73a50b06b4ee06f0b7be0818a2d12302ba"
+    },
+    {
+      "trajectory_id": "traj_013",
+      "persona_id": "p_9c4f26bb90bb",
+      "seed": 54,
+      "occurred_events": 20,
+      "sha256": "438848942f15077c433c730aae5c6d477351f50f0797fd2f428516e1b985542b"
+    },
+    {
+      "trajectory_id": "traj_014",
+      "persona_id": "p_f09b95a852ad",
+      "seed": 55,
+      "occurred_events": 20,
+      "sha256": "061005c1a6c6aaa43ed50aa9ee02bc357a4c7f9406286d5aa44d0d23309f5eb2"
+    },
+    {
+      "trajectory_id": "traj_015",
+      "persona_id": "p_b8c20bc99c0d",
+      "seed": 56,
+      "occurred_events": 20,
+      "sha256": "3ad8bd76514a09e17e10353ff8d6e4373e22dc44271234d8ce07db13feeaa570"
+    },
+    {
+      "trajectory_id": "traj_016",
+      "persona_id": "p_1bcf717903d8",
+      "seed": 57,
+      "occurred_events": 20,
+      "sha256": "b8ffbd92910605446f98e9d43430d7c4d9a7788fb05ba0533bffa328fe57cd39"
+    },
+    {
+      "trajectory_id": "traj_017",
+      "persona_id": "p_3b386777f622",
+      "seed": 58,
+      "occurred_events": 20,
+      "sha256": "db614248641377df7e388b8eec70fa305f06fcbffbfc647bc594d35968bce665"
+    },
+    {
+      "trajectory_id": "traj_018",
+      "persona_id": "p_c2d5f9e29256",
+      "seed": 59,
+      "occurred_events": 20,
+      "sha256": "5eb76e96ff02c4faa6a1a6ed48de1e9bed25931705d75c65b3c56bd1314c6172"
+    },
+    {
+      "trajectory_id": "traj_019",
+      "persona_id": "p_d86b1b7a14e2",
+      "seed": 60,
+      "occurred_events": 20,
+      "sha256": "a038c1954cc860f909a5408eeccd096ace96a6fdede926aca162044560e2dc88"
+    },
+    {
+      "trajectory_id": "traj_020",
+      "persona_id": "p_8c9a673904c1",
+      "seed": 61,
+      "occurred_events": 20,
+      "sha256": "1402c3c017ecbc112125838dee04d7b3ed1fc01c8cac0bfbd849c74a40dc95db"
+    }
+  ],
+  "audit": {
+    "path": "reports/trajectory_audit.json",
+    "passed": true
+  },
+  "summary": {
+    "path": "reports/trajectory_summary.md"
+  },
+  "controlled_outputs": {
+    "window_size_sessions": 15,
+    "sessions": {
+      "path": "dialogues/sessions",
+      "count": 6000,
+      "generator_distribution": {
+        "mock": 6000
+      }
+    },
+    "auxiliary_prefix_gold": {
+      "path": "gold/prefix_gold_all_sessions.jsonl",
+      "count": 6000,
+      "sha256": "8f7fcd03fe49223d9480e5ee82f91b59e83658a254ebacaab6ead99a0e8655fd"
+    },
+    "main_checkpoint_gold": {
+      "path": "gold/prefix_gold_checkpoints_15.jsonl",
+      "count": 400,
+      "sha256": "725317f7354135b901916bf8b74929946acda916535a1613793a476def22aa92"
+    },
+    "stage1_items": {
+      "path": "benchmark_items/stage1_event_status.jsonl",
+      "count": 400,
+      "sha256": "db3a87d04a4d389d4a3a5b709319dca17c577b97d6cfe057b168a78a61720739"
+    },
+    "stage2_items": {
+      "path": "benchmark_items/stage2_memory_mcq.jsonl",
+      "count": 780,
+      "sha256": "04c2f01510122323845de3400d26b33ae3eb685b8871ba5fa5edb070b068bf51"
+    },
+    "audit": {
+      "path": "reports/v4_controlled_audit.json"
+    }
+  }
+}

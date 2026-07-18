@@ -153,4 +153,7 @@ def build_initial_memory(persona: NormalizedPersona, locale: LocaleConfig, seed:
     set_("goals.retirement_goal", "active" if persona.age >= 45 and persona.financial_profile.has_pension_or_irp else None,
          status=CellStatus.CURRENT if persona.age >= 45 and persona.financial_profile.has_pension_or_irp else CellStatus.UNKNOWN)
 
+    # No major one-off expense has occurred inside the generated trajectory yet.
+    set_("cashflow.recent_one_off_expense", None, status=CellStatus.NOT_APPLICABLE)
+
     return memory

@@ -77,6 +77,7 @@ def sample_event_params(
         params["relationship_transition_type"] = transition
         params["marital_status_after"] = "separated" if transition == "separation" else "divorced"
         params["child_support_amount"] = pick("support_amounts_krw") if state.has_children else None
+        params["has_child_support"] = bool(state.has_children)
     elif event_id in {"relationship_childbirth", "relationship_adoption"}:
         params["family_change_type"] = "birth" if event_id == "relationship_childbirth" else "adoption"
         params["children_after"] = sorted((state.children_ages + [0])[:MAX_COUNT_BELOW_FIVE])
@@ -92,15 +93,35 @@ def sample_event_params(
         params["cause"] = rng.choice(["ordinary", "accident"])
         params["dependents_after"] = max(0, state.dependents_count - 1)
     elif event_id == "relationship_family_death":
-        # Keep the historical five-way draw (and therefore seeded lifecycle
-        # determinism), but never materialize an impossible child death.
+        # Preserve the historical draw sequence so lifecycle scheduling stays
+        # deterministic across schema versions, then normalize impossible
+        # identities against the current state.
         relation = rng.choice(["parent", "spouse", "child", "sibling", "other"])
-        params["deceased_relation"] = relation if relation != "child" or state.children else "other"
-        if params["deceased_relation"] == "child":
+        if relation == "spouse" and state.marital_status != "married":
+            relation = "parent" if state.dependents_count > 0 else "other"
+        if relation == "child" and not state.children:
+            relation = "parent" if state.dependents_count > 0 else "other"
+        params["deceased_relation"] = relation
+        if relation == "child":
             child = rng.choice(state.children)
             params["deceased_child_id"] = child.child_id
-        params["was_dependent"] = state.dependents_count > 0 and rng.random() < 0.7
+            params["children_after"] = [
+                candidate.age for candidate in state.children if candidate.child_id != child.child_id
+            ]
+        # Dependence is a state-conditioned fact, not an unrelated random flag.
+        dependency_draw = rng.random()
+        params["was_dependent"] = bool(
+            state.dependents_count > 0
+            and (
+                relation in {"child", "parent"}
+            )
+        )
         params["dependents_after"] = max(0, state.dependents_count - int(params["was_dependent"]))
+        params["one_off_cost"] = [3000000, 5000000, 7000000][min(2, int(dependency_draw * 3))]
+        params["one_off_expense"] = {
+            "category": "funeral",
+            "amount_krw": params["one_off_cost"],
+        }
     elif event_id == "housing_move":
         new_status = rng.choice(["jeonse", "wolse", "family_home", "other"])
         params["new_address"] = pick("address_pool")
@@ -110,6 +131,11 @@ def sample_event_params(
         params["new_payee"] = (
             locale.banking_terms.get("rent_payee") or "집주인"
         ) if new_status == "wolse" else None
+        params["has_rent_payment"] = new_status == "wolse"
+        params["new_maintenance_fee_payee"] = (
+            locale.banking_terms.get("maintenance_fee_payee") or "관리사무소"
+        ) if new_status in {"jeonse", "wolse"} else None
+        params["has_maintenance_fee"] = params["new_maintenance_fee_payee"] is not None
         params["housing_payment_type"] = (
             "rent" if new_status == "wolse"
             else "household_contribution" if new_status == "family_home"
@@ -151,15 +177,18 @@ def sample_event_params(
         params["employment_transition_type"] = "new_employment"
         params["new_employer"] = pick("employer_pool")
         params["new_salary_day"] = pick("salary_days")
+        params["new_salary_account"] = "main_checking"
     elif event_id == "career_reinstatement":
         params["employment_transition_type"] = "reinstatement"
         params["previous_employer"] = state.current_employer or pick("employer_pool")
         params["new_employer"] = params["previous_employer"]
         params["new_salary_day"] = pick("salary_days")
+        params["new_salary_account"] = "main_checking"
     elif event_id == "career_job_change":
         params["change_type"] = "external_employer"
         params["new_employer"] = pick("employer_pool")
         params["new_salary_day"] = pick("salary_days")
+        params["new_salary_account"] = "main_checking"
     elif event_id == "career_employment_end":
         params["end_reason"] = "business_closure" if state.employment_status == "self_employed" else rng.choice(["resignation", "job_loss"])
     elif event_id == "career_self_employment":
@@ -183,10 +212,13 @@ def sample_event_params(
         params["monthly_edu_cost"] = pick("savings_amounts_krw")
     elif event_id == "crisis_health_event":
         params["one_off_cost"] = rng.choice([1500000, 3000000, 5000000])
+        params["one_off_expense"] = {"category": "medical", "amount_krw": params["one_off_cost"]}
     elif event_id == "crisis_accident_or_disaster":
         params["one_off_cost"] = rng.choice([1000000, 2000000, 4000000])
+        params["one_off_expense"] = {"category": "accident_or_disaster", "amount_krw": params["one_off_cost"]}
     elif event_id == "crisis_financial_fraud":
         params["one_off_cost"] = rng.choice([500000, 1500000, 3000000])
+        params["one_off_expense"] = {"category": "fraud_loss", "amount_krw": params["one_off_cost"]}
     elif event_id == "retirement_start":
         params["previous_employment_status"] = state.employment_status
         params["retirement_reason"] = rng.choice(["planned", "health", "family", "other"])
@@ -226,6 +258,9 @@ def validate_event_params(
         child_ids = {child.child_id for child in state.children}
         if params.get("deceased_child_id") not in child_ids:
             raise ValueError("relationship_family_death: deceased_child_id must identify an existing child")
+    if template.event_id == "relationship_family_death" and params.get("deceased_relation") == "spouse":
+        if state.marital_status != "married":
+            raise ValueError("relationship_family_death: spouse requires married state")
     if template.event_id == "education_child_stage_entry":
         child = next((c for c in state.children if c.child_id == params.get("child_id")), None)
         if child is None:
@@ -267,7 +302,10 @@ def apply_occurred_to_life_state(
     elif event_id == "relationship_dependent_end":
         state.dependents_count = int(params.get("dependents_after", max(0, state.dependents_count - 1)))
     elif event_id == "relationship_family_death":
-        if params.get("deceased_relation") == "child":
+        relation = params.get("deceased_relation")
+        if relation == "spouse":
+            state.marital_status = "widowed"
+        elif relation == "child":
             deceased_id = params.get("deceased_child_id")
             state.children = [child for child in state.children if child.child_id != deceased_id]
             state.children_ages = sorted(child.age for child in state.children)

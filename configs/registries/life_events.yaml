@@ -520,6 +520,8 @@ relationship_family_death:
     - true
     - false
     dependents_after: only changes when was_dependent=true
+    one_off_cost: generated funeral cost in KRW
+    one_off_expense: generated concrete expense fact
   state_update_note: 가족 사망 자체와 부양가족 수 감소를 분리하며, 부양가족 수는 deceased_relation/was_dependent에
     따라 조건부 갱신
 housing_move:
@@ -592,6 +594,15 @@ housing_move:
     - wolse
     - family_home
     - other
+    new_rent_amount: generated monthly rent or zero
+    new_payee: generated rent payee or null
+    has_rent_payment:
+    - true
+    - false
+    new_maintenance_fee_payee: generated maintenance payee or null
+    has_maintenance_fee:
+    - true
+    - false
     new_rent_amount: generated monthly rent amount when new_residence_status=wolse; otherwise
       0 or null
     move_reason:
@@ -834,6 +845,7 @@ career_employment:
     - new_employment
     new_employer: generated employer
     new_salary_day: generated salary day
+    new_salary_account: generated salary account reference
 career_reinstatement:
   event_id: career_reinstatement
   label_ko: 복직
@@ -902,6 +914,7 @@ career_reinstatement:
     - reinstatement
     previous_employer: existing employer reference
     new_salary_day: generated salary day
+    new_salary_account: generated salary account reference
 career_job_change:
   event_id: career_job_change
   label_ko: 이직
@@ -970,6 +983,7 @@ career_job_change:
     - external_employer
     new_employer: generated employer
     new_salary_day: generated salary day
+    new_salary_account: generated salary account reference
 career_employment_end:
   event_id: career_employment_end
   label_ko: 고용 종료
@@ -1508,6 +1522,9 @@ crisis_health_event:
   - accident_family_illness
   - accident_family_hospitalization
   - accident_family_surgery
+  event_parameter_schema:
+    one_off_cost: generated medical cost in KRW
+    one_off_expense: generated concrete expense fact
 crisis_accident_or_disaster:
   event_id: crisis_accident_or_disaster
   label_ko: 사고·재난 피해
@@ -1560,6 +1577,9 @@ crisis_accident_or_disaster:
   life_generator_node_ids:
   - accident_accident
   - accident_disaster
+  event_parameter_schema:
+    one_off_cost: generated loss in KRW
+    one_off_expense: generated concrete expense fact
 crisis_financial_fraud:
   event_id: crisis_financial_fraud
   label_ko: 금융사기·피싱 피해
@@ -1614,6 +1634,9 @@ crisis_financial_fraud:
   action_impact_template_id: crisis_financial_fraud
   life_generator_node_ids:
   - accident_financial_fraud
+  event_parameter_schema:
+    one_off_cost: generated fraud loss in KRW
+    one_off_expense: generated concrete expense fact
 career_leave_of_absence:
   event_id: career_leave_of_absence
   label_ko: 휴직 시작

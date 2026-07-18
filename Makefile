@@ -106,11 +106,13 @@ export-gold-controlled:
 
 build-items:
 	$(PYTHON) scripts/build_benchmark_items.py \
-		--prefix-gold $(GOLD) --sessions-dir $(SESS_DIR) --output-dir $(ITEMS_DIR) --seed $(SEED)
+		--prefix-gold $(GOLD) --sessions-dir $(SESS_DIR) --trajectories-dir $(TRAJ_DIR) \
+		--output-dir $(ITEMS_DIR) --seed $(SEED)
 
 build-items-controlled:
 	$(PYTHON) scripts/build_benchmark_items.py \
 		--prefix-gold $(GOLD_CHECKPOINTS) --sessions-dir $(SESS_DIR) \
+		--trajectories-dir $(TRAJ_DIR) \
 		--output-dir $(ITEMS_DIR) --seed $(SEED)
 
 history-filter:
@@ -126,7 +128,7 @@ endif
 
 audit:
 	$(PYTHON) scripts/audit_single_session_recoverability.py --sessions-dir $(SESS_DIR) --output-dir $(QUALITY)
-	$(PYTHON) scripts/audit_full_prefix_recoverability.py --prefix-gold $(GOLD) --output-dir $(QUALITY)
+	$(PYTHON) scripts/audit_full_prefix_recoverability.py --prefix-gold $(GOLD) --sessions-dir $(SESS_DIR) --output-dir $(QUALITY)
 	$(PYTHON) scripts/audit_stale_distractors.py --items $(ITEMS_DIR)/stage2_memory_mcq.jsonl --prefix-gold $(GOLD) --output-dir $(QUALITY)
 	$(PYTHON) scripts/audit_life_stage_constraints.py --trajectories-dir $(TRAJ_DIR) --output-dir $(QUALITY)
 	$(PYTHON) scripts/audit_generation_consistency.py --trajectories-dir $(TRAJ_DIR) --sessions-dir $(SESS_DIR) --output-dir $(QUALITY)
@@ -137,7 +139,8 @@ audit:
 audit-controlled:
 	$(PYTHON) scripts/audit_v3_controlled.py \
 		--trajectories-dir $(TRAJ_DIR) --sessions-dir $(SESS_DIR) \
-		--checkpoints $(GOLD_CHECKPOINTS) --output-dir $(QUALITY)
+		--checkpoints $(GOLD_CHECKPOINTS) \
+		--stage2-items $(ITEMS_DIR)/stage2_memory_mcq.jsonl --output-dir $(QUALITY)
 
 pipeline-smoke: inventory normalize-personas initial-states simulate-smoke dialogue-smoke validate-dialogues export-gold build-items history-filter audit
 	@echo "pipeline-smoke complete. Reports in $(QUALITY)/"

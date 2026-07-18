@@ -25,6 +25,18 @@
         "must_not_execute": {
           "title": "Must Not Execute",
           "type": "boolean"
+        },
+        "source_event_instance_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Event Instance Id"
         }
       },
       "required": [
@@ -42,6 +54,11 @@
       "properties": {
         "event_instance_id": {
           "title": "Event Instance Id",
+          "type": "string"
+        },
+        "event_id": {
+          "default": "",
+          "title": "Event Id",
           "type": "string"
         },
         "life_event_label": {
@@ -154,6 +171,16 @@
       "title": "Time",
       "type": "object"
     },
+    "checkpoint_session_count": {
+      "default": 0,
+      "title": "Checkpoint Session Count",
+      "type": "integer"
+    },
+    "occurred_event_count": {
+      "default": 0,
+      "title": "Occurred Event Count",
+      "type": "integer"
+    },
     "gold_life_events": {
       "items": {
         "$ref": "#/$defs/GoldLifeEvent"
@@ -187,6 +214,11 @@
       },
       "title": "Gold Full Action State",
       "type": "array"
+    },
+    "repeats_previous": {
+      "default": false,
+      "title": "Repeats Previous",
+      "type": "boolean"
     }
   },
   "required": [

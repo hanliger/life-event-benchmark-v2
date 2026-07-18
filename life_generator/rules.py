@@ -278,7 +278,7 @@ def _validate_event_against_state(
         return Rejection(episode.template_id, "startup/freelance requires unemployment after resignation", event_id, age)
     if event_id == "career_business_closure" and state.employment_status != "self_employed":
         return Rejection(episode.template_id, "business closure requires self employment", event_id, age)
-    if event_id == "residence_home_sale" and not state.purchased_home:
+    if event_id == "residence_home_sale" and state.property_count <= 0 and not state.purchased_home:
         return Rejection(episode.template_id, "home sale requires prior home purchase", event_id, age)
     if event_id == "career_pension_start" and not state.retirement_prepared:
         return Rejection(episode.template_id, "pension start requires retirement preparation", event_id, age)
@@ -337,7 +337,11 @@ def _apply_event(event_id: str, state: GeneratorState) -> None:
     elif event_id == "residence_home_purchase":
         state.housing_status = "owned"
         state.purchased_home = True
+        state.property_count += 1
     elif event_id == "residence_home_sale":
-        state.housing_status = "sold"
+        state.property_count = max(0, state.property_count - 1)
+        state.purchased_home = state.property_count > 0
+        if not state.purchased_home:
+            state.housing_status = "sold"
     elif event_id == "residence_move_out":
         state.housing_status = "moved_out"

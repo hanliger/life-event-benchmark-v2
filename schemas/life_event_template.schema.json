@@ -165,6 +165,38 @@
       "title": "Base Rate Per Year",
       "type": "number"
     },
+    "sampling_multiplier": {
+      "default": 1.0,
+      "title": "Sampling Multiplier",
+      "type": "number"
+    },
+    "repeat_policy": {
+      "default": "repeatable",
+      "title": "Repeat Policy",
+      "type": "string"
+    },
+    "occurrence_scope": {
+      "default": "persona",
+      "title": "Occurrence Scope",
+      "type": "string"
+    },
+    "max_occurrences": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Max Occurrences"
+    },
+    "sampling_source": {
+      "default": "event_or_subgraph",
+      "title": "Sampling Source",
+      "type": "string"
+    },
     "age_weights": {
       "additionalProperties": {
         "type": "number"
@@ -216,6 +248,33 @@
       },
       "title": "Life Generator Node Ids",
       "type": "array"
+    },
+    "event_parameter_schema": {
+      "additionalProperties": true,
+      "title": "Event Parameter Schema",
+      "type": "object"
+    },
+    "parameter_guards": {
+      "additionalProperties": true,
+      "title": "Parameter Guards",
+      "type": "object"
+    },
+    "cooldown_group": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Cooldown Group"
+    },
+    "cooldown_group_months": {
+      "default": 0,
+      "title": "Cooldown Group Months",
+      "type": "integer"
     }
   },
   "required": [

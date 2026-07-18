@@ -61,6 +61,47 @@
           "title": "Age",
           "type": "integer"
         },
+        "transition_order": {
+          "default": 0,
+          "title": "Transition Order",
+          "type": "integer"
+        },
+        "window_index": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Window Index"
+        },
+        "position_in_window": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Position In Window"
+        },
+        "window_event_instance_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Window Event Instance Id"
+        },
         "session_type": {
           "title": "Session Type",
           "type": "string"
@@ -138,6 +179,11 @@
           },
           "title": "Target Action Ids",
           "type": "array"
+        },
+        "structured_context": {
+          "additionalProperties": true,
+          "title": "Structured Context",
+          "type": "object"
         },
         "desired_single_session_recoverability": {
           "default": "medium",
@@ -220,6 +266,47 @@
     "age": {
       "title": "Age",
       "type": "integer"
+    },
+    "transition_order": {
+      "default": 0,
+      "title": "Transition Order",
+      "type": "integer"
+    },
+    "window_index": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Window Index"
+    },
+    "position_in_window": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Position In Window"
+    },
+    "window_event_instance_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Window Event Instance Id"
     },
     "session_type": {
       "title": "Session Type",

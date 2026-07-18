@@ -104,7 +104,8 @@ def test_events_anchored_to_persona_age():
     persona = _persona(age=33)
     horizon = 120
     events = subgraph_scripted_events(persona=persona, seed=7, horizon_months=horizon, templates=TEMPLATES, paths=PATHS)
-    for _, month in events:
+    for event in events:
+        month = event[1]
         assert 0 <= month < horizon  # inside the person's forward window
 
 
@@ -221,7 +222,21 @@ def test_fixed_child_education_events_follow_horizon():
 
     assert fixed_child_education_events(persona, horizon_months=12) == []
     assert fixed_child_education_events(persona, horizon_months=13) == [
-        ("education_child_stage_entry", 12, {"new_stage": "primary"})
+        (
+            "education_child_stage_entry",
+            12,
+            {
+                "child_id": "child_001",
+                "child_age_months": 84,
+                "previous_stage": "pre_school",
+                "new_stage": "primary",
+            },
+            {
+                "causal_bundle_id": "fixed_education_child_001_primary",
+                "bundle_event_index": 0,
+                "source_template_id": "fixed_child_education",
+            },
+        )
     ]
 
 

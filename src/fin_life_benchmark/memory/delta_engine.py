@@ -98,7 +98,34 @@ class DeltaEngine:
         rent fields just because a move/rental event touched housing memory.
         """
         if path not in {"housing.rent_amount", "housing.rent_payee"}:
+            if (
+                instance.event_id == "housing_home_purchase"
+                and not instance.params.get("post_purchase_move", True)
+                and path in {
+                    "housing.residence_status",
+                    "housing.address",
+                    "housing.contract_type",
+                    "housing.mortgage_status",
+                }
+            ):
+                return None
+            if (
+                instance.event_id == "housing_home_sale"
+                and instance.params.get("sold_property_role") != "primary_residence"
+                and path in {
+                    "housing.residence_status",
+                    "housing.address",
+                    "housing.contract_type",
+                    "housing.mortgage_status",
+                }
+            ):
+                return None
             return op
+
+        if instance.event_id == "housing_home_purchase" and not instance.params.get("post_purchase_move", True):
+            return None
+        if instance.event_id == "housing_home_sale" and instance.params.get("sold_property_role") != "primary_residence":
+            return None
 
         if instance.event_id == "housing_move":
             residence = instance.params.get("new_residence_status")

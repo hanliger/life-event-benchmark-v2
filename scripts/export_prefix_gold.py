@@ -29,6 +29,12 @@ def main() -> int:
     parser.add_argument("--sessions-dir", required=True)
     parser.add_argument("--output", required=True)
     parser.add_argument("--limit", type=int, default=None, help="max trajectories")
+    parser.add_argument(
+        "--checkpoint-stride",
+        type=int,
+        default=None,
+        help="emit only every N sessions (v3 main evaluation uses 15); default emits every prefix",
+    )
     args = parser.parse_args()
 
     trajectory_files = sorted(Path(args.trajectories_dir).glob("traj_*.json"))
@@ -43,7 +49,11 @@ def main() -> int:
         if not sessions_path.exists():
             continue
         sessions = list(read_jsonl(sessions_path))
-        for prefix in export_prefix_gold(trajectory, sessions):
+        for prefix in export_prefix_gold(
+            trajectory,
+            sessions,
+            checkpoint_stride=args.checkpoint_stride,
+        ):
             records.append(prefix.model_dump(mode="json"))
         exported += 1
 

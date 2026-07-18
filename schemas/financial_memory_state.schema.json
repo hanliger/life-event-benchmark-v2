@@ -8,7 +8,8 @@
         "needs_verification",
         "pending",
         "cancelled",
-        "unknown"
+        "unknown",
+        "not_applicable"
       ],
       "title": "CellStatus",
       "type": "string"

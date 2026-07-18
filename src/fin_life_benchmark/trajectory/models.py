@@ -12,6 +12,28 @@ from ..memory.models import FinancialMemoryState, MemoryUpdate
 from ..persona.models import NormalizedPersona
 
 
+class ChildState(BaseModel):
+    """A stable child identity; age alone is not sufficient for longitudinal events."""
+
+    child_id: str
+    age: int
+    education_stage: str = "pre_school"
+
+
+class PropertyState(BaseModel):
+    """One explicitly identified property in a potentially multi-home portfolio."""
+
+    property_id: str
+    address: str
+    acquired_month: int = 0
+    acquisition_event_instance_id: str | None = None
+    role: str = "secondary_property"  # primary_residence|secondary_property
+    mortgage_status: str = "unknown"
+    ownership_status: str = "owned"  # owned|sold
+    disposed_month: int | None = None
+    disposal_event_instance_id: str | None = None
+
+
 class LifeState(BaseModel):
     """Hidden life state consulted by FSM guards. Field names are the guard
     vocabulary used in configs/registries/life_events.yaml."""
@@ -20,9 +42,13 @@ class LifeState(BaseModel):
     employment_status: str = "unemployed"
     residence_status: str = "other"
     children_ages: list[int] = Field(default_factory=list)
+    children: list[ChildState] = Field(default_factory=list)
     dependents_count: int = 0
     lives_with_parents: bool = False
     home_owned: bool = False
+    properties: list[PropertyState] = Field(default_factory=list)
+    primary_residence_property_id: str | None = None
+    current_employer: str | None = None
     retirement_prepared: bool = False
     pension_receiving: bool = False
     in_education: bool = False
@@ -56,6 +82,8 @@ class LifeState(BaseModel):
 
     def tick_year(self) -> None:
         self.children_ages = [a + 1 for a in self.children_ages]
+        for child in self.children:
+            child.age += 1
 
 
 class PersonaState(BaseModel):
@@ -71,6 +99,7 @@ class StatusTransition(BaseModel):
     event_id: str
     from_status: str
     to_status: str
+    transition_order: int = 0
 
 
 class TrajectoryStep(BaseModel):
@@ -95,6 +124,11 @@ class Trajectory(BaseModel):
     state_snapshots: dict[str, PersonaState] = Field(default_factory=dict)  # month_index(str) -> state
     memory_snapshots: dict[str, FinancialMemoryState] = Field(default_factory=dict)
     action_snapshots: dict[str, list[StandingAction]] = Field(default_factory=dict)
+    # Ordered checkpoints preserve multiple transitions within the same month.
+    # Keys are "<month_index>:<transition_order>".
+    ordered_state_snapshots: dict[str, PersonaState] = Field(default_factory=dict)
+    ordered_memory_snapshots: dict[str, FinancialMemoryState] = Field(default_factory=dict)
+    ordered_action_snapshots: dict[str, list[StandingAction]] = Field(default_factory=dict)
     final_persona_state: PersonaState | None = None
 
 
@@ -133,6 +167,8 @@ class PrefixGold(BaseModel):
     trajectory_id: str
     visible_sessions: list[str]
     time: dict[str, int]  # {age, month_index}
+    checkpoint_session_count: int = 0
+    occurred_event_count: int = 0
     gold_life_events: list[GoldLifeEvent] = Field(default_factory=list)
     gold_memory_updates: list[GoldMemoryUpdate] = Field(default_factory=list)
     gold_action_decisions: list[GoldActionDecision] = Field(default_factory=list)

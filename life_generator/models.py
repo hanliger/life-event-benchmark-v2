@@ -102,6 +102,7 @@ class GeneratorState:
     dependents_count: int = 0
     retirement_prepared: bool = False
     purchased_home: bool = False
+    property_count: int = 0
     child_milestones: set[str] = field(default_factory=set)
     locks: list[tuple[int, tuple[str, ...], str]] = field(default_factory=list)
 

@@ -11,7 +11,7 @@ import random
 from typing import Any
 
 from ..locale.loader import LocaleConfig
-from ..trajectory.models import LifeState
+from ..trajectory.models import ChildState, LifeState, PropertyState
 from .models import EventStatus, LifeEventTemplate
 
 MAX_COUNT_BELOW_FIVE = 4
@@ -92,7 +92,13 @@ def sample_event_params(
         params["cause"] = rng.choice(["ordinary", "accident"])
         params["dependents_after"] = max(0, state.dependents_count - 1)
     elif event_id == "relationship_family_death":
-        params["deceased_relation"] = rng.choice(["parent", "spouse", "child", "sibling", "other"])
+        # Keep the historical five-way draw (and therefore seeded lifecycle
+        # determinism), but never materialize an impossible child death.
+        relation = rng.choice(["parent", "spouse", "child", "sibling", "other"])
+        params["deceased_relation"] = relation if relation != "child" or state.children else "other"
+        if params["deceased_relation"] == "child":
+            child = rng.choice(state.children)
+            params["deceased_child_id"] = child.child_id
         params["was_dependent"] = state.dependents_count > 0 and rng.random() < 0.7
         params["dependents_after"] = max(0, state.dependents_count - int(params["was_dependent"]))
     elif event_id == "housing_move":
@@ -101,32 +107,53 @@ def sample_event_params(
         params["new_residence_status"] = new_status
         params["new_contract_type"] = new_status
         params["new_rent_amount"] = pick("rent_amounts_krw") if new_status == "wolse" else 0
-        params["new_payee"] = locale.banking_terms.get("rent_payee") or "집주인"
+        params["new_payee"] = (
+            locale.banking_terms.get("rent_payee") or "집주인"
+        ) if new_status == "wolse" else None
+        params["housing_payment_type"] = (
+            "rent" if new_status == "wolse"
+            else "household_contribution" if new_status == "family_home"
+            else "none"
+        )
         params["move_reason"] = rng.choice([
             "ordinary_move", "independence", "separate_household",
             "return_to_family_home", "caregiving", "other",
         ])
     elif event_id == "housing_home_purchase":
         params["ownership_transition"] = "acquire"
+        # Replaced with the globally unique event-instance-derived ID by the
+        # simulator immediately after sampling.
+        params["property_id"] = f"property_candidate_{len(state.properties) + 1:03d}"
         params["new_address"] = pick("address_pool")
-        params["post_purchase_residence_status"] = "owner"
-        params["post_purchase_contract_type"] = "owner"
         params["post_purchase_move"] = rng.choice([True, False])
+        params["purchase_role"] = "primary_residence" if params["post_purchase_move"] else "secondary_property"
+        params["property_address"] = params["new_address"]
+        params["post_purchase_residence_status"] = "owner" if params["post_purchase_move"] else state.residence_status
+        params["post_purchase_contract_type"] = "owner" if params["post_purchase_move"] else state.residence_status
         params["mortgage_monthly"] = pick("mortgage_monthly_krw")
         params["mortgage_payment_day"] = rng.choice([10, 15, 27])
         params["loans_after"] = ["mortgage"]
     elif event_id == "housing_home_sale":
-        post_sale = rng.choice(["jeonse", "wolse", "family_home", "other"])
+        owned = [p for p in state.properties if p.ownership_status == "owned"]
+        if not owned:
+            raise ValueError("housing_home_sale: no identified owned property")
+        sold = rng.choice(owned)
+        is_primary = sold.property_id == state.primary_residence_property_id
+        post_sale = rng.choice(["jeonse", "wolse", "family_home", "other"]) if is_primary else state.residence_status
         params["ownership_transition"] = "dispose"
+        params["sold_property_id"] = sold.property_id
+        params["sold_property_address"] = sold.address
+        params["sold_property_role"] = sold.role
         params["post_sale_residence_status"] = post_sale
         params["post_sale_contract_type"] = post_sale
+        params["remaining_property_ids"] = [p.property_id for p in owned if p.property_id != sold.property_id]
     elif event_id == "career_employment":
         params["employment_transition_type"] = "new_employment"
         params["new_employer"] = pick("employer_pool")
         params["new_salary_day"] = pick("salary_days")
     elif event_id == "career_reinstatement":
         params["employment_transition_type"] = "reinstatement"
-        params["previous_employer"] = "previous_employer"
+        params["previous_employer"] = state.current_employer or pick("employer_pool")
         params["new_employer"] = params["previous_employer"]
         params["new_salary_day"] = pick("salary_days")
     elif event_id == "career_job_change":
@@ -142,8 +169,17 @@ def sample_event_params(
         params["employment_relationship_maintained"] = True
     elif event_id == "education_child_stage_entry":
         entries = [(7, "primary"), (13, "middle"), (16, "high")]
-        candidates = [stage for entry, stage in entries if any(abs(a - entry) <= 1 for a in state.children_ages)]
-        params["new_stage"] = candidates[0] if candidates else "primary"
+        candidates = [
+            (child, stage)
+            for entry, stage in entries
+            for child in state.children
+            if abs(child.age - entry) <= 1
+        ]
+        child, stage = candidates[0] if candidates else (state.children[0], "primary")
+        params["child_id"] = child.child_id
+        params["child_age_months"] = child.age * 12
+        params["previous_stage"] = child.education_stage
+        params["new_stage"] = stage
         params["monthly_edu_cost"] = pick("savings_amounts_krw")
     elif event_id == "crisis_health_event":
         params["one_off_cost"] = rng.choice([1500000, 3000000, 5000000])
@@ -186,8 +222,33 @@ def validate_event_params(
                     f"{field}={state.guard_value(field)!r}"
                 )
 
+    if template.event_id == "relationship_family_death" and params.get("deceased_relation") == "child":
+        child_ids = {child.child_id for child in state.children}
+        if params.get("deceased_child_id") not in child_ids:
+            raise ValueError("relationship_family_death: deceased_child_id must identify an existing child")
+    if template.event_id == "education_child_stage_entry":
+        child = next((c for c in state.children if c.child_id == params.get("child_id")), None)
+        if child is None:
+            raise ValueError("education_child_stage_entry: child_id must identify an existing child")
+        if params.get("child_age_months") != child.age * 12:
+            raise ValueError("education_child_stage_entry: child_age_months does not match child state")
+    if template.event_id == "housing_home_sale":
+        owned_ids = {p.property_id for p in state.properties if p.ownership_status == "owned"}
+        if params.get("sold_property_id") not in owned_ids:
+            raise ValueError("housing_home_sale: sold_property_id must identify an owned property")
+    if template.event_id == "housing_move" and params.get("new_residence_status") != "wolse":
+        if params.get("new_payee") is not None:
+            raise ValueError("housing_move: non-wolse residence cannot have a rent payee")
 
-def apply_occurred_to_life_state(event_id: str, state: LifeState, params: dict[str, Any]) -> None:
+
+def apply_occurred_to_life_state(
+    event_id: str,
+    state: LifeState,
+    params: dict[str, Any],
+    *,
+    event_instance_id: str | None = None,
+    month_index: int = 0,
+) -> None:
     """Mutate LifeState when an event occurs. Mirrors (and extends) the state
     effects in life_generator.rules._apply_event."""
     if event_id == "relationship_marriage":
@@ -195,6 +256,9 @@ def apply_occurred_to_life_state(event_id: str, state: LifeState, params: dict[s
     elif event_id == "relationship_divorce_or_separation":
         state.marital_status = str(params.get("marital_status_after", "divorced"))
     elif event_id in {"relationship_childbirth", "relationship_adoption"}:
+        child_id = str(params.get("child_id") or f"child_{len(state.children) + 1:03d}")
+        if not any(child.child_id == child_id for child in state.children):
+            state.children.append(ChildState(child_id=child_id, age=0))
         children_after = list(params.get("children_after") or (state.children_ages + [0]))
         state.children_ages = sorted(children_after[:MAX_COUNT_BELOW_FIVE])
         state.dependents_count = int(params.get("dependents_after", state.dependents_count + 1))
@@ -203,26 +267,62 @@ def apply_occurred_to_life_state(event_id: str, state: LifeState, params: dict[s
     elif event_id == "relationship_dependent_end":
         state.dependents_count = int(params.get("dependents_after", max(0, state.dependents_count - 1)))
     elif event_id == "relationship_family_death":
+        if params.get("deceased_relation") == "child":
+            deceased_id = params.get("deceased_child_id")
+            state.children = [child for child in state.children if child.child_id != deceased_id]
+            state.children_ages = sorted(child.age for child in state.children)
         state.dependents_count = int(params.get("dependents_after", max(0, state.dependents_count - 1)))
     elif event_id == "housing_move":
         state.residence_status = str(params.get("new_residence_status", state.residence_status))
         state.lives_with_parents = state.residence_status == "family_home"
     elif event_id == "housing_home_purchase":
-        state.residence_status = "owner"
+        property_id = str(params.get("property_id") or event_instance_id or f"property_{len(state.properties) + 1:03d}")
+        role = str(params.get("purchase_role", "primary_residence"))
+        if not any(prop.property_id == property_id for prop in state.properties):
+            state.properties.append(PropertyState(
+                property_id=property_id,
+                address=str(params.get("property_address") or params.get("new_address") or "unknown"),
+                acquired_month=month_index,
+                acquisition_event_instance_id=event_instance_id,
+                role=role,
+                mortgage_status="active" if params.get("mortgage_monthly") else "none",
+            ))
+        if params.get("post_purchase_move", True):
+            state.residence_status = "owner"
+            state.primary_residence_property_id = property_id
         state.home_owned = True
+        params["properties_after"] = [prop.model_dump(mode="json") for prop in state.properties]
+        params["primary_residence_property_id_after"] = state.primary_residence_property_id
     elif event_id == "housing_home_sale":
-        state.home_owned = False
-        state.residence_status = str(params.get("post_sale_residence_status", "jeonse"))
+        sold_id = params.get("sold_property_id")
+        for prop in state.properties:
+            if prop.property_id == sold_id:
+                prop.ownership_status = "sold"
+                prop.disposed_month = month_index
+                prop.disposal_event_instance_id = event_instance_id
+        remaining = [p for p in state.properties if p.ownership_status == "owned"]
+        state.home_owned = bool(remaining)
+        if sold_id == state.primary_residence_property_id:
+            state.primary_residence_property_id = None
+            state.residence_status = str(params.get("post_sale_residence_status", "jeonse"))
+        params["properties_after"] = [prop.model_dump(mode="json") for prop in state.properties]
+        params["primary_residence_property_id_after"] = state.primary_residence_property_id
     elif event_id in {"career_employment", "career_reinstatement"}:
         state.employment_status = "employed"
+        state.current_employer = params.get("new_employer") or state.current_employer
     elif event_id == "career_job_change":
         state.employment_status = "employed"
+        state.current_employer = params.get("new_employer") or state.current_employer
     elif event_id == "career_leave_of_absence":
         state.employment_status = "on_leave"
     elif event_id == "career_employment_end":
         state.employment_status = "unemployed"
     elif event_id == "career_self_employment":
         state.employment_status = "self_employed"
+    elif event_id == "education_child_stage_entry":
+        for child in state.children:
+            if child.child_id == params.get("child_id"):
+                child.education_stage = str(params.get("new_stage", child.education_stage))
     elif event_id in {"education_self_program_start", "education_study_abroad"}:
         state.in_education = True
     elif event_id == "retirement_start":

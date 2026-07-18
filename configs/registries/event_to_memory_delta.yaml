@@ -238,6 +238,12 @@ housing_home_purchase:
         value_from: "literal:active"
   on_occurred:
     memory_updates:
+      - path: housing.properties
+        operation: update
+        value_from: "param:properties_after"
+      - path: housing.primary_residence_property_id
+        operation: update
+        value_from: "param:primary_residence_property_id_after"
       - path: housing.residence_status
         operation: update
         value_from: "literal:owner"
@@ -367,6 +373,12 @@ housing_home_sale_or_moveout:
         operation: needs_verification
   on_occurred:
     memory_updates:
+      - path: housing.properties
+        operation: update
+        value_from: "param:properties_after"
+      - path: housing.primary_residence_property_id
+        operation: update
+        value_from: "param:primary_residence_property_id_after"
       - path: housing.residence_status
         operation: update
         value_from: "param:post_sale_residence_status"
@@ -376,6 +388,10 @@ housing_home_sale_or_moveout:
       - path: housing.mortgage_status
         operation: update
         value_from: "literal:closed"
+      - path: housing.rent_amount
+        operation: set_not_applicable
+      - path: housing.rent_payee
+        operation: set_not_applicable
       - path: financial_products.loans
         operation: needs_verification
   on_cancelled:
@@ -423,6 +439,10 @@ career_leave:
       - path: employment.income_stability
         operation: update
         value_from: "literal:reduced"
+      - path: employment.salary_day
+        operation: mark_stale
+      - path: employment.salary_account
+        operation: mark_stale
   on_cancelled:
     memory_updates:
       - path: employment.income_stability

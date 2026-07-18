@@ -1,0 +1,17 @@
+# V3 Controlled Run Audit
+
+- passed: True
+- trajectory_count: 20
+- session_count: 6000
+- checkpoint_count: 400
+- window_size: 15
+- target_occurred_events_per_trajectory: 20
+## status_totals
+- occurred: 400
+- cancelled: 46
+- open_weak_or_upcoming: 5
+
+- multi_property_trajectories: 6
+- max_properties_listed_in_one_trajectory: 3
+- issue_count: 0
+- issues: 0 entries (see JSON)

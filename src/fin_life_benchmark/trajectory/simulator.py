@@ -25,15 +25,52 @@ from ..locale.loader import LocaleConfig
 from ..memory.delta_engine import DeltaEngine
 from ..memory.models import FinancialMemoryState
 from ..persona.models import NormalizedPersona
-from .models import LifeState, PersonaState, StatusTransition, Trajectory, TrajectoryStep
+from .models import ChildState, LifeState, PersonaState, PropertyState, StatusTransition, Trajectory, TrajectoryStep
 
-ForcedEvent = tuple[str, int] | tuple[str, int, dict[str, Any]]
+ForcedEvent = (
+    tuple[str, int]
+    | tuple[str, int, dict[str, Any]]
+    | tuple[str, int, dict[str, Any], dict[str, Any]]
+)
 
 
-def life_state_from_persona(persona: NormalizedPersona) -> LifeState:
+def life_state_from_persona(
+    persona: NormalizedPersona,
+    initial_memory: FinancialMemoryState | None = None,
+) -> LifeState:
     marital = persona.household.marital_status
     if marital == "unknown":
         marital = "single"
+    children = [
+        ChildState(
+            child_id=f"child_{index:03d}",
+            age=age,
+            education_stage=(
+                "high" if age >= 16 else "middle" if age >= 13 else "primary" if age >= 7 else "pre_school"
+            ),
+        )
+        for index, age in enumerate(persona.household.children_ages, start=1)
+    ]
+    employer = None
+    address = "unknown"
+    mortgage_status = "unknown"
+    if initial_memory is not None:
+        employer_cell = initial_memory.latest("employment.employer")
+        address_cell = initial_memory.latest("housing.address")
+        mortgage_cell = initial_memory.latest("housing.mortgage_status")
+        employer = employer_cell.value if employer_cell else None
+        address = str(address_cell.value) if address_cell else address
+        mortgage_status = str(mortgage_cell.value) if mortgage_cell else mortgage_status
+    properties: list[PropertyState] = []
+    primary_property_id = None
+    if persona.housing.residence_status == "owner":
+        primary_property_id = f"property_initial_{persona.persona_id}"
+        properties.append(PropertyState(
+            property_id=primary_property_id,
+            address=address,
+            role="primary_residence",
+            mortgage_status=mortgage_status,
+        ))
     return LifeState(
         marital_status=marital,
         employment_status=persona.occupation_state.employment_status
@@ -43,9 +80,13 @@ def life_state_from_persona(persona: NormalizedPersona) -> LifeState:
         if persona.housing.residence_status != "unknown"
         else "other",
         children_ages=list(persona.household.children_ages),
+        children=children,
         dependents_count=persona.household.dependents_count,
         lives_with_parents=persona.household.lives_with_parents,
         home_owned=persona.housing.residence_status == "owner",
+        properties=properties,
+        primary_residence_property_id=primary_property_id,
+        current_employer=str(employer) if employer else None,
         retirement_prepared=persona.occupation_state.employment_status == "retired",
         pension_receiving=persona.occupation_state.employment_status == "retired",
     )
@@ -96,7 +137,7 @@ class TrajectorySimulator:
         start_age = persona.age
         forced_queue = sorted(forced_events or [], key=lambda item: item[1])
 
-        life_state = life_state_from_persona(persona)
+        life_state = life_state_from_persona(persona, initial_memory)
         memory = copy.deepcopy(initial_memory)
         actions = [a.model_copy(deep=True) for a in initial_actions]
 
@@ -111,8 +152,13 @@ class TrajectorySimulator:
         snapshots: dict[str, PersonaState] = {"0": initial_state.model_copy(deep=True)}
         memory_snaps: dict[str, FinancialMemoryState] = {"0": copy.deepcopy(memory)}
         action_snaps: dict[str, list[StandingAction]] = {"0": [a.model_copy(deep=True) for a in actions]}
+        ordered_snapshots: dict[str, PersonaState] = {}
+        ordered_memory_snaps: dict[str, FinancialMemoryState] = {}
+        ordered_action_snaps: dict[str, list[StandingAction]] = {}
         instance_counter = 0
         occurred_count = 0
+        last_group_occurrence_month: dict[str, int] = {}
+        month_transition_order = 0
 
         max_active = int(self.cfg.get("max_concurrent_active_events", 2))
         max_total = int(self.cfg.get("max_events_per_trajectory", 12))
@@ -138,6 +184,7 @@ class TrajectorySimulator:
             force_occur: bool = False,
             param_overrides: dict[str, Any] | None = None,
             generation_source: str = "hazard",
+            source_metadata: dict[str, Any] | None = None,
         ) -> None:
             """Create + schedule one event instance (shared by hazard and
             forced starts). force_occur guarantees the instance reaches
@@ -147,9 +194,23 @@ class TrajectorySimulator:
             params = sample_event_params(template, life_state, self.locale, rng)
             if param_overrides:
                 params.update(param_overrides)
+                if template.event_id == "education_child_stage_entry":
+                    child = next(
+                        (candidate for candidate in life_state.children if candidate.child_id == params.get("child_id")),
+                        None,
+                    )
+                    if child is not None:
+                        params["child_age_months"] = child.age * 12
+                        params["previous_stage"] = child.education_stage
                 validate_event_params(template, life_state, params)
+            event_instance_id = f"{trajectory_id}_ev{instance_counter:03d}"
+            if template.event_id == "housing_home_purchase":
+                params["property_id"] = f"property_{event_instance_id}"
+            if template.event_id in {"relationship_childbirth", "relationship_adoption"}:
+                params.setdefault("child_id", f"child_{event_instance_id}")
+            metadata = source_metadata or {}
             instance = EventInstance(
-                event_instance_id=f"{trajectory_id}_ev{instance_counter:03d}",
+                event_instance_id=event_instance_id,
                 event_id=template.event_id,
                 label_ko=template.label_ko,
                 domain=template.domain,
@@ -162,6 +223,9 @@ class TrajectorySimulator:
                     template.action_impact_template_id or template.event_id
                 ),
                 generation_source=generation_source,
+                causal_bundle_id=metadata.get("causal_bundle_id"),
+                bundle_event_index=metadata.get("bundle_event_index"),
+                source_template_id=metadata.get("source_template_id"),
             )
             schedule = plan_lifecycle(template, month, rng, force_occur=force_occur)
             schedule = [(min(m, horizon_months - 1), s) for m, s in schedule]
@@ -188,7 +252,7 @@ class TrajectorySimulator:
             ]
 
         def process_transition(instance: EventInstance, to_status: EventStatus, month: int, age: int, step: TrajectoryStep) -> None:
-            nonlocal occurred_count
+            nonlocal occurred_count, month_transition_order
             # Several active instances may mature in the same month. Once the
             # requested target is reached, leave any later occurrence pending
             # instead of overshooting the exact trajectory target.
@@ -214,14 +278,34 @@ class TrajectorySimulator:
                         template, life_state, age
                     ):
                         to_status = EventStatus.CANCELLED
+                    if to_status == EventStatus.OCCURRED and template.cooldown_group:
+                        previous = last_group_occurrence_month.get(template.cooldown_group)
+                        if previous is not None and month - previous < template.cooldown_group_months:
+                            to_status = EventStatus.CANCELLED
 
             from_status = instance.status
+            month_transition_order += 1
             instance.status = to_status
-            instance.status_history.append(EventStatusHistoryItem(status=to_status, month_index=month, age=age))
+            instance.status_history.append(EventStatusHistoryItem(
+                status=to_status,
+                month_index=month,
+                age=age,
+                transition_order=month_transition_order,
+            ))
             if to_status == EventStatus.OCCURRED:
                 instance.occurred_month = month
+                instance.occurred_transition_order = month_transition_order
                 last_end_month[instance.event_id] = month
-                apply_occurred_to_life_state(instance.event_id, life_state, instance.params)
+                template = self.templates.get(instance.event_id)
+                if template is not None and template.cooldown_group:
+                    last_group_occurrence_month[template.cooldown_group] = month
+                apply_occurred_to_life_state(
+                    instance.event_id,
+                    life_state,
+                    instance.params,
+                    event_instance_id=instance.event_instance_id,
+                    month_index=month,
+                )
                 occurred_count += 1
             elif to_status == EventStatus.CANCELLED:
                 instance.cancelled_month = month
@@ -232,14 +316,22 @@ class TrajectorySimulator:
                     event_id=instance.event_id,
                     from_status=from_status.value,
                     to_status=to_status.value,
+                    transition_order=month_transition_order,
                 )
             )
             step.memory_updates.extend(self.delta_engine.apply_transition(memory, instance, to_status, month, rng))
             step.action_impacts.extend(self.impact_engine.apply_transition(actions, instance, to_status, month))
+            ordered_key = f"{month}:{month_transition_order}"
+            ordered_snapshots[ordered_key] = PersonaState(
+                month_index=month, age=age, life_state=life_state.model_copy(deep=True)
+            )
+            ordered_memory_snaps[ordered_key] = copy.deepcopy(memory)
+            ordered_action_snaps[ordered_key] = [a.model_copy(deep=True) for a in actions]
 
         actual_end_month = horizon_months
         for month in range(horizon_months):
             age = start_age + month // 12
+            month_transition_order = 0
             if month > 0 and month % 12 == 0:
                 life_state.tick_year()
 
@@ -259,6 +351,7 @@ class TrajectorySimulator:
             for forced in forced_queue:
                 event_id, target_month = forced[0], forced[1]
                 param_overrides = forced[2] if len(forced) > 2 else None
+                source_metadata = forced[3] if len(forced) > 3 else None
                 if target_month > month:
                     still_queued.append(forced)
                     continue
@@ -269,17 +362,11 @@ class TrajectorySimulator:
                     continue  # respect the trajectory-wide event cap
                 if not repeat_policy_pass(template):
                     if month < horizon_months - 1:
-                        if param_overrides:
-                            still_queued.append((event_id, month + 1, param_overrides))
-                        else:
-                            still_queued.append((event_id, month + 1))
+                        still_queued.append((event_id, month + 1, param_overrides or {}, source_metadata or {}))
                     continue
                 if len(active) >= max_active:
                     if month < horizon_months - 1:
-                        if param_overrides:
-                            still_queued.append((event_id, month + 1, param_overrides))
-                        else:
-                            still_queued.append((event_id, month + 1))
+                        still_queued.append((event_id, month + 1, param_overrides or {}, source_metadata or {}))
                     continue  # retry after an active event completes
                 if self.fsm.guards_pass(template, life_state, age, month, last_end_month, active):
                     start_instance(
@@ -288,13 +375,11 @@ class TrajectorySimulator:
                         force_occur=True,
                         param_overrides=param_overrides,
                         generation_source="forced",
+                        source_metadata=source_metadata,
                     )
                     active = active_or_pending_instances()
                 elif month < horizon_months - 1:
-                    if param_overrides:
-                        still_queued.append((event_id, month + 1, param_overrides))
-                    else:
-                        still_queued.append((event_id, month + 1))  # retry next month
+                    still_queued.append((event_id, month + 1, param_overrides or {}, source_metadata or {}))
                 # else: horizon reached, guard never met -> drop
             forced_queue = still_queued
 
@@ -364,5 +449,8 @@ class TrajectorySimulator:
             state_snapshots=snapshots,
             memory_snapshots=memory_snaps,
             action_snapshots=action_snaps,
+            ordered_state_snapshots=ordered_snapshots,
+            ordered_memory_snapshots=ordered_memory_snaps,
+            ordered_action_snapshots=ordered_action_snaps,
             final_persona_state=final_state,
         )

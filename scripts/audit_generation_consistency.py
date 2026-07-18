@@ -43,24 +43,19 @@ def _initial_consistency_issues(trajectory: Trajectory) -> list[dict[str, Any]]:
 
 
 def _delta_issues(trajectory: Trajectory) -> list[dict[str, Any]]:
+    """Report structurally unsafe deltas, not benign confirmations.
+
+    Equal old/new values can confirm a pending cell, and
+    needs_verification is explicitly allowed to create an unknown cell. The
+    DeltaEngine already removes true no-ops before persisting updates.
+    """
     issues: list[dict[str, Any]] = []
     for step in trajectory.timeline_steps:
         for update in step.memory_updates:
-            if update.operation.value in {"create", "update"} and update.old_value == update.new_value:
+            if update.source_event_instance_id is None:
                 issues.append(
                     {
-                        "code": "noop_memory_update",
-                        "month_index": step.month_index,
-                        "path": update.path,
-                        "operation": update.operation.value,
-                        "value": update.new_value,
-                        "source_event_instance_id": update.source_event_instance_id,
-                    }
-                )
-            if update.operation.value in {"mark_stale", "needs_verification"} and update.old_value is None:
-                issues.append(
-                    {
-                        "code": "weak_delta_without_known_value",
+                        "code": "orphan_memory_update",
                         "month_index": step.month_index,
                         "path": update.path,
                         "operation": update.operation.value,

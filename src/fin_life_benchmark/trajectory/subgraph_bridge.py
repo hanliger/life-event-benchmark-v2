@@ -234,45 +234,66 @@ def event_entry_candidates(
 
 def _planning_state(
     persona: NormalizedPersona,
-    planned_events: list[tuple[str, int]],
+    planned_events: list[tuple[str, int, dict[str, object]]],
     through_age: int,
 ) -> LifeState:
     """Replay planned occurred events to obtain the state at ``through_age``."""
     state = life_state_from_persona(persona)
     current_age = persona.age
-    for event_id, age in sorted(planned_events, key=lambda item: (item[1], item[0])):
+    for event_id, age, _ in sorted(planned_events, key=lambda item: (item[1], item[0])):
         if age > through_age:
             break
         while current_age < age:
             state.tick_year()
             current_age += 1
-        apply_occurred_to_life_state(event_id, state, {})
+        params: dict[str, object] = {}
+        if event_id == "housing_home_sale":
+            owned = [prop for prop in state.properties if prop.ownership_status == "owned"]
+            sold = next(
+                (prop for prop in owned if prop.property_id == state.primary_residence_property_id),
+                owned[0] if owned else None,
+            )
+            if sold is not None:
+                params = {
+                    "sold_property_id": sold.property_id,
+                    "post_sale_residence_status": "jeonse",
+                }
+        apply_occurred_to_life_state(event_id, state, params)
     return state
 
 
 def _instance_events(
     instance: object,
     reverse_map: dict[str, str],
-) -> list[tuple[str, int]]:
+    causal_bundle_id: str,
+) -> list[tuple[str, int, dict[str, object]]]:
     """Convert one episode instance's person-age nodes to benchmark events."""
-    events: list[tuple[str, int]] = []
-    for node_id, age in getattr(instance, "event_ages", ()):
+    events: list[tuple[str, int, dict[str, object]]] = []
+    for index, (node_id, age) in enumerate(getattr(instance, "event_ages", ())):
         event_id = reverse_map.get(node_id)
         if event_id is not None:
-            events.append((event_id, age))
+            events.append((event_id, age, {
+                "causal_bundle_id": causal_bundle_id,
+                "bundle_event_index": index,
+                "source_template_id": (
+                    getattr(instance, "source_template_id", None)
+                    or getattr(instance, "template_id", None)
+                ),
+                "source_node_id": node_id,
+            }))
     return events
 
 
 def _forced_events_from_planned(
     persona: NormalizedPersona,
-    planned_events: list[tuple[str, int]],
+    planned_events: list[tuple[str, int, dict[str, object]]],
     horizon_months: int,
 ) -> list[ForcedEvent]:
     forced: list[ForcedEvent] = []
-    for event_id, age in planned_events:
+    for event_id, age, metadata in planned_events:
         month = (age - persona.age) * 12
         if 0 <= month < horizon_months:
-            forced.append((event_id, month))
+            forced.append((event_id, month, {}, metadata))
     forced.sort(key=lambda item: (item[1], item[0]))
     return forced
 
@@ -347,6 +368,7 @@ def generator_state_from_persona(life_state: LifeState) -> object:
         dependents_count=life_state.dependents_count,
         retirement_prepared=life_state.retirement_prepared,
         purchased_home=life_state.home_owned,
+        property_count=len([p for p in life_state.properties if p.ownership_status == "owned"]),
         child_milestones=milestones,
     )
 
@@ -362,9 +384,9 @@ def fixed_child_education_events(
     configured entry ages. ``horizon_months`` is authoritative, so this works
     for non-10-year runs as well.
     """
-    stage_rank = {stage: rank for rank, (stage, _) in enumerate(CHILD_EDUCATION_STAGES)}
-    due_by_month: dict[int, str] = {}
-    for child_age in persona.household.children_ages:
+    forced: list[ForcedEvent] = []
+    for child_index, child_age in enumerate(persona.household.children_ages, start=1):
+        child_id = f"child_{child_index:03d}"
         for stage, target_age in CHILD_EDUCATION_STAGES:
             years_until = target_age - child_age
             if years_until < 0:
@@ -372,14 +394,25 @@ def fixed_child_education_events(
             month = years_until * 12
             if month >= horizon_months:
                 continue
-            current = due_by_month.get(month)
-            if current is None or stage_rank[stage] > stage_rank[current]:
-                due_by_month[month] = stage
-
-    return [
-        ("education_child_stage_entry", month, {"new_stage": stage})
-        for month, stage in sorted(due_by_month.items())
-    ]
+            previous_stage = (
+                "pre_school" if stage == "primary" else "primary" if stage == "middle" else "middle"
+            )
+            forced.append((
+                "education_child_stage_entry",
+                month,
+                {
+                    "child_id": child_id,
+                    "child_age_months": target_age * 12,
+                    "previous_stage": previous_stage,
+                    "new_stage": stage,
+                },
+                {
+                    "causal_bundle_id": f"fixed_education_{child_id}_{stage}",
+                    "bundle_event_index": 0,
+                    "source_template_id": "fixed_child_education",
+                },
+            ))
+    return sorted(forced, key=lambda item: (item[1], item[2]["child_id"]))
 
 
 def select_episode_instances(
@@ -430,7 +463,7 @@ def subgraph_scripted_events(
     max_age: int | None = None,
     templates: dict[str, LifeEventTemplate] | None = None,
     paths: RepoPaths | None = None,
-) -> list[tuple[str, int]]:
+) -> list[ForcedEvent]:
     """Sample event-first subgraphs and return forced event starts.
 
     The production path samples one benchmark event at a time. Its hazard is
@@ -465,7 +498,7 @@ def subgraph_scripted_events(
     rng = random.Random(f"event-first:{seed}")
 
     accepted_instances: list[object] = []
-    planned_events: list[tuple[str, int]] = []
+    planned_events: list[tuple[str, int, dict[str, object]]] = []
     occurrence_counts: dict[str, int] = {}
     prior_nodes: set[str] = set()
     cursor_age = persona.age
@@ -504,7 +537,11 @@ def subgraph_scripted_events(
                     event_template = templates[event_id]
                     if start_age > event_template.age_guard.max_age:
                         continue
-                    planned_events.append((event_id, start_age))
+                    planned_events.append((event_id, start_age, {
+                        "causal_bundle_id": f"direct_{attempts:03d}",
+                        "bundle_event_index": 0,
+                        "source_template_id": "direct_registry_event",
+                    }))
                     occurrence_counts[event_id] = occurrence_counts.get(event_id, 0) + 1
                     cursor_age = start_age
                     accepted_this_round = True
@@ -518,13 +555,14 @@ def subgraph_scripted_events(
                     start_age=start_age,
                     start_event_index=candidate.start_event_index,
                 )
-                instance_events = _instance_events(instance, reverse)
+                bundle_id = f"subgraph_{len(accepted_instances) + 1:03d}"
+                instance_events = _instance_events(instance, reverse, bundle_id)
                 if not instance_events or instance_events[0][0] != event_id:
                     continue
 
                 proposed_counts = dict(occurrence_counts)
                 policy_ok = True
-                for proposed_event_id, _ in instance_events:
+                for proposed_event_id, _, _ in instance_events:
                     proposed_counts[proposed_event_id] = proposed_counts.get(proposed_event_id, 0) + 1
                     event_template = templates.get(proposed_event_id)
                     if event_template is None or not _repeat_allowed(
@@ -545,7 +583,7 @@ def subgraph_scripted_events(
                 occurrence_counts = proposed_counts
                 planned_events.extend(instance_events)
                 prior_nodes.update(node_id for node_id, _ in instance.event_ages)
-                cursor_age = max(age for _, age in instance_events)
+                cursor_age = max(age for _, age, _ in instance_events)
                 accepted_this_round = True
                 break
 

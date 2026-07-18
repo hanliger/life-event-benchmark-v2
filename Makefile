@@ -23,12 +23,15 @@ TRAJ_DIR := $(RUN_DIR)/trajectories
 SESS_DIR := $(RUN_DIR)/dialogues/sessions
 RAW_DIALOGUE_DIR := $(RUN_DIR)/dialogues/raw_outputs
 GOLD := $(RUN_DIR)/gold/prefix_gold_$(RUN_ID).jsonl
+GOLD_ALL := $(RUN_DIR)/gold/prefix_gold_all_sessions.jsonl
+GOLD_CHECKPOINTS := $(RUN_DIR)/gold/prefix_gold_checkpoints_15.jsonl
 ITEMS_DIR := $(RUN_DIR)/benchmark_items
 QUALITY := $(RUN_DIR)/quality_reports
 
 .PHONY: setup inventory normalize-personas initial-states simulate-smoke \
 	coverage-trajectories dialogue-smoke-dry dialogue-smoke validate-dialogues \
-	export-gold build-items history-filter audit pipeline-smoke test clean-generated
+	export-gold build-items history-filter audit pipeline-smoke test clean-generated \
+	export-gold-controlled build-items-controlled audit-controlled
 
 setup:
 	$(PYTHON) -m pip install -r requirements.txt
@@ -94,9 +97,21 @@ export-gold:
 	$(PYTHON) scripts/export_prefix_gold.py \
 		--trajectories-dir $(TRAJ_DIR) --sessions-dir $(SESS_DIR) --output $(GOLD)
 
+export-gold-controlled:
+	$(PYTHON) scripts/export_prefix_gold.py \
+		--trajectories-dir $(TRAJ_DIR) --sessions-dir $(SESS_DIR) --output $(GOLD_ALL)
+	$(PYTHON) scripts/export_prefix_gold.py \
+		--trajectories-dir $(TRAJ_DIR) --sessions-dir $(SESS_DIR) \
+		--output $(GOLD_CHECKPOINTS) --checkpoint-stride 15
+
 build-items:
 	$(PYTHON) scripts/build_benchmark_items.py \
 		--prefix-gold $(GOLD) --sessions-dir $(SESS_DIR) --output-dir $(ITEMS_DIR) --seed $(SEED)
+
+build-items-controlled:
+	$(PYTHON) scripts/build_benchmark_items.py \
+		--prefix-gold $(GOLD_CHECKPOINTS) --sessions-dir $(SESS_DIR) \
+		--output-dir $(ITEMS_DIR) --seed $(SEED)
 
 history-filter:
 ifeq ($(EXECUTE),1)
@@ -118,6 +133,11 @@ audit:
 	$(PYTHON) scripts/build_quality_summary.py \
 		--trajectories-dir $(TRAJ_DIR) --sessions-dir $(SESS_DIR) \
 		--prefix-gold $(GOLD) --items-dir $(ITEMS_DIR) --output-dir $(QUALITY)
+
+audit-controlled:
+	$(PYTHON) scripts/audit_v3_controlled.py \
+		--trajectories-dir $(TRAJ_DIR) --sessions-dir $(SESS_DIR) \
+		--checkpoints $(GOLD_CHECKPOINTS) --output-dir $(QUALITY)
 
 pipeline-smoke: inventory normalize-personas initial-states simulate-smoke dialogue-smoke validate-dialogues export-gold build-items history-filter audit
 	@echo "pipeline-smoke complete. Reports in $(QUALITY)/"

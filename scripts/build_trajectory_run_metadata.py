@@ -33,6 +33,11 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _line_count(path: Path) -> int:
+    with path.open("rb") as handle:
+        return sum(1 for _ in handle)
+
+
 def _git_version(repo: Path) -> dict[str, Any]:
     def run(*args: str) -> str:
         result = subprocess.run(
@@ -99,7 +104,13 @@ def _audit_trajectory(
                 errors.append(f"{instance.event_instance_id}: {exc}")
             if not fsm.occurrence_guards_pass(template, state, step.age):
                 errors.append(f"{instance.event_instance_id}: occurrence guard failed")
-            apply_occurred_to_life_state(instance.event_id, state, instance.params)
+            apply_occurred_to_life_state(
+                instance.event_id,
+                state,
+                instance.params,
+                event_instance_id=instance.event_instance_id,
+                month_index=step.month_index,
+            )
 
         snapshot = trajectory.state_snapshots.get(str(step.month_index))
         if snapshot is not None:
@@ -123,6 +134,7 @@ def main() -> int:
     parser.add_argument("--locale", default="ko_KR")
     parser.add_argument("--master-seed", type=int, default=42)
     parser.add_argument("--target-occurred-events", type=int, default=20)
+    parser.add_argument("--run-version", default="v2")
     args = parser.parse_args()
 
     run_dir = Path(args.run_dir)
@@ -228,7 +240,7 @@ def main() -> int:
 
     repo = RepoPaths.default().root
     manifest = {
-        "run_version": "v2",
+        "run_version": args.run_version,
         "locale": args.locale,
         "master_seed": args.master_seed,
         "trajectory_seed_range": [args.master_seed, args.master_seed + len(trajectories) - 1],
@@ -262,6 +274,31 @@ def main() -> int:
         "audit": {"path": "reports/trajectory_audit.json", "passed": not all_errors},
         "summary": {"path": "reports/trajectory_summary.md"},
     }
+    sessions_dir = run_dir / "dialogues" / "sessions"
+    prefix_all_path = run_dir / "gold" / "prefix_gold_all_sessions.jsonl"
+    checkpoints_path = run_dir / "gold" / "prefix_gold_checkpoints_15.jsonl"
+    if sessions_dir.exists() and prefix_all_path.exists() and checkpoints_path.exists():
+        session_files = sorted(sessions_dir.glob("sessions_traj_*.jsonl"))
+        manifest["controlled_outputs"] = {
+            "window_size_sessions": 15,
+            "sessions": {
+                "path": "dialogues/sessions",
+                "count": sum(_line_count(path) for path in session_files),
+            },
+            "auxiliary_prefix_gold": {
+                "path": "gold/prefix_gold_all_sessions.jsonl",
+                "count": _line_count(prefix_all_path),
+                "sha256": _sha256(prefix_all_path),
+            },
+            "main_checkpoint_gold": {
+                "path": "gold/prefix_gold_checkpoints_15.jsonl",
+                "count": _line_count(checkpoints_path),
+                "sha256": _sha256(checkpoints_path),
+            },
+            "stage1_items": {"path": "benchmark_items/stage1_event_status.jsonl"},
+            "stage2_items": {"path": "benchmark_items/stage2_memory_mcq.jsonl"},
+            "audit": {"path": "reports/v3_controlled_audit.json"},
+        }
     (run_dir / "manifest.json").write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )

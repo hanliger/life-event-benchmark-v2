@@ -32,6 +32,8 @@ domains:
       - rent_payee
       - maintenance_fee_payee
       - mortgage_status
+      - properties
+      - primary_residence_property_id
   education:
     paths:
       - self_education_status

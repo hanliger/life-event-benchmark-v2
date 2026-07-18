@@ -1,0 +1,221 @@
+{
+  "run_version": "v3",
+  "locale": "ko_KR",
+  "master_seed": 42,
+  "trajectory_seed_range": [
+    42,
+    61
+  ],
+  "persona_count": 20,
+  "age_distribution": {
+    "20s": 4,
+    "30s": 6,
+    "40s": 6,
+    "50s": 4
+  },
+  "target_occurred_events_per_trajectory": 20,
+  "inputs": {
+    "personas": {
+      "path": "inputs/personas.jsonl",
+      "sha256": "6a3408fe61a12fc1f2493d286908f7c6060fd5e6b674d511eb7461fb66cf66cc"
+    },
+    "initial_states": {
+      "path": "inputs/initial_states.jsonl",
+      "sha256": "2785c523ace420fb01ae548750171d7262fcb1c7dcdb38ee4033c7efee03426e"
+    },
+    "life_event_registry": {
+      "path": "configs/registries/life_events.yaml",
+      "sha256": "0280acc12ecde6ab2a7ede92dacb013e12f55e2213bd34d7f442d1da2e8286df"
+    }
+  },
+  "generation": {
+    "mode": "subgraph_with_guarded_hazard",
+    "one_trajectory_per_persona": true,
+    "sampling_policy": {
+      "global_hazard_scale": 4.5,
+      "preferred_horizon_months": [
+        120,
+        240
+      ]
+    },
+    "code_version": {
+      "commit": "be1f8a13f60b23c04b52523cc326b3b748f928ec",
+      "dirty": true
+    }
+  },
+  "trajectories": [
+    {
+      "trajectory_id": "traj_001",
+      "persona_id": "p_5e8d9df03584",
+      "seed": 42,
+      "occurred_events": 20,
+      "sha256": "28375347ebef10be73244103cda01c9b8686ef2852d6f5f9e7afd34be1dd2186"
+    },
+    {
+      "trajectory_id": "traj_002",
+      "persona_id": "p_e59d3090a517",
+      "seed": 43,
+      "occurred_events": 20,
+      "sha256": "15ee8bb41f482afe67e03b1c208eff5d54f1e3e5f5a58208f31168bbf7a85cfc"
+    },
+    {
+      "trajectory_id": "traj_003",
+      "persona_id": "p_ba20d81ebde7",
+      "seed": 44,
+      "occurred_events": 20,
+      "sha256": "d1710181350196d9283a7f40f54e4bb54f8e34305c8b07410aaaf71193f5ea47"
+    },
+    {
+      "trajectory_id": "traj_004",
+      "persona_id": "p_90d9542da2c4",
+      "seed": 45,
+      "occurred_events": 20,
+      "sha256": "7fb9f2b712fc4f4a3f7a87a91ac648ca1506c5a270a95f4a048f38c7ef6e7fe0"
+    },
+    {
+      "trajectory_id": "traj_005",
+      "persona_id": "p_a13bf7e107ce",
+      "seed": 46,
+      "occurred_events": 20,
+      "sha256": "2e99243673b76edd9d4c7aea4701d44b2f20872277cb43bcc1a23b2925cc0157"
+    },
+    {
+      "trajectory_id": "traj_006",
+      "persona_id": "p_57eb527f5138",
+      "seed": 47,
+      "occurred_events": 20,
+      "sha256": "68ca38f067ef42e7cf4d6250e59dee66feac5973a42ad4a49e4342bd8f547b09"
+    },
+    {
+      "trajectory_id": "traj_007",
+      "persona_id": "p_9af25c927991",
+      "seed": 48,
+      "occurred_events": 20,
+      "sha256": "819ef89d123d380b15479e6b8644a31ad6788df1df77031d09daa8c8705b7ca0"
+    },
+    {
+      "trajectory_id": "traj_008",
+      "persona_id": "p_e12bc82b3ad5",
+      "seed": 49,
+      "occurred_events": 20,
+      "sha256": "d1745a39c7004f3c5050800a566d3900192586d8488ec3eca4a0a6c4e3458c35"
+    },
+    {
+      "trajectory_id": "traj_009",
+      "persona_id": "p_279ec7a44378",
+      "seed": 50,
+      "occurred_events": 20,
+      "sha256": "c647e803b493ceb5d2b6504d31fccb9f4a792aee6451050606f51b0b7d15d834"
+    },
+    {
+      "trajectory_id": "traj_010",
+      "persona_id": "p_702dd652ff75",
+      "seed": 51,
+      "occurred_events": 20,
+      "sha256": "0675e6d747229ad1af72f147976802b0477dfa96f2ac124bc764edf0f8719de7"
+    },
+    {
+      "trajectory_id": "traj_011",
+      "persona_id": "p_f47b28561c3a",
+      "seed": 52,
+      "occurred_events": 20,
+      "sha256": "ffccd9c4929e635321d95a8a533bb472aad5736e3693faf6d37e392eb45f5076"
+    },
+    {
+      "trajectory_id": "traj_012",
+      "persona_id": "p_7ed134ba985e",
+      "seed": 53,
+      "occurred_events": 20,
+      "sha256": "933fbdfbeb46fbe75e064207a2279ac856112d4876dcff6c89d9eb01b687199b"
+    },
+    {
+      "trajectory_id": "traj_013",
+      "persona_id": "p_9c4f26bb90bb",
+      "seed": 54,
+      "occurred_events": 20,
+      "sha256": "cf736056b8a7089a16ce01671665b931e755b097b5c0d436a9044938db57de68"
+    },
+    {
+      "trajectory_id": "traj_014",
+      "persona_id": "p_f09b95a852ad",
+      "seed": 55,
+      "occurred_events": 20,
+      "sha256": "964a429d203fd923ef3b87c6782b960a563c516b64eba8f6f924f6e5dede5aab"
+    },
+    {
+      "trajectory_id": "traj_015",
+      "persona_id": "p_b8c20bc99c0d",
+      "seed": 56,
+      "occurred_events": 20,
+      "sha256": "884619acfed3ada19eeac3745744be8405921f01656a49d573cfe0f9f2176620"
+    },
+    {
+      "trajectory_id": "traj_016",
+      "persona_id": "p_1bcf717903d8",
+      "seed": 57,
+      "occurred_events": 20,
+      "sha256": "bd49b2369b817b0bc9ee28ed351d198d3525a4e517971cddbe71d3ec9424378b"
+    },
+    {
+      "trajectory_id": "traj_017",
+      "persona_id": "p_3b386777f622",
+      "seed": 58,
+      "occurred_events": 20,
+      "sha256": "3f72c6a39f7bef3f9b62b3938a58ab0832df2c30e0a57651208dc8a42755573a"
+    },
+    {
+      "trajectory_id": "traj_018",
+      "persona_id": "p_c2d5f9e29256",
+      "seed": 59,
+      "occurred_events": 20,
+      "sha256": "49552d483a11a40010c271436bfaa730a4ad9968ac6d4fda29c68a2677ea40f7"
+    },
+    {
+      "trajectory_id": "traj_019",
+      "persona_id": "p_d86b1b7a14e2",
+      "seed": 60,
+      "occurred_events": 20,
+      "sha256": "ce53fe543c4477f83d524950decd413d862c3a9d360bf9809fd6c418459e60f3"
+    },
+    {
+      "trajectory_id": "traj_020",
+      "persona_id": "p_8c9a673904c1",
+      "seed": 61,
+      "occurred_events": 20,
+      "sha256": "8289ac15133910f66d3e402eec29adab3bd90c03651ce8ef499c53d961fa8dd8"
+    }
+  ],
+  "audit": {
+    "path": "reports/trajectory_audit.json",
+    "passed": true
+  },
+  "summary": {
+    "path": "reports/trajectory_summary.md"
+  },
+  "controlled_outputs": {
+    "window_size_sessions": 15,
+    "sessions": {
+      "path": "dialogues/sessions",
+      "count": 6000
+    },
+    "auxiliary_prefix_gold": {
+      "path": "gold/prefix_gold_all_sessions.jsonl",
+      "count": 6000,
+      "sha256": "ed66403260061fa01162d78624b28e36f8a66571662389c9e5505ef900589045"
+    },
+    "main_checkpoint_gold": {
+      "path": "gold/prefix_gold_checkpoints_15.jsonl",
+      "count": 400,
+      "sha256": "78b18fb4e93129a4dcd2f67bd871e4b90795aa4c0bbd07aa50ab0d43d143438c"
+    },
+    "stage1_items": {
+      "path": "benchmark_items/stage1_event_status.jsonl"
+    },
+    "stage2_items": {
+      "path": "benchmark_items/stage2_memory_mcq.jsonl"
+    },
+    "audit": {
+      "path": "reports/v3_controlled_audit.json"
+    }
+  }
+}

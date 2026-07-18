@@ -49,8 +49,6 @@ class ItemBuilder:
         items: list[BenchmarkItem] = []
         for prefix in prefixes:
             lookup = _session_lookup(sessions_by_traj.get(prefix["trajectory_id"], []))
-            if _last_session_type(prefix, lookup) not in _EVIDENCE_TYPES:
-                continue
             gold_events = [
                 {
                     "life_event_label": e["life_event_label"],
@@ -69,7 +67,11 @@ class ItemBuilder:
                     visible_sessions=prefix["visible_sessions"],
                     question=_STAGE1_QUESTION,
                     gold={"life_events": gold_events or [{"life_event_label": None, "event_status": "no_event"}]},
-                    metadata={"last_session_type": _last_session_type(prefix, lookup)},
+                    metadata={
+                        "last_session_type": _last_session_type(prefix, lookup),
+                        "checkpoint_session_count": prefix.get("checkpoint_session_count"),
+                        "occurred_event_count": prefix.get("occurred_event_count"),
+                    },
                 )
             )
         return items

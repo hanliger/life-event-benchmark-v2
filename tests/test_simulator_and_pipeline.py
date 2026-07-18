@@ -409,6 +409,17 @@ def test_end_to_end_mock_pipeline_in_memory():
     planner = EvidencePlanner(templates, locale, paths)
     plans = planner.build_plans(trajectory, seed=0)
     assert plans and plans[0].session_id == "S001"
+    occurred_count = sum(instance.occurred_month is not None for instance in trajectory.life_event_instances)
+    assert len(plans) == occurred_count * 15
+    for window_index in range(1, occurred_count + 1):
+        window = [plan for plan in plans if plan.window_index == window_index]
+        assert len(window) == 15
+        assert sum(
+            plan.session_type == "occurred_evidence"
+            and plan.event_status_after_session == "occurred"
+            for plan in window
+        ) == 1
+        assert len({plan.window_event_instance_id for plan in window}) == 1
 
     generator = DialogueGenerator(mode="mock", paths=paths)
     sessions = [generator.generate_session(p, trajectory.persona).model_dump(mode="json") for p in plans]
@@ -429,6 +440,14 @@ def test_end_to_end_mock_pipeline_in_memory():
         for decision in prefix.gold_action_decisions:
             if decision.funds_movement:
                 assert decision.must_not_execute
+
+    checkpoints = export_prefix_gold(trajectory, sessions, checkpoint_stride=15)
+    assert [prefix.checkpoint_session_count for prefix in checkpoints] == [
+        15 * index for index in range(1, occurred_count + 1)
+    ]
+    assert [prefix.occurred_event_count for prefix in checkpoints] == list(
+        range(1, occurred_count + 1)
+    )
 
 
 def test_prefix_gold_dedup_roundtrips(tmp_path):

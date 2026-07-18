@@ -82,7 +82,8 @@ def build_initial_memory(persona: NormalizedPersona, locale: LocaleConfig, seed:
     # housing
     housing = persona.housing
     set_("housing.residence_status", housing.residence_status)
-    set_("housing.address", housing.region or rng.choice(locale.pool("address_pool")))
+    housing_address = housing.region or rng.choice(locale.pool("address_pool"))
+    set_("housing.address", housing_address)
     if housing.residence_status in {"wolse", "jeonse"}:
         set_("housing.contract_type", housing.residence_status)
         if housing.residence_status == "wolse":
@@ -105,6 +106,24 @@ def build_initial_memory(persona: NormalizedPersona, locale: LocaleConfig, seed:
         set_("housing.rent_payee", None, status=CellStatus.NOT_APPLICABLE)
         set_("housing.maintenance_fee_payee", None, status=CellStatus.NOT_APPLICABLE)
         set_("housing.mortgage_status", "none")
+
+    if housing.residence_status == "owner":
+        property_id = f"property_initial_{persona.persona_id}"
+        set_("housing.properties", [{
+            "property_id": property_id,
+            "address": housing_address,
+            "acquired_month": 0,
+            "acquisition_event_instance_id": None,
+            "role": "primary_residence",
+            "mortgage_status": "active" if persona.financial_profile.loan_type == "mortgage" else "none",
+            "ownership_status": "owned",
+            "disposed_month": None,
+            "disposal_event_instance_id": None,
+        }])
+        set_("housing.primary_residence_property_id", property_id)
+    else:
+        set_("housing.properties", [])
+        set_("housing.primary_residence_property_id", None, status=CellStatus.NOT_APPLICABLE)
 
     # education
     set_("education.self_education_status", "none")

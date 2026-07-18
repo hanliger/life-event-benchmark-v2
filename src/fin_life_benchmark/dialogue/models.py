@@ -36,6 +36,10 @@ class DialogueGenerationPlan(BaseModel):
     trajectory_id: str
     month_index: int
     age: int
+    transition_order: int = 0
+    window_index: int | None = None
+    position_in_window: int | None = None
+    window_event_instance_id: str | None = None
     session_type: str
     linked_event_instance_id: str | None = None
     event_status_after_session: str = "no_event"
@@ -63,6 +67,10 @@ class Session(BaseModel):
     trajectory_id: str
     month_index: int
     age: int
+    transition_order: int = 0
+    window_index: int | None = None
+    position_in_window: int | None = None
+    window_event_instance_id: str | None = None
     session_type: str
     linked_event_instance_id: str | None = None
     event_status_after_session: str = "no_event"

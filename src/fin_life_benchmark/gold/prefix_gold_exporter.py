@@ -20,13 +20,19 @@ from ..trajectory.models import (
 )
 
 
-def _snapshot_at(snapshots: dict[str, Any], month: int) -> Any:
-    """Latest snapshot with key (month_index) <= month."""
-    best_key, best_month = None, -1
+def _snapshot_at(
+    snapshots: dict[str, Any],
+    month: int,
+    transition_order: int | None = None,
+) -> Any:
+    """Latest monthly or ``month:transition_order`` snapshot at a cursor."""
+    best_key, best_cursor = None, (-1, -1)
     for key in snapshots:
-        k = int(key)
-        if best_month < k <= month:
-            best_key, best_month = key, k
+        parts = str(key).split(":", 1)
+        cursor = (int(parts[0]), int(parts[1]) if len(parts) == 2 else 0)
+        target = (month, transition_order if transition_order is not None else 10**9)
+        if best_cursor < cursor <= target:
+            best_key, best_cursor = key, cursor
     return snapshots[best_key] if best_key is not None else None
 
 
@@ -64,7 +70,7 @@ def _status_rank(status: Any) -> int:
 
 def _visible_event_status(instance: Any, linked_sessions: list[dict[str, Any]]) -> EventStatus:
     """Return the latest event status actually evidenced in visible sessions."""
-    latest = sorted(linked_sessions, key=lambda s: (s["month_index"], s["session_id"]))[-1]
+    latest = sorted(linked_sessions, key=lambda s: s["session_id"])[-1]
     status = latest.get("event_status_after_session")
     try:
         return EventStatus(status)
@@ -72,8 +78,13 @@ def _visible_event_status(instance: Any, linked_sessions: list[dict[str, Any]]) 
         return instance.status_as_of(latest["month_index"])
 
 
-def export_prefix_gold(trajectory: Trajectory, sessions: list[dict[str, Any]]) -> list[PrefixGold]:
-    sessions = sorted(sessions, key=lambda s: (s["month_index"], s["session_id"]))
+def export_prefix_gold(
+    trajectory: Trajectory,
+    sessions: list[dict[str, Any]],
+    checkpoint_stride: int | None = None,
+) -> list[PrefixGold]:
+    """Export every prefix by default, or only stride-aligned checkpoints."""
+    sessions = sorted(sessions, key=lambda s: s["session_id"])
     start_age = trajectory.initial_persona_state.age
     instances = {i.event_instance_id: i for i in trajectory.life_event_instances}
 
@@ -112,10 +123,20 @@ def export_prefix_gold(trajectory: Trajectory, sessions: list[dict[str, Any]]) -
         return s["session_id"]
 
     prefixes: list[PrefixGold] = []
-    for k in range(1, len(sessions) + 1):
+    prefix_sizes = list(range(1, len(sessions) + 1))
+    if checkpoint_stride is not None:
+        if checkpoint_stride <= 0:
+            raise ValueError("checkpoint_stride must be positive")
+        prefix_sizes = list(range(checkpoint_stride, len(sessions) + 1, checkpoint_stride))
+    for k in prefix_sizes:
         visible = sessions[:k]
         visible_ids = [s["session_id"] for s in visible]
-        month = visible[-1]["month_index"]
+        cursor_session = max(
+            visible,
+            key=lambda session: (session["month_index"], session.get("transition_order", 0)),
+        )
+        month = cursor_session["month_index"]
+        transition_order = int(cursor_session.get("transition_order", 0))
         age = start_age + month // 12
 
         # gold life events: instances with >=1 evidence session in prefix
@@ -185,15 +206,25 @@ def export_prefix_gold(trajectory: Trajectory, sessions: list[dict[str, Any]]) -
             and i.source_event_instance_id in visible_instances
         ]
 
-        memory_snap = _snapshot_at(trajectory.memory_snapshots, month)
-        action_snap = _snapshot_at(trajectory.action_snapshots, month) or []
+        memory_snap = _snapshot_at(
+            trajectory.ordered_memory_snapshots or trajectory.memory_snapshots,
+            month,
+            transition_order,
+        )
+        action_snap = _snapshot_at(
+            trajectory.ordered_action_snapshots or trajectory.action_snapshots,
+            month,
+            transition_order,
+        ) or []
 
         prefixes.append(
             PrefixGold(
                 prefix_id=f"{trajectory.trajectory_id}_pfx{k:03d}",
                 trajectory_id=trajectory.trajectory_id,
                 visible_sessions=visible_ids,
-                time={"age": age, "month_index": month},
+                time={"age": age, "month_index": month, "transition_order": transition_order},
+                checkpoint_session_count=k,
+                occurred_event_count=sum(event.occurred for event in gold_events),
                 gold_life_events=gold_events,
                 gold_memory_updates=gold_updates,
                 gold_action_decisions=gold_decisions,

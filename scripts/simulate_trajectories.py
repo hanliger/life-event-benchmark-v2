@@ -36,11 +36,19 @@ from fin_life_benchmark.trajectory.subgraph_bridge import fixed_child_education_
 
 
 def merge_forced_events(*event_lists: list[ForcedEvent] | None) -> list[ForcedEvent]:
-    """Merge forced events, preferring parameterized events on same event/month."""
-    merged: dict[tuple[str, int], ForcedEvent] = {}
+    """Merge exact duplicates without collapsing distinct children/bundles."""
+    merged: dict[tuple[str, int, str], ForcedEvent] = {}
     for events in event_lists:
         for event in events or []:
-            key = (event[0], event[1])
+            params = event[2] if len(event) > 2 else {}
+            metadata = event[3] if len(event) > 3 else {}
+            identity = str(
+                params.get("child_id")
+                or params.get("property_id")
+                or metadata.get("causal_bundle_id")
+                or ""
+            )
+            key = (event[0], event[1], identity)
             existing = merged.get(key)
             if existing is None or (len(event) > 2 and len(existing) == 2):
                 merged[key] = event

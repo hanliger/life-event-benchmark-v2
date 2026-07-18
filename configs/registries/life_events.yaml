@@ -184,6 +184,8 @@ relationship_childbirth:
       - true
     forbidden: {}
   cooldown_months: 24
+  cooldown_group: child_arrival
+  cooldown_group_months: 12
   base_rate_per_year: 0.09
   age_weights:
     20-27: 0.6
@@ -253,6 +255,8 @@ relationship_adoption:
       - true
     forbidden: {}
   cooldown_months: 24
+  cooldown_group: child_arrival
+  cooldown_group_months: 12
   base_rate_per_year: 0.09
   age_weights:
     20-27: 0.6
@@ -610,10 +614,8 @@ housing_home_purchase:
     max_age: 70
   state_guards:
     required: {}
-    forbidden:
-      home_owned:
-      - true
-  cooldown_months: 120
+    forbidden: {}
+  cooldown_months: 24
   base_rate_per_year: 0.03
   age_weights:
     27-34: 0.9
@@ -665,11 +667,24 @@ housing_home_purchase:
     new_address: generated address
     post_purchase_residence_status:
     - owner
+    - jeonse
+    - wolse
+    - family_home
+    - other
     post_purchase_contract_type:
     - owner
+    - jeonse
+    - wolse
+    - family_home
+    - other
     post_purchase_move:
     - true
     - false
+    property_id: generated unique property identifier
+    property_address: generated address
+    purchase_role:
+    - primary_residence
+    - secondary_property
   episode_rule: 주소가 바뀌어도 housing_move_*를 추가 생성하지 않고 구매 event의 결과로 주소를 업데이트
 housing_home_sale:
   event_id: housing_home_sale
@@ -733,6 +748,11 @@ housing_home_sale:
   event_parameter_schema:
     ownership_transition:
     - dispose
+    sold_property_id: existing owned property identifier
+    sold_property_address: existing owned property address
+    sold_property_role:
+    - primary_residence
+    - secondary_property
     post_sale_residence_status:
     - jeonse
     - wolse
@@ -1217,6 +1237,18 @@ education_child_stage_entry:
   - relationship_child_primary_school_entry
   - relationship_child_middle_school_entry
   - relationship_child_high_school_entry
+  event_parameter_schema:
+    child_id: existing child identifier
+    child_age_months: generated child age in months
+    previous_stage:
+    - pre_school
+    - primary
+    - middle
+    - high
+    new_stage:
+    - primary
+    - middle
+    - high
 education_study_abroad:
   event_id: education_study_abroad
   label_ko: 유학·장기연수

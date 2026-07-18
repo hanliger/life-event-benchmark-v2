@@ -23,6 +23,11 @@
         "age": {
           "title": "Age",
           "type": "integer"
+        },
+        "transition_order": {
+          "default": 0,
+          "title": "Transition Order",
+          "type": "integer"
         }
       },
       "required": [
@@ -95,6 +100,69 @@
       "additionalProperties": true,
       "title": "Params",
       "type": "object"
+    },
+    "memory_delta_template_id": {
+      "default": "",
+      "title": "Memory Delta Template Id",
+      "type": "string"
+    },
+    "action_impact_template_id": {
+      "default": "",
+      "title": "Action Impact Template Id",
+      "type": "string"
+    },
+    "generation_source": {
+      "default": "hazard",
+      "title": "Generation Source",
+      "type": "string"
+    },
+    "occurred_transition_order": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Occurred Transition Order"
+    },
+    "causal_bundle_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Causal Bundle Id"
+    },
+    "bundle_event_index": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Bundle Event Index"
+    },
+    "source_template_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Source Template Id"
     }
   },
   "required": [

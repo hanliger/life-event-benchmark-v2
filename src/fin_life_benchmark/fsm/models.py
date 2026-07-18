@@ -69,6 +69,9 @@ class LifeEventTemplate(BaseModel):
     life_generator_node_ids: list[str] = Field(default_factory=list)
     event_parameter_schema: dict[str, Any] = Field(default_factory=dict)
     parameter_guards: dict[str, Any] = Field(default_factory=dict)
+    # Events sharing a group may impose a cross-event occurrence gap.
+    cooldown_group: str | None = None
+    cooldown_group_months: int = 0
 
     def age_weight(self, age: int) -> float:
         for bracket, weight in self.age_weights.items():
@@ -82,6 +85,7 @@ class EventStatusHistoryItem(BaseModel):
     status: EventStatus
     month_index: int
     age: int
+    transition_order: int = 0
 
 
 class EventInstance(BaseModel):
@@ -100,6 +104,10 @@ class EventInstance(BaseModel):
     memory_delta_template_id: str = ""
     action_impact_template_id: str = ""
     generation_source: str = "hazard"  # hazard|forced
+    occurred_transition_order: int | None = None
+    causal_bundle_id: str | None = None
+    bundle_event_index: int | None = None
+    source_template_id: str | None = None
 
     def status_as_of(self, month_index: int) -> EventStatus:
         status = EventStatus.NO_EVENT

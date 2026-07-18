@@ -112,10 +112,35 @@
         "needs_verification",
         "pending",
         "cancelled",
-        "unknown"
+        "unknown",
+        "not_applicable"
       ],
       "title": "CellStatus",
       "type": "string"
+    },
+    "ChildState": {
+      "description": "A stable child identity; age alone is not sufficient for longitudinal events.",
+      "properties": {
+        "child_id": {
+          "title": "Child Id",
+          "type": "string"
+        },
+        "age": {
+          "title": "Age",
+          "type": "integer"
+        },
+        "education_stage": {
+          "default": "pre_school",
+          "title": "Education Stage",
+          "type": "string"
+        }
+      },
+      "required": [
+        "child_id",
+        "age"
+      ],
+      "title": "ChildState",
+      "type": "object"
     },
     "EventInstance": {
       "properties": {
@@ -179,6 +204,69 @@
           "additionalProperties": true,
           "title": "Params",
           "type": "object"
+        },
+        "memory_delta_template_id": {
+          "default": "",
+          "title": "Memory Delta Template Id",
+          "type": "string"
+        },
+        "action_impact_template_id": {
+          "default": "",
+          "title": "Action Impact Template Id",
+          "type": "string"
+        },
+        "generation_source": {
+          "default": "hazard",
+          "title": "Generation Source",
+          "type": "string"
+        },
+        "occurred_transition_order": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Occurred Transition Order"
+        },
+        "causal_bundle_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Causal Bundle Id"
+        },
+        "bundle_event_index": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Bundle Event Index"
+        },
+        "source_template_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Template Id"
         }
       },
       "required": [
@@ -212,6 +300,11 @@
         },
         "age": {
           "title": "Age",
+          "type": "integer"
+        },
+        "transition_order": {
+          "default": 0,
+          "title": "Transition Order",
           "type": "integer"
         }
       },
@@ -378,6 +471,13 @@
           "title": "Children Ages",
           "type": "array"
         },
+        "children": {
+          "items": {
+            "$ref": "#/$defs/ChildState"
+          },
+          "title": "Children",
+          "type": "array"
+        },
         "dependents_count": {
           "default": 0,
           "title": "Dependents Count",
@@ -392,6 +492,37 @@
           "default": false,
           "title": "Home Owned",
           "type": "boolean"
+        },
+        "properties": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/PropertyState"
+          },
+          "title": "Properties"
+        },
+        "primary_residence_property_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Primary Residence Property Id"
+        },
+        "current_employer": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Current Employer"
         },
         "retirement_prepared": {
           "default": false,
@@ -508,6 +639,7 @@
         "set_pending",
         "clear_pending",
         "reactivate",
+        "set_not_applicable",
         "no_update"
       ],
       "title": "MemoryOperation",
@@ -713,6 +845,81 @@
       "title": "PersonaState",
       "type": "object"
     },
+    "PropertyState": {
+      "description": "One explicitly identified property in a potentially multi-home portfolio.",
+      "properties": {
+        "property_id": {
+          "title": "Property Id",
+          "type": "string"
+        },
+        "address": {
+          "title": "Address",
+          "type": "string"
+        },
+        "acquired_month": {
+          "default": 0,
+          "title": "Acquired Month",
+          "type": "integer"
+        },
+        "acquisition_event_instance_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Acquisition Event Instance Id"
+        },
+        "role": {
+          "default": "secondary_property",
+          "title": "Role",
+          "type": "string"
+        },
+        "mortgage_status": {
+          "default": "unknown",
+          "title": "Mortgage Status",
+          "type": "string"
+        },
+        "ownership_status": {
+          "default": "owned",
+          "title": "Ownership Status",
+          "type": "string"
+        },
+        "disposed_month": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Disposed Month"
+        },
+        "disposal_event_instance_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Disposal Event Instance Id"
+        }
+      },
+      "required": [
+        "property_id",
+        "address"
+      ],
+      "title": "PropertyState",
+      "type": "object"
+    },
     "StandingAction": {
       "properties": {
         "action_id": {
@@ -857,6 +1064,11 @@
         "to_status": {
           "title": "To Status",
           "type": "string"
+        },
+        "transition_order": {
+          "default": 0,
+          "title": "Transition Order",
+          "type": "integer"
         }
       },
       "required": [
@@ -998,6 +1210,30 @@
         "type": "array"
       },
       "title": "Action Snapshots",
+      "type": "object"
+    },
+    "ordered_state_snapshots": {
+      "additionalProperties": {
+        "$ref": "#/$defs/PersonaState"
+      },
+      "title": "Ordered State Snapshots",
+      "type": "object"
+    },
+    "ordered_memory_snapshots": {
+      "additionalProperties": {
+        "$ref": "#/$defs/FinancialMemoryState"
+      },
+      "title": "Ordered Memory Snapshots",
+      "type": "object"
+    },
+    "ordered_action_snapshots": {
+      "additionalProperties": {
+        "items": {
+          "$ref": "#/$defs/StandingAction"
+        },
+        "type": "array"
+      },
+      "title": "Ordered Action Snapshots",
       "type": "object"
     },
     "final_persona_state": {

@@ -144,6 +144,16 @@ class DialogueGenerator:
 
         safe_task = plan.financial_task
         leaked = _contains_any(safe_task, plan.must_not_include_terms)
+        if leaked is None:
+            leaked = next(
+                (
+                    label
+                    for label in self.validator.event_labels
+                    if label in safe_task
+                    and not any(label in cue for cue in plan.must_include_cues)
+                ),
+                None,
+            )
         if leaked:
             safe_task = "자동이체 설정 확인"
 
@@ -197,6 +207,10 @@ class DialogueGenerator:
             trajectory_id=plan.trajectory_id,
             month_index=plan.month_index,
             age=plan.age,
+            transition_order=plan.transition_order,
+            window_index=plan.window_index,
+            position_in_window=plan.position_in_window,
+            window_event_instance_id=plan.window_event_instance_id,
             session_type=plan.session_type,
             linked_event_instance_id=plan.linked_event_instance_id,
             event_status_after_session=plan.event_status_after_session,
@@ -440,6 +454,10 @@ class DialogueGenerator:
                     trajectory_id=plan.trajectory_id,
                     month_index=plan.month_index,
                     age=plan.age,
+                    transition_order=plan.transition_order,
+                    window_index=plan.window_index,
+                    position_in_window=plan.position_in_window,
+                    window_event_instance_id=plan.window_event_instance_id,
                     session_type=plan.session_type,
                     linked_event_instance_id=plan.linked_event_instance_id,
                     event_status_after_session=plan.event_status_after_session,

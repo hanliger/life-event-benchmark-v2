@@ -161,7 +161,12 @@ class EvidencePlanner:
                 "domain": instance.domain,
                 "status": status_at_session,
                 "status_history": [
-                    {"status": self._enum_value(item.status), "month_index": item.month_index, "age": item.age}
+                    {
+                        "status": self._enum_value(item.status),
+                        "month_index": item.month_index,
+                        "age": item.age,
+                        "transition_order": item.transition_order,
+                    }
                     for item in visible_history
                 ],
                 "params": dict(instance.params),
@@ -242,6 +247,7 @@ class EvidencePlanner:
                         trajectory_id=trajectory.trajectory_id,
                         month_index=item.month_index,
                         age=item.age,
+                        transition_order=item.transition_order,
                         session_type=session_type,
                         linked_event_instance_id=instance.event_instance_id,
                         event_status_after_session=status,
@@ -272,6 +278,7 @@ class EvidencePlanner:
                         trajectory_id=trajectory.trajectory_id,
                         month_index=month,
                         age=start_age + month // 12,
+                        transition_order=instance.occurred_transition_order or 0,
                         session_type="consequence_session",
                         linked_event_instance_id=instance.event_instance_id,
                         event_status_after_session="occurred",
@@ -303,6 +310,7 @@ class EvidencePlanner:
                         trajectory_id=trajectory.trajectory_id,
                         month_index=month,
                         age=start_age + month // 12,
+                        transition_order=instance.occurred_transition_order or 0,
                         session_type="stale_recall_session",
                         linked_event_instance_id=instance.event_instance_id,
                         event_status_after_session="occurred",
@@ -319,106 +327,126 @@ class EvidencePlanner:
                     )
                 )
 
-        # 2. routine sessions. Dense benchmark runs target a fixed number of
-        # sessions per trajectory and allow multiple independent bank visits in
-        # the same month; sparse smoke runs retain the older per-year fallback.
-        target_sessions = self.cfg.get("target_sessions_per_trajectory")
-        target_hard = None
-        if target_sessions is not None:
-            target_sessions = int(target_sessions)
-            target_hard = int(target_sessions * float(self.cfg.get("hard_negative_target_ratio", 0.15)))
-            n_routine = max(0, target_sessions - len(plans) - target_hard)
-            for _ in range(n_routine):
-                month = rng.randint(0, trajectory.horizon_months - 1)
-                fa_code, task = rng.choice(_ROUTINE_TASKS)
-                plans.append(
-                    DialogueGenerationPlan(
+        # 2. Controlled v3 layout: one occurred instance per 15-session
+        # window. Every lifecycle session for an instance is an indivisible
+        # bundle. Cancelled/weak/upcoming bundles may share a window and do not
+        # consume its occurred quota.
+        window_size = int(self.cfg.get("controlled_window_size", 15))
+        occurred_instances = sorted(
+            [instance for instance in trajectory.life_event_instances if instance.status == EventStatus.OCCURRED],
+            key=lambda instance: (
+                instance.occurred_month if instance.occurred_month is not None else 10**9,
+                instance.occurred_transition_order or 0,
+                instance.event_instance_id,
+            ),
+        )
+        if not occurred_instances:
+            return []
+
+        plans_by_instance: dict[str, list[DialogueGenerationPlan]] = {}
+        for plan in plans:
+            if plan.linked_event_instance_id:
+                plans_by_instance.setdefault(plan.linked_event_instance_id, []).append(plan)
+
+        windows: list[list[DialogueGenerationPlan]] = []
+        for instance in occurred_instances:
+            bundle = plans_by_instance.pop(instance.event_instance_id, [])
+            if len(bundle) > window_size:
+                required = [p for p in bundle if p.session_type.endswith("_evidence")]
+                optional = [p for p in bundle if not p.session_type.endswith("_evidence")]
+                bundle = required + optional[: max(0, window_size - len(required))]
+            if len(bundle) > window_size:
+                raise ValueError(f"{instance.event_instance_id}: lifecycle bundle exceeds {window_size} sessions")
+            windows.append(bundle)
+
+        instance_by_id = {instance.event_instance_id: instance for instance in trajectory.life_event_instances}
+        background_bundles = list(plans_by_instance.values())
+        background_bundles.sort(key=lambda bundle: (
+            max((plan.month_index for plan in bundle), default=0),
+            bundle[0].linked_event_instance_id if bundle else "",
+        ))
+        for bundle in background_bundles:
+            terminal_month = max((plan.month_index for plan in bundle), default=0)
+            candidates = sorted(
+                range(len(windows)),
+                key=lambda index: (
+                    abs((occurred_instances[index].occurred_month or 0) - terminal_month),
+                    index,
+                ),
+            )
+            placed = False
+            for index in candidates:
+                if len(windows[index]) + len(bundle) <= window_size:
+                    windows[index].extend(bundle)
+                    placed = True
+                    break
+            if not placed:
+                instance_id = bundle[0].linked_event_instance_id if bundle else "unknown"
+                raise ValueError(f"{instance_id}: no controlled window can hold the complete background bundle")
+
+        total_capacity = len(windows) * window_size
+        filler_count = total_capacity - sum(len(window) for window in windows)
+        hard_remaining = min(
+            filler_count,
+            int(total_capacity * float(self.cfg.get("hard_negative_target_ratio", 0.30))),
+        )
+        event_templates = list(self.templates.values())
+        for index, window in enumerate(windows):
+            anchor = occurred_instances[index]
+            anchor_month = int(anchor.occurred_month or 0)
+            while len(window) < window_size:
+                if hard_remaining > 0:
+                    template = rng.choice(event_templates)
+                    mapped = template.mapped_actions_by_status.get("occurred") or ["FA-01"]
+                    filler = DialogueGenerationPlan(
                         trajectory_id=trajectory.trajectory_id,
-                        month_index=month,
-                        age=start_age + month // 12,
+                        month_index=anchor_month,
+                        age=start_age + anchor_month // 12,
+                        transition_order=anchor.occurred_transition_order or 0,
+                        session_type="hard_negative",
+                        event_status_after_session="no_event",
+                        near_miss_event_label=template.label_ko,
+                        mapped_action=mapped[0],
+                        financial_task=self._fa_task(mapped[0], rng),
+                        must_include_cues=[rng.choice(_NEAR_MISS_CUES)],
+                        must_not_include_terms=list(template.discriminative_cues_ko.required) + self.all_labels,
+                        structured_context=self._structured_context(trajectory, None, anchor_month, [], [], []),
+                        desired_single_session_recoverability="low",
+                        desired_cumulative_recoverability="medium",
+                    )
+                    hard_remaining -= 1
+                else:
+                    fa_code, task = rng.choice(_ROUTINE_TASKS)
+                    filler = DialogueGenerationPlan(
+                        trajectory_id=trajectory.trajectory_id,
+                        month_index=anchor_month,
+                        age=start_age + anchor_month // 12,
+                        transition_order=anchor.occurred_transition_order or 0,
                         session_type="routine_financial",
                         event_status_after_session="no_event",
                         mapped_action=fa_code,
                         financial_task=task,
-                        must_include_cues=[],
                         must_not_include_terms=self.all_labels,
-                        structured_context=self._structured_context(
-                            trajectory, None, month, [], [], []
-                        ),
+                        structured_context=self._structured_context(trajectory, None, anchor_month, [], [], []),
                         desired_single_session_recoverability="low",
                         desired_cumulative_recoverability="medium",
                     )
-                )
-        else:
-            per_year = int(self.cfg.get("routine_sessions_per_year", 2))
-            busy_months = {p.month_index for p in plans}
-            for year in range(trajectory.horizon_months // 12):
-                for _ in range(per_year):
-                    month = year * 12 + rng.randint(0, 11)
-                    if month in busy_months:
-                        continue
-                    fa_code, task = rng.choice(_ROUTINE_TASKS)
-                    plans.append(
-                        DialogueGenerationPlan(
-                            trajectory_id=trajectory.trajectory_id,
-                            month_index=month,
-                            age=start_age + month // 12,
-                            session_type="routine_financial",
-                            event_status_after_session="no_event",
-                            mapped_action=fa_code,
-                            financial_task=task,
-                            must_include_cues=[],
-                            must_not_include_terms=self.all_labels,
-                            structured_context=self._structured_context(
-                                trajectory, None, month, [], [], []
-                            ),
-                            desired_single_session_recoverability="low",
-                            desired_cumulative_recoverability="medium",
-                        )
-                    )
-                    busy_months.add(month)
+                window.append(filler)
 
-        # 3. hard negatives: same FA family as a real event, no life event
-        if target_hard is None:
-            n_hard = int(
-                len([p for p in plans if p.session_type.endswith("_evidence")])
-                * float(self.cfg.get("hard_negative_ratio", 0.25))
-            )
-            busy_months = {p.month_index for p in plans}
-        else:
-            n_hard = max(0, target_hard)
-            busy_months = None
-        event_templates = list(self.templates.values())
-        for _ in range(n_hard):
-            template = rng.choice(event_templates)
-            mapped = template.mapped_actions_by_status.get("occurred") or ["FA-01"]
-            month = rng.randint(0, trajectory.horizon_months - 1)
-            if busy_months is not None and month in busy_months:
-                continue
-            plans.append(
-                DialogueGenerationPlan(
-                    trajectory_id=trajectory.trajectory_id,
-                    month_index=month,
-                    age=start_age + month // 12,
-                    session_type="hard_negative",
-                    event_status_after_session="no_event",
-                    near_miss_event_label=template.label_ko,
-                    mapped_action=mapped[0],
-                    financial_task=self._fa_task(mapped[0], rng),
-                    must_include_cues=[rng.choice(_NEAR_MISS_CUES)],
-                    must_not_include_terms=list(template.discriminative_cues_ko.required) + self.all_labels,
-                    structured_context=self._structured_context(
-                        trajectory, None, month, [], [], []
-                    ),
-                    desired_single_session_recoverability="low",
-                    desired_cumulative_recoverability="medium",
-                )
-            )
-            if busy_months is not None:
-                busy_months.add(month)
+        ordered: list[DialogueGenerationPlan] = []
+        for window_index, (anchor, window) in enumerate(zip(occurred_instances, windows), start=1):
+            window.sort(key=lambda plan: (plan.month_index, plan.transition_order, plan.session_type))
+            for position, plan in enumerate(window, start=1):
+                plan.window_index = window_index
+                plan.position_in_window = position
+                plan.window_event_instance_id = anchor.event_instance_id
+                plan.session_id = f"S{len(ordered) + 1:03d}"
+                ordered.append(plan)
 
-        # order chronologically and assign session ids
-        plans.sort(key=lambda p: (p.month_index, p.session_type))
-        for i, plan in enumerate(plans, start=1):
-            plan.session_id = f"S{i:03d}"
-        return plans
+        # Defensive invariant: an occurred evidence session can only belong to
+        # the window whose anchor is that exact event instance.
+        for plan in ordered:
+            if plan.event_status_after_session == "occurred" and plan.session_type == "occurred_evidence":
+                if plan.linked_event_instance_id != plan.window_event_instance_id:
+                    raise AssertionError("controlled window contains a second occurred event")
+        return ordered

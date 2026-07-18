@@ -56,6 +56,8 @@ def load_life_event_templates(paths: RepoPaths | None = None) -> dict[str, LifeE
             life_generator_node_ids=_as_list(spec.get("life_generator_node_ids")),
             event_parameter_schema=spec.get("event_parameter_schema") or {},
             parameter_guards=spec.get("parameter_guards") or {},
+            cooldown_group=spec.get("cooldown_group"),
+            cooldown_group_months=int(spec.get("cooldown_group_months", 0)),
         )
         if template.active:
             templates[template.event_id] = template

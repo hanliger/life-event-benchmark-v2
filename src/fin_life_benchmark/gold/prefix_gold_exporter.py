@@ -7,10 +7,12 @@ occurred at prefix k+3; update_allowed flips accordingly.
 
 from __future__ import annotations
 
+import copy
 import json
 from typing import Any
 
 from ..fsm.models import EventStatus
+from ..memory.models import MemoryOperation, MemoryUpdate
 from ..trajectory.models import (
     GoldActionDecision,
     GoldLifeEvent,
@@ -37,35 +39,35 @@ def _snapshot_at(
 
 
 def serialize_memory_state(memory: Any) -> dict[str, Any]:
-    """Compact view: path -> {value, status, historical_values}."""
-    cells = memory.cells if hasattr(memory, "cells") else memory.get("cells", {})
+    """Compact effective view with a separately represented live proposal."""
+    from ..memory.models import FinancialMemoryState
+
+    state = memory if isinstance(memory, FinancialMemoryState) else FinancialMemoryState.model_validate(memory)
+    cells = state.cells
     out: dict[str, Any] = {}
     for path, hist in cells.items():
-        rows = [c.model_dump(mode="json") if hasattr(c, "model_dump") else c for c in hist]
-        latest = rows[-1] if rows else None
+        effective = state.effective(path)
+        pending = state.pending(path)
         out[path] = {
-            "value": latest.get("value") if latest else None,
-            "status": latest.get("status") if latest else "unknown",
-            "historical_values": [r.get("value") for r in rows[:-1] if r.get("status") == "historical" and r.get("value") is not None]
-            + ([latest.get("value")] if latest and latest.get("status") == "historical" else []),
+            "value": effective.value if effective else None,
+            "status": effective.status.value if effective else "unknown",
+            "source_event_instance_id": effective.source_event_instance_id if effective else None,
+            "historical_values": [
+                cell.value
+                for cell in hist
+                if cell.status.value == "historical" and cell.value is not None
+            ],
+            "pending_proposal": (
+                {
+                    "value": pending.value,
+                    "valid_from": pending.valid_from,
+                    "source_event_instance_id": pending.source_event_instance_id,
+                }
+                if pending is not None
+                else None
+            ),
         }
     return out
-
-
-_STATUS_RANK = {
-    "weak_signal": 1,
-    "upcoming": 2,
-    "occurred": 3,
-    "cancelled": 4,
-}
-
-
-def _status_value(status: Any) -> str:
-    return getattr(status, "value", status)
-
-
-def _status_rank(status: Any) -> int:
-    return _STATUS_RANK.get(str(_status_value(status)), -1)
 
 
 def _visible_event_status(instance: Any, linked_sessions: list[dict[str, Any]]) -> EventStatus:
@@ -94,14 +96,14 @@ def export_prefix_gold(
         if s.get("linked_event_instance_id"):
             sessions_by_instance.setdefault(s["linked_event_instance_id"], []).append(s)
 
-    # memory updates / action impacts by month (chronological)
-    updates: list[Any] = []
+    # Stored action impacts are replayed only after their source event becomes
+    # visible. Memory state is replayed from dialogue-grounded annotations.
     impacts: list[Any] = []
     for step in trajectory.timeline_steps:
-        updates.extend(step.memory_updates)
         impacts.extend(step.action_impacts)
-
-    action_by_id = {a.action_id: a for a in trajectory.initial_standing_actions}
+    impacts_by_source: dict[str, list[Any]] = {}
+    for impact in impacts:
+        impacts_by_source.setdefault(impact.source_event_instance_id or "", []).append(impact)
 
     def first_recoverable(instance_id: str) -> str | None:
         """First session by which the event is identifiable. For drift events
@@ -128,27 +130,82 @@ def export_prefix_gold(
         if checkpoint_stride <= 0:
             raise ValueError("checkpoint_stride must be positive")
         prefix_sizes = list(range(checkpoint_stride, len(sessions) + 1, checkpoint_stride))
-    for k in prefix_sizes:
+    prefix_size_set = set(prefix_sizes)
+
+    visible_memory = copy.deepcopy(trajectory.initial_financial_memory_state)
+    visible_actions = copy.deepcopy(trajectory.initial_standing_actions)
+    actions_by_id = {action.action_id: action for action in visible_actions}
+    applied_updates: list[MemoryUpdate] = []
+    applied_update_by_key: dict[tuple[str, int, int, str, str], MemoryUpdate] = {}
+    visible_impacts: list[Any] = []
+    applied_impact_keys: set[tuple[str, str, int | None]] = set()
+
+    for k, current_session in enumerate(sessions, start=1):
+        source = current_session.get("linked_event_instance_id") or ""
+        for cue in current_session.get("cue_annotations") or []:
+            if cue.get("cue_type") != "memory_fact":
+                continue
+            path = cue.get("linked_memory_path")
+            operation = cue.get("linked_memory_operation")
+            if not path or not operation:
+                continue
+            key = (
+                source,
+                int(current_session["month_index"]),
+                int(current_session.get("transition_order", 0)),
+                path,
+                operation,
+            )
+            evidence_turn = f"{current_session['session_id']}:{cue['turn_index']}"
+            if key in applied_update_by_key:
+                existing = applied_update_by_key[key]
+                if evidence_turn not in existing.evidence_turns:
+                    existing.evidence_turns.append(evidence_turn)
+                continue
+            update = MemoryUpdate(
+                path=path,
+                operation=MemoryOperation(operation),
+                new_value=copy.deepcopy(cue.get("linked_memory_value")),
+                month_index=int(current_session["month_index"]),
+                source_event_instance_id=source or None,
+                event_status=current_session.get("event_status_after_session"),
+                evidence_turns=[evidence_turn],
+            )
+            visible_memory.apply(update)
+            applied_updates.append(update)
+            applied_update_by_key[key] = update
+
+        if source and current_session.get("event_status_after_session") == "occurred":
+            for impact in impacts_by_source.get(source, []):
+                impact_key = (source, impact.action_id, impact.month_index)
+                if impact_key in applied_impact_keys:
+                    continue
+                applied_impact_keys.add(impact_key)
+                visible_impacts.append(impact)
+                action = actions_by_id.get(impact.action_id)
+                if action is not None:
+                    action.validity_status = "needs_review"
+                    action.snapshot(
+                        int(current_session["month_index"]),
+                        f"visible impact:{impact.impact_type} from {source}",
+                    )
+
+        if k not in prefix_size_set:
+            continue
         visible = sessions[:k]
         visible_ids = [s["session_id"] for s in visible]
-        cursor_session = max(
-            visible,
-            key=lambda session: (session["month_index"], session.get("transition_order", 0)),
-        )
-        month = cursor_session["month_index"]
-        transition_order = int(cursor_session.get("transition_order", 0))
-        age = start_age + month // 12
+        month = int(current_session["month_index"])
+        transition_order = int(current_session.get("transition_order", 0))
+        age = int(current_session.get("age", start_age + month // 12))
 
         # gold life events: instances with >=1 evidence session in prefix
         gold_events: list[GoldLifeEvent] = []
-        visible_instance_status: dict[str, EventStatus] = {}
         for instance_id, linked in sessions_by_instance.items():
             in_prefix = [s for s in linked if s["session_id"] in visible_ids]
             if not in_prefix:
                 continue
             instance = instances[instance_id]
             status = _visible_event_status(instance, in_prefix)
-            visible_instance_status[instance_id] = status
             evidence_turns = [
                 f"{s['session_id']}:{c['turn_index']}"
                 for s in in_prefix
@@ -168,26 +225,17 @@ def export_prefix_gold(
                 )
             )
 
-        # gold memory updates: updates whose source event/status has evidence in prefix
-        visible_instances = {e.event_instance_id for e in gold_events}
+        # Only dialogue-grounded updates are part of the prefix state/gold.
         gold_updates = [
             GoldMemoryUpdate(
                 path=u.path,
                 operation=u.operation.value,
                 old_value=u.old_value,
                 new_value=u.new_value,
-                evidence_turns=[
-                    f"{s['session_id']}:{c['turn_index']}"
-                    for s in visible
-                    for c in (s.get("cue_annotations") or [])
-                    if c.get("linked_memory_path") == u.path
-                ],
+                source_event_instance_id=u.source_event_instance_id,
+                evidence_turns=list(u.evidence_turns),
             )
-            for u in updates
-            if u.month_index is not None
-            and u.month_index <= month
-            and u.source_event_instance_id in visible_instances
-            and _status_rank(u.event_status) <= _status_rank(visible_instance_status.get(u.source_event_instance_id))
+            for u in applied_updates
         ]
 
         gold_decisions = [
@@ -200,22 +248,8 @@ def export_prefix_gold(
                 must_not_execute=i.must_not_execute,
                 source_event_instance_id=i.source_event_instance_id,
             )
-            for i in impacts
-            if i.month_index is not None
-            and i.month_index <= month
-            and i.source_event_instance_id in visible_instances
+            for i in visible_impacts
         ]
-
-        memory_snap = _snapshot_at(
-            trajectory.ordered_memory_snapshots or trajectory.memory_snapshots,
-            month,
-            transition_order,
-        )
-        action_snap = _snapshot_at(
-            trajectory.ordered_action_snapshots or trajectory.action_snapshots,
-            month,
-            transition_order,
-        ) or []
 
         prefixes.append(
             PrefixGold(
@@ -228,13 +262,12 @@ def export_prefix_gold(
                 gold_life_events=gold_events,
                 gold_memory_updates=gold_updates,
                 gold_action_decisions=gold_decisions,
-                gold_full_memory_state=serialize_memory_state(memory_snap) if memory_snap else {},
+                gold_full_memory_state=serialize_memory_state(visible_memory),
                 gold_full_action_state=[
-                    a.model_dump(mode="json") if hasattr(a, "model_dump") else a for a in action_snap
+                    action.model_dump(mode="json") for action in visible_actions
                 ],
             )
         )
-    _ = action_by_id  # (kept for future per-action gold enrichment)
 
     # Storage optimization: blank the (large) gold payload on prefixes whose
     # entire payload repeats the previous prefix. read_prefix_gold() carries it

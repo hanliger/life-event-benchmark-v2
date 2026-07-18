@@ -31,7 +31,7 @@ QUALITY := $(RUN_DIR)/quality_reports
 .PHONY: setup inventory normalize-personas initial-states simulate-smoke \
 	coverage-trajectories dialogue-smoke-dry dialogue-smoke validate-dialogues \
 	export-gold build-items history-filter audit pipeline-smoke test clean-generated \
-	export-gold-controlled build-items-controlled audit-controlled
+	export-gold-controlled build-items-controlled audit-controlled export-public
 
 setup:
 	$(PYTHON) -m pip install -r requirements.txt
@@ -114,6 +114,11 @@ build-items-controlled:
 		--prefix-gold $(GOLD_CHECKPOINTS) --sessions-dir $(SESS_DIR) \
 		--trajectories-dir $(TRAJ_DIR) \
 		--output-dir $(ITEMS_DIR) --seed $(SEED)
+
+export-public:
+	$(PYTHON) scripts/export_public_benchmark.py \
+		--sessions-dir $(SESS_DIR) --items-dir $(ITEMS_DIR) \
+		--output-dir $(RUN_DIR)/public
 
 history-filter:
 ifeq ($(EXECUTE),1)

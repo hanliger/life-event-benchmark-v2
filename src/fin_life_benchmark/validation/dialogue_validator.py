@@ -131,14 +131,31 @@ class DialogueValidator:
                 flag("cue_not_user_turn", f"cue at turn {idx} is not a user turn")
             else:
                 annotated_user_texts.append(turns[idx].get("text", ""))
-                cue_text = cue.get("cue_text")
+                cue_text = cue.get("evidence_text") or cue.get("cue_text")
                 if cue_text and cue_text not in turns[idx].get("text", ""):
-                    flag("cue_text_not_in_annotated_turn", f"cue_text '{cue_text}' absent from turn {idx}")
+                    flag("cue_text_not_in_annotated_turn", f"evidence text '{cue_text}' absent from turn {idx}")
             linked = cue.get("linked_memory_path")
             if linked is not None and linked not in target_memory_paths:
                 flag("cue_linked_path_not_target", f"linked_memory_path '{linked}' not in target_memory_paths")
         if plan.get("must_include_cues") and not cue_annotations:
             flag("missing_cue_annotation", "must_include_cues present but cue_annotations is empty")
+
+        expected_memory_facts = (
+            (plan.get("structured_context") or {}).get("session_memory_updates") or []
+        )
+        for expected in expected_memory_facts:
+            matching = [
+                cue for cue in cue_annotations
+                if cue.get("cue_type") == "memory_fact"
+                and cue.get("linked_memory_path") == expected.get("path")
+                and cue.get("linked_memory_operation") == expected.get("operation")
+                and cue.get("linked_memory_value") == expected.get("new_value")
+            ]
+            if not matching:
+                flag(
+                    "missing_memory_fact_grounding",
+                    f"{expected.get('path')} {expected.get('operation')} lacks exact annotation",
+                )
 
         status = session.get("event_status_after_session", "no_event")
         session_type = session.get("session_type", "")

@@ -9,6 +9,7 @@ from fin_life_benchmark.actions.models import ActionStatus, StandingAction
 from fin_life_benchmark.fsm.models import EventInstance, EventStatus
 from fin_life_benchmark.memory.delta_engine import DeltaEngine
 from fin_life_benchmark.memory.models import CellStatus, FinancialMemoryState, MemoryOperation, MemoryUpdate
+from fin_life_benchmark.gold.prefix_gold_exporter import serialize_memory_state
 
 
 def _memory_with(path: str, value):
@@ -36,6 +37,28 @@ def test_clear_pending_cancels_pending_cells():
     assert memory.current_value("household.marital_status") == "single"
     # Cancelling a proposal does not erase the committed fact.
     assert memory.history("household.marital_status")[0].value == "single"
+
+
+def test_compact_state_keeps_committed_value_and_separates_pending():
+    memory = _memory_with("household.marital_status", "single")
+    source = "traj_ev001"
+    memory.apply(MemoryUpdate(
+        path="household.marital_status", operation=MemoryOperation.SET_PENDING,
+        new_value="married", month_index=3, source_event_instance_id=source,
+    ))
+    pending = serialize_memory_state(memory)["household.marital_status"]
+    assert pending["value"] == "single"
+    assert pending["status"] == "current"
+    assert pending["pending_proposal"]["value"] == "married"
+
+    memory.apply(MemoryUpdate(
+        path="household.marital_status", operation=MemoryOperation.CLEAR_PENDING,
+        month_index=4, source_event_instance_id=source,
+    ))
+    cancelled = serialize_memory_state(memory)["household.marital_status"]
+    assert cancelled["value"] == "single"
+    assert cancelled["status"] == "current"
+    assert cancelled["pending_proposal"] is None
 
 
 def test_pending_confirmation_closes_old_current_and_promotes_one_cell():

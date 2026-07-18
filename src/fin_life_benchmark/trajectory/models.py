@@ -149,6 +149,7 @@ class GoldMemoryUpdate(BaseModel):
     operation: str
     old_value: Any = None
     new_value: Any = None
+    source_event_instance_id: str | None = None
     evidence_turns: list[str] = Field(default_factory=list)
 
 

@@ -45,6 +45,8 @@
 18. 오프라인 지점/창구 상황처럼 쓰지 않습니다. 다음 표현과 장면은 금지합니다: 창구, 영업점, 방문, 안내 창구, 모시겠습니다, 신분증 지참, 실물 신분증, 신청서 작성, 서명, 출력, 우편 발송, 우편 배송, 배송, 방문 수령, 창구 수령, 실물 수령. 필요한 확인은 앱 인증, 본인인증, 확인 버튼, 메뉴 이동, 알림/문자 안내처럼 비대면 흐름으로 표현합니다.
 19. 절대 등장하면 안 되는 표현과 금지 표현은 user와 assistant 양쪽 모두에 적용됩니다. assistant의 선택지, 예시, 확인 질문에도 넣지 않습니다.
 20. 구조화된 사실 컨텍스트의 event.params, session_memory_updates, event_memory_updates, persona_state, current_memory와 충돌하는 주소·금액·가족관계·고용·주거 정보를 만들지 않습니다. 제공되지 않은 구체값은 새로 만들지 말고 일반 표현을 사용합니다.
+21. session_memory_updates의 각 항목은 반드시 user 발화에 명시적으로 근거가 있어야 합니다. update/create/set_pending은 new_value가 자연어로 드러나야 하고, archive/mark_stale/clear_pending/set_not_applicable은 해당 변경·취소·종료가 분명히 드러나야 합니다.
+22. 각 session_memory_updates 항목마다 cue_type="memory_fact" annotation을 하나 이상 만들고 linked_memory_path, linked_memory_operation, linked_memory_value를 원본과 정확히 동일하게 복사합니다. evidence_text에는 해당 user 발화에 실제로 포함된 최소 근거 문자열을 넣습니다.
 
 ## 출력 형식 (JSON만 출력)
 {
@@ -53,7 +55,14 @@
     {"speaker": "assistant", "text": "..."}
   ],
   "cue_annotations": [
-    {"turn_index": 2, "cue_type": "...", "linked_memory_path": "..."}
+    {
+      "turn_index": 2,
+      "cue_type": "memory_fact",
+      "linked_memory_path": "employment.salary_day",
+      "linked_memory_operation": "update",
+      "linked_memory_value": 25,
+      "evidence_text": "급여가 매달 25일에 들어와요"
+    }
   ],
   "quality_self_check": {
     "no_direct_life_event_mention": true,

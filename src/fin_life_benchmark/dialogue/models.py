@@ -31,6 +31,7 @@ class CueAnnotation(BaseModel):
     linked_memory_path: str | None = None
     linked_memory_operation: str | None = None
     linked_memory_value: Any = None
+    evidence_text: str | None = None
 
 
 class DialogueGenerationPlan(BaseModel):

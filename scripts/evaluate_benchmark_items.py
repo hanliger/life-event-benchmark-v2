@@ -51,7 +51,11 @@ def _format_initial_memory(memory: dict[str, Any]) -> str:
     lines = ["[초기 금융 메모리]"]
     for path, cell in sorted(memory.items()):
         cell = cell or {}
-        lines.append(f"- {path}: 상태={cell.get('status')}, 값={cell.get('value')}")
+        line = f"- {path}: 상태={cell.get('status')}, 값={cell.get('value')}"
+        pending = cell.get("pending_proposal")
+        if isinstance(pending, dict):
+            line += f", 변경 예정={pending.get('value')}"
+        lines.append(line)
     return "\n".join(lines)
 
 

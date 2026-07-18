@@ -408,6 +408,59 @@ def test_llm_session_repairs_missing_required_cue_annotation(tmp_path):
     assert "cue_annotations must include at least one user-turn annotation" in client.requests[1][1]
 
 
+def test_llm_session_requires_exact_memory_fact_grounding(tmp_path):
+    plan = _plan()
+    plan.target_memory_paths = ["employment.salary_day"]
+    plan.structured_context = {
+        "session_memory_updates": [
+            {
+                "path": "employment.salary_day",
+                "operation": "update",
+                "new_value": 25,
+            }
+        ]
+    }
+    broken = """
+    {
+      "turns": [
+        {"speaker": "user", "text": "급여 계좌를 확인하려고요."},
+        {"speaker": "assistant", "text": "네, 확인해 드릴게요."}
+      ],
+      "cue_annotations": [],
+      "quality_self_check": {}
+    }
+    """
+    repaired = """
+    {
+      "turns": [
+        {"speaker": "user", "text": "급여가 매달 25일에 들어와요."},
+        {"speaker": "assistant", "text": "네, 입금 날짜를 확인해 드릴게요."}
+      ],
+      "cue_annotations": [
+        {
+          "turn_index": 0,
+          "cue_type": "memory_fact",
+          "linked_memory_path": "employment.salary_day",
+          "linked_memory_operation": "update",
+          "linked_memory_value": 25,
+          "evidence_text": "급여가 매달 25일에 들어와요"
+        }
+      ],
+      "quality_self_check": {}
+    }
+    """
+    client = FakeLLMClient([broken, repaired])
+    generator = DialogueGenerator(mode="llm", client=client, paths=RepoPaths.default())
+
+    session = generator._llm_session(plan, _persona(), tmp_path)
+
+    fact = session.cue_annotations[0]
+    assert fact.linked_memory_operation == "update"
+    assert fact.linked_memory_value == 25
+    assert fact.evidence_text == "급여가 매달 25일에 들어와요"
+    assert "ground every session_memory_update" in client.requests[1][1]
+
+
 def test_validator_flags_missing_required_cue_annotation():
     generator = DialogueGenerator(paths=RepoPaths.default())
     session = {

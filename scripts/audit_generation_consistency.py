@@ -103,10 +103,14 @@ def _event_utility_issues(trajectory: Trajectory) -> list[dict[str, Any]]:
     impacts_by_source: dict[str, int] = {}
     for step in trajectory.timeline_steps:
         for update in step.memory_updates:
+            if update.event_status != "occurred":
+                continue
             updates_by_source[update.source_event_instance_id or ""] = updates_by_source.get(
                 update.source_event_instance_id or "", 0
             ) + 1
         for impact in step.action_impacts:
+            if impact.event_status != "occurred":
+                continue
             impacts_by_source[impact.source_event_instance_id or ""] = impacts_by_source.get(
                 impact.source_event_instance_id or "", 0
             ) + 1
@@ -144,7 +148,7 @@ def _dialogue_grounding(
                     continue
                 turn_index = int(annotation.get("turn_index", -1))
                 turns = session.get("turns") or []
-                cue_text = annotation.get("cue_text") or ""
+                cue_text = annotation.get("evidence_text") or annotation.get("cue_text") or ""
                 if turn_index < 0 or turn_index >= len(turns) or cue_text not in turns[turn_index].get("text", ""):
                     annotation_surface_issues.append(
                         {

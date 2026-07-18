@@ -39,7 +39,7 @@
       ]
     },
     "code_version": {
-      "commit": "bda6333c5256d8b8e9277f34d12b7799e57f5752",
+      "commit": "4d7042d9655c1426ef771a0c8633821c3dcc5bcc",
       "dirty": true
     }
   },
@@ -204,25 +204,41 @@
     "auxiliary_prefix_gold": {
       "path": "gold/prefix_gold_all_sessions.jsonl",
       "count": 6000,
-      "sha256": "8f7fcd03fe49223d9480e5ee82f91b59e83658a254ebacaab6ead99a0e8655fd"
+      "sha256": "3797ebe2a9fa80f6f3461c2ba76230bedb2c648f936ca484dd61f24d01ccebc0"
     },
     "main_checkpoint_gold": {
       "path": "gold/prefix_gold_checkpoints_15.jsonl",
       "count": 400,
-      "sha256": "725317f7354135b901916bf8b74929946acda916535a1613793a476def22aa92"
+      "sha256": "91d12e5d1315cbff20c684fd71c1fd1e4f1904099695017ca5786b5cdc111b03"
     },
     "stage1_items": {
       "path": "benchmark_items/stage1_event_status.jsonl",
       "count": 400,
-      "sha256": "db3a87d04a4d389d4a3a5b709319dca17c577b97d6cfe057b168a78a61720739"
+      "sha256": "dd65f11cc488310891210a667821e4d3ecf8d583f4a50d75fa2b368dd56bbf55"
     },
     "stage2_items": {
       "path": "benchmark_items/stage2_memory_mcq.jsonl",
-      "count": 780,
-      "sha256": "04c2f01510122323845de3400d26b33ae3eb685b8871ba5fa5edb070b068bf51"
+      "count": 783,
+      "sha256": "b6c7ca0aaf02fae3e7721c2e8d7b8968063104927a4cd13e62af6e1af96f2be4"
     },
     "audit": {
       "path": "reports/v4_controlled_audit.json"
+    },
+    "public_release": {
+      "sessions": {
+        "path": "public/dialogues/sessions",
+        "count": 6000
+      },
+      "stage1_items": {
+        "path": "public/benchmark_items/stage1_event_status.jsonl",
+        "count": 400,
+        "sha256": "f5d21f2c9db0e73fb8f35564c99bf3d46aee80fa1b5113c3fc392bf9da8dfe34"
+      },
+      "stage2_items": {
+        "path": "public/benchmark_items/stage2_memory_mcq.jsonl",
+        "count": 783,
+        "sha256": "425abef0f5b720dc1e7d7bb64defc518d398ecb45495588a30d9e9835c61d52a"
+      }
     }
   }
 }

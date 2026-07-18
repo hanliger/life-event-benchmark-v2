@@ -273,27 +273,28 @@ class EvidencePlanner:
                 event_updates = updates_by_instance.get(instance.event_instance_id, [])
                 target_paths = [u.path for u in occurred_updates]
                 cue = required[-1] if required else None
-                plans.append(
-                    DialogueGenerationPlan(
-                        trajectory_id=trajectory.trajectory_id,
-                        month_index=month,
-                        age=start_age + month // 12,
-                        transition_order=instance.occurred_transition_order or 0,
-                        session_type="consequence_session",
-                        linked_event_instance_id=instance.event_instance_id,
-                        event_status_after_session="occurred",
-                        mapped_action="FA-01",
-                        financial_task="거래내역 조회",
-                        must_include_cues=[cue] if cue else [],
-                        must_not_include_terms=forbidden_terms,
-                        target_memory_paths=target_paths,
-                        structured_context=self._structured_context(
-                            trajectory, instance, month, [], event_updates, target_paths
-                        ),
-                        desired_single_session_recoverability="low",
-                        desired_cumulative_recoverability="high",
+                if month > instance.occurred_month:
+                    plans.append(
+                        DialogueGenerationPlan(
+                            trajectory_id=trajectory.trajectory_id,
+                            month_index=month,
+                            age=start_age + month // 12,
+                            transition_order=instance.occurred_transition_order or 0,
+                            session_type="consequence_session",
+                            linked_event_instance_id=instance.event_instance_id,
+                            event_status_after_session="occurred",
+                            mapped_action="FA-01",
+                            financial_task="거래내역 조회",
+                            must_include_cues=[cue] if cue else [],
+                            must_not_include_terms=forbidden_terms,
+                            target_memory_paths=target_paths,
+                            structured_context=self._structured_context(
+                                trajectory, instance, month, [], event_updates, target_paths
+                            ),
+                            desired_single_session_recoverability="low",
+                            desired_cumulative_recoverability="high",
+                        )
                     )
-                )
 
             # stale recall session: old value asked about after archive/update
             occurred_updates = updates_by_key.get((instance.event_instance_id, instance.occurred_month or -1), [])
@@ -305,32 +306,33 @@ class EvidencePlanner:
                 month = min((instance.occurred_month or 0) + rng.randint(2, 6), trajectory.horizon_months - 1)
                 event_updates = updates_by_instance.get(instance.event_instance_id, [])
                 target_paths = stale_paths[:2]
-                plans.append(
-                    DialogueGenerationPlan(
-                        trajectory_id=trajectory.trajectory_id,
-                        month_index=month,
-                        age=start_age + month // 12,
-                        transition_order=instance.occurred_transition_order or 0,
-                        session_type="stale_recall_session",
-                        linked_event_instance_id=instance.event_instance_id,
-                        event_status_after_session="occurred",
-                        mapped_action="FA-01",
-                        financial_task="예전 설정 확인",
-                        must_include_cues=["예전에 쓰던 설정"],
-                        must_not_include_terms=forbidden_terms,
-                        target_memory_paths=target_paths,
-                        structured_context=self._structured_context(
-                            trajectory, instance, month, [], event_updates, target_paths
-                        ),
-                        desired_single_session_recoverability="low",
-                        desired_cumulative_recoverability="high",
+                if month > (instance.occurred_month or 0):
+                    plans.append(
+                        DialogueGenerationPlan(
+                            trajectory_id=trajectory.trajectory_id,
+                            month_index=month,
+                            age=start_age + month // 12,
+                            transition_order=instance.occurred_transition_order or 0,
+                            session_type="stale_recall_session",
+                            linked_event_instance_id=instance.event_instance_id,
+                            event_status_after_session="occurred",
+                            mapped_action="FA-01",
+                            financial_task="예전 설정 확인",
+                            must_include_cues=["예전에 쓰던 설정"],
+                            must_not_include_terms=forbidden_terms,
+                            target_memory_paths=target_paths,
+                            structured_context=self._structured_context(
+                                trajectory, instance, month, [], event_updates, target_paths
+                            ),
+                            desired_single_session_recoverability="low",
+                            desired_cumulative_recoverability="high",
+                        )
                     )
-                )
 
-        # 2. Controlled v3 layout: one occurred instance per 15-session
-        # window. Every lifecycle session for an instance is an indivisible
-        # bundle. Cancelled/weak/upcoming bundles may share a window and do not
-        # consume its occurred quota.
+        # 2. Controlled layout: one occurred instance per 15-session window,
+        # with globally chronological session order. Lifecycle bundles may
+        # cross window boundaries when events overlap in time; dialogue order
+        # takes precedence over keeping an instance in one window.
         window_size = int(self.cfg.get("controlled_window_size", 15))
         occurred_instances = sorted(
             [instance for instance in trajectory.life_event_instances if instance.status == EventStatus.OCCURRED],
@@ -343,46 +345,45 @@ class EvidencePlanner:
         if not occurred_instances:
             return []
 
-        plans_by_instance: dict[str, list[DialogueGenerationPlan]] = {}
-        for plan in plans:
-            if plan.linked_event_instance_id:
-                plans_by_instance.setdefault(plan.linked_event_instance_id, []).append(plan)
+        windows: list[list[DialogueGenerationPlan]] = [
+            [] for _ in occurred_instances
+        ]
+        anchor_cursor = [
+            (int(instance.occurred_month or 0), int(instance.occurred_transition_order or 0))
+            for instance in occurred_instances
+        ]
+        anchor_index = {
+            instance.event_instance_id: index
+            for index, instance in enumerate(occurred_instances)
+        }
 
-        windows: list[list[DialogueGenerationPlan]] = []
-        for instance in occurred_instances:
-            bundle = plans_by_instance.pop(instance.event_instance_id, [])
-            if len(bundle) > window_size:
-                required = [p for p in bundle if p.session_type.endswith("_evidence")]
-                optional = [p for p in bundle if not p.session_type.endswith("_evidence")]
-                bundle = required + optional[: max(0, window_size - len(required))]
-            if len(bundle) > window_size:
-                raise ValueError(f"{instance.event_instance_id}: lifecycle bundle exceeds {window_size} sessions")
-            windows.append(bundle)
+        def plan_cursor(plan: DialogueGenerationPlan) -> tuple[int, int]:
+            return plan.month_index, plan.transition_order
 
-        instance_by_id = {instance.event_instance_id: instance for instance in trajectory.life_event_instances}
-        background_bundles = list(plans_by_instance.values())
-        background_bundles.sort(key=lambda bundle: (
-            max((plan.month_index for plan in bundle), default=0),
-            bundle[0].linked_event_instance_id if bundle else "",
-        ))
-        for bundle in background_bundles:
-            terminal_month = max((plan.month_index for plan in bundle), default=0)
-            candidates = sorted(
-                range(len(windows)),
-                key=lambda index: (
-                    abs((occurred_instances[index].occurred_month or 0) - terminal_month),
-                    index,
-                ),
-            )
-            placed = False
-            for index in candidates:
-                if len(windows[index]) + len(bundle) <= window_size:
-                    windows[index].extend(bundle)
-                    placed = True
-                    break
-            if not placed:
-                instance_id = bundle[0].linked_event_instance_id if bundle else "unknown"
-                raise ValueError(f"{instance_id}: no controlled window can hold the complete background bundle")
+        for plan in sorted(
+            plans,
+            key=lambda item: (
+                *plan_cursor(item),
+                item.linked_event_instance_id or "",
+                item.session_type,
+            ),
+        ):
+            if plan.session_type == "occurred_evidence" and plan.linked_event_instance_id in anchor_index:
+                index = anchor_index[plan.linked_event_instance_id]
+            else:
+                index = next(
+                    (
+                        candidate
+                        for candidate, cursor in enumerate(anchor_cursor)
+                        if plan_cursor(plan) <= cursor
+                    ),
+                    len(windows) - 1,
+                )
+            windows[index].append(plan)
+
+        oversized = [index + 1 for index, window in enumerate(windows) if len(window) > window_size]
+        if oversized:
+            raise ValueError(f"chronological controlled windows exceed {window_size} sessions: {oversized}")
 
         total_capacity = len(windows) * window_size
         filler_count = total_capacity - sum(len(window) for window in windows)
@@ -435,13 +436,22 @@ class EvidencePlanner:
 
         ordered: list[DialogueGenerationPlan] = []
         for window_index, (anchor, window) in enumerate(zip(occurred_instances, windows), start=1):
-            window.sort(key=lambda plan: (plan.month_index, plan.transition_order, plan.session_type))
+            window.sort(key=lambda plan: (
+                plan.month_index,
+                plan.transition_order,
+                plan.linked_event_instance_id or "",
+                plan.session_type,
+            ))
             for position, plan in enumerate(window, start=1):
                 plan.window_index = window_index
                 plan.position_in_window = position
                 plan.window_event_instance_id = anchor.event_instance_id
                 plan.session_id = f"S{len(ordered) + 1:03d}"
                 ordered.append(plan)
+
+        cursors = [(plan.month_index, plan.transition_order) for plan in ordered]
+        if cursors != sorted(cursors):
+            raise AssertionError("controlled session order is not chronological")
 
         # Defensive invariant: an occurred evidence session can only belong to
         # the window whose anchor is that exact event instance.

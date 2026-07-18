@@ -15,4 +15,5 @@
 - max_properties_listed_in_one_trajectory: 3
 - issue_count: 0
 - stage2_true_initial_memory_mismatches: 0
+- hidden_prefix_memory_sources: 0
 - issues: 0 entries (see JSON)

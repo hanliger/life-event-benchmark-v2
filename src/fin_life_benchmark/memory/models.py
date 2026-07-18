@@ -91,6 +91,33 @@ class FinancialMemoryState(BaseModel):
                 return cell
         return None
 
+    def pending(self, path: str) -> MemoryCell | None:
+        """Latest live proposal for a path, if one exists."""
+        return next(
+            (cell for cell in reversed(self.history(path)) if cell.status == CellStatus.PENDING),
+            None,
+        )
+
+    def effective(self, path: str) -> MemoryCell | None:
+        """Cell representing the effective non-prospective state.
+
+        Cancelled proposals never replace the committed value.  If a path no
+        longer has a committed cell (for example after archive), retain the
+        latest non-cancelled historical state so the compact gold can express
+        that the value is no longer current.
+        """
+        committed = self.committed(path)
+        if committed is not None:
+            return committed
+        return next(
+            (
+                cell
+                for cell in reversed(self.history(path))
+                if cell.status not in {CellStatus.PENDING, CellStatus.CANCELLED}
+            ),
+            None,
+        )
+
     def current_value(self, path: str) -> Any:
         cell = self.committed(path)
         if cell is None or cell.status in {CellStatus.NOT_APPLICABLE, CellStatus.UNKNOWN}:

@@ -315,6 +315,27 @@ def main() -> int:
             },
             "audit": {"path": f"reports/{args.run_version}_controlled_audit.json"},
         }
+        public_sessions_dir = run_dir / "public" / "dialogues" / "sessions"
+        public_stage1_path = run_dir / "public" / "benchmark_items" / "stage1_event_status.jsonl"
+        public_stage2_path = run_dir / "public" / "benchmark_items" / "stage2_memory_mcq.jsonl"
+        if public_sessions_dir.exists() and public_stage1_path.exists() and public_stage2_path.exists():
+            public_session_files = sorted(public_sessions_dir.glob("sessions_traj_*.jsonl"))
+            manifest["controlled_outputs"]["public_release"] = {
+                "sessions": {
+                    "path": "public/dialogues/sessions",
+                    "count": sum(_line_count(path) for path in public_session_files),
+                },
+                "stage1_items": {
+                    "path": "public/benchmark_items/stage1_event_status.jsonl",
+                    "count": _line_count(public_stage1_path),
+                    "sha256": _sha256(public_stage1_path),
+                },
+                "stage2_items": {
+                    "path": "public/benchmark_items/stage2_memory_mcq.jsonl",
+                    "count": _line_count(public_stage2_path),
+                    "sha256": _sha256(public_stage2_path),
+                },
+            }
     (run_dir / "manifest.json").write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )

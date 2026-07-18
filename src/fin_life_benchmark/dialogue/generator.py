@@ -281,6 +281,7 @@ class DialogueGenerator:
                                 linked_memory_path=update.get("path"),
                                 linked_memory_operation=update.get("operation"),
                                 linked_memory_value=update.get("new_value"),
+                                evidence_text=fact_text,
                             )
                         )
             else:
@@ -301,6 +302,7 @@ class DialogueGenerator:
                         linked_memory_path=update.get("path"),
                         linked_memory_operation=update.get("operation"),
                         linked_memory_value=update.get("new_value"),
+                        evidence_text=_memory_fact_text(update),
                     )
                 )
 
@@ -538,8 +540,37 @@ class DialogueGenerator:
                     cue_type=str(item.get("cue_type", "unknown")),
                     cue_text=item.get("cue_text"),
                     linked_memory_path=linked_memory_path,
+                    linked_memory_operation=item.get("linked_memory_operation"),
+                    linked_memory_value=item.get("linked_memory_value"),
+                    evidence_text=item.get("evidence_text") or item.get("cue_text"),
                 )
             )
+        expected_memory_facts = list(
+            plan.structured_context.get("session_memory_updates") or []
+        )
+        for expected in expected_memory_facts:
+            matches = [
+                cue
+                for cue in cues
+                if cue.cue_type == "memory_fact"
+                and cue.linked_memory_path == expected.get("path")
+                and cue.linked_memory_operation == expected.get("operation")
+                and cue.linked_memory_value == expected.get("new_value")
+            ]
+            if not matches:
+                raise LLMOutputValidationError(
+                    "cue_annotations must ground every session_memory_update "
+                    f"with exact path/operation/value: {expected.get('path')} "
+                    f"{expected.get('operation')} {expected.get('new_value')!r}"
+                )
+            if not any(
+                cue.evidence_text
+                and cue.evidence_text in turns[cue.turn_index].text
+                for cue in matches
+            ):
+                raise LLMOutputValidationError(
+                    f"memory fact evidence_text must be visible in a user turn: {expected.get('path')}"
+                )
         if plan.must_include_cues and not cues:
             raise LLMOutputValidationError(
                 "cue_annotations must include at least one user-turn annotation "

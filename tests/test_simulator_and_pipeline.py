@@ -411,6 +411,9 @@ def test_end_to_end_mock_pipeline_in_memory():
     assert plans and plans[0].session_id == "S001"
     occurred_count = sum(instance.occurred_month is not None for instance in trajectory.life_event_instances)
     assert len(plans) == occurred_count * 15
+    assert [(plan.month_index, plan.transition_order) for plan in plans] == sorted(
+        (plan.month_index, plan.transition_order) for plan in plans
+    )
     for window_index in range(1, occurred_count + 1):
         window = [plan for plan in plans if plan.window_index == window_index]
         assert len(window) == 15
@@ -440,6 +443,13 @@ def test_end_to_end_mock_pipeline_in_memory():
         for decision in prefix.gold_action_decisions:
             if decision.funds_movement:
                 assert decision.must_not_execute
+        visible_sources = {event.event_instance_id for event in prefix.gold_life_events}
+        for cell in prefix.gold_full_memory_state.values():
+            source = cell.get("source_event_instance_id")
+            pending_source = (cell.get("pending_proposal") or {}).get("source_event_instance_id")
+            assert source is None or source in visible_sources
+            assert pending_source is None or pending_source in visible_sources
+            assert cell.get("status") != "cancelled"
 
     checkpoints = export_prefix_gold(trajectory, sessions, checkpoint_stride=15)
     assert [prefix.checkpoint_session_count for prefix in checkpoints] == [

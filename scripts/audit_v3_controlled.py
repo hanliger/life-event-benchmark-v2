@@ -13,6 +13,7 @@ import _bootstrap  # noqa: F401
 
 from fin_life_benchmark.io import read_jsonl
 from fin_life_benchmark.gold.prefix_gold_exporter import serialize_memory_state
+from fin_life_benchmark.gold.loader import read_prefix_gold
 from fin_life_benchmark.validation.audits import write_report
 
 
@@ -130,11 +131,14 @@ def audit_v3(
         if len(trajectory_sessions) != 300:
             fail("session_count", trajectory_id, f"expected 300, found {len(trajectory_sessions)}")
         windows: dict[int, list[dict[str, Any]]] = defaultdict(list)
-        instance_windows: dict[str, set[int]] = defaultdict(set)
         for session in trajectory_sessions:
             windows[int(session.get("window_index") or 0)].append(session)
-            if session.get("linked_event_instance_id"):
-                instance_windows[session["linked_event_instance_id"]].add(int(session.get("window_index") or 0))
+        cursors = [
+            (int(row["month_index"]), int(row.get("transition_order", 0)))
+            for row in trajectory_sessions
+        ]
+        if cursors != sorted(cursors):
+            fail("session_chronology", trajectory_id, "session IDs are not chronological")
         if sorted(windows) != list(range(1, 21)):
             fail("window_indices", trajectory_id, str(sorted(windows)))
         window_anchors: set[str] = set()
@@ -153,9 +157,6 @@ def audit_v3(
                 fail("window_occurred_quota", trajectory_id, f"window {window_index}: {len(occurred_evidence)}")
             else:
                 window_anchors.update(anchors)
-        split = sorted(instance_id for instance_id, indexes in instance_windows.items() if len(indexes) != 1)
-        if split:
-            fail("split_event_bundle", trajectory_id, str(split))
         occurred_ids = {row["event_instance_id"] for row in occurred}
         if window_anchors != occurred_ids:
             fail("window_anchor_coverage", trajectory_id, "anchors differ from occurred instances")
@@ -189,6 +190,21 @@ def audit_v3(
             if cell != expected.get(path):
                 true_initial_mismatches += 1
 
+    hidden_prefix_memory_sources = 0
+    for checkpoint in checkpoints:
+        visible_sources = {
+            event["event_instance_id"]
+            for event in checkpoint.get("gold_life_events") or []
+        }
+        for cell in (checkpoint.get("gold_full_memory_state") or {}).values():
+            source = cell.get("source_event_instance_id")
+            pending = cell.get("pending_proposal") or {}
+            pending_source = pending.get("source_event_instance_id")
+            if source is not None and source not in visible_sources:
+                hidden_prefix_memory_sources += 1
+            if pending_source is not None and pending_source not in visible_sources:
+                hidden_prefix_memory_sources += 1
+
     return {
         "passed": not issues,
         "trajectory_count": len(trajectories),
@@ -201,6 +217,7 @@ def audit_v3(
         "max_properties_listed_in_one_trajectory": max_properties_listed,
         "issue_count": len(issues),
         "stage2_true_initial_memory_mismatches": true_initial_mismatches,
+        "hidden_prefix_memory_sources": hidden_prefix_memory_sources,
         "issues": issues,
     }
 
@@ -217,12 +234,15 @@ def main() -> int:
 
     trajectories = [json.loads(path.read_text(encoding="utf-8")) for path in sorted(Path(args.trajectories_dir).glob("traj_*.json"))]
     sessions = [row for path in sorted(Path(args.sessions_dir).glob("sessions_traj_*.jsonl")) for row in read_jsonl(path)]
-    checkpoints = list(read_jsonl(Path(args.checkpoints)))
+    checkpoints = list(read_prefix_gold(Path(args.checkpoints)))
     stage2_items = list(read_jsonl(Path(args.stage2_items))) if args.stage2_items else None
     report = audit_v3(trajectories, sessions, checkpoints, stage2_items)
     if report["stage2_true_initial_memory_mismatches"]:
         report["passed"] = False
         report["issue_count"] += report["stage2_true_initial_memory_mismatches"]
+    if report["hidden_prefix_memory_sources"]:
+        report["passed"] = False
+        report["issue_count"] += report["hidden_prefix_memory_sources"]
     output_dir = Path(args.output_dir)
     write_report(
         report,

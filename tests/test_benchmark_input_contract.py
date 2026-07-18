@@ -9,6 +9,7 @@ from scripts.evaluate_benchmark_items import (
     _build_stage2_prompt,
     _visible_sessions,
 )
+from scripts.export_public_benchmark import public_item, public_session
 
 
 def test_stage2_prompt_excludes_internal_session_metadata():
@@ -54,3 +55,31 @@ def test_session_lookup_is_trajectory_scoped():
     item = {"trajectory_id": "traj_001", "visible_sessions": ["S001"]}
 
     assert _visible_sessions(item, sessions)[0]["trajectory_id"] == "traj_001"
+
+
+def test_public_exports_strip_private_annotations_and_gold():
+    session = {
+        "session_id": "S001",
+        "trajectory_id": "traj_001",
+        "turns": [{"speaker": "user", "text": "안녕하세요"}],
+        "plan": {"structured_context": {"answer": 25}},
+        "cue_annotations": [{"linked_memory_value": 25}],
+    }
+    item = {
+        "item_id": "item_1",
+        "stage": "stage2_memory_mcq",
+        "trajectory_id": "traj_001",
+        "prefix_id": "pfx1",
+        "visible_sessions": ["S001"],
+        "question": "질문",
+        "options": [{"option_id": "A", "text": "보기", "correct": True, "error_type": None}],
+        "gold": {"correct_option": "A"},
+        "metadata": {"initial_memory": {}},
+    }
+
+    safe_session = public_session(session)
+    safe_item = public_item(item)
+
+    assert set(safe_session) == {"session_id", "trajectory_id", "turns"}
+    assert "gold" not in safe_item
+    assert set(safe_item["options"][0]) == {"option_id", "text"}

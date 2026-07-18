@@ -148,8 +148,17 @@ class ItemBuilder:
         }
         return labels.get(path, path)
 
-    def _memory_option_text(self, path: str, value: Any, status: str) -> str:
-        return f"{self._memory_label(path)}: 상태={status}, 값={self._format_memory_value(value)}"
+    def _memory_option_text(
+        self,
+        path: str,
+        value: Any,
+        status: str,
+        pending: dict[str, Any] | None = None,
+    ) -> str:
+        text = f"{self._memory_label(path)}: 상태={status}, 값={self._format_memory_value(value)}"
+        if pending is not None:
+            text += f", 변경 예정={self._format_memory_value(pending.get('value'))}"
+        return text
 
     def _stage2_options_for_path(
         self,
@@ -162,12 +171,13 @@ class ItemBuilder:
         cell = memory.get(path) or {}
         correct_value = cell.get("value", update.get("new_value"))
         correct_status = cell.get("status", "current")
+        correct_pending = cell.get("pending_proposal")
         historical = list(cell.get("historical_values") or [])
         if update.get("old_value") is not None:
             historical.append(update.get("old_value"))
 
         option_specs: list[tuple[str, str | None, bool]] = [
-            (self._memory_option_text(path, correct_value, correct_status), None, True)
+            (self._memory_option_text(path, correct_value, correct_status, correct_pending), None, True)
         ]
         if historical:
             stale_value = historical[-1]
@@ -194,7 +204,12 @@ class ItemBuilder:
             if other_cell.get("value") is not None:
                 option_specs.append(
                     (
-                        self._memory_option_text(other_path, other_cell.get("value"), other_cell.get("status", "current")),
+                        self._memory_option_text(
+                            other_path,
+                            other_cell.get("value"),
+                            other_cell.get("status", "current"),
+                            other_cell.get("pending_proposal"),
+                        ),
                         "wrong_sibling_event",
                         False,
                     )
@@ -221,7 +236,7 @@ class ItemBuilder:
         if not any(o.correct for o in options):
             options[-1] = CounterfactualOption(
                 option_id=options[-1].option_id,
-                text=self._memory_option_text(path, correct_value, correct_status),
+                text=self._memory_option_text(path, correct_value, correct_status, correct_pending),
                 correct=True,
             )
         correct_id = next(o.option_id for o in options if o.correct)
@@ -286,10 +301,19 @@ class ItemBuilder:
         paths = list(reversed(paths))
         rng = random.Random(f"{prefix['prefix_id']}:stage2_multi:{self.seed}")
 
-        def statement(path_a: str, value_a: Any, status_a: str, path_b: str, value_b: Any, status_b: str) -> str:
+        def statement(
+            path_a: str,
+            value_a: Any,
+            status_a: str,
+            path_b: str,
+            value_b: Any,
+            status_b: str,
+            pending_a: dict[str, Any] | None = None,
+            pending_b: dict[str, Any] | None = None,
+        ) -> str:
             return (
-                f"{self._memory_option_text(path_a, value_a, status_a)} / "
-                f"{self._memory_option_text(path_b, value_b, status_b)}"
+                f"{self._memory_option_text(path_a, value_a, status_a, pending_a)} / "
+                f"{self._memory_option_text(path_b, value_b, status_b, pending_b)}"
             )
 
         a, b = paths
@@ -297,16 +321,18 @@ class ItemBuilder:
         cell_b = memory.get(b) or {}
         value_a, status_a = cell_a.get("value"), cell_a.get("status", "current")
         value_b, status_b = cell_b.get("value"), cell_b.get("status", "current")
+        pending_a = cell_a.get("pending_proposal")
+        pending_b = cell_b.get("pending_proposal")
         hist_a = list(cell_a.get("historical_values") or [])
         hist_b = list(cell_b.get("historical_values") or [])
 
         option_specs: list[tuple[str, str | None, bool]] = [
-            (statement(a, value_a, status_a, b, value_b, status_b), None, True)
+            (statement(a, value_a, status_a, b, value_b, status_b, pending_a, pending_b), None, True)
         ]
         if hist_a:
-            option_specs.append((statement(a, hist_a[-1], "current", b, value_b, status_b), "stale_memory_carryover", False))
+            option_specs.append((statement(a, hist_a[-1], "current", b, value_b, status_b, pending_a, pending_b), "stale_memory_carryover", False))
         if hist_b:
-            option_specs.append((statement(a, value_a, status_a, b, hist_b[-1], "current"), "stale_memory_carryover", False))
+            option_specs.append((statement(a, value_a, status_a, b, hist_b[-1], "current", pending_a, pending_b), "stale_memory_carryover", False))
         option_specs.append((statement(a, value_b, status_b, b, value_a, status_a), "historical_state_contamination", False))
         option_specs.append((f"{self._memory_label(a)}와 {self._memory_label(b)} 모두 기존 정보에서 바뀐 점이 없다.", "missed_update", False))
 
@@ -329,7 +355,7 @@ class ItemBuilder:
         if not any(o.correct for o in options):
             options[-1] = CounterfactualOption(
                 option_id=options[-1].option_id,
-                text=statement(a, value_a, status_a, b, value_b, status_b),
+                text=statement(a, value_a, status_a, b, value_b, status_b, pending_a, pending_b),
                 correct=True,
             )
         correct_id = next(o.option_id for o in options if o.correct)

@@ -21,6 +21,7 @@ INITIAL_STATES := $(INPUTS_DIR)/initial_states_$(RUN_ID).jsonl
 RUN_MANIFEST := $(RUN_DIR)/manifest_$(RUN_ID).json
 TRAJ_DIR := $(RUN_DIR)/trajectories
 SESS_DIR := $(RUN_DIR)/dialogues/sessions
+PLAN_DIR := $(RUN_DIR)/dialogues/plans
 RAW_DIALOGUE_DIR := $(RUN_DIR)/dialogues/raw_outputs
 GOLD := $(RUN_DIR)/gold/prefix_gold_$(RUN_ID).jsonl
 GOLD_ALL := $(RUN_DIR)/gold/prefix_gold_all_sessions.jsonl
@@ -28,7 +29,7 @@ GOLD_CHECKPOINTS := $(RUN_DIR)/gold/prefix_gold_checkpoints_15.jsonl
 ITEMS_DIR := $(RUN_DIR)/benchmark_items
 QUALITY := $(RUN_DIR)/quality_reports
 
-.PHONY: setup inventory normalize-personas initial-states simulate-smoke \
+.PHONY: setup inventory normalize-personas initial-states simulate-smoke plan-dialogues audit-dialogue-plans \
 	coverage-trajectories dialogue-smoke-dry dialogue-smoke validate-dialogues \
 	export-gold build-items history-filter audit pipeline-smoke test clean-generated \
 	export-gold-controlled build-items-controlled audit-controlled export-public
@@ -71,21 +72,35 @@ coverage-trajectories:
 		--personas $(PERSONAS) --locale ko_KR --horizon-years 12 \
 		--output-dir $(TRAJ_DIR) --seed 500 --max-per-pair 2
 
+plan-dialogues:
+	$(PYTHON) scripts/build_dialogue_plans.py \
+		--trajectories-dir $(TRAJ_DIR) \
+		--locale ko_KR \
+		--output-dir $(PLAN_DIR) \
+		--report-dir $(RUN_DIR)/reports \
+		--seed $(SEED)
+
+audit-dialogue-plans:
+	$(PYTHON) scripts/audit_dialogue_plans.py \
+		--plans-dir $(PLAN_DIR) \
+		--trajectories-dir $(TRAJ_DIR) \
+		--output-dir $(RUN_DIR)/reports
+
 dialogue-smoke-dry:
 	$(PYTHON) scripts/generate_dialogue_sessions.py \
-		--trajectories-dir $(TRAJ_DIR) --locale ko_KR \
+		--trajectories-dir $(TRAJ_DIR) --plans-dir $(PLAN_DIR) --locale ko_KR \
 		--output-dir $(SESS_DIR) --raw-output-dir $(RAW_DIALOGUE_DIR) \
 		--max-trajectories $(NUM_TRAJ) $(SESSION_LIMIT_FLAGS) --dry-run
 
 dialogue-smoke:
 ifeq ($(EXECUTE),1)
 	$(PYTHON) scripts/generate_dialogue_sessions.py \
-		--trajectories-dir $(TRAJ_DIR) --locale ko_KR \
+		--trajectories-dir $(TRAJ_DIR) --plans-dir $(PLAN_DIR) --locale ko_KR \
 		--output-dir $(SESS_DIR) --raw-output-dir $(RAW_DIALOGUE_DIR) \
 		--max-trajectories $(NUM_TRAJ) $(SESSION_LIMIT_FLAGS) --overwrite --execute --continue-on-error
 else
 	$(PYTHON) scripts/generate_dialogue_sessions.py \
-		--trajectories-dir $(TRAJ_DIR) --locale ko_KR \
+		--trajectories-dir $(TRAJ_DIR) --plans-dir $(PLAN_DIR) --locale ko_KR \
 		--output-dir $(SESS_DIR) --raw-output-dir $(RAW_DIALOGUE_DIR) \
 		--max-trajectories $(NUM_TRAJ) $(SESSION_LIMIT_FLAGS) --overwrite --mock
 endif

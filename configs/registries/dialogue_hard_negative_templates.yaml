@@ -1,0 +1,25 @@
+# Typed near misses. `when` is evaluated against the current snapshot.
+career_employment:
+  domain: employment
+  action_matched_hard_negative:
+    - {task_template_id: hn_employment_one_off_deposit, fa_code: FA-01, visible_task_ko: "일회성 정산금 입금 내역 확인", explanation: "회사 경비나 일회성 정산금일 뿐 새로운 고용 또는 급여 등록이 아니다.", surface_hint: "이번 입금은 경비 정산금이라 내역만 확인할게요", protected_memory_paths: [employment.employer, employment.employment_status, employment.salary_account, employment.salary_day]}
+relationship_marriage:
+  domain: relationship
+  sibling_event_negative:
+    - {task_template_id: hn_relationship_group_dues, fa_code: FA-05, visible_task_ko: "동호회 공동 회비 계좌 관리", explanation: "동호회 회비를 관리할 뿐 배우자나 가구 관계의 변화가 아니다.", surface_hint: "동호회 회비를 같이 관리할 계좌예요", protected_memory_paths: [household.marital_status, household.spouse_or_partner]}
+housing_move:
+  domain: housing
+  existing_state_negative:
+    - {task_template_id: hn_housing_current_address, fa_code: FA-01, visible_task_ko: "현재 등록 주소 확인", explanation: "이미 사용 중인 주소를 확인할 뿐 새 주소나 주거 상태 변화가 없다.", surface_hint: "오래전부터 쓰던 등록 정보가 맞는지만 볼게요", protected_memory_paths: [housing.address, housing.residence_status, housing.contract_type]}
+education_child_stage_entry:
+  domain: education
+  stale_value_no_change:
+    - {task_template_id: hn_education_existing_autopay, fa_code: FA-01, visible_task_ko: "기존 교육비 자동이체 내역 확인", explanation: "이미 적용 중인 납부를 확인할 뿐 새로운 교육 단계나 금액 변화가 없다.", surface_hint: "계속 내던 교육비 자동이체 내역만 볼게요", protected_memory_paths: [education.child_education_stage, goals.child_education_goal], when: {state_truthy: [has_children]}}
+crisis_financial_fraud:
+  domain: crisis
+  action_matched_hard_negative:
+    - {task_template_id: hn_security_routine_review, fa_code: FA-06, visible_task_ko: "정기 보안점검과 로그인 알림 확인", explanation: "예방 목적의 정기 보안점검일 뿐 피해나 의심 거래가 발생한 것이 아니다.", surface_hint: "정기적으로 로그인 알림 설정만 확인하고 있어요", protected_memory_paths: [cashflow.recent_one_off_expense]}
+routine_neutral:
+  domain: neutral
+  routine_neutral:
+    - {task_template_id: hn_routine_balance, fa_code: FA-01, visible_task_ko: "주거래계좌 잔액 확인", explanation: "일상적인 잔액 확인으로 어떠한 생활 변화도 의미하지 않는다.", surface_hint: "평소처럼 잔액만 확인할게요", protected_memory_paths: []}

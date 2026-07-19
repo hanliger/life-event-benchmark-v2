@@ -1,0 +1,226 @@
+# Concrete banking tasks keyed by active life-event ID and lifecycle status.
+# EvidencePlanner never falls back to financial_actions.yaml for these entries.
+
+relationship_marriage:
+  weak_signal:
+    - {task_template_id: relationship_marriage_shared_account_precheck, fa_code: FA-05, visible_task_ko: "공동 생활비 계좌 조건 조회", user_goal_instruction: "관계가 확정되지 않은 상태에서 공동 생활비 계좌 조건만 확인한다.", compatible_memory_paths: [household.marital_status, household.spouse_or_partner], required_event_params: [], required_action_types: [], cue_template_ids: [relationship_marriage_weak_signal], weight: 1.0}
+  upcoming:
+    - {task_template_id: relationship_marriage_shared_account_prepare, fa_code: FA-05, visible_task_ko: "공동 생활비 계좌 준비", user_goal_instruction: "향후 함께 사용할 생활비 계좌의 개설 절차를 준비한다.", compatible_memory_paths: [household.marital_status, household.spouse_or_partner], required_event_params: [], required_action_types: [], cue_template_ids: [relationship_marriage_upcoming], weight: 1.0}
+  occurred:
+    - {task_template_id: relationship_marriage_expense_split, fa_code: FA-08, visible_task_ko: "공동 생활비 분담 이체 설정", user_goal_instruction: "실제 공동 지출을 위한 정기이체 설정을 확인한다.", compatible_memory_paths: [household.marital_status, household.spouse_or_partner], required_event_params: [], required_action_types: [], cue_template_ids: [relationship_marriage_occurred], weight: 1.0}
+  cancelled:
+    - {task_template_id: relationship_marriage_account_plan_cancel, fa_code: FA-05, visible_task_ko: "공동 생활비 계좌 준비 취소 확인", user_goal_instruction: "앞서 준비하던 공동 계좌 계획을 취소하고 개설되지 않았음을 확인한다.", compatible_memory_paths: [household.marital_status, household.spouse_or_partner], required_event_params: [], required_action_types: [], cue_template_ids: [relationship_marriage_cancelled], weight: 1.0}
+
+relationship_divorce_or_separation:
+  weak_signal:
+    - {task_template_id: relationship_separation_joint_spend_review, fa_code: FA-01, visible_task_ko: "공동 지출 내역 확인", user_goal_instruction: "관계 변화는 확정하지 않고 공동 지출 내역만 점검한다.", compatible_memory_paths: [household.marital_status, household.spouse_or_partner, household.child_support_arrangement], required_event_params: [], required_action_types: [], cue_template_ids: [relationship_divorce_or_separation_weak_signal], weight: 1.0}
+  upcoming:
+    - {task_template_id: relationship_separation_account_split_prepare, fa_code: FA-05, visible_task_ko: "공동 생활비 계좌 분리 준비", user_goal_instruction: "공동 생활비 계좌를 나눌 절차를 미래 계획으로 문의한다.", compatible_memory_paths: [household.marital_status, household.spouse_or_partner], required_event_params: [], required_action_types: [], cue_template_ids: [relationship_divorce_or_separation_upcoming], weight: 1.0}
+  occurred:
+    - {task_template_id: relationship_separation_transfer_cleanup, fa_code: FA-08, visible_task_ko: "생활비 정기이체 정리", user_goal_instruction: "기존 공동 생활비 또는 양육비 이체 설정을 실제 상태에 맞춰 점검한다.", compatible_memory_paths: [household.marital_status, household.spouse_or_partner, household.child_support_arrangement], required_event_params: [], required_action_types: [], cue_template_ids: [relationship_divorce_or_separation_occurred], weight: 1.0}
+  cancelled:
+    - {task_template_id: relationship_separation_schedule_cancel, fa_code: FA-02, visible_task_ko: "계좌 분리 일정 알림 취소", user_goal_instruction: "계좌 분리 계획이 취소됐고 현재 관계 정보는 바뀌지 않았음을 드러낸다.", compatible_memory_paths: [household.marital_status, household.child_support_arrangement], required_event_params: [], required_action_types: [], cue_template_ids: [relationship_divorce_or_separation_cancelled], weight: 1.0}
+
+relationship_childbirth:
+  weak_signal:
+    - {task_template_id: relationship_childbirth_cost_precheck, fa_code: FA-04, visible_task_ko: "아이 관련 비용 대비 상품 조회", user_goal_instruction: "아직 확정되지 않은 상황에서 향후 비용 대비 조건만 조회한다.", compatible_memory_paths: [household.children, household.dependents, goals.child_education_goal], required_event_params: [], required_action_types: [], cue_template_ids: [relationship_childbirth_weak_signal], weight: 1.0}
+  upcoming:
+    - {task_template_id: relationship_childbirth_savings_prepare, fa_code: FA-05, visible_task_ko: "아이 목적자금 계좌 준비", user_goal_instruction: "향후 사용할 아이 목적자금 계좌를 미리 준비한다.", compatible_memory_paths: [household.children, goals.child_education_goal], required_event_params: [], required_action_types: [], cue_template_ids: [relationship_childbirth_upcoming], weight: 1.0}
+  occurred:
+    - {task_template_id: relationship_childbirth_child_savings, fa_code: FA-09, visible_task_ko: "아이 교육저축 정기납입 설정", user_goal_instruction: "실제 양육을 시작한 뒤 아이 목적 저축 납입을 설정한다.", compatible_memory_paths: [household.children, household.dependents, goals.child_education_goal], required_event_params: [], required_action_types: [], cue_template_ids: [relationship_childbirth_occurred], weight: 1.0}
+  cancelled:
+    - {task_template_id: relationship_childbirth_savings_reminder_cancel, fa_code: FA-02, visible_task_ko: "아이 목적저축 시작 알림 취소", user_goal_instruction: "앞서 잡은 저축 시작 알림을 취소하며 새 가족 정보가 현재가 되지 않았음을 분명히 한다.", compatible_memory_paths: [household.children, goals.child_education_goal], required_event_params: [], required_action_types: [], cue_template_ids: [relationship_childbirth_cancelled], weight: 1.0}
+
+relationship_adoption:
+  weak_signal:
+    - {task_template_id: relationship_adoption_guardian_precheck, fa_code: FA-04, visible_task_ko: "보호자 등록과 아이 목적자금 조건 조회", user_goal_instruction: "보호자 등록과 아이 목적자금 조건만 사전에 확인한다.", compatible_memory_paths: [household.children, household.dependents, goals.child_education_goal], required_event_params: [], required_action_types: [], cue_template_ids: [relationship_adoption_weak_signal], weight: 1.0}
+  upcoming:
+    - {task_template_id: relationship_adoption_child_account_prepare, fa_code: FA-05, visible_task_ko: "아이 목적자금 계좌 준비", user_goal_instruction: "향후 보호할 아이를 위한 계좌 준비 절차를 문의한다.", compatible_memory_paths: [household.children, goals.child_education_goal], required_event_params: [], required_action_types: [], cue_template_ids: [relationship_adoption_upcoming], weight: 1.0}
+  occurred:
+    - {task_template_id: relationship_adoption_education_savings, fa_code: FA-09, visible_task_ko: "아이 교육저축 정기납입 설정", user_goal_instruction: "현재 보호 중인 아이를 위한 교육저축을 실제 설정한다.", compatible_memory_paths: [household.children, household.dependents, goals.child_education_goal], required_event_params: [], required_action_types: [], cue_template_ids: [relationship_adoption_occurred], weight: 1.0}
+  cancelled:
+    - {task_template_id: relationship_adoption_account_reminder_cancel, fa_code: FA-02, visible_task_ko: "아이 계좌 준비 알림 취소", user_goal_instruction: "아이 계좌 준비 계획을 취소하며 새 가족 정보가 반영되지 않았음을 말한다.", compatible_memory_paths: [household.children, goals.child_education_goal], required_event_params: [], required_action_types: [], cue_template_ids: [relationship_adoption_cancelled], weight: 1.0}
+
+relationship_dependent_addition:
+  weak_signal:
+    - {task_template_id: dependent_addition_transfer_precheck, fa_code: FA-01, visible_task_ko: "가족 지원 이체 조건 조회", user_goal_instruction: "지원 대상이 확정되기 전 이체 조건만 확인한다.", compatible_memory_paths: [household.dependents], required_event_params: [], required_action_types: [], cue_template_ids: [relationship_dependent_addition_weak_signal], weight: 1.0}
+  upcoming:
+    - {task_template_id: dependent_addition_transfer_prepare, fa_code: FA-04, visible_task_ko: "정기 지원 이체 조건 준비", user_goal_instruction: "향후 가족 지원을 위한 이체 조건을 준비한다.", compatible_memory_paths: [household.dependents], required_event_params: [], required_action_types: [], cue_template_ids: [relationship_dependent_addition_upcoming], weight: 1.0}
+  occurred:
+    - {task_template_id: dependent_addition_support_transfer, fa_code: FA-08, visible_task_ko: "생활비 정기지원 설정", user_goal_instruction: "현재 지원 대상에게 생활비를 정기적으로 보내도록 설정한다.", compatible_memory_paths: [household.dependents], required_event_params: [], required_action_types: [], cue_template_ids: [relationship_dependent_addition_occurred], weight: 1.0}
+  cancelled:
+    - {task_template_id: dependent_addition_transfer_cancel, fa_code: FA-02, visible_task_ko: "가족 지원 이체 준비 알림 취소", user_goal_instruction: "지원 준비가 취소돼 부양 상태가 현재화되지 않았음을 나타낸다.", compatible_memory_paths: [household.dependents], required_event_params: [], required_action_types: [], cue_template_ids: [relationship_dependent_addition_cancelled], weight: 1.0}
+
+relationship_dependent_end:
+  weak_signal:
+    - {task_template_id: dependent_end_transfer_review, fa_code: FA-01, visible_task_ko: "기존 지원 이체 내역 확인", user_goal_instruction: "지원 종료를 확정하지 않고 기존 이체만 확인한다.", compatible_memory_paths: [household.dependents], required_event_params: [], required_action_types: [], cue_template_ids: [relationship_dependent_end_weak_signal], weight: 1.0}
+  upcoming:
+    - {task_template_id: dependent_end_transfer_change_prepare, fa_code: FA-04, visible_task_ko: "정기 지원 감액 조건 확인", user_goal_instruction: "향후 정기 지원을 줄이거나 멈출 조건을 확인한다.", compatible_memory_paths: [household.dependents], required_event_params: [], required_action_types: [], cue_template_ids: [relationship_dependent_end_upcoming], weight: 1.0}
+  occurred:
+    - {task_template_id: dependent_end_transfer_stop, fa_code: FA-08, visible_task_ko: "기존 지원 정기이체 변경", user_goal_instruction: "기존 지원 이체를 현재 부양 상태에 맞춰 변경 또는 해지한다.", compatible_memory_paths: [household.dependents], required_event_params: [], required_action_types: [], cue_template_ids: [relationship_dependent_end_occurred], weight: 1.0}
+  cancelled:
+    - {task_template_id: dependent_end_change_cancel, fa_code: FA-02, visible_task_ko: "지원 이체 변경 알림 취소", user_goal_instruction: "지원 변경 계획을 취소하고 기존 지원 상태가 유지됨을 나타낸다.", compatible_memory_paths: [household.dependents], required_event_params: [], required_action_types: [], cue_template_ids: [relationship_dependent_end_cancelled], weight: 1.0}
+
+relationship_family_death:
+  weak_signal:
+    - {task_template_id: family_death_support_review, fa_code: FA-01, visible_task_ko: "가족 지원 이체 내역 확인", user_goal_instruction: "불확실한 상황에서 기존 가족 지원 내역만 확인한다.", compatible_memory_paths: [household.dependents, household.spouse_or_partner, cashflow.recent_one_off_expense], required_event_params: [], required_action_types: [], cue_template_ids: [relationship_family_death_weak_signal], weight: 1.0}
+  occurred:
+    - {task_template_id: family_death_funeral_transfer, fa_code: FA-07, visible_task_ko: "장례 비용 이체", user_goal_instruction: "실제로 발생한 장례 비용을 이체하거나 이체 내역을 확인한다.", compatible_memory_paths: [household.dependents, household.marital_status, household.spouse_or_partner, household.children, cashflow.recent_one_off_expense], required_event_params: [one_off_expense], required_action_types: [], cue_template_ids: [relationship_family_death_occurred], weight: 1.0}
+
+housing_move:
+  weak_signal:
+    - {task_template_id: housing_move_cost_precheck, fa_code: FA-04, visible_task_ko: "주거비 조건 조회", user_goal_instruction: "새 주소를 확정하지 않고 주거비와 이체 조건만 조회한다.", compatible_memory_paths: [housing.address, housing.residence_status, housing.contract_type, housing.rent_amount], required_event_params: [], required_action_types: [], cue_template_ids: [housing_move_weak_signal], weight: 1.0}
+  upcoming:
+    - {task_template_id: housing_move_deposit_limit, fa_code: FA-07, visible_task_ko: "보증금 이체 한도 확인", user_goal_instruction: "향후 주거 변경에 필요한 이체 한도를 미리 확인한다.", compatible_memory_paths: [housing.address, housing.residence_status, housing.contract_type, housing.rent_amount, housing.rent_payee], required_event_params: [], required_action_types: [], cue_template_ids: [housing_move_upcoming], weight: 1.0}
+  occurred:
+    - {task_template_id: housing_move_address_update, fa_code: FA-03, visible_task_ko: "현재 등록 주소 변경", user_goal_instruction: "실제 변경된 현재 주소를 금융기관 등록 정보에 반영한다.", compatible_memory_paths: [housing.address, housing.residence_status, housing.contract_type, housing.rent_amount, housing.rent_payee, housing.maintenance_fee_payee], required_event_params: [new_address], required_action_types: [], cue_template_ids: [housing_move_occurred], weight: 1.0}
+  cancelled:
+    - {task_template_id: housing_move_autopay_change_cancel, fa_code: FA-08, visible_task_ko: "주거비 납부처 변경 예약 취소", user_goal_instruction: "예정했던 납부처 변경을 취소하고 기존 주소가 현재임을 유지한다.", compatible_memory_paths: [housing.address, housing.rent_payee, housing.maintenance_fee_payee], required_event_params: [], required_action_types: [], cue_template_ids: [housing_move_cancelled], weight: 1.0}
+
+housing_home_purchase:
+  weak_signal:
+    - {task_template_id: home_purchase_loan_precheck, fa_code: FA-04, visible_task_ko: "주택대출 조건과 상환액 조회", user_goal_instruction: "계약이 확정되지 않은 상태에서 대출 조건만 조회한다.", compatible_memory_paths: [housing.properties, housing.mortgage_status, financial_products.loans], required_event_params: [], required_action_types: [], cue_template_ids: [housing_home_purchase_weak_signal], weight: 1.0}
+  upcoming:
+    - {task_template_id: home_purchase_balance_limit, fa_code: FA-07, visible_task_ko: "잔금 이체 한도 확인", user_goal_instruction: "향후 잔금 지급을 위한 이체 한도를 준비한다.", compatible_memory_paths: [housing.address, housing.properties, housing.mortgage_status, financial_products.loans], required_event_params: [], required_action_types: [], cue_template_ids: [housing_home_purchase_upcoming], weight: 1.0}
+  occurred:
+    - {task_template_id: home_purchase_mortgage_execute, fa_code: FA-10, visible_task_ko: "주담대 실행과 상환계좌 확인", user_goal_instruction: "실제 소유권과 대출 상태에 맞춰 대출 실행 또는 상환계좌를 확인한다.", compatible_memory_paths: [housing.address, housing.properties, housing.primary_residence_property_id, housing.mortgage_status, financial_products.loans], required_event_params: [], required_action_types: [], cue_template_ids: [housing_home_purchase_occurred], weight: 1.0}
+  cancelled:
+    - {task_template_id: home_purchase_loan_reminder_cancel, fa_code: FA-02, visible_task_ko: "대출 실행 일정 알림 취소", user_goal_instruction: "대출 실행 준비가 취소됐고 소유권이나 대출이 현재화되지 않았음을 드러낸다.", compatible_memory_paths: [housing.properties, housing.mortgage_status, financial_products.loans], required_event_params: [], required_action_types: [], cue_template_ids: [housing_home_purchase_cancelled], weight: 1.0}
+
+housing_home_sale:
+  weak_signal:
+    - {task_template_id: home_sale_repayment_precheck, fa_code: FA-04, visible_task_ko: "주택대출 중도상환 시뮬레이션", user_goal_instruction: "처분이 확정되지 않은 상태에서 대출 상환 조건만 조회한다.", compatible_memory_paths: [housing.properties, housing.mortgage_status, financial_products.loans], required_event_params: [], required_action_types: [], cue_template_ids: [housing_home_sale_weak_signal], weight: 1.0}
+  upcoming:
+    - {task_template_id: home_sale_balance_review, fa_code: FA-01, visible_task_ko: "담보대출 잔액과 상환 조건 확인", user_goal_instruction: "향후 정산을 위해 현재 대출 잔액을 확인한다.", compatible_memory_paths: [housing.properties, housing.mortgage_status, financial_products.loans], required_event_params: [], required_action_types: [], cue_template_ids: [housing_home_sale_upcoming], weight: 1.0}
+  occurred:
+    - {task_template_id: home_sale_loan_payoff, fa_code: FA-10, visible_task_ko: "담보대출 상환 처리", user_goal_instruction: "실제 처분 결과에 따라 남은 담보대출을 상환 또는 종료 확인한다.", compatible_memory_paths: [housing.properties, housing.primary_residence_property_id, housing.mortgage_status, financial_products.loans], required_event_params: [], required_action_types: [], cue_template_ids: [housing_home_sale_occurred], weight: 1.0}
+  cancelled:
+    - {task_template_id: home_sale_settlement_reminder_cancel, fa_code: FA-02, visible_task_ko: "대출 정산 일정 알림 취소", user_goal_instruction: "정산 계획을 취소하고 기존 소유 및 대출 상태를 유지한다.", compatible_memory_paths: [housing.properties, housing.mortgage_status, financial_products.loans], required_event_params: [], required_action_types: [], cue_template_ids: [housing_home_sale_cancelled], weight: 1.0}
+
+career_employment:
+  weak_signal:
+    - {task_template_id: career_employment_precheck, fa_code: FA-04, visible_task_ko: "재직 조건이 필요한 상품 조회", user_goal_instruction: "아직 새 직장이 확정되지 않은 상태에서 재직 조건과 급여계좌 등록 조건만 확인한다.", compatible_memory_paths: [employment.employment_status, employment.employer, employment.salary_day, employment.salary_account], required_event_params: [], required_action_types: [], cue_template_ids: [career_employment_weak_signal], weight: 1.0}
+  upcoming:
+    - {task_template_id: career_employment_salary_account_prepare, fa_code: FA-03, visible_task_ko: "급여계좌 등록 준비", user_goal_instruction: "다음 달부터 사용할 급여계좌 등록 절차를 문의하며 첫 입금을 완료처럼 표현하지 않는다.", compatible_memory_paths: [employment.employer, employment.salary_account, employment.salary_day], required_event_params: [], required_action_types: [], cue_template_ids: [career_employment_upcoming], weight: 1.0}
+  occurred:
+    - {task_template_id: career_employment_first_salary, fa_code: FA-03, visible_task_ko: "첫 급여 입금 확인과 급여계좌 등록", user_goal_instruction: "새 입금이 실제 발생했거나 급여계좌를 실제 등록하는 업무를 중심으로 한다.", compatible_memory_paths: [employment.employment_status, employment.employer, employment.salary_day, employment.salary_account], required_event_params: [], required_action_types: [], cue_template_ids: [career_employment_occurred], weight: 1.0}
+  cancelled:
+    - {task_template_id: career_employment_registration_cancel, fa_code: FA-02, visible_task_ko: "급여계좌 등록 일정 알림 취소", user_goal_instruction: "예정했던 등록을 취소하고 새 고용 정보가 현재가 되지 않았음을 분명히 한다.", compatible_memory_paths: [employment.employer, employment.salary_account], required_event_params: [], required_action_types: [], cue_template_ids: [career_employment_cancelled], weight: 1.0}
+
+career_reinstatement:
+  weak_signal:
+    - {task_template_id: career_reinstatement_account_precheck, fa_code: FA-04, visible_task_ko: "기존 급여계좌 사용 가능 여부 확인", user_goal_instruction: "업무 재개가 확정되기 전 기존 급여계좌 조건만 확인한다.", compatible_memory_paths: [employment.employment_status, employment.employer, employment.salary_account, employment.salary_day], required_event_params: [], required_action_types: [], cue_template_ids: [career_reinstatement_weak_signal], weight: 1.0}
+  upcoming:
+    - {task_template_id: career_reinstatement_deposit_prepare, fa_code: FA-03, visible_task_ko: "급여 입금 재개 계좌 확인", user_goal_instruction: "향후 입금이 재개될 계좌를 미리 확인한다.", compatible_memory_paths: [employment.employer, employment.salary_account, employment.salary_day], required_event_params: [], required_action_types: [], cue_template_ids: [career_reinstatement_upcoming], weight: 1.0}
+  occurred:
+    - {task_template_id: career_reinstatement_salary_return, fa_code: FA-03, visible_task_ko: "급여 재입금 확인", user_goal_instruction: "실제로 재개된 급여 입금과 계좌 등록 상태를 확인한다.", compatible_memory_paths: [employment.employment_status, employment.employer, employment.salary_account, employment.salary_day], required_event_params: [], required_action_types: [], cue_template_ids: [career_reinstatement_occurred], weight: 1.0}
+  cancelled:
+    - {task_template_id: career_reinstatement_reminder_cancel, fa_code: FA-02, visible_task_ko: "급여 입금 재개 알림 취소", user_goal_instruction: "입금 재개 계획이 취소됐고 고용 정보가 현재화되지 않았음을 드러낸다.", compatible_memory_paths: [employment.employer, employment.salary_account], required_event_params: [], required_action_types: [], cue_template_ids: [career_reinstatement_cancelled], weight: 1.0}
+
+career_job_change:
+  weak_signal:
+    - {task_template_id: career_job_change_income_precheck, fa_code: FA-04, visible_task_ko: "소득 조건 금융상품 재조회", user_goal_instruction: "변경이 확정되지 않은 상태에서 소득 조건만 다시 조회한다.", compatible_memory_paths: [employment.employer, employment.salary_account, employment.salary_day], required_event_params: [], required_action_types: [], cue_template_ids: [career_job_change_weak_signal], weight: 1.0}
+  upcoming:
+    - {task_template_id: career_job_change_payroll_prepare, fa_code: FA-03, visible_task_ko: "새 급여계좌와 입금명 사전 확인", user_goal_instruction: "향후 사용할 급여계좌와 입금명을 미래 정보로 확인한다.", compatible_memory_paths: [employment.employer, employment.salary_account, employment.salary_day], required_event_params: [], required_action_types: [], cue_template_ids: [career_job_change_upcoming], weight: 1.0}
+  occurred:
+    - {task_template_id: career_job_change_payroll_update, fa_code: FA-03, visible_task_ko: "새 고용주 입금 확인과 급여계좌 변경", user_goal_instruction: "실제 새 입금 또는 급여계좌 변경을 확인한다.", compatible_memory_paths: [employment.employer, employment.salary_account, employment.salary_day], required_event_params: [], required_action_types: [], cue_template_ids: [career_job_change_occurred], weight: 1.0}
+  cancelled:
+    - {task_template_id: career_job_change_payroll_cancel, fa_code: FA-02, visible_task_ko: "급여계좌 변경 알림 취소", user_goal_instruction: "계좌 변경 계획이 취소돼 기존 고용 정보가 유지됨을 나타낸다.", compatible_memory_paths: [employment.employer, employment.salary_account, employment.salary_day], required_event_params: [], required_action_types: [], cue_template_ids: [career_job_change_cancelled], weight: 1.0}
+
+career_leave_of_absence:
+  weak_signal:
+    - {task_template_id: career_leave_cashflow_review, fa_code: FA-01, visible_task_ko: "급여연동 지출과 저축 내역 확인", user_goal_instruction: "소득 변화가 확정되기 전 연결된 지출과 저축만 확인한다.", compatible_memory_paths: [employment.employment_status, employment.income_stability, employment.salary_account, employment.salary_day], required_event_params: [], required_action_types: [], cue_template_ids: [career_leave_of_absence_weak_signal], weight: 1.0}
+  upcoming:
+    - {task_template_id: career_leave_income_schedule, fa_code: FA-01, visible_task_ko: "급여 입금 일정과 자동저축 확인", user_goal_instruction: "향후 소득 변동에 앞서 급여 일정과 자동저축을 확인한다.", compatible_memory_paths: [employment.employment_status, employment.income_stability, employment.salary_day], required_event_params: [], required_action_types: [], cue_template_ids: [career_leave_of_absence_upcoming], weight: 1.0}
+  occurred:
+    - {task_template_id: career_leave_savings_review, fa_code: FA-08, visible_task_ko: "급여연동 자동저축 일정 점검", user_goal_instruction: "현재 소득 상태에 맞춰 급여연동 저축 설정을 점검한다.", compatible_memory_paths: [employment.employment_status, employment.income_stability, employment.salary_account, employment.salary_day], required_event_params: [], required_action_types: [], cue_template_ids: [career_leave_of_absence_occurred], weight: 1.0}
+  cancelled:
+    - {task_template_id: career_leave_income_alert_cancel, fa_code: FA-02, visible_task_ko: "소득 변동 대비 알림 취소", user_goal_instruction: "예정했던 소득 변동 계획을 취소하고 현재 급여 상태가 유지됨을 말한다.", compatible_memory_paths: [employment.income_stability], required_event_params: [], required_action_types: [], cue_template_ids: [career_leave_of_absence_cancelled], weight: 1.0}
+
+career_employment_end:
+  weak_signal:
+    - {task_template_id: employment_end_linked_review, fa_code: FA-01, visible_task_ko: "고정지출과 급여연동 설정 조회", user_goal_instruction: "고용 변화는 확정하지 않고 급여연동 설정만 확인한다.", compatible_memory_paths: [employment.employment_status, employment.employer, employment.income_stability, employment.salary_account, employment.salary_day], required_event_params: [], required_action_types: [], cue_template_ids: [career_employment_end_weak_signal], weight: 1.0}
+  upcoming:
+    - {task_template_id: employment_end_last_salary, fa_code: FA-01, visible_task_ko: "마지막 급여 입금과 자동저축 확인", user_goal_instruction: "향후 마지막 입금과 자동저축 조정 필요성을 준비한다.", compatible_memory_paths: [employment.employment_status, employment.employer, employment.income_stability, employment.salary_day], required_event_params: [], required_action_types: [], cue_template_ids: [career_employment_end_upcoming], weight: 1.0}
+  occurred:
+    - {task_template_id: employment_end_linked_settings, fa_code: FA-08, visible_task_ko: "급여연동 자동저축과 납부 설정 점검", user_goal_instruction: "급여 유입 종료 후 연결된 저축과 납부 설정을 실제 상태에 맞춰 점검한다.", compatible_memory_paths: [employment.employment_status, employment.employer, employment.income_stability, employment.salary_account, employment.salary_day], required_event_params: [], required_action_types: [], cue_template_ids: [career_employment_end_occurred], weight: 1.0}
+  cancelled:
+    - {task_template_id: employment_end_alert_cancel, fa_code: FA-02, visible_task_ko: "급여연동 변경 알림 취소", user_goal_instruction: "고용 종료 계획이 취소돼 기존 급여 설정이 유지됨을 나타낸다.", compatible_memory_paths: [employment.employment_status, employment.income_stability], required_event_params: [], required_action_types: [], cue_template_ids: [career_employment_end_cancelled], weight: 1.0}
+
+career_self_employment:
+  weak_signal:
+    - {task_template_id: self_employment_business_precheck, fa_code: FA-04, visible_task_ko: "사업자 금융상품 조건 조회", user_goal_instruction: "사업 시작을 확정하지 않고 사업자 금융 조건만 조회한다.", compatible_memory_paths: [employment.employment_status, employment.employer, employment.income_stability], required_event_params: [], required_action_types: [], cue_template_ids: [career_self_employment_weak_signal], weight: 1.0}
+  upcoming:
+    - {task_template_id: self_employment_expense_account_prepare, fa_code: FA-05, visible_task_ko: "사업비용 분리계좌 준비", user_goal_instruction: "향후 사업비용을 분리할 계좌를 준비한다.", compatible_memory_paths: [employment.employment_status, employment.employer, employment.income_stability], required_event_params: [], required_action_types: [], cue_template_ids: [career_self_employment_upcoming], weight: 1.0}
+  occurred:
+    - {task_template_id: self_employment_expense_autopay, fa_code: FA-08, visible_task_ko: "사업비용 자동납부 설정", user_goal_instruction: "현재 사업 소득 구조에 맞춰 사업비용 자동납부를 설정한다.", compatible_memory_paths: [employment.employment_status, employment.employer, employment.income_stability, employment.salary_day], required_event_params: [], required_action_types: [], cue_template_ids: [career_self_employment_occurred], weight: 1.0}
+  cancelled:
+    - {task_template_id: self_employment_account_cancel, fa_code: FA-05, visible_task_ko: "사업비용 분리계좌 준비 취소", user_goal_instruction: "사업계좌 준비가 취소되고 고용 상태가 바뀌지 않았음을 말한다.", compatible_memory_paths: [employment.employment_status, employment.employer], required_event_params: [], required_action_types: [], cue_template_ids: [career_self_employment_cancelled], weight: 1.0}
+
+education_self_program_start:
+  weak_signal:
+    - {task_template_id: self_program_cost_precheck, fa_code: FA-04, visible_task_ko: "교육비 대출과 저축 조건 조회", user_goal_instruction: "과정 등록이 확정되지 않은 상태에서 교육비 조달 조건만 조회한다.", compatible_memory_paths: [education.self_education_status], required_event_params: [], required_action_types: [], cue_template_ids: [education_self_program_start_weak_signal], weight: 1.0}
+  upcoming:
+    - {task_template_id: self_program_tuition_prepare, fa_code: FA-02, visible_task_ko: "등록금 납부 일정 알림 설정", user_goal_instruction: "향후 등록금 납부일을 준비하되 납부 완료처럼 표현하지 않는다.", compatible_memory_paths: [education.self_education_status], required_event_params: [], required_action_types: [], cue_template_ids: [education_self_program_start_upcoming], weight: 1.0}
+  occurred:
+    - {task_template_id: self_program_tuition_transfer, fa_code: FA-07, visible_task_ko: "등록금 이체와 교육비 납부 확인", user_goal_instruction: "실제로 시작된 과정의 등록금 이체 또는 납부 내역을 확인한다.", compatible_memory_paths: [education.self_education_status], required_event_params: [], required_action_types: [], cue_template_ids: [education_self_program_start_occurred], weight: 1.0}
+  cancelled:
+    - {task_template_id: self_program_tuition_alert_cancel, fa_code: FA-02, visible_task_ko: "등록금 납부 알림 취소", user_goal_instruction: "등록 계획이 취소돼 교육 상태가 현재화되지 않았음을 드러낸다.", compatible_memory_paths: [education.self_education_status], required_event_params: [], required_action_types: [], cue_template_ids: [education_self_program_start_cancelled], weight: 1.0}
+
+education_child_stage_entry:
+  weak_signal:
+    - {task_template_id: child_stage_savings_review, fa_code: FA-02, visible_task_ko: "교육비 목적저축 일정 조회", user_goal_instruction: "새 교육 단계가 확정되지 않은 상태에서 목적저축 일정만 조회한다.", compatible_memory_paths: [education.child_education_stage, goals.child_education_goal], required_event_params: [], required_action_types: [], cue_template_ids: [education_child_stage_entry_weak_signal], weight: 1.0}
+  upcoming:
+    - {task_template_id: child_stage_autopay_prepare, fa_code: FA-09, visible_task_ko: "교육비 목적저축 증액 준비", user_goal_instruction: "향후 교육비 증가에 맞춘 저축 증액을 준비한다.", compatible_memory_paths: [education.child_education_stage, goals.child_education_goal], required_event_params: [], required_action_types: [], cue_template_ids: [education_child_stage_entry_upcoming], weight: 1.0}
+  occurred:
+    - {task_template_id: child_stage_autopay_update, fa_code: FA-08, visible_task_ko: "교육비 자동이체 금액 변경", user_goal_instruction: "현재 교육 단계에 맞춰 교육비 이체 또는 저축액을 실제 변경한다.", compatible_memory_paths: [education.child_education_stage, goals.child_education_goal], required_event_params: [], required_action_types: [], cue_template_ids: [education_child_stage_entry_occurred], weight: 1.0}
+  cancelled:
+    - {task_template_id: child_stage_alert_cancel, fa_code: FA-02, visible_task_ko: "교육비 증액 일정 알림 취소", user_goal_instruction: "교육비 변경 계획을 취소하고 기존 단계가 유지됨을 나타낸다.", compatible_memory_paths: [education.child_education_stage, goals.child_education_goal], required_event_params: [], required_action_types: [], cue_template_ids: [education_child_stage_entry_cancelled], weight: 1.0}
+
+education_study_abroad:
+  weak_signal:
+    - {task_template_id: study_abroad_fx_precheck, fa_code: FA-04, visible_task_ko: "해외 교육비 송금 조건 조회", user_goal_instruction: "해외 과정이 확정되지 않은 상태에서 교육비 송금 조건만 조회한다.", compatible_memory_paths: [education.self_education_status], required_event_params: [], required_action_types: [], cue_template_ids: [education_study_abroad_weak_signal], weight: 1.0}
+  upcoming:
+    - {task_template_id: study_abroad_fx_account_prepare, fa_code: FA-05, visible_task_ko: "해외 교육비 외화계좌 준비", user_goal_instruction: "향후 교육비 송금을 위한 외화계좌를 준비한다.", compatible_memory_paths: [education.self_education_status], required_event_params: [], required_action_types: [], cue_template_ids: [education_study_abroad_upcoming], weight: 1.0}
+  occurred:
+    - {task_template_id: study_abroad_tuition_transfer, fa_code: FA-07, visible_task_ko: "해외 교육비 송금", user_goal_instruction: "실제 해외 과정의 교육비를 송금하거나 송금 내역을 확인한다.", compatible_memory_paths: [education.self_education_status], required_event_params: [], required_action_types: [], cue_template_ids: [education_study_abroad_occurred], weight: 1.0}
+  cancelled:
+    - {task_template_id: study_abroad_fx_account_cancel, fa_code: FA-05, visible_task_ko: "해외 교육비 계좌 준비 취소", user_goal_instruction: "해외 교육비 계좌 준비를 취소하고 교육 상태가 바뀌지 않았음을 말한다.", compatible_memory_paths: [education.self_education_status], required_event_params: [], required_action_types: [], cue_template_ids: [education_study_abroad_cancelled], weight: 1.0}
+
+retirement_start:
+  weak_signal:
+    - {task_template_id: retirement_income_precheck, fa_code: FA-04, visible_task_ko: "연금 수령액과 생활비 조건 조회", user_goal_instruction: "근로 종료가 확정되지 않은 상태에서 향후 현금흐름만 조회한다.", compatible_memory_paths: [employment.employment_status, employment.income_stability, employment.salary_day, financial_products.pension_or_irp], required_event_params: [], required_action_types: [], cue_template_ids: [retirement_start_weak_signal], weight: 1.0}
+  upcoming:
+    - {task_template_id: retirement_cashflow_prepare, fa_code: FA-04, visible_task_ko: "연금 수령과 자동저축 전환 준비", user_goal_instruction: "향후 급여 중단과 연금 현금흐름 전환을 준비한다.", compatible_memory_paths: [employment.employment_status, employment.income_stability, employment.salary_day, financial_products.pension_or_irp], required_event_params: [], required_action_types: [], cue_template_ids: [retirement_start_upcoming], weight: 1.0}
+  occurred:
+    - {task_template_id: retirement_savings_transition, fa_code: FA-09, visible_task_ko: "급여연동 저축과 연금 납입 전환", user_goal_instruction: "현재 근로 및 연금 상태에 맞춰 저축 납입을 전환한다.", compatible_memory_paths: [employment.employment_status, employment.income_stability, employment.salary_day, financial_products.pension_or_irp], required_event_params: [], required_action_types: [], cue_template_ids: [retirement_start_occurred], weight: 1.0}
+  cancelled:
+    - {task_template_id: retirement_transition_alert_cancel, fa_code: FA-02, visible_task_ko: "현금흐름 전환 알림 취소", user_goal_instruction: "전환 계획을 취소하고 현재 근로 상태가 유지됨을 나타낸다.", compatible_memory_paths: [employment.employment_status, financial_products.pension_or_irp], required_event_params: [], required_action_types: [], cue_template_ids: [retirement_start_cancelled], weight: 1.0}
+
+retirement_pension_start:
+  weak_signal:
+    - {task_template_id: pension_start_amount_precheck, fa_code: FA-04, visible_task_ko: "연금 예상 수령액 조회", user_goal_instruction: "수령 개시가 확정되지 않은 상태에서 예상액만 조회한다.", compatible_memory_paths: [financial_products.pension_or_irp, employment.employment_status], required_event_params: [], required_action_types: [], cue_template_ids: [retirement_pension_start_weak_signal], weight: 1.0}
+  upcoming:
+    - {task_template_id: pension_start_account_prepare, fa_code: FA-03, visible_task_ko: "연금 수령계좌 등록 준비", user_goal_instruction: "향후 연금이 들어올 계좌를 미리 등록 준비한다.", compatible_memory_paths: [financial_products.pension_or_irp, employment.employment_status], required_event_params: [], required_action_types: [], cue_template_ids: [retirement_pension_start_upcoming], weight: 1.0}
+  occurred:
+    - {task_template_id: pension_start_deposit_confirm, fa_code: FA-03, visible_task_ko: "첫 연금 입금과 수령계좌 확인", user_goal_instruction: "실제 연금 입금 또는 수령계좌 등록 완료를 확인한다.", compatible_memory_paths: [financial_products.pension_or_irp, employment.employment_status], required_event_params: [], required_action_types: [], cue_template_ids: [retirement_pension_start_occurred], weight: 1.0}
+  cancelled:
+    - {task_template_id: pension_start_alert_cancel, fa_code: FA-02, visible_task_ko: "연금 입금 시작 알림 취소", user_goal_instruction: "수령 개시 계획을 취소하고 연금 상태가 현재화되지 않았음을 드러낸다.", compatible_memory_paths: [financial_products.pension_or_irp], required_event_params: [], required_action_types: [], cue_template_ids: [retirement_pension_start_cancelled], weight: 1.0}
+
+crisis_health_event:
+  weak_signal:
+    - {task_template_id: health_cost_history_review, fa_code: FA-01, visible_task_ko: "의료비 지출 내역 확인", user_goal_instruction: "건강 결과를 확정하지 않고 기존 의료비 내역만 확인한다.", compatible_memory_paths: [cashflow.recent_one_off_expense], required_event_params: [], required_action_types: [], cue_template_ids: [crisis_health_event_weak_signal], weight: 1.0}
+  upcoming:
+    - {task_template_id: health_cost_limit_prepare, fa_code: FA-04, visible_task_ko: "예정 의료비 결제 한도 확인", user_goal_instruction: "향후 예정된 비용에 필요한 한도를 준비한다.", compatible_memory_paths: [cashflow.recent_one_off_expense], required_event_params: [], required_action_types: [], cue_template_ids: [crisis_health_event_upcoming], weight: 1.0}
+  occurred:
+    - {task_template_id: health_cost_transfer, fa_code: FA-07, visible_task_ko: "의료비 이체와 납부 내역 확인", user_goal_instruction: "실제로 발생한 의료비를 이체하거나 납부 내역을 확인한다.", compatible_memory_paths: [cashflow.recent_one_off_expense], required_event_params: [one_off_expense], required_action_types: [], cue_template_ids: [crisis_health_event_occurred], weight: 1.0}
+  cancelled:
+    - {task_template_id: health_cost_alert_cancel, fa_code: FA-02, visible_task_ko: "예정 의료비 알림 취소", user_goal_instruction: "예정 비용 계획이 취소돼 새 지출이 발생하지 않았음을 드러낸다.", compatible_memory_paths: [cashflow.recent_one_off_expense], required_event_params: [], required_action_types: [], cue_template_ids: [crisis_health_event_cancelled], weight: 1.0}
+
+crisis_accident_or_disaster:
+  occurred:
+    - {task_template_id: disaster_emergency_transfer, fa_code: FA-07, visible_task_ko: "긴급 복구비 이체와 지출 확인", user_goal_instruction: "실제로 발생한 긴급 복구비를 이체하거나 지출 내역을 확인한다.", compatible_memory_paths: [cashflow.recent_one_off_expense], required_event_params: [one_off_expense], required_action_types: [], cue_template_ids: [crisis_accident_or_disaster_occurred], weight: 1.0}
+
+crisis_financial_fraud:
+  occurred:
+    - {task_template_id: fraud_payment_stop, fa_code: FA-06, visible_task_ko: "의심 거래 확인과 계좌 지급정지", user_goal_instruction: "의심 거래를 확인하고 카드 또는 계좌를 즉시 보호하는 사고 대응만 수행한다.", compatible_memory_paths: [cashflow.recent_one_off_expense], required_event_params: [one_off_expense], required_action_types: [], cue_template_ids: [crisis_financial_fraud_occurred], weight: 1.0}

@@ -33,6 +33,34 @@
           ],
           "default": null,
           "title": "Linked Memory Path"
+        },
+        "linked_memory_operation": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Linked Memory Operation"
+        },
+        "linked_memory_value": {
+          "default": null,
+          "title": "Linked Memory Value"
+        },
+        "evidence_text": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Evidence Text"
         }
       },
       "required": [
@@ -152,6 +180,49 @@
           "title": "Financial Task",
           "type": "string"
         },
+        "task_template_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Task Template Id"
+        },
+        "task_selection_score": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Task Selection Score"
+        },
+        "task_selection_reasons": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Task Selection Reasons",
+          "type": "array"
+        },
+        "task_grounding_paths": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Task Grounding Paths",
+          "type": "array"
+        },
+        "task_used_generic_fallback": {
+          "default": false,
+          "title": "Task Used Generic Fallback",
+          "type": "boolean"
+        },
         "must_include_cues": {
           "items": {
             "type": "string"
@@ -159,11 +230,39 @@
           "title": "Must Include Cues",
           "type": "array"
         },
+        "planned_cues": {
+          "items": {
+            "$ref": "#/$defs/PlannedCue"
+          },
+          "title": "Planned Cues",
+          "type": "array"
+        },
         "must_not_include_terms": {
           "items": {
             "type": "string"
           },
           "title": "Must Not Include Terms",
+          "type": "array"
+        },
+        "evidence_memory_paths": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Memory Paths",
+          "type": "array"
+        },
+        "session_update_paths": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Session Update Paths",
+          "type": "array"
+        },
+        "event_update_paths": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Event Update Paths",
           "type": "array"
         },
         "target_memory_paths": {
@@ -179,6 +278,152 @@
           },
           "title": "Target Action Ids",
           "type": "array"
+        },
+        "action_impact_types": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Action Impact Types",
+          "type": "array"
+        },
+        "evidence_bundle_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Evidence Bundle Id"
+        },
+        "evidence_stage_index": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Evidence Stage Index"
+        },
+        "evidence_stage_count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Evidence Stage Count"
+        },
+        "prior_planned_cue_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Prior Planned Cue Ids",
+          "type": "array"
+        },
+        "cumulative_cue_ids_after_session": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Cumulative Cue Ids After Session",
+          "type": "array"
+        },
+        "stale_memory_pairs": {
+          "items": {
+            "$ref": "#/$defs/StaleMemoryPair"
+          },
+          "title": "Stale Memory Pairs",
+          "type": "array"
+        },
+        "hard_negative_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Hard Negative Type"
+        },
+        "near_miss_event_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Near Miss Event Id"
+        },
+        "near_miss_explanation": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Near Miss Explanation"
+        },
+        "protected_memory_paths": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Protected Memory Paths",
+          "type": "array"
+        },
+        "expected_memory_operation": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Expected Memory Operation"
+        },
+        "filler_allowed_month_range": {
+          "anyOf": [
+            {
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "integer"
+                }
+              ],
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Filler Allowed Month Range"
+        },
+        "filler_placement_overflow": {
+          "default": false,
+          "title": "Filler Placement Overflow",
+          "type": "boolean"
         },
         "structured_context": {
           "additionalProperties": true,
@@ -205,6 +450,98 @@
       "title": "DialogueGenerationPlan",
       "type": "object"
     },
+    "PlannedCue": {
+      "description": "Structured, lifecycle-calibrated evidence requested from a dialogue.",
+      "properties": {
+        "cue_id": {
+          "title": "Cue Id",
+          "type": "string"
+        },
+        "semantic_instruction_ko": {
+          "title": "Semantic Instruction Ko",
+          "type": "string"
+        },
+        "status": {
+          "title": "Status",
+          "type": "string"
+        },
+        "linked_memory_paths": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Linked Memory Paths",
+          "type": "array"
+        },
+        "required_value_source": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Required Value Source"
+        },
+        "required_value": {
+          "default": null,
+          "title": "Required Value"
+        },
+        "exact_surface_required": {
+          "default": false,
+          "title": "Exact Surface Required",
+          "type": "boolean"
+        },
+        "surface_hint": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Surface Hint"
+        },
+        "cue_role": {
+          "title": "Cue Role",
+          "type": "string"
+        },
+        "linked_memory_operation": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Linked Memory Operation"
+        },
+        "allow_reuse_across_statuses": {
+          "default": false,
+          "title": "Allow Reuse Across Statuses",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "cue_id",
+        "semantic_instruction_ko",
+        "status",
+        "cue_role"
+      ],
+      "title": "PlannedCue",
+      "type": "object"
+    },
     "QualitySelfCheck": {
       "properties": {
         "no_direct_life_event_mention": {
@@ -229,6 +566,51 @@
         }
       },
       "title": "QualitySelfCheck",
+      "type": "object"
+    },
+    "StaleMemoryPair": {
+      "properties": {
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "old_value": {
+          "title": "Old Value"
+        },
+        "current_value": {
+          "title": "Current Value"
+        },
+        "old_valid_until": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Old Valid Until"
+        },
+        "current_valid_from": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Current Valid From"
+        }
+      },
+      "required": [
+        "path",
+        "old_value",
+        "current_value"
+      ],
+      "title": "StaleMemoryPair",
       "type": "object"
     },
     "Turn": {

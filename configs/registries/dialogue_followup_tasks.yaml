@@ -1,0 +1,76 @@
+# Path-aware tasks used only after an occurred event.
+employment.employer:
+  consequence: {task_template_id: followup_current_employer_deposit, fa_code: FA-01, visible_task_ko: "최근 급여 입금명 확인"}
+  stale_recall: {task_template_id: stale_previous_employer_deposit, fa_code: FA-01, visible_task_ko: "이전 입금명으로 남은 설정 확인"}
+employment.employment_status:
+  consequence: {task_template_id: followup_current_income_status, fa_code: FA-01, visible_task_ko: "현재 소득 연결 설정 확인"}
+  stale_recall: {task_template_id: stale_previous_income_status, fa_code: FA-01, visible_task_ko: "이전 소득 상태 기준 설정 확인"}
+employment.income_stability:
+  consequence: {task_template_id: followup_income_stability, fa_code: FA-04, visible_task_ko: "현재 소득 기준 납입 여력 조회"}
+  stale_recall: {task_template_id: stale_income_stability, fa_code: FA-01, visible_task_ko: "이전 소득 기준 자동저축 확인"}
+employment.salary_account:
+  consequence: {task_template_id: followup_salary_account, fa_code: FA-01, visible_task_ko: "현재 급여계좌 입금 확인"}
+  stale_recall: {task_template_id: stale_salary_account, fa_code: FA-01, visible_task_ko: "이전 급여계좌 연결 설정 확인"}
+employment.salary_day:
+  consequence: {task_template_id: followup_salary_day, fa_code: FA-01, visible_task_ko: "최근 급여 입금일 확인"}
+  stale_recall: {task_template_id: stale_salary_day, fa_code: FA-01, visible_task_ko: "기존 급여일 기준 자동저축 설정 확인"}
+housing.address:
+  consequence: {task_template_id: followup_current_address, fa_code: FA-01, visible_task_ko: "현재 등록 주소 확인"}
+  stale_recall: {task_template_id: stale_previous_address, fa_code: FA-01, visible_task_ko: "이전 주소로 남은 납부와 알림 정보 확인"}
+housing.residence_status:
+  consequence: {task_template_id: followup_residence_status, fa_code: FA-01, visible_task_ko: "현재 주거비 납부 방식 확인"}
+  stale_recall: {task_template_id: stale_residence_status, fa_code: FA-01, visible_task_ko: "이전 주거방식 기준 납부 설정 확인"}
+housing.contract_type:
+  consequence: {task_template_id: followup_contract_type, fa_code: FA-01, visible_task_ko: "현재 주거계약 납부 조건 확인"}
+  stale_recall: {task_template_id: stale_contract_type, fa_code: FA-01, visible_task_ko: "이전 계약 조건으로 남은 알림 확인"}
+housing.rent_amount:
+  consequence: {task_template_id: followup_rent_amount, fa_code: FA-01, visible_task_ko: "현재 주거비 이체 금액 확인"}
+  stale_recall: {task_template_id: stale_rent_amount, fa_code: FA-01, visible_task_ko: "이전 주거비 금액의 정기이체 확인"}
+housing.rent_payee:
+  consequence: {task_template_id: followup_rent_payee, fa_code: FA-01, visible_task_ko: "현재 월세 납부처 확인"}
+  stale_recall: {task_template_id: stale_rent_payee, fa_code: FA-01, visible_task_ko: "이전 수취인으로 된 정기이체 확인"}
+housing.maintenance_fee_payee:
+  consequence: {task_template_id: followup_maintenance_payee, fa_code: FA-01, visible_task_ko: "현재 관리비 납부처 확인"}
+  stale_recall: {task_template_id: stale_maintenance_payee, fa_code: FA-01, visible_task_ko: "이전 관리비 수취인 설정 확인"}
+housing.properties:
+  consequence: {task_template_id: followup_property, fa_code: FA-01, visible_task_ko: "현재 보유 주택 금융정보 확인"}
+  stale_recall: {task_template_id: stale_property, fa_code: FA-01, visible_task_ko: "이전 보유 주택에 연결된 납부 확인"}
+housing.primary_residence_property_id:
+  consequence: {task_template_id: followup_primary_property, fa_code: FA-01, visible_task_ko: "현재 주거 주택 연결정보 확인"}
+  stale_recall: {task_template_id: stale_primary_property, fa_code: FA-01, visible_task_ko: "이전 주거 주택에 남은 설정 확인"}
+housing.mortgage_status:
+  consequence: {task_template_id: followup_mortgage, fa_code: FA-01, visible_task_ko: "현재 담보대출 상태 확인"}
+  stale_recall: {task_template_id: stale_mortgage, fa_code: FA-01, visible_task_ko: "이전 담보대출 상환 설정 확인"}
+financial_products.loans:
+  consequence: {task_template_id: followup_loans, fa_code: FA-01, visible_task_ko: "현재 대출잔액과 상환일 확인"}
+  stale_recall: {task_template_id: stale_loans, fa_code: FA-01, visible_task_ko: "종전 대출 상환계좌 설정 확인"}
+household.marital_status:
+  consequence: {task_template_id: followup_household_expense, fa_code: FA-01, visible_task_ko: "현재 생활비 분담 이체 확인"}
+  stale_recall: {task_template_id: stale_household_expense, fa_code: FA-01, visible_task_ko: "이전 생활비 분담 기준 이체 확인"}
+household.spouse_or_partner:
+  consequence: {task_template_id: followup_partner_transfer, fa_code: FA-01, visible_task_ko: "공동 생활비 이체 대상 확인"}
+  stale_recall: {task_template_id: stale_partner_transfer, fa_code: FA-01, visible_task_ko: "이전 생활비 이체 대상 확인"}
+household.children:
+  consequence: {task_template_id: followup_child_savings, fa_code: FA-01, visible_task_ko: "현재 아이 목적저축 연결정보 확인"}
+  stale_recall: {task_template_id: stale_child_savings, fa_code: FA-01, visible_task_ko: "이전 아이 정보로 남은 목적저축 확인"}
+household.dependents:
+  consequence: {task_template_id: followup_dependent_transfer, fa_code: FA-01, visible_task_ko: "현재 가족 지원 이체 확인"}
+  stale_recall: {task_template_id: stale_dependent_transfer, fa_code: FA-01, visible_task_ko: "이전 지원 대상 기준 정기이체 확인"}
+household.child_support_arrangement:
+  consequence: {task_template_id: followup_child_support, fa_code: FA-01, visible_task_ko: "현재 양육비 이체 조건 확인"}
+  stale_recall: {task_template_id: stale_child_support, fa_code: FA-01, visible_task_ko: "이전 양육비 조건의 정기이체 확인"}
+goals.child_education_goal:
+  consequence: {task_template_id: followup_child_goal, fa_code: FA-01, visible_task_ko: "현재 아이 교육저축 목표 확인"}
+  stale_recall: {task_template_id: stale_child_goal, fa_code: FA-01, visible_task_ko: "이전 교육저축 목표 설정 확인"}
+education.self_education_status:
+  consequence: {task_template_id: followup_self_education, fa_code: FA-01, visible_task_ko: "현재 교육비 납부 내역 확인"}
+  stale_recall: {task_template_id: stale_self_education, fa_code: FA-01, visible_task_ko: "이전 교육비 납부 설정 확인"}
+education.child_education_stage:
+  consequence: {task_template_id: followup_child_stage, fa_code: FA-01, visible_task_ko: "현재 교육비 자동이체 확인"}
+  stale_recall: {task_template_id: stale_child_stage, fa_code: FA-01, visible_task_ko: "이전 교육단계 기준 자동이체 확인"}
+financial_products.pension_or_irp:
+  consequence: {task_template_id: followup_pension, fa_code: FA-01, visible_task_ko: "현재 연금 입금과 납입 상태 확인"}
+  stale_recall: {task_template_id: stale_pension, fa_code: FA-01, visible_task_ko: "이전 연금 납입 설정 확인"}
+cashflow.recent_one_off_expense:
+  consequence: {task_template_id: followup_one_off_expense, fa_code: FA-01, visible_task_ko: "최근 일회성 지출 내역 확인"}
+  stale_recall: {task_template_id: stale_one_off_expense, fa_code: FA-01, visible_task_ko: "이전 일회성 지출 분류 확인"}

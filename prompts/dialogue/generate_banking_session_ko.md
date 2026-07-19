@@ -17,6 +17,7 @@
 - 은행 업무(financial_task): {financial_task}
 - 이벤트 상태(내부 정보): {event_status}
 - 반드시 자연스럽게 포함할 단서 표현: {must_include_cues}
+- 의미를 보존해 자연스럽게 표현할 구조화 단서: {planned_cues}
 - 절대 등장하면 안 되는 표현: {must_not_include_terms}
 - cue_annotations에서 연결 가능한 memory path: {target_memory_paths}
 - 구조화된 사실 컨텍스트: {structured_context}
@@ -44,9 +45,10 @@
 17. 현재 고객 상태와 충돌하는 세부사항을 만들지 않습니다. 예를 들어 retired/unemployed/student/homemaker 고객에게 월급일·급여 받는 계좌를 말하게 하지 않고, owner/jeonse/family_home 고객에게 월세·집주인 납부를 말하게 하지 않습니다.
 18. 오프라인 지점/창구 상황처럼 쓰지 않습니다. 다음 표현과 장면은 금지합니다: 창구, 영업점, 방문, 안내 창구, 모시겠습니다, 신분증 지참, 실물 신분증, 신청서 작성, 서명, 출력, 우편 발송, 우편 배송, 배송, 방문 수령, 창구 수령, 실물 수령. 필요한 확인은 앱 인증, 본인인증, 확인 버튼, 메뉴 이동, 알림/문자 안내처럼 비대면 흐름으로 표현합니다.
 19. 절대 등장하면 안 되는 표현과 금지 표현은 user와 assistant 양쪽 모두에 적용됩니다. assistant의 선택지, 예시, 확인 질문에도 넣지 않습니다.
-20. 구조화된 사실 컨텍스트의 event.params, session_memory_updates, event_memory_updates, persona_state, current_memory와 충돌하는 주소·금액·가족관계·고용·주거 정보를 만들지 않습니다. 제공되지 않은 구체값은 새로 만들지 말고 일반 표현을 사용합니다.
+20. 구조화된 사실 컨텍스트의 event.params, session_memory_updates, event_memory_updates, current_state, current_financial_memory와 충돌하는 주소·금액·가족관계·고용·주거 정보를 만들지 않습니다. persona_seed는 현재 상태가 아니라 말투와 안정적 인구통계에만 사용합니다. 제공되지 않은 구체값은 새로 만들지 말고 일반 표현을 사용합니다.
 21. session_memory_updates의 각 항목은 반드시 user 발화에 명시적으로 근거가 있어야 합니다. update/create/set_pending은 new_value가 자연어로 드러나야 하고, archive/mark_stale/clear_pending/set_not_applicable은 해당 변경·취소·종료가 분명히 드러나야 합니다.
 22. 각 session_memory_updates 항목마다 cue_type="memory_fact" annotation을 하나 이상 만들고 linked_memory_path, linked_memory_operation, linked_memory_value를 원본과 정확히 동일하게 복사합니다. evidence_text에는 해당 user 발화에 실제로 포함된 최소 근거 문자열을 넣습니다.
+23. planned_cues는 semantic_instruction_ko의 의미를 자연스럽게 표현합니다. exact_surface_required=true인 경우에만 surface_hint를 그대로 포함하고, 그 외에는 어색한 직역을 피합니다.
 
 ## 출력 형식 (JSON만 출력)
 {

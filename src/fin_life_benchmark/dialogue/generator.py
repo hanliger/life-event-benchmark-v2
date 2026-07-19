@@ -185,7 +185,7 @@ def _context_memory_value(plan: DialogueGenerationPlan, path: str) -> Any:
 
 def _context_life_state_value(plan: DialogueGenerationPlan, key: str) -> Any:
     life_state = (
-        (plan.structured_context.get("persona_state") or {})
+        (plan.structured_context.get("current_state") or plan.structured_context.get("persona_state") or {})
         .get("life_state")
         or {}
     )
@@ -253,6 +253,12 @@ class DialogueGenerator:
 
         # cue turns (or fillers so length stays >= 8 turns)
         cue_texts = list(plan.must_include_cues)
+        if not cue_texts:
+            cue_texts = [
+                cue.surface_hint
+                for cue in plan.planned_cues
+                if cue.surface_hint and cue.cue_role != "memory_fact"
+            ]
         while len(cue_texts) < 2:
             cue_texts.append(None)  # filler slot
         memory_paths = list(plan.target_memory_paths) or [None]
@@ -262,12 +268,16 @@ class DialogueGenerator:
                 if i == 0 and memory_facts:
                     text += ". " + ". ".join(_memory_fact_text(update) for update in memory_facts)
                 turns.append(Turn(speaker="user", text=text))
+                planned = next(
+                    (item for item in plan.planned_cues if item.surface_hint == cue),
+                    None,
+                )
                 cues.append(
                     CueAnnotation(
                         turn_index=len(turns) - 1,
-                        cue_type=_slugify(cue),
+                        cue_type=planned.cue_id if planned else _slugify(cue),
                         cue_text=cue,
-                        linked_memory_path=None,
+                        linked_memory_path=(planned.linked_memory_paths[0] if planned and planned.linked_memory_paths else None),
                     )
                 )
                 if i == 0:
@@ -377,6 +387,9 @@ class DialogueGenerator:
             "{financial_task}": plan.financial_task,
             "{event_status}": plan.event_status_after_session,
             "{must_include_cues}": json.dumps(plan.must_include_cues, ensure_ascii=False),
+            "{planned_cues}": json.dumps(
+                [cue.model_dump(mode="json") for cue in plan.planned_cues], ensure_ascii=False
+            ),
             "{must_not_include_terms}": json.dumps(plan.must_not_include_terms, ensure_ascii=False),
             "{target_memory_paths}": json.dumps(plan.target_memory_paths, ensure_ascii=False),
             "{structured_context}": json.dumps(plan.structured_context, ensure_ascii=False),
@@ -491,14 +504,23 @@ class DialogueGenerator:
         employment_status = _session_context_value(
             plan, "employment.employment_status", persona.occupation_state.employment_status
         )
-        if employment_status not in {"employed", "on_leave"}:
+        event_context = plan.structured_context.get("event") or {}
+        employment_introduced = (
+            str(event_context.get("event_id", "")).startswith("career_")
+            and plan.event_status_after_session in {"upcoming", "occurred"}
+        )
+        if employment_status not in {"employed", "on_leave"} and not employment_introduced:
             for term in ("월급", "급여일"):
                 if term in visible:
                     raise LLMOutputValidationError(
                         f"visible dialogue conflicts with employment_status={employment_status}: '{term}'"
                     )
         residence_status = _session_context_value(plan, "housing.residence_status", persona.housing.residence_status)
-        if residence_status != "wolse":
+        rent_introduced = (
+            str(event_context.get("event_id", "")).startswith("housing_")
+            and plan.event_status_after_session in {"upcoming", "occurred"}
+        )
+        if residence_status != "wolse" and not rent_introduced:
             for term in ("월세", "집주인"):
                 if term in visible:
                     raise LLMOutputValidationError(

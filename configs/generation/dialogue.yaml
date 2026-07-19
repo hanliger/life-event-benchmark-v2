@@ -4,10 +4,39 @@ turns_max: 32
 user_turns_min: 14
 user_turns_max: 16
 target_sessions_per_trajectory: 300
-hard_negative_target_ratio: 0.30 # hard-negative plans as share of all sessions when target_sessions_per_trajectory is set
 routine_sessions_per_year: 2     # fallback when target_sessions_per_trajectory is unset
 hard_negative_ratio: 0.25        # fallback: hard-negative plans per evidence plan
-stale_recall_ratio: 0.30         # stale-recall plans per occurred event with archived values
-consequence_session_delay_months: [1, 4]
-drift_event_ratio: 0.30          # fraction of occurred events planned as low single-session recoverability
 cues_per_session: [1, 3]
+
+controlled_window_size: 15
+
+task_selection:
+  require_event_specific_template: true
+  generic_fallback_for_evidence: false
+  penalize_repeated_task: true
+
+evidence:
+  drift_event_ratio: 0.30
+  require_occurred_financial_consequence: true
+  prevent_cross_status_cue_reuse: true
+  require_memory_fact_for_session_updates: true
+
+hard_negatives:
+  target_ratio: 0.30
+  balance_by_domain: true
+  types:
+    action_matched_hard_negative: 0.40
+    existing_state_negative: 0.25
+    sibling_event_negative: 0.20
+    stale_value_no_change: 0.15
+
+followups:
+  consequence_ratio: 0.60
+  stale_recall_ratio: 0.30
+  consequence_delay_months: [1, 4]
+  stale_delay_months: [2, 6]
+
+controlled_layout:
+  window_size: 15
+  filler_month_strategy: balanced
+  max_filler_sessions_per_month: 5

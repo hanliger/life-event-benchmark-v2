@@ -1,0 +1,127 @@
+# Lifecycle-specific semantic cues. Anchors keep the policy consistent while
+# every referenced cue remains event/path specific.
+_weak_defaults: &weak
+  semantic_instruction_ko: "관련 생활 변화의 가능성을 암시하되 새 값이나 완료를 확정하지 않는다."
+  allowed_statuses: [weak_signal]
+  required_value_source: null
+  exact_surface_required: false
+  explicitness: implicit
+  allow_reuse_across_statuses: false
+  cue_role: event_signal
+  surface_examples: ["아직 확정은 아니어서 조건만 미리 보고 있어요"]
+_upcoming_defaults: &upcoming
+  semantic_instruction_ko: "관련 금융 준비와 값이 미래에 적용될 예정임을 시간 표현과 함께 드러낸다."
+  allowed_statuses: [upcoming]
+  required_value_source: [event.params, session_memory_updates]
+  exact_surface_required: false
+  explicitness: recoverable
+  allow_reuse_across_statuses: false
+  cue_role: event_signal
+  surface_examples: ["다음 달부터 쓸 예정이라 미리 준비하고 있어요"]
+_occurred_defaults: &occurred
+  semantic_instruction_ko: "관련 변화 뒤 실제 입금·이체·등록·납부 같은 금융 결과가 발생했음을 드러낸다."
+  allowed_statuses: [occurred]
+  required_value_source: [session_memory_updates, event.params]
+  exact_surface_required: false
+  explicitness: recoverable
+  allow_reuse_across_statuses: false
+  cue_role: event_signal
+  surface_examples: ["이번에 실제로 반영돼 금융 설정을 정리하려고요"]
+_cancelled_defaults: &cancelled
+  semantic_instruction_ko: "이전의 예정 또는 pending 값을 언급하고 계획이 취소되어 현재가 되지 않았음을 드러낸다."
+  allowed_statuses: [cancelled]
+  required_value_source: [session_memory_updates, event.params]
+  exact_surface_required: false
+  explicitness: recoverable
+  allow_reuse_across_statuses: false
+  cue_role: cancellation
+  surface_examples: ["지난번에 준비하던 건 취소돼서 기존 설정을 그대로 쓰려고요"]
+
+relationship_marriage_weak_signal: {<<: *weak, cue_id: relationship_marriage_weak_signal, linked_memory_paths: [household.marital_status, household.spouse_or_partner]}
+relationship_marriage_upcoming: {<<: *upcoming, cue_id: relationship_marriage_upcoming, linked_memory_paths: [household.marital_status, household.spouse_or_partner]}
+relationship_marriage_occurred: {<<: *occurred, cue_id: relationship_marriage_occurred, linked_memory_paths: [household.marital_status, household.spouse_or_partner]}
+relationship_marriage_cancelled: {<<: *cancelled, cue_id: relationship_marriage_cancelled, linked_memory_paths: [household.marital_status, household.spouse_or_partner]}
+relationship_divorce_or_separation_weak_signal: {<<: *weak, cue_id: relationship_divorce_or_separation_weak_signal, linked_memory_paths: [household.marital_status, household.spouse_or_partner, household.child_support_arrangement]}
+relationship_divorce_or_separation_upcoming: {<<: *upcoming, cue_id: relationship_divorce_or_separation_upcoming, linked_memory_paths: [household.marital_status, household.spouse_or_partner, household.child_support_arrangement]}
+relationship_divorce_or_separation_occurred: {<<: *occurred, cue_id: relationship_divorce_or_separation_occurred, linked_memory_paths: [household.marital_status, household.spouse_or_partner, household.child_support_arrangement]}
+relationship_divorce_or_separation_cancelled: {<<: *cancelled, cue_id: relationship_divorce_or_separation_cancelled, linked_memory_paths: [household.marital_status, household.child_support_arrangement]}
+relationship_childbirth_weak_signal: {<<: *weak, cue_id: relationship_childbirth_weak_signal, linked_memory_paths: [household.children, household.dependents, goals.child_education_goal]}
+relationship_childbirth_upcoming: {<<: *upcoming, cue_id: relationship_childbirth_upcoming, linked_memory_paths: [household.children, goals.child_education_goal]}
+relationship_childbirth_occurred: {<<: *occurred, cue_id: relationship_childbirth_occurred, linked_memory_paths: [household.children, household.dependents, goals.child_education_goal]}
+relationship_childbirth_cancelled: {<<: *cancelled, cue_id: relationship_childbirth_cancelled, linked_memory_paths: [household.children, goals.child_education_goal]}
+relationship_adoption_weak_signal: {<<: *weak, cue_id: relationship_adoption_weak_signal, linked_memory_paths: [household.children, household.dependents, goals.child_education_goal]}
+relationship_adoption_upcoming: {<<: *upcoming, cue_id: relationship_adoption_upcoming, linked_memory_paths: [household.children, goals.child_education_goal]}
+relationship_adoption_occurred: {<<: *occurred, cue_id: relationship_adoption_occurred, linked_memory_paths: [household.children, household.dependents, goals.child_education_goal]}
+relationship_adoption_cancelled: {<<: *cancelled, cue_id: relationship_adoption_cancelled, linked_memory_paths: [household.children, goals.child_education_goal]}
+relationship_dependent_addition_weak_signal: {<<: *weak, cue_id: relationship_dependent_addition_weak_signal, linked_memory_paths: [household.dependents]}
+relationship_dependent_addition_upcoming: {<<: *upcoming, cue_id: relationship_dependent_addition_upcoming, linked_memory_paths: [household.dependents]}
+relationship_dependent_addition_occurred: {<<: *occurred, cue_id: relationship_dependent_addition_occurred, linked_memory_paths: [household.dependents]}
+relationship_dependent_addition_cancelled: {<<: *cancelled, cue_id: relationship_dependent_addition_cancelled, linked_memory_paths: [household.dependents]}
+relationship_dependent_end_weak_signal: {<<: *weak, cue_id: relationship_dependent_end_weak_signal, linked_memory_paths: [household.dependents]}
+relationship_dependent_end_upcoming: {<<: *upcoming, cue_id: relationship_dependent_end_upcoming, linked_memory_paths: [household.dependents]}
+relationship_dependent_end_occurred: {<<: *occurred, cue_id: relationship_dependent_end_occurred, linked_memory_paths: [household.dependents]}
+relationship_dependent_end_cancelled: {<<: *cancelled, cue_id: relationship_dependent_end_cancelled, linked_memory_paths: [household.dependents]}
+relationship_family_death_weak_signal: {<<: *weak, cue_id: relationship_family_death_weak_signal, linked_memory_paths: [household.dependents, household.spouse_or_partner, household.children, cashflow.recent_one_off_expense]}
+relationship_family_death_occurred: {<<: *occurred, cue_id: relationship_family_death_occurred, linked_memory_paths: [household.dependents, household.marital_status, household.spouse_or_partner, household.children, cashflow.recent_one_off_expense]}
+housing_move_weak_signal: {<<: *weak, cue_id: housing_move_weak_signal, linked_memory_paths: [housing.address, housing.residence_status, housing.contract_type]}
+housing_move_upcoming: {<<: *upcoming, cue_id: housing_move_upcoming, linked_memory_paths: [housing.address, housing.residence_status, housing.contract_type, housing.rent_amount, housing.rent_payee]}
+housing_move_occurred: {<<: *occurred, cue_id: housing_move_occurred, linked_memory_paths: [housing.address, housing.residence_status, housing.contract_type, housing.rent_amount, housing.rent_payee, housing.maintenance_fee_payee]}
+housing_move_cancelled: {<<: *cancelled, cue_id: housing_move_cancelled, linked_memory_paths: [housing.address, housing.rent_payee, housing.maintenance_fee_payee]}
+housing_home_purchase_weak_signal: {<<: *weak, cue_id: housing_home_purchase_weak_signal, linked_memory_paths: [housing.properties, housing.mortgage_status, financial_products.loans]}
+housing_home_purchase_upcoming: {<<: *upcoming, cue_id: housing_home_purchase_upcoming, linked_memory_paths: [housing.address, housing.properties, housing.mortgage_status, financial_products.loans]}
+housing_home_purchase_occurred: {<<: *occurred, cue_id: housing_home_purchase_occurred, linked_memory_paths: [housing.address, housing.properties, housing.primary_residence_property_id, housing.mortgage_status, financial_products.loans]}
+housing_home_purchase_cancelled: {<<: *cancelled, cue_id: housing_home_purchase_cancelled, linked_memory_paths: [housing.properties, housing.mortgage_status, financial_products.loans]}
+housing_home_sale_weak_signal: {<<: *weak, cue_id: housing_home_sale_weak_signal, linked_memory_paths: [housing.properties, housing.mortgage_status, financial_products.loans]}
+housing_home_sale_upcoming: {<<: *upcoming, cue_id: housing_home_sale_upcoming, linked_memory_paths: [housing.properties, housing.mortgage_status, financial_products.loans]}
+housing_home_sale_occurred: {<<: *occurred, cue_id: housing_home_sale_occurred, linked_memory_paths: [housing.properties, housing.primary_residence_property_id, housing.mortgage_status, financial_products.loans]}
+housing_home_sale_cancelled: {<<: *cancelled, cue_id: housing_home_sale_cancelled, linked_memory_paths: [housing.properties, housing.mortgage_status, financial_products.loans]}
+career_employment_weak_signal: {<<: *weak, cue_id: career_employment_weak_signal, linked_memory_paths: [employment.employment_status, employment.employer, employment.salary_account, employment.salary_day]}
+career_employment_upcoming: {<<: *upcoming, cue_id: career_employment_upcoming, linked_memory_paths: [employment.employer, employment.salary_account, employment.salary_day]}
+career_employment_occurred: {<<: *occurred, cue_id: career_employment_occurred, linked_memory_paths: [employment.employment_status, employment.employer, employment.salary_account, employment.salary_day]}
+career_employment_cancelled: {<<: *cancelled, cue_id: career_employment_cancelled, linked_memory_paths: [employment.employer, employment.salary_account]}
+career_reinstatement_weak_signal: {<<: *weak, cue_id: career_reinstatement_weak_signal, linked_memory_paths: [employment.employment_status, employment.employer, employment.salary_account, employment.salary_day]}
+career_reinstatement_upcoming: {<<: *upcoming, cue_id: career_reinstatement_upcoming, linked_memory_paths: [employment.employer, employment.salary_account, employment.salary_day]}
+career_reinstatement_occurred: {<<: *occurred, cue_id: career_reinstatement_occurred, linked_memory_paths: [employment.employment_status, employment.employer, employment.salary_account, employment.salary_day]}
+career_reinstatement_cancelled: {<<: *cancelled, cue_id: career_reinstatement_cancelled, linked_memory_paths: [employment.employer, employment.salary_account]}
+career_job_change_weak_signal: {<<: *weak, cue_id: career_job_change_weak_signal, linked_memory_paths: [employment.employer, employment.salary_account, employment.salary_day]}
+career_job_change_upcoming: {<<: *upcoming, cue_id: career_job_change_upcoming, linked_memory_paths: [employment.employer, employment.salary_account, employment.salary_day]}
+career_job_change_occurred: {<<: *occurred, cue_id: career_job_change_occurred, linked_memory_paths: [employment.employer, employment.salary_account, employment.salary_day]}
+career_job_change_cancelled: {<<: *cancelled, cue_id: career_job_change_cancelled, linked_memory_paths: [employment.employer, employment.salary_account, employment.salary_day]}
+career_leave_of_absence_weak_signal: {<<: *weak, cue_id: career_leave_of_absence_weak_signal, linked_memory_paths: [employment.employment_status, employment.income_stability, employment.salary_account, employment.salary_day]}
+career_leave_of_absence_upcoming: {<<: *upcoming, cue_id: career_leave_of_absence_upcoming, linked_memory_paths: [employment.employment_status, employment.income_stability, employment.salary_day]}
+career_leave_of_absence_occurred: {<<: *occurred, cue_id: career_leave_of_absence_occurred, linked_memory_paths: [employment.employment_status, employment.income_stability, employment.salary_account, employment.salary_day]}
+career_leave_of_absence_cancelled: {<<: *cancelled, cue_id: career_leave_of_absence_cancelled, linked_memory_paths: [employment.income_stability]}
+career_employment_end_weak_signal: {<<: *weak, cue_id: career_employment_end_weak_signal, linked_memory_paths: [employment.employment_status, employment.employer, employment.income_stability, employment.salary_account, employment.salary_day]}
+career_employment_end_upcoming: {<<: *upcoming, cue_id: career_employment_end_upcoming, linked_memory_paths: [employment.employment_status, employment.employer, employment.income_stability, employment.salary_day]}
+career_employment_end_occurred: {<<: *occurred, cue_id: career_employment_end_occurred, linked_memory_paths: [employment.employment_status, employment.employer, employment.income_stability, employment.salary_account, employment.salary_day]}
+career_employment_end_cancelled: {<<: *cancelled, cue_id: career_employment_end_cancelled, linked_memory_paths: [employment.employment_status, employment.income_stability]}
+career_self_employment_weak_signal: {<<: *weak, cue_id: career_self_employment_weak_signal, linked_memory_paths: [employment.employment_status, employment.employer, employment.income_stability]}
+career_self_employment_upcoming: {<<: *upcoming, cue_id: career_self_employment_upcoming, linked_memory_paths: [employment.employment_status, employment.employer, employment.income_stability]}
+career_self_employment_occurred: {<<: *occurred, cue_id: career_self_employment_occurred, linked_memory_paths: [employment.employment_status, employment.employer, employment.income_stability, employment.salary_day]}
+career_self_employment_cancelled: {<<: *cancelled, cue_id: career_self_employment_cancelled, linked_memory_paths: [employment.employment_status, employment.employer]}
+education_self_program_start_weak_signal: {<<: *weak, cue_id: education_self_program_start_weak_signal, linked_memory_paths: [education.self_education_status]}
+education_self_program_start_upcoming: {<<: *upcoming, cue_id: education_self_program_start_upcoming, linked_memory_paths: [education.self_education_status]}
+education_self_program_start_occurred: {<<: *occurred, cue_id: education_self_program_start_occurred, linked_memory_paths: [education.self_education_status]}
+education_self_program_start_cancelled: {<<: *cancelled, cue_id: education_self_program_start_cancelled, linked_memory_paths: [education.self_education_status]}
+education_child_stage_entry_weak_signal: {<<: *weak, cue_id: education_child_stage_entry_weak_signal, linked_memory_paths: [education.child_education_stage, goals.child_education_goal]}
+education_child_stage_entry_upcoming: {<<: *upcoming, cue_id: education_child_stage_entry_upcoming, linked_memory_paths: [education.child_education_stage, goals.child_education_goal]}
+education_child_stage_entry_occurred: {<<: *occurred, cue_id: education_child_stage_entry_occurred, linked_memory_paths: [education.child_education_stage, goals.child_education_goal]}
+education_child_stage_entry_cancelled: {<<: *cancelled, cue_id: education_child_stage_entry_cancelled, linked_memory_paths: [education.child_education_stage, goals.child_education_goal]}
+education_study_abroad_weak_signal: {<<: *weak, cue_id: education_study_abroad_weak_signal, linked_memory_paths: [education.self_education_status]}
+education_study_abroad_upcoming: {<<: *upcoming, cue_id: education_study_abroad_upcoming, linked_memory_paths: [education.self_education_status]}
+education_study_abroad_occurred: {<<: *occurred, cue_id: education_study_abroad_occurred, linked_memory_paths: [education.self_education_status]}
+education_study_abroad_cancelled: {<<: *cancelled, cue_id: education_study_abroad_cancelled, linked_memory_paths: [education.self_education_status]}
+retirement_start_weak_signal: {<<: *weak, cue_id: retirement_start_weak_signal, linked_memory_paths: [employment.employment_status, employment.income_stability, employment.salary_day, financial_products.pension_or_irp]}
+retirement_start_upcoming: {<<: *upcoming, cue_id: retirement_start_upcoming, linked_memory_paths: [employment.employment_status, employment.income_stability, employment.salary_day, financial_products.pension_or_irp]}
+retirement_start_occurred: {<<: *occurred, cue_id: retirement_start_occurred, linked_memory_paths: [employment.employment_status, employment.income_stability, employment.salary_day, financial_products.pension_or_irp]}
+retirement_start_cancelled: {<<: *cancelled, cue_id: retirement_start_cancelled, linked_memory_paths: [employment.employment_status, financial_products.pension_or_irp]}
+retirement_pension_start_weak_signal: {<<: *weak, cue_id: retirement_pension_start_weak_signal, linked_memory_paths: [financial_products.pension_or_irp, employment.employment_status]}
+retirement_pension_start_upcoming: {<<: *upcoming, cue_id: retirement_pension_start_upcoming, linked_memory_paths: [financial_products.pension_or_irp, employment.employment_status]}
+retirement_pension_start_occurred: {<<: *occurred, cue_id: retirement_pension_start_occurred, linked_memory_paths: [financial_products.pension_or_irp, employment.employment_status]}
+retirement_pension_start_cancelled: {<<: *cancelled, cue_id: retirement_pension_start_cancelled, linked_memory_paths: [financial_products.pension_or_irp]}
+crisis_health_event_weak_signal: {<<: *weak, cue_id: crisis_health_event_weak_signal, linked_memory_paths: [cashflow.recent_one_off_expense]}
+crisis_health_event_upcoming: {<<: *upcoming, cue_id: crisis_health_event_upcoming, linked_memory_paths: [cashflow.recent_one_off_expense]}
+crisis_health_event_occurred: {<<: *occurred, cue_id: crisis_health_event_occurred, linked_memory_paths: [cashflow.recent_one_off_expense]}
+crisis_health_event_cancelled: {<<: *cancelled, cue_id: crisis_health_event_cancelled, linked_memory_paths: [cashflow.recent_one_off_expense]}
+crisis_accident_or_disaster_occurred: {<<: *occurred, cue_id: crisis_accident_or_disaster_occurred, linked_memory_paths: [cashflow.recent_one_off_expense]}
+crisis_financial_fraud_occurred: {<<: *occurred, cue_id: crisis_financial_fraud_occurred, linked_memory_paths: [cashflow.recent_one_off_expense]}

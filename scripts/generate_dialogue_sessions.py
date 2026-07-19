@@ -29,11 +29,13 @@ from tqdm import tqdm
 
 from fin_life_benchmark.dialogue.evidence_planner import EvidencePlanner
 from fin_life_benchmark.dialogue.generator import DialogueGenerator
+from fin_life_benchmark.dialogue.models import DialogueGenerationPlan
 from fin_life_benchmark.fsm.registry import load_life_event_templates
-from fin_life_benchmark.io import RepoPaths
+from fin_life_benchmark.io import RepoPaths, read_jsonl
 from fin_life_benchmark.llm.client import LLMClient
 from fin_life_benchmark.locale import load_locale
 from fin_life_benchmark.trajectory.models import Trajectory
+from fin_life_benchmark.validation.dialogue_plan_validator import DialoguePlanValidator
 
 
 def _write_jsonl_line(handle, record: dict[str, Any]) -> None:
@@ -44,6 +46,11 @@ def _write_jsonl_line(handle, record: dict[str, Any]) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--trajectories-dir", required=True)
+    parser.add_argument(
+        "--plans-dir",
+        default=None,
+        help="load validated plans_*.jsonl from this directory instead of rebuilding plans",
+    )
     parser.add_argument("--locale", default="ko_KR")
     parser.add_argument("--output-dir", required=True)
     parser.add_argument(
@@ -72,6 +79,7 @@ def main() -> int:
     locale = load_locale(args.locale, paths)
     templates = load_life_event_templates(paths)
     planner = EvidencePlanner(templates, locale, paths)
+    plan_validator = DialoguePlanValidator(templates, paths)
 
     if args.execute:
         client = LLMClient.from_env(provider=args.provider, model=args.model)
@@ -102,7 +110,20 @@ def main() -> int:
         if out_path.exists() and not args.overwrite and not args.dry_run:
             print(f"skip existing {out_path} (use --overwrite)")
             continue
-        plans = planner.build_plans(trajectory, seed=args.seed)
+        if args.plans_dir:
+            plan_path = Path(args.plans_dir) / f"plans_{trajectory.trajectory_id}.jsonl"
+            if not plan_path.exists():
+                raise SystemExit(f"missing saved plan file: {plan_path}")
+            plans = [
+                DialogueGenerationPlan.model_validate(record)
+                for record in read_jsonl(plan_path)
+            ]
+            violations = plan_validator.validate_plans(plans, trajectory)
+            if violations:
+                summary = ", ".join(sorted({item.code for item in violations}))
+                raise SystemExit(f"saved plans failed validation for {trajectory.trajectory_id}: {summary}")
+        else:
+            plans = planner.build_plans(trajectory, seed=args.seed)
         if args.max_sessions is not None:
             plans = plans[: args.max_sessions]
         if args.dry_run:

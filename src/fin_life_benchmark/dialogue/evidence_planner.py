@@ -1,21 +1,17 @@
-"""Plan multi-session evidence for each event instance.
-
-Key design: not every event is recoverable from one session. Drift events
-spread cues across sessions so only the cumulative history identifies them.
-Hard-negative and stale-recall plans provide distractor material.
-"""
+"""Build deterministic, state-aware dialogue plans without calling an LLM."""
 
 from __future__ import annotations
 
 import random
 import re
+from collections import Counter
 from typing import Any
 
 from ..fsm.models import EventStatus, LifeEventTemplate
 from ..io import RepoPaths, load_yaml
 from ..locale.loader import LocaleConfig
 from ..trajectory.models import Trajectory
-from .models import DialogueGenerationPlan
+from .models import DialogueGenerationPlan, PlannedCue, StaleMemoryPair
 
 _SESSION_TYPE_BY_STATUS = {
     "weak_signal": "weak_signal_evidence",
@@ -31,16 +27,17 @@ _ROUTINE_TASKS = [
     ("FA-01", "이체확인증 발급"),
 ]
 
-# generic near-miss cue material for hard negatives (no life-event implication)
-_NEAR_MISS_CUES = [
-    "회사 경비 처리용 이체",
-    "동호회 회비 정기이체",
-    "친구한테 빌린 돈 상환",
-    "여행 경비 모으는 통장",
-]
+
+class PlannerCoverageError(ValueError):
+    """Raised when an evidence event/status has no valid concrete task."""
+
 
 def _slugify(text: str) -> str:
-    return re.sub(r"[^0-9a-zA-Z가-힣]+", "_", text).strip("_")[:40]
+    return re.sub(r"[^0-9a-zA-Z가-힣]+", "_", text).strip("_")[:60]
+
+
+def _unique(values: list[str]) -> list[str]:
+    return list(dict.fromkeys(value for value in values if value))
 
 
 class EvidencePlanner:
@@ -50,27 +47,22 @@ class EvidencePlanner:
         locale: LocaleConfig,
         paths: RepoPaths | None = None,
     ):
-        paths = paths or RepoPaths.default()
+        self.paths = paths or RepoPaths.default()
         self.templates = templates
         self.locale = locale
-        self.cfg = load_yaml(paths.generation / "dialogue.yaml")
-        self.fa_registry = load_yaml(paths.registries / "financial_actions.yaml")
-        # leakage vocabulary: all event labels (split composite labels)
+        self.cfg = load_yaml(self.paths.generation / "dialogue.yaml")
+        self.fa_registry = load_yaml(self.paths.registries / "financial_actions.yaml")
+        self.task_registry = load_yaml(self.paths.registries / "dialogue_task_templates.yaml")
+        raw_cues = load_yaml(self.paths.registries / "dialogue_cue_templates.yaml")
+        self.cue_registry = {key: value for key, value in raw_cues.items() if not key.startswith("_")}
+        self.followup_registry = load_yaml(self.paths.registries / "dialogue_followup_tasks.yaml")
+        self.hard_negative_registry = load_yaml(
+            self.paths.registries / "dialogue_hard_negative_templates.yaml"
+        )
+
         from ..fsm.registry import all_event_labels_ko
 
         self.all_labels = all_event_labels_ko(templates)
-
-    def _forbidden_terms(self, template: LifeEventTemplate, required_cues: list[str]) -> list[str]:
-        """Template forbidden cues + event labels, minus labels that are
-        substrings of this event's own required cues (e.g. '수술' vs
-        '수술비 수납')."""
-        labels = [l for l in self.all_labels if not any(l in cue for cue in required_cues)]
-        return list(template.discriminative_cues_ko.forbidden) + labels
-
-    def _fa_task(self, fa_code: str | None, rng: random.Random) -> str:
-        if fa_code and fa_code in self.fa_registry:
-            return rng.choice(self.fa_registry[fa_code]["examples"])
-        return rng.choice(_ROUTINE_TASKS)[1]
 
     @staticmethod
     def _enum_value(value: Any) -> Any:
@@ -105,10 +97,10 @@ class EvidencePlanner:
     @staticmethod
     def _snapshot_at(snapshots: dict[str, Any], month_index: int, initial: Any) -> Any:
         selected = initial
-        selected_month = 0
+        selected_month = -1
         for key, value in snapshots.items():
             try:
-                candidate_month = int(key)
+                candidate_month = int(str(key).split(":", 1)[0])
             except (TypeError, ValueError):
                 continue
             if selected_month <= candidate_month <= month_index:
@@ -116,22 +108,189 @@ class EvidencePlanner:
                 selected_month = candidate_month
         return selected
 
-    def _persona_state_context(self, trajectory: Trajectory, month_index: int) -> dict[str, Any]:
-        snapshot = self._snapshot_at(trajectory.state_snapshots, month_index, trajectory.initial_persona_state)
-        persona = trajectory.persona
-        return {
-            "month_index": month_index,
-            "age": snapshot.age,
-            "life_state": snapshot.life_state.model_dump(mode="json"),
-            "persona": {
-                "employment_status": persona.occupation_state.employment_status,
-                "residence_status": persona.housing.residence_status,
-                "marital_status": persona.household.marital_status,
-                "children_ages": list(persona.household.children_ages),
-                "dependents_count": persona.household.dependents_count,
-                "has_loan": persona.financial_profile.has_loan,
-            },
-        }
+    def _state_parts(self, trajectory: Trajectory, month_index: int) -> tuple[Any, Any, list[Any]]:
+        state = self._snapshot_at(
+            trajectory.state_snapshots, month_index, trajectory.initial_persona_state
+        )
+        memory = self._snapshot_at(
+            trajectory.memory_snapshots,
+            month_index,
+            trajectory.initial_financial_memory_state,
+        )
+        actions = self._snapshot_at(
+            trajectory.action_snapshots, month_index, trajectory.initial_standing_actions
+        )
+        return state, memory, actions
+
+    def _forbidden_terms(self, template: LifeEventTemplate, surface_hints: list[str]) -> list[str]:
+        labels = [label for label in self.all_labels if not any(label in hint for hint in surface_hints)]
+        return _unique(list(template.discriminative_cues_ko.forbidden) + labels)
+
+    @staticmethod
+    def _condition_value(memory: Any, state: Any, path: str) -> Any:
+        if "." in path:
+            cell = memory.latest(path)
+            return cell.value if cell is not None else None
+        life_state = state.life_state
+        try:
+            return life_state.guard_value(path)
+        except AttributeError:
+            return getattr(life_state, path, None)
+
+    def _conditions_match(
+        self,
+        when: dict[str, Any] | None,
+        params: dict[str, Any],
+        state: Any,
+        memory: Any,
+        action_types: set[str],
+    ) -> bool:
+        if not when:
+            return True
+        for key, expected in (when.get("param_equals") or {}).items():
+            if params.get(key) != expected:
+                return False
+        for path, expected in (when.get("memory_status") or {}).items():
+            cell = memory.latest(path)
+            actual = self._enum_value(cell.status) if cell is not None else None
+            if actual != expected:
+                return False
+        for path, expected in (when.get("state_equals") or {}).items():
+            if self._condition_value(memory, state, path) != expected:
+                return False
+        for key in when.get("state_truthy") or []:
+            if not self._condition_value(memory, state, key):
+                return False
+        required_actions = set(when.get("action_type_exists") or [])
+        if required_actions and not required_actions.issubset(action_types):
+            return False
+        return True
+
+    def select_task_template(
+        self,
+        event_template: LifeEventTemplate,
+        status: str,
+        event_params: dict[str, Any],
+        current_state: Any,
+        current_memory: Any,
+        session_update_paths: list[str],
+        evidence_memory_paths: list[str],
+        action_impacts: list[Any],
+        current_actions: list[Any],
+        previous_task_template_ids: list[str],
+        rng: random.Random,
+    ) -> tuple[dict[str, Any], float, list[str], list[str]]:
+        candidates = list((self.task_registry.get(event_template.event_id) or {}).get(status) or [])
+        allowed_fa = set(event_template.mapped_actions_by_status.get(status) or [])
+        action_types = {getattr(action, "type", "") for action in current_actions}
+        impact_action_types = {getattr(impact, "action_type", "") for impact in action_impacts}
+        valid: list[tuple[dict[str, Any], float, list[str], list[str]]] = []
+
+        for candidate in candidates:
+            if candidate.get("fa_code") not in allowed_fa:
+                continue
+            required_params = candidate.get("required_event_params") or []
+            if any(event_params.get(key) is None for key in required_params):
+                continue
+            required_actions = set(candidate.get("required_action_types") or [])
+            if required_actions and not required_actions.issubset(action_types):
+                continue
+            if not self._conditions_match(
+                candidate.get("when"), event_params, current_state, current_memory, action_types
+            ):
+                continue
+
+            compatible = set(candidate.get("compatible_memory_paths") or [])
+            session_overlap = compatible.intersection(session_update_paths)
+            evidence_overlap = compatible.intersection(evidence_memory_paths)
+            score = 0.0
+            reasons: list[str] = []
+            if session_overlap:
+                score += 3
+                reasons.append("session_update_path_overlap:+3")
+            if evidence_overlap:
+                score += 2
+                reasons.append("evidence_path_overlap:+2")
+            if required_actions.intersection(impact_action_types) or (
+                impact_action_types and compatible.intersection(session_update_paths)
+            ):
+                score += 2
+                reasons.append("standing_action_impact_match:+2")
+            if required_params and any(event_params.get(key) is not None for key in required_params):
+                score += 1
+                reasons.append("event_parameter_match:+1")
+            if (
+                self.cfg.get("task_selection", {}).get("penalize_repeated_task", True)
+                and candidate.get("task_template_id") in previous_task_template_ids
+            ):
+                score -= 2
+                reasons.append("same_lifecycle_task_repeat:-2")
+            grounding = sorted(session_overlap.union(evidence_overlap))
+            valid.append((candidate, score, reasons or ["event_status_registry_match"], grounding))
+
+        if not valid:
+            raise PlannerCoverageError(
+                f"no valid dialogue task for {event_template.event_id} + {status}"
+            )
+        best_score = max(item[1] for item in valid)
+        tied = sorted(
+            (item for item in valid if item[1] == best_score),
+            key=lambda item: item[0]["task_template_id"],
+        )
+        return rng.choice(tied)
+
+    def _planned_cues(
+        self,
+        task: dict[str, Any],
+        status: str,
+        session_updates: list[Any],
+        evidence_paths: list[str],
+    ) -> list[PlannedCue]:
+        planned: list[PlannedCue] = []
+        for cue_id in task.get("cue_template_ids") or []:
+            spec = self.cue_registry.get(cue_id)
+            if spec is None:
+                raise PlannerCoverageError(f"unknown cue template: {cue_id}")
+            if status not in (spec.get("allowed_statuses") or []):
+                raise PlannerCoverageError(f"cue {cue_id} is not allowed for {status}")
+            linked = _unique(list(spec.get("linked_memory_paths") or []))
+            if evidence_paths:
+                narrowed = [path for path in linked if path in evidence_paths]
+                linked = narrowed or linked
+            surfaces = list(spec.get("surface_examples") or [])
+            planned.append(
+                PlannedCue(
+                    cue_id=cue_id,
+                    semantic_instruction_ko=spec["semantic_instruction_ko"],
+                    status=status,
+                    linked_memory_paths=linked,
+                    required_value_source=spec.get("required_value_source"),
+                    exact_surface_required=bool(spec.get("exact_surface_required", False)),
+                    surface_hint=surfaces[0] if surfaces else None,
+                    cue_role=spec.get("cue_role", "event_signal"),
+                    allow_reuse_across_statuses=bool(spec.get("allow_reuse_across_statuses", False)),
+                )
+            )
+        for index, update in enumerate(session_updates):
+            operation = str(self._enum_value(update.operation))
+            planned.append(
+                PlannedCue(
+                    cue_id=f"memory_fact_{_slugify(update.path)}_{operation}_{index}",
+                    semantic_instruction_ko=(
+                        "이 값은 아직 예정 또는 가정임을 분명히 한다."
+                        if operation == "set_pending"
+                        else "이 실제 메모리 변경을 사용자 발화에서 금융 맥락으로 근거화한다."
+                    ),
+                    status=status,
+                    linked_memory_paths=[update.path],
+                    required_value_source="session_memory_updates",
+                    required_value=update.new_value,
+                    exact_surface_required=False,
+                    cue_role="memory_fact",
+                    linked_memory_operation=operation,
+                )
+            )
+        return planned
 
     def _structured_context(
         self,
@@ -141,25 +300,32 @@ class EvidencePlanner:
         session_updates: list[Any],
         event_updates: list[tuple[int, Any]],
         target_paths: list[str],
+        action_impacts: list[Any] | None = None,
     ) -> dict[str, Any]:
-        memory = self._snapshot_at(trajectory.memory_snapshots, month_index, trajectory.initial_financial_memory_state)
-        unique_paths = list(dict.fromkeys(target_paths))
+        state, memory, actions = self._state_parts(trajectory, month_index)
+        persona = trajectory.persona
+        current_state = {
+            "month_index": month_index,
+            "age": state.age,
+            "life_state": state.life_state.model_dump(mode="json"),
+        }
+        persona_seed = {
+            "persona_id": persona.persona_id,
+            "sex": persona.sex,
+            "source_age": persona.age,
+            "has_loan": persona.financial_profile.has_loan,
+            "style": persona.style.model_dump(mode="json"),
+        }
+        current_memory = {
+            path: self._memory_cell_context(memory, path) for path in _unique(target_paths)
+        }
         event_context = None
         if instance is not None:
-            visible_history = [
-                item
-                for item in instance.status_history
-                if item.month_index <= month_index
-            ]
-            status_at_session = (
-                self._enum_value(visible_history[-1].status)
-                if visible_history
-                else self._enum_value(instance.status)
-            )
+            visible_history = [item for item in instance.status_history if item.month_index <= month_index]
             event_context = {
                 "event_id": instance.event_id,
                 "domain": instance.domain,
-                "status": status_at_session,
+                "status": self._enum_value(visible_history[-1].status) if visible_history else "no_event",
                 "status_history": [
                     {
                         "status": self._enum_value(item.status),
@@ -173,167 +339,368 @@ class EvidencePlanner:
             }
         return {
             "event": event_context,
-            "persona_state": self._persona_state_context(trajectory, month_index),
+            "persona_seed": persona_seed,
+            "current_state": current_state,
+            "current_financial_memory": current_memory,
+            "current_standing_actions": [action.model_dump(mode="json") for action in actions],
             "session_memory_updates": [
-                self._memory_update_context(update, month_index)
-                for update in session_updates
+                self._memory_update_context(update, month_index) for update in session_updates
             ],
             "event_memory_updates": [
                 self._memory_update_context(update, update_month)
                 for update_month, update in event_updates
                 if update_month <= month_index
             ],
-            "current_memory": {
-                path: self._memory_cell_context(memory, path)
-                for path in unique_paths
-            },
+            "action_impacts": [
+                impact.model_dump(mode="json") for impact in (action_impacts or [])
+            ],
+            # Transitional aliases consumed by the current generator/prompt.
+            "persona_state": current_state,
+            "current_memory": current_memory,
         }
+
+    def _followup_plan(
+        self,
+        trajectory: Trajectory,
+        instance: Any,
+        kind: str,
+        month: int,
+        updates: list[Any],
+        event_updates: list[tuple[int, Any]],
+    ) -> DialogueGenerationPlan | None:
+        state, memory, _ = self._state_parts(trajectory, month)
+        del state
+        for update in updates:
+            spec = (self.followup_registry.get(update.path) or {}).get(kind)
+            if spec is None:
+                continue
+            current_cell = memory.latest(update.path)
+            current_value = current_cell.value if current_cell is not None else update.new_value
+            pairs: list[StaleMemoryPair] = []
+            cues: list[PlannedCue]
+            session_type = "consequence_session"
+            if kind == "stale_recall":
+                if update.old_value is None or update.old_value == current_value:
+                    continue
+                session_type = "stale_recall_session"
+                pairs = [
+                    StaleMemoryPair(
+                        path=update.path,
+                        old_value=update.old_value,
+                        current_value=current_value,
+                        old_valid_until=instance.occurred_month,
+                        current_valid_from=getattr(current_cell, "valid_from", None),
+                    )
+                ]
+                cues = [
+                    PlannedCue(
+                        cue_id=f"stale_value_{_slugify(update.path)}",
+                        semantic_instruction_ko="이전 값과 그것을 다시 확인하는 이유를 현재 값과 구분해 말한다.",
+                        status="occurred",
+                        linked_memory_paths=[update.path],
+                        required_value_source="stale_memory_pairs.old_value",
+                        required_value=update.old_value,
+                        cue_role="stale_value",
+                    ),
+                    PlannedCue(
+                        cue_id=f"current_value_{_slugify(update.path)}",
+                        semantic_instruction_ko="현재 유효한 값을 이전 값과 혼동하지 않도록 함께 드러낸다.",
+                        status="occurred",
+                        linked_memory_paths=[update.path],
+                        required_value_source="stale_memory_pairs.current_value",
+                        required_value=current_value,
+                        cue_role="current_value",
+                    ),
+                ]
+            else:
+                cues = [
+                    PlannedCue(
+                        cue_id=f"consequence_{_slugify(update.path)}",
+                        semantic_instruction_ko="이미 발생한 변화의 현재 금융 결과를 확인하고 원래 사건 표현은 반복하지 않는다.",
+                        status="occurred",
+                        linked_memory_paths=[update.path],
+                        required_value_source="current_financial_memory",
+                        required_value=current_value,
+                        cue_role="current_value",
+                    )
+                ]
+            event_paths = _unique([item.path for update_month, item in event_updates if update_month <= month])
+            target_paths = _unique([update.path] + event_paths)
+            return DialogueGenerationPlan(
+                trajectory_id=trajectory.trajectory_id,
+                month_index=month,
+                age=trajectory.initial_persona_state.age + month // 12,
+                transition_order=instance.occurred_transition_order or 0,
+                session_type=session_type,
+                linked_event_instance_id=instance.event_instance_id,
+                event_status_after_session="occurred",
+                mapped_action=spec["fa_code"],
+                financial_task=spec["visible_task_ko"],
+                task_template_id=spec["task_template_id"],
+                task_selection_score=2,
+                task_selection_reasons=["event_update_path_followup"],
+                task_grounding_paths=[update.path],
+                planned_cues=cues,
+                evidence_memory_paths=[update.path],
+                event_update_paths=event_paths,
+                target_memory_paths=target_paths,
+                stale_memory_pairs=pairs,
+                evidence_bundle_id=instance.event_instance_id,
+                structured_context=self._structured_context(
+                    trajectory, instance, month, [], event_updates, target_paths
+                ),
+                desired_single_session_recoverability="low",
+                desired_cumulative_recoverability="high",
+            )
+        return None
+
+    def _hard_negative_candidates(self, trajectory: Trajectory, month: int) -> list[dict[str, Any]]:
+        state, memory, actions = self._state_parts(trajectory, month)
+        action_types = {getattr(action, "type", "") for action in actions}
+        candidates: list[dict[str, Any]] = []
+        for event_id, group in self.hard_negative_registry.items():
+            domain = group.get("domain", "neutral")
+            for hard_type, items in group.items():
+                if hard_type == "domain":
+                    continue
+                for item in items or []:
+                    if self._conditions_match(item.get("when"), {}, state, memory, action_types):
+                        candidates.append({**item, "event_id": event_id, "domain": domain, "type": hard_type})
+        return candidates
+
+    def _make_filler(
+        self,
+        trajectory: Trajectory,
+        month: int,
+        transition_order: int,
+        hard_negative: bool,
+        rng: random.Random,
+        hard_counts: Counter,
+    ) -> DialogueGenerationPlan:
+        if not hard_negative:
+            fa_code, task = rng.choice(_ROUTINE_TASKS)
+            return DialogueGenerationPlan(
+                trajectory_id=trajectory.trajectory_id,
+                month_index=month,
+                age=trajectory.initial_persona_state.age + month // 12,
+                transition_order=transition_order,
+                session_type="routine_financial",
+                event_status_after_session="no_event",
+                mapped_action=fa_code,
+                financial_task=task,
+                task_used_generic_fallback=True,
+                must_not_include_terms=self.all_labels,
+                structured_context=self._structured_context(trajectory, None, month, [], [], []),
+                desired_single_session_recoverability="low",
+                desired_cumulative_recoverability="medium",
+            )
+
+        candidates = self._hard_negative_candidates(trajectory, month)
+        type_weights = self.cfg.get("hard_negatives", {}).get("types", {})
+        candidates = [item for item in candidates if item["type"] in type_weights]
+        if not candidates:
+            raise PlannerCoverageError(f"no state-compatible hard negative at month {month}")
+        hard_total = sum(hard_counts[hard_type] for hard_type in type_weights)
+        deficits = {
+            hard_type: float(weight) * (hard_total + 1) - hard_counts[hard_type]
+            for hard_type, weight in type_weights.items()
+        }
+        best_deficit = max(deficits[item["type"]] for item in candidates)
+        balanced = [item for item in candidates if deficits[item["type"]] == best_deficit]
+        min_domain_count = min(hard_counts[f"domain:{item['domain']}"] for item in balanced)
+        balanced = [item for item in balanced if hard_counts[f"domain:{item['domain']}"] == min_domain_count]
+        item = rng.choice(sorted(balanced, key=lambda value: value["task_template_id"]))
+        hard_counts[item["type"]] += 1
+        hard_counts[f"domain:{item['domain']}"] += 1
+        template = self.templates.get(item["event_id"])
+        protected = list(item.get("protected_memory_paths") or [])
+        cue = PlannedCue(
+            cue_id=f"hard_negative_{item['task_template_id']}",
+            semantic_instruction_ko=item["explanation"],
+            status="no_event",
+            linked_memory_paths=protected,
+            required_value_source="current_financial_memory" if protected else None,
+            surface_hint=item.get("surface_hint"),
+            cue_role="event_signal",
+        )
+        return DialogueGenerationPlan(
+            trajectory_id=trajectory.trajectory_id,
+            month_index=month,
+            age=trajectory.initial_persona_state.age + month // 12,
+            transition_order=transition_order,
+            session_type="hard_negative",
+            event_status_after_session="no_event",
+            near_miss_event_label=template.label_ko if template else None,
+            near_miss_event_id=item["event_id"] if template else None,
+            mapped_action=item["fa_code"],
+            financial_task=item["visible_task_ko"],
+            task_template_id=item["task_template_id"],
+            task_selection_score=0,
+            task_selection_reasons=["state_compatible_typed_near_miss"],
+            planned_cues=[cue],
+            must_not_include_terms=(
+                _unique(list(template.discriminative_cues_ko.required) + self.all_labels)
+                if template else self.all_labels
+            ),
+            evidence_memory_paths=protected,
+            target_memory_paths=protected,
+            hard_negative_type=item["type"],
+            near_miss_explanation=item["explanation"],
+            protected_memory_paths=protected,
+            expected_memory_operation="no_update",
+            structured_context=self._structured_context(
+                trajectory, None, month, [], [], protected
+            ),
+            desired_single_session_recoverability="low",
+            desired_cumulative_recoverability="medium",
+        )
 
     def build_plans(self, trajectory: Trajectory, seed: int = 0) -> list[DialogueGenerationPlan]:
         rng = random.Random(f"{trajectory.trajectory_id}:{seed}")
         plans: list[DialogueGenerationPlan] = []
-        start_age = trajectory.initial_persona_state.age
-
-        # index memory updates / action impacts by (instance, month)
-        updates_by_key: dict[tuple[str, int], list] = {}
+        updates_by_key: dict[tuple[str, int], list[Any]] = {}
         updates_by_instance: dict[str, list[tuple[int, Any]]] = {}
-        impacts_by_key: dict[tuple[str, int], list] = {}
+        impacts_by_key: dict[tuple[str, int], list[Any]] = {}
         for step in trajectory.timeline_steps:
-            for u in step.memory_updates:
-                source = u.source_event_instance_id or ""
-                updates_by_key.setdefault((source, step.month_index), []).append(u)
-                updates_by_instance.setdefault(source, []).append((step.month_index, u))
-            for a in step.action_impacts:
-                impacts_by_key.setdefault((a.source_event_instance_id or "", step.month_index), []).append(a)
+            for update in step.memory_updates:
+                source = update.source_event_instance_id or ""
+                updates_by_key.setdefault((source, step.month_index), []).append(update)
+                updates_by_instance.setdefault(source, []).append((step.month_index, update))
+            for impact in step.action_impacts:
+                source = impact.source_event_instance_id or ""
+                impacts_by_key.setdefault((source, step.month_index), []).append(impact)
 
-        # 1. evidence sessions per event instance
+        evidence_cfg = self.cfg.get("evidence", {})
+        followup_cfg = self.cfg.get("followups", {})
         for instance in trajectory.life_event_instances:
             template = self.templates[instance.event_id]
-            required = list(template.discriminative_cues_ko.required)
-            rng.shuffle(required)
+            supported_history = [
+                item for item in instance.status_history if item.status.value in _SESSION_TYPE_BY_STATUS
+            ]
+            prior_cue_ids: list[str] = []
+            previous_tasks: list[str] = []
             is_drift = (
                 instance.status == EventStatus.OCCURRED
-                and len(instance.status_history) >= 2
-                and rng.random() < float(self.cfg.get("drift_event_ratio", 0.3))
+                and len(supported_history) >= 2
+                and rng.random() < float(evidence_cfg.get("drift_event_ratio", 0.30))
             )
-            forbidden_terms = self._forbidden_terms(template, required)
-
-            cue_cursor = 0
-            for idx, item in enumerate(instance.status_history):
+            for stage_index, item in enumerate(supported_history, start=1):
                 status = item.status.value
-                session_type = _SESSION_TYPE_BY_STATUS.get(status)
-                if session_type is None:
-                    continue
-                mapped = template.mapped_actions_by_status.get(status) or []
-                fa_code = mapped[0] if mapped else None
-
-                if is_drift:
-                    cues = required[cue_cursor : cue_cursor + 1]
-                    cue_cursor = min(cue_cursor + 1, max(0, len(required) - 1))
-                    single_rec = "low"
-                else:
-                    lo, hi = self.cfg.get("cues_per_session", [1, 3])
-                    k = min(len(required), rng.randint(int(lo), int(hi)))
-                    cues = required[:k] if k else []
-                    single_rec = "high" if status == "occurred" else "medium"
-
                 month_updates = updates_by_key.get((instance.event_instance_id, item.month_index), [])
-                month_impacts = impacts_by_key.get((instance.event_instance_id, item.month_index), [])
                 event_updates = updates_by_instance.get(instance.event_instance_id, [])
-                target_paths = [u.path for u in month_updates]
-
-                plans.append(
-                    DialogueGenerationPlan(
-                        trajectory_id=trajectory.trajectory_id,
-                        month_index=item.month_index,
-                        age=item.age,
-                        transition_order=item.transition_order,
-                        session_type=session_type,
-                        linked_event_instance_id=instance.event_instance_id,
-                        event_status_after_session=status,
-                        mapped_action=fa_code,
-                        financial_task=self._fa_task(fa_code, rng),
-                        must_include_cues=cues,
-                        must_not_include_terms=forbidden_terms,
-                        target_memory_paths=target_paths,
-                        target_action_ids=[a.action_id for a in month_impacts],
-                        structured_context=self._structured_context(
-                            trajectory, instance, item.month_index, month_updates, event_updates, target_paths
-                        ),
-                        desired_single_session_recoverability=single_rec,
-                        desired_cumulative_recoverability="high",
-                    )
+                cumulative_updates = [update for month, update in event_updates if month <= item.month_index]
+                session_paths = _unique([update.path for update in month_updates])
+                event_paths = _unique([update.path for update in cumulative_updates])
+                state, memory, actions = self._state_parts(trajectory, item.month_index)
+                raw_candidates = list((self.task_registry.get(instance.event_id) or {}).get(status) or [])
+                registry_paths = _unique(
+                    [path for candidate in raw_candidates for path in candidate.get("compatible_memory_paths", [])]
                 )
+                evidence_paths = _unique(session_paths + event_paths + registry_paths)
+                month_impacts = impacts_by_key.get((instance.event_instance_id, item.month_index), [])
+                task, score, reasons, grounding = self.select_task_template(
+                    template,
+                    status,
+                    instance.params,
+                    state,
+                    memory,
+                    session_paths,
+                    evidence_paths,
+                    month_impacts,
+                    actions,
+                    previous_tasks,
+                    rng,
+                )
+                previous_tasks.append(task["task_template_id"])
+                cues = self._planned_cues(task, status, month_updates, evidence_paths)
+                cue_ids = [cue.cue_id for cue in cues]
+                exact_cues = [
+                    cue.surface_hint for cue in cues if cue.exact_surface_required and cue.surface_hint
+                ]
+                surface_hints = [cue.surface_hint for cue in cues if cue.surface_hint]
+                target_paths = _unique(evidence_paths + session_paths + event_paths)
+                plan = DialogueGenerationPlan(
+                    trajectory_id=trajectory.trajectory_id,
+                    month_index=item.month_index,
+                    age=item.age,
+                    transition_order=item.transition_order,
+                    session_type=_SESSION_TYPE_BY_STATUS[status],
+                    linked_event_instance_id=instance.event_instance_id,
+                    event_status_after_session=status,
+                    mapped_action=task["fa_code"],
+                    financial_task=task["visible_task_ko"],
+                    task_template_id=task["task_template_id"],
+                    task_selection_score=score,
+                    task_selection_reasons=reasons,
+                    task_grounding_paths=grounding or task.get("compatible_memory_paths", [])[:1],
+                    planned_cues=cues,
+                    must_include_cues=exact_cues,
+                    must_not_include_terms=self._forbidden_terms(template, surface_hints),
+                    evidence_memory_paths=evidence_paths,
+                    session_update_paths=session_paths,
+                    event_update_paths=event_paths,
+                    target_memory_paths=target_paths,
+                    target_action_ids=[impact.action_id for impact in month_impacts],
+                    action_impact_types=[impact.impact_type for impact in month_impacts],
+                    evidence_bundle_id=instance.event_instance_id,
+                    evidence_stage_index=stage_index,
+                    evidence_stage_count=len(supported_history),
+                    prior_planned_cue_ids=list(prior_cue_ids),
+                    cumulative_cue_ids_after_session=_unique(prior_cue_ids + cue_ids),
+                    expected_memory_operation=("no_update" if not month_updates else None),
+                    structured_context=self._structured_context(
+                        trajectory,
+                        instance,
+                        item.month_index,
+                        month_updates,
+                        event_updates,
+                        target_paths,
+                        month_impacts,
+                    ),
+                    desired_single_session_recoverability=(
+                        "low" if is_drift or status == "weak_signal" else "medium"
+                    ),
+                    desired_cumulative_recoverability="high",
+                )
+                plans.append(plan)
+                prior_cue_ids = plan.cumulative_cue_ids_after_session
 
-            # consequence session after occurred
-            if instance.occurred_month is not None and rng.random() < 0.6:
-                lo, hi = self.cfg.get("consequence_session_delay_months", [1, 4])
+            if instance.occurred_month is None:
+                continue
+            occurred_updates = updates_by_key.get(
+                (instance.event_instance_id, instance.occurred_month), []
+            )
+            event_updates = updates_by_instance.get(instance.event_instance_id, [])
+            if occurred_updates and rng.random() < float(followup_cfg.get("consequence_ratio", 0.60)):
+                lo, hi = followup_cfg.get("consequence_delay_months", [1, 4])
                 month = min(instance.occurred_month + rng.randint(int(lo), int(hi)), trajectory.horizon_months - 1)
-                occurred_updates = updates_by_key.get((instance.event_instance_id, instance.occurred_month), [])
-                event_updates = updates_by_instance.get(instance.event_instance_id, [])
-                target_paths = [u.path for u in occurred_updates]
-                cue = required[-1] if required else None
                 if month > instance.occurred_month:
-                    plans.append(
-                        DialogueGenerationPlan(
-                            trajectory_id=trajectory.trajectory_id,
-                            month_index=month,
-                            age=start_age + month // 12,
-                            transition_order=instance.occurred_transition_order or 0,
-                            session_type="consequence_session",
-                            linked_event_instance_id=instance.event_instance_id,
-                            event_status_after_session="occurred",
-                            mapped_action="FA-01",
-                            financial_task="거래내역 조회",
-                            must_include_cues=[cue] if cue else [],
-                            must_not_include_terms=forbidden_terms,
-                            target_memory_paths=target_paths,
-                            structured_context=self._structured_context(
-                                trajectory, instance, month, [], event_updates, target_paths
-                            ),
-                            desired_single_session_recoverability="low",
-                            desired_cumulative_recoverability="high",
-                        )
+                    followup = self._followup_plan(
+                        trajectory, instance, "consequence", month, occurred_updates, event_updates
                     )
-
-            # stale recall session: old value asked about after archive/update
-            occurred_updates = updates_by_key.get((instance.event_instance_id, instance.occurred_month or -1), [])
-            stale_paths = [
-                u.path for u in occurred_updates
-                if u.operation.value in {"update", "archive", "mark_stale"} and u.old_value is not None
+                    if followup is not None:
+                        plans.append(followup)
+            stale_updates = [
+                update
+                for update in occurred_updates
+                if self._enum_value(update.operation) in {"update", "archive", "mark_stale"}
+                and update.old_value is not None
             ]
-            if stale_paths and rng.random() < float(self.cfg.get("stale_recall_ratio", 0.3)):
-                month = min((instance.occurred_month or 0) + rng.randint(2, 6), trajectory.horizon_months - 1)
-                event_updates = updates_by_instance.get(instance.event_instance_id, [])
-                target_paths = stale_paths[:2]
-                if month > (instance.occurred_month or 0):
-                    plans.append(
-                        DialogueGenerationPlan(
-                            trajectory_id=trajectory.trajectory_id,
-                            month_index=month,
-                            age=start_age + month // 12,
-                            transition_order=instance.occurred_transition_order or 0,
-                            session_type="stale_recall_session",
-                            linked_event_instance_id=instance.event_instance_id,
-                            event_status_after_session="occurred",
-                            mapped_action="FA-01",
-                            financial_task="예전 설정 확인",
-                            must_include_cues=["예전에 쓰던 설정"],
-                            must_not_include_terms=forbidden_terms,
-                            target_memory_paths=target_paths,
-                            structured_context=self._structured_context(
-                                trajectory, instance, month, [], event_updates, target_paths
-                            ),
-                            desired_single_session_recoverability="low",
-                            desired_cumulative_recoverability="high",
-                        )
+            if stale_updates and rng.random() < float(followup_cfg.get("stale_recall_ratio", 0.30)):
+                lo, hi = followup_cfg.get("stale_delay_months", [2, 6])
+                month = min(instance.occurred_month + rng.randint(int(lo), int(hi)), trajectory.horizon_months - 1)
+                if month > instance.occurred_month:
+                    stale = self._followup_plan(
+                        trajectory, instance, "stale_recall", month, stale_updates, event_updates
                     )
+                    if stale is not None:
+                        plans.append(stale)
 
-        # 2. Controlled layout: one occurred instance per 15-session window,
-        # with globally chronological session order. Lifecycle bundles may
-        # cross window boundaries when events overlap in time; dialogue order
-        # takes precedence over keeping an instance in one window.
-        window_size = int(self.cfg.get("controlled_window_size", 15))
+        window_size = int(
+            self.cfg.get("controlled_layout", {}).get(
+                "window_size", self.cfg.get("controlled_window_size", 15)
+            )
+        )
         occurred_instances = sorted(
             [instance for instance in trajectory.life_event_instances if instance.status == EventStatus.OCCURRED],
             key=lambda instance: (
@@ -344,26 +711,19 @@ class EvidencePlanner:
         )
         if not occurred_instances:
             return []
-
-        windows: list[list[DialogueGenerationPlan]] = [
-            [] for _ in occurred_instances
-        ]
+        windows: list[list[DialogueGenerationPlan]] = [[] for _ in occurred_instances]
         anchor_cursor = [
             (int(instance.occurred_month or 0), int(instance.occurred_transition_order or 0))
             for instance in occurred_instances
         ]
         anchor_index = {
-            instance.event_instance_id: index
-            for index, instance in enumerate(occurred_instances)
+            instance.event_instance_id: index for index, instance in enumerate(occurred_instances)
         }
-
-        def plan_cursor(plan: DialogueGenerationPlan) -> tuple[int, int]:
-            return plan.month_index, plan.transition_order
-
         for plan in sorted(
             plans,
             key=lambda item: (
-                *plan_cursor(item),
+                item.month_index,
+                item.transition_order,
                 item.linked_event_instance_id or "",
                 item.session_type,
             ),
@@ -371,77 +731,81 @@ class EvidencePlanner:
             if plan.session_type == "occurred_evidence" and plan.linked_event_instance_id in anchor_index:
                 index = anchor_index[plan.linked_event_instance_id]
             else:
+                cursor = (plan.month_index, plan.transition_order)
                 index = next(
-                    (
-                        candidate
-                        for candidate, cursor in enumerate(anchor_cursor)
-                        if plan_cursor(plan) <= cursor
-                    ),
+                    (candidate for candidate, anchor in enumerate(anchor_cursor) if cursor <= anchor),
                     len(windows) - 1,
                 )
             windows[index].append(plan)
 
         oversized = [index + 1 for index, window in enumerate(windows) if len(window) > window_size]
         if oversized:
-            raise ValueError(f"chronological controlled windows exceed {window_size} sessions: {oversized}")
-
+            raise PlannerCoverageError(
+                f"chronological controlled windows exceed {window_size} sessions: {oversized}"
+            )
         total_capacity = len(windows) * window_size
         filler_count = total_capacity - sum(len(window) for window in windows)
-        hard_remaining = min(
+        hard_target = min(
             filler_count,
-            int(total_capacity * float(self.cfg.get("hard_negative_target_ratio", 0.30))),
+            int(total_capacity * float(self.cfg.get("hard_negatives", {}).get("target_ratio", 0.30))),
         )
-        event_templates = list(self.templates.values())
+        hard_remaining = hard_target
+        hard_counts: Counter = Counter()
+        layout_cfg = self.cfg.get("controlled_layout", {})
+        max_per_month = int(layout_cfg.get("max_filler_sessions_per_month", 5))
+        filler_load: Counter = Counter()
         for index, window in enumerate(windows):
             anchor = occurred_instances[index]
             anchor_month = int(anchor.occurred_month or 0)
+            previous_month = int(occurred_instances[index - 1].occurred_month or 0) if index else 0
+            lower = previous_month if index else 0
+            months = list(range(max(0, lower), min(anchor_month, trajectory.horizon_months - 1) + 1))
+            if not months:
+                months = [anchor_month]
             while len(window) < window_size:
+                available = [month for month in months if filler_load[month] < max_per_month]
+                overflow = not available
+                pool = available or months
+                minimum = min(filler_load[month] for month in pool)
+                choices = [month for month in pool if filler_load[month] == minimum]
+                month = choices[len(window) % len(choices)]
+                transition_order = (
+                    int(anchor.occurred_transition_order or 0)
+                    if month == anchor_month
+                    else int(occurred_instances[index - 1].occurred_transition_order or 0)
+                    if index and month == previous_month
+                    else 0
+                )
+                filler = self._make_filler(
+                    trajectory,
+                    month,
+                    transition_order,
+                    hard_remaining > 0,
+                    rng,
+                    hard_counts,
+                )
                 if hard_remaining > 0:
-                    template = rng.choice(event_templates)
-                    mapped = template.mapped_actions_by_status.get("occurred") or ["FA-01"]
-                    filler = DialogueGenerationPlan(
-                        trajectory_id=trajectory.trajectory_id,
-                        month_index=anchor_month,
-                        age=start_age + anchor_month // 12,
-                        transition_order=anchor.occurred_transition_order or 0,
-                        session_type="hard_negative",
-                        event_status_after_session="no_event",
-                        near_miss_event_label=template.label_ko,
-                        mapped_action=mapped[0],
-                        financial_task=self._fa_task(mapped[0], rng),
-                        must_include_cues=[rng.choice(_NEAR_MISS_CUES)],
-                        must_not_include_terms=list(template.discriminative_cues_ko.required) + self.all_labels,
-                        structured_context=self._structured_context(trajectory, None, anchor_month, [], [], []),
-                        desired_single_session_recoverability="low",
-                        desired_cumulative_recoverability="medium",
-                    )
                     hard_remaining -= 1
-                else:
-                    fa_code, task = rng.choice(_ROUTINE_TASKS)
-                    filler = DialogueGenerationPlan(
-                        trajectory_id=trajectory.trajectory_id,
-                        month_index=anchor_month,
-                        age=start_age + anchor_month // 12,
-                        transition_order=anchor.occurred_transition_order or 0,
-                        session_type="routine_financial",
-                        event_status_after_session="no_event",
-                        mapped_action=fa_code,
-                        financial_task=task,
-                        must_not_include_terms=self.all_labels,
-                        structured_context=self._structured_context(trajectory, None, anchor_month, [], [], []),
-                        desired_single_session_recoverability="low",
-                        desired_cumulative_recoverability="medium",
-                    )
+                filler.filler_allowed_month_range = (lower, anchor_month)
+                filler.filler_placement_overflow = overflow
+                filler.structured_context["filler_placement"] = {
+                    "allowed_month_range": [lower, anchor_month],
+                    "overflow": overflow,
+                    "configured_max_per_month": max_per_month,
+                }
+                filler_load[month] += 1
                 window.append(filler)
 
         ordered: list[DialogueGenerationPlan] = []
         for window_index, (anchor, window) in enumerate(zip(occurred_instances, windows), start=1):
-            window.sort(key=lambda plan: (
-                plan.month_index,
-                plan.transition_order,
-                plan.linked_event_instance_id or "",
-                plan.session_type,
-            ))
+            window.sort(
+                key=lambda plan: (
+                    plan.month_index,
+                    plan.transition_order,
+                    plan.linked_event_instance_id or "",
+                    plan.session_type,
+                )
+            )
             for position, plan in enumerate(window, start=1):
                 plan.window_index = window_index
                 plan.position_in_window = position
@@ -452,11 +816,8 @@ class EvidencePlanner:
         cursors = [(plan.month_index, plan.transition_order) for plan in ordered]
         if cursors != sorted(cursors):
             raise AssertionError("controlled session order is not chronological")
-
-        # Defensive invariant: an occurred evidence session can only belong to
-        # the window whose anchor is that exact event instance.
         for plan in ordered:
-            if plan.event_status_after_session == "occurred" and plan.session_type == "occurred_evidence":
+            if plan.session_type == "occurred_evidence":
                 if plan.linked_event_instance_id != plan.window_event_instance_id:
                     raise AssertionError("controlled window contains a second occurred event")
         return ordered

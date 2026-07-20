@@ -5,7 +5,13 @@ import json
 import pytest
 
 from fin_life_benchmark.dialogue.generator import DialogueGenerator, LLMOutputValidationError
-from fin_life_benchmark.dialogue.models import DialogueGenerationPlan
+from fin_life_benchmark.dialogue.models import (
+    ActionExecutionContract,
+    DialogueGenerationPlan,
+    EvidenceDimension,
+    PlannedCue,
+    StaleMemoryPair,
+)
 from fin_life_benchmark.io import RepoPaths
 from fin_life_benchmark.persona.models import HouseholdState, HousingState, NormalizedPersona, OccupationState
 
@@ -94,6 +100,146 @@ def test_llm_session_reports_invalid_repair(tmp_path):
 
     with pytest.raises(LLMOutputValidationError, match="after 3 repair attempts"):
         generator._llm_session(_plan(), _persona(), tmp_path)
+
+
+def test_llm_session_canonicalizes_action_resolution_planner_aliases(tmp_path):
+    plan = _plan()
+    plan.mapped_action = "FA-08"
+    plan.action_execution_contract = ActionExecutionContract(
+        action_mode="pending_required_information",
+        required_slots=["source_account", "amount", "explicit_confirmation"],
+        grounded_slots={"amount": 500000},
+        missing_slots=["source_account"],
+        completion_allowed=False,
+        confirmation_required=True,
+    )
+    plan.structured_context = {"event": {"params": {"amount": 500000}}}
+    response = """
+    {
+      "turns": [
+        {"speaker": "user", "text": "50만원 정기이체를 알아보려고요."},
+        {"speaker": "assistant", "text": "출금 계좌가 정해지기 전에는 실행하지 않고 대기하겠습니다."}
+      ],
+      "cue_annotations": [],
+      "action_resolution": {
+        "action_mode": "pending_required_information",
+        "collected_slots": {"amount": 500000},
+        "missing_slots": ["source_account"],
+        "completion_allowed": false,
+        "confirmation_required": true,
+        "final_status": "pending"
+      }
+    }
+    """
+    client = FakeLLMClient([response])
+    generator = DialogueGenerator(mode="llm", client=client, paths=RepoPaths.default())
+
+    session = generator._llm_session(plan, _persona(), tmp_path)
+
+    assert len(client.requests) == 1
+    assert session.action_resolution.mode == "pending_required_information"
+    assert session.action_resolution.provided_slots == {"amount": 500000}
+    assert session.action_resolution.missing_slots == ["source_account"]
+
+
+def test_llm_session_canonicalizes_dimension_cue_types(tmp_path):
+    plan = _plan()
+    plan.session_type = "weak_signal_evidence"
+    plan.event_status_after_session = "weak_signal"
+    plan.financial_task = "자동저축 설정 점검"
+    plan.evidence_placement_strategy = "task_and_evidence_opening"
+    plan.evidence_placement_slots = [0]
+    plan.evidence_dimensions = [
+        EvidenceDimension(
+            dimension_id="possible_state_change",
+            role="uncertainty",
+            semantic_instruction_ko="현재 상태가 달라질 가능성을 드러낸다.",
+        ),
+        EvidenceDimension(
+            dimension_id="possible_financial_adjustment",
+            role="financial_consequence",
+            semantic_instruction_ko="금융 설정 조정 가능성을 드러낸다.",
+        ),
+    ]
+    response = """
+    {
+      "turns": [
+        {"speaker": "user", "text": "상황이 달라질 수도 있어서 자동저축 설정을 조정할 수 있는지 점검해 주세요."},
+        {"speaker": "assistant", "text": "현재 설정을 유지한 채 조정 가능한 범위를 확인하겠습니다."}
+      ],
+      "cue_annotations": [
+        {"turn_index": 0, "cue_type": "task_intent", "evidence_text": "자동저축 설정을 조정할 수 있는지 점검해 주세요"},
+        {"turn_index": 0, "cue_type": "event_signal", "evidence_text": "상황이 달라질 수도 있어서", "evidence_dimension_id": "possible_state_change"},
+        {"turn_index": 0, "cue_type": "possible_financial_adjustment", "evidence_text": "자동저축 설정을 조정할 수 있는지", "evidence_dimension_id": "possible_financial_adjustment"}
+      ]
+    }
+    """
+    client = FakeLLMClient([response])
+    generator = DialogueGenerator(mode="llm", client=client, paths=RepoPaths.default())
+
+    session = generator._llm_session(plan, _persona(), tmp_path)
+
+    assert len(client.requests) == 1
+    assert [cue.cue_type for cue in session.cue_annotations[1:]] == [
+        "uncertainty",
+        "financial_consequence",
+    ]
+
+
+def test_llm_session_canonicalizes_stale_recall_cue_types(tmp_path):
+    plan = _plan()
+    plan.session_type = "stale_recall_session"
+    plan.target_memory_paths = ["employment.employment_status"]
+    plan.stale_memory_pairs = [
+        StaleMemoryPair(
+            path="employment.employment_status",
+            old_value="unemployed",
+            current_value="employed",
+        )
+    ]
+    response = """
+    {
+      "turns": [
+        {"speaker": "user", "text": "예전에는 소득이 없었지만 지금은 일하고 있어서 현재 상태를 확인하고 싶어요."},
+        {"speaker": "assistant", "text": "과거 기록과 현재 유효한 상태를 구분해 확인하겠습니다."}
+      ],
+      "cue_annotations": [
+        {"turn_index": 0, "cue_type": "event_signal", "linked_memory_path": "employment.employment_status", "linked_memory_value": "unemployed", "evidence_text": "예전에는 소득이 없었지만"},
+        {"turn_index": 0, "cue_type": "event_evidence", "linked_memory_path": "employment.employment_status", "linked_memory_value": "employed", "evidence_text": "지금은 일하고 있어서"}
+      ]
+    }
+    """
+    client = FakeLLMClient([response])
+    generator = DialogueGenerator(mode="llm", client=client, paths=RepoPaths.default())
+
+    session = generator._llm_session(plan, _persona(), tmp_path)
+
+    assert len(client.requests) == 1
+    assert [cue.cue_type for cue in session.cue_annotations] == [
+        "stale_value",
+        "current_value",
+    ]
+
+
+def test_non_binding_surface_hint_is_not_sent_to_provider():
+    plan = _plan()
+    plan.planned_cues = [
+        PlannedCue(
+            cue_id="example",
+            semantic_instruction_ko="시점과 금융 결과를 자연스럽게 드러낸다.",
+            status="occurred",
+            cue_role="event_signal",
+            surface_hint="이번에 실제로 반영돼 금융 설정을 정리하려고요",
+            exact_surface_required=False,
+        )
+    ]
+    generator = DialogueGenerator(paths=RepoPaths.default())
+
+    prompt = generator._build_prompt(plan, _persona())
+    repair_contract = generator._build_repair_constraints(plan)
+
+    assert "이번에 실제로 반영" not in prompt
+    assert "이번에 실제로 반영" not in repair_contract
 
 
 def test_llm_session_repairs_dialogue_that_ends_with_user(tmp_path):

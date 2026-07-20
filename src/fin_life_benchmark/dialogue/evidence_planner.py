@@ -204,10 +204,14 @@ class EvidencePlanner:
             return ActionExecutionContract(action_mode="information_only")
         # A lookup/check remains information-only even if its FA family can
         # execute funds movement in other task subtypes.
-        if any(
-            term in plan.financial_task
-            for term in ("조회", "확인", "점검", "비교", "내역")
-        ) and not any(term in plan.financial_task for term in ("설정", "변경", "해지", "실행", "송금")):
+        information_only_suffixes = ("조회", "확인", "점검", "비교")
+        explicitly_executable = any(
+            term in plan.financial_task for term in ("실행", "송금", "변경", "해지")
+        )
+        if (
+            plan.financial_task.endswith(information_only_suffixes)
+            or "내역" in plan.financial_task
+        ) and not explicitly_executable:
             return ActionExecutionContract(
                 action_mode="information_only", confirmation_required=False
             )

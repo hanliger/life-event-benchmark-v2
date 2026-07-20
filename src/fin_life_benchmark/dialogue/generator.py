@@ -34,6 +34,34 @@ from .models import (
 
 _HIGH_RISK_FA = {"FA-07", "FA-08", "FA-09", "FA-10"}
 _REVIEW_ONLY_VALIDATION_CODES = {"near_direct_event_disclosure"}
+_GENERIC_EVIDENCE_CUE_TYPES = {
+    "dimension",
+    "event_dimension",
+    "event_evidence",
+    "event_signal",
+    "evidence",
+    "evidence_dimension",
+}
+_ACTION_RESOLUTION_FIELDS = {
+    "mode",
+    "provided_slots",
+    "missing_slots",
+    "explicit_confirmation_turn_index",
+    "completion_turn_index",
+}
+_ACTION_RESOLUTION_ALIASES = {
+    "action_mode": "mode",
+    "collected_slots": "provided_slots",
+    "grounded_slots": "provided_slots",
+    "resolved_slots": "provided_slots",
+}
+_ACTION_RESOLUTION_IGNORED_DIAGNOSTICS = {
+    "completion_allowed",
+    "confirmation_required",
+    "final_status",
+    "required_slots",
+    "user_confirmed",
+}
 
 _ASSISTANT_OPENINGS = [
     "네, 요청하신 범위에서 현재 상태부터 확인하겠습니다.",
@@ -558,7 +586,7 @@ class DialogueGenerator:
             ),
             "{must_include_cues}": json.dumps(plan.must_include_cues, ensure_ascii=False),
             "{planned_cues}": json.dumps(
-                [cue.model_dump(mode="json") for cue in plan.planned_cues], ensure_ascii=False
+                self._planned_cues_for_prompt(plan), ensure_ascii=False
             ),
             "{evidence_realization_contract}": json.dumps(
                 {
@@ -594,6 +622,19 @@ class DialogueGenerator:
             prompt = prompt.replace(key, value)
         return prompt
 
+    @staticmethod
+    def _planned_cues_for_prompt(
+        plan: DialogueGenerationPlan,
+    ) -> list[dict[str, Any]]:
+        """Omit non-binding canonical surface examples from provider prompts."""
+        payloads: list[dict[str, Any]] = []
+        for cue in plan.planned_cues:
+            payload = cue.model_dump(mode="json")
+            if not cue.exact_surface_required:
+                payload.pop("surface_hint", None)
+            payloads.append(payload)
+        return payloads
+
     def _build_repair_constraints(
         self, plan: DialogueGenerationPlan
     ) -> str:
@@ -618,9 +659,7 @@ class DialogueGenerator:
                 "user_max": int(self.cfg.get("user_turns_max", 4)),
             },
             "must_include_cues": plan.must_include_cues,
-            "planned_cues": [
-                cue.model_dump(mode="json") for cue in plan.planned_cues
-            ],
+            "planned_cues": self._planned_cues_for_prompt(plan),
             "must_not_include_terms": plan.must_not_include_terms,
             "target_memory_paths": plan.target_memory_paths,
             "protected_memory_paths": plan.protected_memory_paths,
@@ -663,9 +702,129 @@ class DialogueGenerator:
                     "value",
                     "linked_memory_paths",
                 ],
+                "dimension_cue_types": {
+                    item.dimension_id: item.role
+                    for item in plan.evidence_dimensions
+                },
+                "stale_recall_cue_types": {
+                    "old_value": "stale_value",
+                    "current_value": "current_value",
+                },
+            },
+            "action_resolution_output_contract": {
+                "required_field_names": [
+                    "mode",
+                    "provided_slots",
+                    "missing_slots",
+                    "explicit_confirmation_turn_index",
+                    "completion_turn_index",
+                ],
+                "mode": plan.action_execution_contract.action_mode,
+                "provided_slots": plan.action_execution_contract.grounded_slots,
+                "missing_slots": plan.action_execution_contract.missing_slots,
+                "planner_field_names_not_for_output": [
+                    "action_mode",
+                    "collected_slots",
+                    "grounded_slots",
+                    "resolved_slots",
+                    "required_slots",
+                    "completion_allowed",
+                    "confirmation_required",
+                ],
             },
         }
         return json.dumps(payload, ensure_ascii=False, indent=2)
+
+    @staticmethod
+    def _normalize_action_resolution(
+        raw_resolution: dict[str, Any],
+    ) -> ActionResolution:
+        """Canonicalize known planner aliases and reject unknown output keys."""
+        normalized = dict(raw_resolution)
+        for alias, canonical in _ACTION_RESOLUTION_ALIASES.items():
+            if alias not in normalized:
+                continue
+            alias_value = normalized.pop(alias)
+            if canonical in normalized and normalized[canonical] != alias_value:
+                raise LLMOutputValidationError(
+                    "payload.action_resolution has conflicting fields "
+                    f"{canonical!r} and {alias!r}"
+                )
+            normalized.setdefault(canonical, alias_value)
+        for key in _ACTION_RESOLUTION_IGNORED_DIAGNOSTICS:
+            normalized.pop(key, None)
+        unknown = sorted(set(normalized) - _ACTION_RESOLUTION_FIELDS)
+        if unknown:
+            raise LLMOutputValidationError(
+                "payload.action_resolution has unsupported key(s): "
+                + ", ".join(unknown)
+            )
+        return ActionResolution(**normalized)
+
+    @staticmethod
+    def _canonicalize_cue_annotations(
+        turns: list[Turn],
+        cues: list[CueAnnotation],
+        plan: DialogueGenerationPlan,
+    ) -> list[CueAnnotation]:
+        """Normalize annotation-only aliases while preserving visible dialogue."""
+        dimension_roles = {
+            item.dimension_id: item.role for item in plan.evidence_dimensions
+        }
+        stale_pairs = list(plan.stale_memory_pairs or [])
+        user_indices = [
+            index for index, turn in enumerate(turns) if turn.speaker == "user"
+        ]
+
+        for cue in cues:
+            dimension_id = cue.evidence_dimension_id
+            expected_role = dimension_roles.get(str(dimension_id))
+            if expected_role and cue.cue_type != "memory_fact" and (
+                cue.cue_type in _GENERIC_EVIDENCE_CUE_TYPES
+                or cue.cue_type == dimension_id
+            ):
+                cue.cue_type = expected_role
+
+            if plan.session_type == "stale_recall_session" and cue.cue_type in (
+                _GENERIC_EVIDENCE_CUE_TYPES | {"near_miss"}
+            ):
+                for pair in stale_pairs:
+                    if cue.linked_memory_path != pair.path:
+                        continue
+                    if cue.linked_memory_value == pair.old_value:
+                        cue.cue_type = "stale_value"
+                        break
+                    if cue.linked_memory_value == pair.current_value:
+                        cue.cue_type = "current_value"
+                        break
+
+            evidence_text = cue.evidence_text or cue.cue_text
+            if not evidence_text or evidence_text in turns[cue.turn_index].text:
+                continue
+            exact_matches = [
+                index
+                for index in user_indices
+                if evidence_text in turns[index].text
+            ]
+            if len(exact_matches) == 1:
+                cue.turn_index = exact_matches[0]
+                continue
+
+            fragments = [
+                fragment.strip()
+                for fragment in re.split(r"\.{3,}|…+", evidence_text)
+                if len(fragment.strip()) >= 3
+            ]
+            fragment_matches = [
+                index
+                for index in user_indices
+                if fragments
+                and all(fragment in turns[index].text for fragment in fragments)
+            ]
+            if len(fragment_matches) == 1:
+                cue.turn_index = fragment_matches[0]
+                cue.evidence_text = turns[fragment_matches[0]].text
+        return cues
 
     @staticmethod
     def _parse_llm_json(raw: str) -> dict:
@@ -859,6 +1018,7 @@ class DialogueGenerator:
                     evidence_dimension_id=item.get("evidence_dimension_id"),
                 )
             )
+        cues = self._canonicalize_cue_annotations(turns, cues, plan)
         expected_memory_facts = list(
             plan.structured_context.get("session_memory_updates") or []
         )
@@ -899,7 +1059,7 @@ class DialogueGenerator:
             raise LLMOutputValidationError(
                 "payload.action_resolution must be an object when present"
             )
-        resolution = ActionResolution(**raw_resolution)
+        resolution = self._normalize_action_resolution(raw_resolution)
         return turns, cues, check, resolution
 
     def _llm_session(

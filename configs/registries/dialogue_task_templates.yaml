@@ -25,7 +25,7 @@ relationship_childbirth:
   weak_signal:
     - {task_template_id: relationship_childbirth_cost_precheck, fa_code: FA-04, visible_task_ko: "아이 관련 비용 대비 상품 조회", user_goal_instruction: "아직 확정되지 않은 상황에서 향후 비용 대비 조건만 조회한다.", compatible_memory_paths: [household.children, household.dependents, goals.child_education_goal], required_event_params: [], required_action_types: [], cue_template_ids: [relationship_childbirth_weak_signal], weight: 1.0}
   upcoming:
-    - {task_template_id: relationship_childbirth_savings_prepare, fa_code: FA-05, visible_task_ko: "아이 목적자금 계좌 준비", user_goal_instruction: "향후 사용할 아이 목적자금 계좌를 미리 준비한다.", compatible_memory_paths: [household.children, goals.child_education_goal], required_event_params: [], required_action_types: [], cue_template_ids: [relationship_childbirth_upcoming], weight: 1.0}
+    - {task_template_id: relationship_childbirth_savings_prepare, fa_code: FA-05, visible_task_ko: "아이 목적자금 계좌 준비", user_goal_instruction: "향후 사용할 아이 목적자금 계좌의 개설 절차를 알아본다.", compatible_memory_paths: [household.children, goals.child_education_goal], required_event_params: [], required_action_types: [], cue_template_ids: [relationship_childbirth_upcoming], weight: 1.0}
   occurred:
     - {task_template_id: relationship_childbirth_child_savings, fa_code: FA-09, visible_task_ko: "아이 교육저축 정기납입 설정", user_goal_instruction: "실제 양육을 시작한 뒤 아이 목적 저축 납입을 설정한다.", compatible_memory_paths: [household.children, household.dependents, goals.child_education_goal], required_event_params: [], required_action_types: [], cue_template_ids: [relationship_childbirth_occurred], weight: 1.0}
   cancelled:
@@ -113,7 +113,7 @@ career_employment:
   weak_signal:
     - {task_template_id: career_employment_precheck, fa_code: FA-04, visible_task_ko: "재직 조건이 필요한 상품 조회", user_goal_instruction: "아직 새 직장이 확정되지 않은 상태에서 재직 조건과 급여계좌 등록 조건만 확인한다.", compatible_memory_paths: [employment.employment_status, employment.employer, employment.salary_day, employment.salary_account], required_event_params: [], required_action_types: [], cue_template_ids: [career_employment_weak_signal], weight: 1.0}
   upcoming:
-    - {task_template_id: career_employment_salary_account_prepare, fa_code: FA-03, visible_task_ko: "급여계좌 등록 준비", user_goal_instruction: "다음 달부터 사용할 급여계좌 등록 절차를 문의하며 첫 입금을 완료처럼 표현하지 않는다.", compatible_memory_paths: [employment.employer, employment.salary_account, employment.salary_day], required_event_params: [], required_action_types: [], cue_template_ids: [career_employment_upcoming], weight: 1.0}
+    - {task_template_id: career_employment_salary_account_prepare, fa_code: FA-03, visible_task_ko: "급여계좌 등록 준비", user_goal_instruction: "향후 사용할 급여계좌 등록 절차를 문의하며 첫 입금을 완료처럼 표현하지 않는다.", compatible_memory_paths: [employment.employer, employment.salary_account, employment.salary_day], required_event_params: [], required_action_types: [], cue_template_ids: [career_employment_upcoming], weight: 1.0}
   occurred:
     - {task_template_id: career_employment_first_salary, fa_code: FA-03, visible_task_ko: "첫 급여 입금 확인과 급여계좌 등록", user_goal_instruction: "새 입금이 실제 발생했거나 급여계좌를 실제 등록하는 업무를 중심으로 한다.", compatible_memory_paths: [employment.employment_status, employment.employer, employment.salary_day, employment.salary_account], required_event_params: [], required_action_types: [], cue_template_ids: [career_employment_occurred], weight: 1.0}
   cancelled:

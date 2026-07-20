@@ -205,6 +205,77 @@ def test_exact_opening_repeated_three_times_fails_diversity():
     assert report["violation_counts"]["duplicate_opening_over_limit"] == 1
 
 
+def _lifecycle_audit_records(
+    *, status: str, count: int, phrase: str, phrase_count: int
+) -> tuple[list[dict], list[dict]]:
+    plans: list[dict] = []
+    sessions: list[dict] = []
+    session_type = (
+        "cancellation_evidence" if status == "cancelled" else f"{status}_evidence"
+    )
+    for index in range(1, count + 1):
+        sid = f"S{index:03d}"
+        plan = {
+            "session_id": sid,
+            "session_type": session_type,
+            "event_status_after_session": status,
+            "financial_task": "계좌 상태 확인",
+            "evidence_dimensions": [],
+            "structured_context": {"session_memory_updates": []},
+        }
+        user = f"계좌 상태를 {index}번째로 확인해 주세요"
+        assistant = phrase if index <= phrase_count else f"서로 다른 안내 {index}입니다"
+        session = {
+            "session_id": sid,
+            "trajectory_id": "traj_test",
+            "session_type": session_type,
+            "event_status_after_session": status,
+            "mapped_action": "FA-01",
+            "financial_task": "계좌 상태 확인",
+            "turns": [
+                {"speaker": "user", "text": user},
+                {"speaker": "assistant", "text": assistant},
+            ],
+            "cue_annotations": [],
+            "plan": plan,
+        }
+        plans.append(plan)
+        sessions.append(session)
+    return plans, sessions
+
+
+def test_lifecycle_phrase_ratio_ignores_a_single_small_stratum_occurrence():
+    plans, sessions = _lifecycle_audit_records(
+        status="cancelled", count=6, phrase="없던 일이 됐습니다", phrase_count=1
+    )
+
+    report = audit_dialogue_generation(
+        plans, sessions, [], load_life_event_templates(), 2, 8
+    )
+
+    assert report["violation_counts"].get(
+        "lifecycle_exact_phrase_overconcentration", 0
+    ) == 0
+
+
+def test_lifecycle_phrase_ratio_counts_only_longest_nested_phrase():
+    plans, sessions = _lifecycle_audit_records(
+        status="occurred",
+        count=20,
+        phrase="이번에 실제로 반영됐습니다",
+        phrase_count=4,
+    )
+
+    report = audit_dialogue_generation(
+        plans, sessions, [], load_life_event_templates(), 2, 8
+    )
+    concentrations = report["surface_diversity"][
+        "lifecycle_exact_phrase_concentrations"
+    ]
+
+    assert [item["phrase"] for item in concentrations] == ["이번에 실제로 반영"]
+
+
 def test_planner_realization_is_deterministic_and_varied():
     paths = RepoPaths.default()
     trajectory = Trajectory.model_validate(json.loads((paths.root / "data/runs/v4/trajectories/traj_001.json").read_text(encoding="utf-8")))
@@ -215,6 +286,18 @@ def test_planner_realization_is_deterministic_and_varied():
     signature = lambda plans: [(item.session_id, item.evidence_realization_strategy, item.evidence_placement_strategy, item.lifecycle_surface_variant_id) for item in plans]
     assert signature(first) == signature(second)
     assert len({item.evidence_placement_strategy for item in first if item.evidence_dimensions}) >= 3
+    linked_settings_review = next(
+        item
+        for item in first
+        if item.task_template_id == "employment_end_linked_settings"
+    )
+    assert linked_settings_review.action_execution_contract.action_mode == "information_only"
+    mortgage_execution = next(
+        item
+        for item in first
+        if item.task_template_id == "home_purchase_mortgage_execute"
+    )
+    assert mortgage_execution.action_execution_contract.action_mode != "information_only"
 
 
 def _review_record(**overrides):

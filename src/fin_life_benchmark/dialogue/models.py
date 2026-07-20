@@ -78,6 +78,8 @@ class ActionExecutionContract(BaseModel):
 class ActionResolution(BaseModel):
     """Generated-session account of what, if anything, was resolved."""
 
+    model_config = ConfigDict(extra="forbid")
+
     mode: str = "information_only"
     provided_slots: dict[str, Any] = Field(default_factory=dict)
     missing_slots: list[str] = Field(default_factory=list)

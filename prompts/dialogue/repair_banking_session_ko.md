@@ -30,6 +30,8 @@
 - unsupported_bank_policy_claim/bank_policy_contradiction: 지원 여부·수수료·자격 단정을 중립적인 앱 확인 절차로 바꾸세요.
 - event_label_leakage: 실제 문맥에서 라벨인 경우만 간접 금융 표현으로 바꾸고, 다른 단어 속 우연한 문자열은 바꿀 필요가 없습니다.
 - stale_old_current_confusion: old/current annotation과 user 근거를 각각 보존하고 현재 유효값을 명시적으로 구분하세요.
-- action_resolution과 cue_annotations도 수정된 visible dialogue에 맞춰 함께 갱신하세요.
+- action_resolution과 cue_annotations도 수정된 visible dialogue에 맞춰 함께 갱신하세요. action_resolution에는 action_resolution_output_contract의 필드명만 사용하고 planner의 action_mode, grounded_slots, collected_slots, resolved_slots를 복사하지 마세요.
+- evidence_dimension_id가 있는 non-memory_fact annotation의 cue_type은 cue_annotation_output_contract.dimension_cue_types에 지정된 role을 정확히 사용하세요.
+- stale_recall_session의 과거/현재 값 annotation은 각각 cue_type=stale_value/current_value를 사용하세요.
 - 이전 출력 전체를 수정한 완전한 JSON 객체를 다시 출력하세요. 일부 turn이나 annotation만 출력하지 마세요.
 - JSON 외 다른 텍스트를 출력하지 마세요.

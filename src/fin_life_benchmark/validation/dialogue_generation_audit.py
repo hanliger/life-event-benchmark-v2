@@ -130,26 +130,6 @@ def audit_dialogue_generation(
                 for phrase in _UPCOMING_CURRENT_PHRASES
             ):
                 violations.append({"session_id": session_id, "code": "upcoming_value_treated_current", "detail": "pending memory evidence describes the future value as current"})
-        if plan.get("session_type") == "stale_recall_session":
-            for pair in plan.get("stale_memory_pairs") or []:
-                old_value, current_value = pair.get("old_value"), pair.get("current_value")
-                path = pair.get("path")
-                old_grounded = any(
-                    cue.get("cue_type") == "stale_value"
-                    and cue.get("linked_memory_path") == path
-                    and cue.get("linked_memory_value") == old_value
-                    and cue.get("evidence_text")
-                    for cue in annotations
-                )
-                current_grounded = any(
-                    cue.get("cue_type") == "current_value"
-                    and cue.get("linked_memory_path") == path
-                    and cue.get("linked_memory_value") == current_value
-                    and cue.get("evidence_text")
-                    for cue in annotations
-                )
-                if not (old_grounded and current_grounded):
-                    violations.append({"session_id": session_id, "code": "stale_old_current_confusion", "detail": str(path)})
         if _INTERNAL_RE.search(visible):
             violations.append({"session_id": session_id, "code": "internal_metadata_leakage", "detail": "internal token visible"})
 
@@ -307,6 +287,9 @@ def audit_dialogue_generation(
     exact_ratio_limit = float(
         diversity_cfg.get("exact_lifecycle_phrase_max_ratio", 0.15)
     )
+    exact_min_count = int(
+        diversity_cfg.get("exact_lifecycle_phrase_min_count", 2)
+    )
     family_ratio_limit = float(
         diversity_cfg.get("lifecycle_phrase_family_max_ratio", 0.40)
     )
@@ -322,15 +305,26 @@ def audit_dialogue_generation(
     for status, status_plans in sorted(by_status.items()):
         status_ids = [str(plan.get("session_id")) for plan in status_plans]
         for family, phrases in (_LIFECYCLE_PHRASE_FAMILIES.get(status) or {}).items():
+            # Attribute an occurrence to the longest matching phrase only.
+            # Without this, "이번에 실제로 반영" also counted as the nested
+            # phrase "실제로 반영" and inflated one surface into two failures.
+            phrase_ids: dict[str, list[str]] = {phrase: [] for phrase in phrases}
+            ordered_phrases = sorted(phrases, key=len, reverse=True)
+            for session_id in status_ids:
+                visible = _visible(session_by_id.get(session_id) or {})
+                selected: list[str] = []
+                for phrase in ordered_phrases:
+                    if phrase not in visible:
+                        continue
+                    if any(phrase in longer for longer in selected):
+                        continue
+                    selected.append(phrase)
+                    phrase_ids[phrase].append(session_id)
             family_ids: set[str] = set()
             for phrase in phrases:
-                ids_for_phrase = [
-                    session_id
-                    for session_id in status_ids
-                    if phrase in _visible(session_by_id.get(session_id) or {})
-                ]
+                ids_for_phrase = phrase_ids[phrase]
                 ratio = len(ids_for_phrase) / len(status_ids) if status_ids else 0
-                if ratio > exact_ratio_limit:
+                if len(ids_for_phrase) >= exact_min_count and ratio > exact_ratio_limit:
                     item = {
                         "status": status,
                         "phrase": phrase,

@@ -33,6 +33,7 @@ semantic_validity:
 surface_diversity:
   exact_opening_max_count: 2
   exact_lifecycle_phrase_max_ratio: 0.15
+  exact_lifecycle_phrase_min_count: 2
   lifecycle_phrase_family_max_ratio: 0.40
   evidence_placement_max_ratio: 0.60
   hard_negative_template_max_ratio: 0.15

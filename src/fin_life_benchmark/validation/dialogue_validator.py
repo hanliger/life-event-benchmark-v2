@@ -390,6 +390,25 @@ class DialogueValidator:
 
         status = session.get("event_status_after_session", "no_event")
         session_type = session.get("session_type", "")
+        if session_type == "stale_recall_session":
+            for pair in plan.get("stale_memory_pairs") or []:
+                path = pair.get("path")
+                old_grounded = any(
+                    cue.get("cue_type") == "stale_value"
+                    and cue.get("linked_memory_path") == path
+                    and cue.get("linked_memory_value") == pair.get("old_value")
+                    and cue.get("evidence_text")
+                    for cue in cue_annotations
+                )
+                current_grounded = any(
+                    cue.get("cue_type") == "current_value"
+                    and cue.get("linked_memory_path") == path
+                    and cue.get("linked_memory_value") == pair.get("current_value")
+                    and cue.get("evidence_text")
+                    for cue in cue_annotations
+                )
+                if not (old_grounded and current_grounded):
+                    flag("stale_old_current_confusion", str(path))
         evidence_types = {
             "weak_signal_evidence",
             "upcoming_evidence",
@@ -419,6 +438,7 @@ class DialogueValidator:
                 str(item.get("dimension_id")): item for item in dimensions
             }
             realized: dict[str, list[int]] = {}
+            role_realized: dict[str, list[int]] = {}
             for cue in cue_annotations:
                 dimension_id = cue.get("evidence_dimension_id")
                 if not dimension_id:
@@ -438,6 +458,8 @@ class DialogueValidator:
                 index = int(cue.get("turn_index", -1))
                 if 0 <= index < len(turns) and turns[index].get("speaker") == "user":
                     realized.setdefault(str(dimension_id), []).append(index)
+                    if cue.get("cue_type") == expected_role:
+                        role_realized.setdefault(str(dimension_id), []).append(index)
             required_dimensions = [
                 item for item in dimensions if item.get("required", True)
             ]
@@ -467,9 +489,24 @@ class DialogueValidator:
             ):
                 flag("generic_financial_task_only", "only generic financial activity is evidenced")
 
-            realized_turns = sorted({turn for values in realized.values() for turn in values})
+            realized_turns = sorted(
+                {
+                    turn
+                    for dimension_id, values in realized.items()
+                    for turn in (role_realized.get(dimension_id) or values)
+                }
+            )
             planned_slots = set(plan.get("evidence_placement_slots") or [])
-            if realized_turns and planned_slots and not set(realized_turns).issubset(planned_slots):
+            placement_strategy = str(plan.get("evidence_placement_strategy") or "")
+            placement_matches = True
+            if realized_turns and planned_slots:
+                if placement_strategy == "task_first_evidence_split_turns_2_3":
+                    placement_matches = planned_slots.issubset(realized_turns)
+                elif placement_strategy == "final_user_turn_reveal":
+                    placement_matches = set(realized_turns).issubset(planned_slots)
+                else:
+                    placement_matches = min(realized_turns) == min(planned_slots)
+            if realized_turns and planned_slots and not placement_matches:
                 flag(
                     "evidence_placement_strategy_mismatch",
                     f"realized at {realized_turns}, planned {sorted(planned_slots)}",

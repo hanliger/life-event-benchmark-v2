@@ -134,6 +134,37 @@ def test_delta_engine_skips_noop_update():
     assert memory.current_value("employment.employer") == "같은직장"
 
 
+def test_delta_engine_skips_archive_of_not_applicable_cell():
+    engine = DeltaEngine()
+    engine.registry = {
+        "test_event": {
+            "on_occurred": {
+                "memory_updates": [
+                    {"path": "housing.rent_payee", "operation": "archive"}
+                ]
+            }
+        }
+    }
+    memory = FinancialMemoryState()
+    memory.set_initial(
+        "housing.rent_payee", None, status=CellStatus.NOT_APPLICABLE
+    )
+    instance = EventInstance(
+        event_instance_id="t_ev_noop_archive",
+        event_id="test_event",
+        label_ko="테스트",
+        domain="housing",
+    )
+
+    updates = engine.apply_transition(
+        memory, instance, EventStatus.OCCURRED, 12, random.Random(0)
+    )
+
+    assert updates == []
+    assert len(memory.history("housing.rent_payee")) == 1
+    assert memory.latest("housing.rent_payee").status == CellStatus.NOT_APPLICABLE
+
+
 def test_equal_one_off_expenses_from_distinct_events_are_preserved():
     engine = DeltaEngine()
     memory = FinancialMemoryState()

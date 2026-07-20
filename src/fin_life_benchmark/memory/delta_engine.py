@@ -85,7 +85,11 @@ class DeltaEngine:
         if update.operation == MemoryOperation.NEEDS_VERIFICATION:
             return committed is not None and committed.status == CellStatus.NEEDS_VERIFICATION
         if update.operation == MemoryOperation.ARCHIVE:
-            return committed is None
+            # Archiving an already-inapplicable cell creates a historical
+            # null fact with no semantic change. Besides polluting memory
+            # history, that bogus delta later forces dialogue plans to invent
+            # a visible "ended" fact for something that never applied.
+            return committed is None or committed.status == CellStatus.NOT_APPLICABLE
         if update.operation == MemoryOperation.SET_NOT_APPLICABLE:
             return (
                 not matching_pending

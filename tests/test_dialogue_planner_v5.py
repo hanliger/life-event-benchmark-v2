@@ -86,6 +86,11 @@ def test_v4_plans_have_grounded_lifecycle_and_roundtrip(planner_bundle):
             assert plan.task_template_id
             assert not plan.task_used_generic_fallback
         for update in plan.structured_context.get("session_memory_updates") or []:
+            assert not (
+                update["operation"] == "archive"
+                and update["old_value"] is None
+                and update["new_value"] is None
+            )
             assert any(
                 cue.cue_role == "memory_fact"
                 and update["path"] in cue.linked_memory_paths
@@ -121,6 +126,71 @@ def test_task_condition_predicates_use_current_state(planner_bundle):
     assert not planner._conditions_match(
         {"state_equals": {"employment_status": "impossible_status"}},
         {}, state, memory, action_types,
+    )
+
+
+def test_routine_registry_is_expanded_balanced_and_no_update(planner_bundle):
+    paths, _, planner, _ = planner_bundle
+    trajectory = _trajectory(paths.root / "data/runs/v4/trajectories/traj_001.json")
+    plans = planner.build_plans(trajectory, seed=42)
+    routine = [plan for plan in plans if plan.session_type == "routine_financial"]
+
+    assert len(planner.routine_tasks) >= 24
+    assert len({plan.task_template_id for plan in routine}) >= 24
+    counts = {}
+    for plan in routine:
+        counts[plan.task_template_id] = counts.get(plan.task_template_id, 0) + 1
+        assert plan.expected_memory_operation == "no_update"
+        assert plan.task_user_goal_instruction
+        assert plan.structured_context["session_memory_updates"] == []
+    assert max(counts.values()) - min(counts.values()) <= 1
+
+
+@pytest.mark.parametrize("trajectory_number", range(1, 21))
+def test_housing_move_tasks_follow_target_residence_subtype(
+    planner_bundle, trajectory_number
+):
+    paths, _, planner, _ = planner_bundle
+    trajectory = _trajectory(
+        paths.root / f"data/runs/v4/trajectories/traj_{trajectory_number:03d}.json"
+    )
+    plans = planner.build_plans(trajectory, seed=42)
+
+    for plan in plans:
+        event = plan.structured_context.get("event") or {}
+        if event.get("event_id") != "housing_move" or not plan.session_type.endswith(
+            "_evidence"
+        ):
+            continue
+        subtype = (event.get("params") or {}).get("new_residence_status")
+        selected = next(
+            item
+            for item in planner.task_registry["housing_move"][
+                plan.event_status_after_session
+            ]
+            if item["task_template_id"] == plan.task_template_id
+        )
+        assert selected["when"]["param_equals"]["new_residence_status"] == subtype
+        if subtype == "family_home":
+            assert "보증금" not in plan.financial_task
+            assert "월세" not in plan.financial_task
+
+
+def test_occurred_event_is_one_atomic_high_recoverability_anchor(planner_bundle):
+    paths, _, planner, validator = planner_bundle
+    trajectory = _trajectory(paths.root / "data/runs/v4/trajectories/traj_006.json")
+    plans = planner.build_plans(trajectory, seed=42)
+
+    occurred = [plan for plan in plans if plan.session_type == "occurred_evidence"]
+    assert len(occurred) == 20
+    assert len({plan.linked_event_instance_id for plan in occurred}) == 20
+    assert all(
+        plan.desired_single_session_recoverability == "high" for plan in occurred
+    )
+    assert not {
+        item.code for item in validator.validate_plans(plans, trajectory)
+    }.intersection(
+        {"memory.occurred_not_single_session", "memory.occurred_anchor_not_atomic"}
     )
 
 

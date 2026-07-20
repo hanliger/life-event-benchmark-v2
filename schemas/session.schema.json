@@ -192,6 +192,18 @@
           "default": null,
           "title": "Task Template Id"
         },
+        "task_user_goal_instruction": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Task User Goal Instruction"
+        },
         "task_selection_score": {
           "anyOf": [
             {
@@ -749,6 +761,11 @@
       "default": "mock",
       "title": "Generator",
       "type": "string"
+    },
+    "generation_metadata": {
+      "additionalProperties": true,
+      "title": "Generation Metadata",
+      "type": "object"
     },
     "plan": {
       "anyOf": [

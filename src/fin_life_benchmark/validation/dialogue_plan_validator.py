@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from collections import Counter, defaultdict
 from typing import Any, Iterable
 
@@ -31,6 +32,13 @@ class DialoguePlanValidator:
         self.task_registry = load_yaml(
             self.paths.registries / "dialogue_task_templates.yaml"
         )
+        routine_registry = load_yaml(
+            self.paths.registries / "dialogue_routine_tasks.yaml"
+        )
+        self.routine_tasks = {
+            item["task_template_id"]: item
+            for item in routine_registry.get("routine_tasks") or []
+        }
         raw_cues = load_yaml(self.paths.registries / "dialogue_cue_templates.yaml")
         self.cue_registry = {
             key: value for key, value in raw_cues.items() if not key.startswith("_")
@@ -83,6 +91,22 @@ class DialoguePlanValidator:
         if not set(when.get("action_type_exists") or []).issubset(action_types):
             return False
         return True
+
+    @staticmethod
+    def _memory_update_signature(update: dict[str, Any]) -> str:
+        payload = {
+            key: update.get(key)
+            for key in (
+                "month_index",
+                "path",
+                "operation",
+                "old_value",
+                "new_value",
+                "event_status",
+                "source_event_instance_id",
+            )
+        }
+        return json.dumps(payload, ensure_ascii=False, sort_keys=True)
 
     def validate_plans(
         self,
@@ -147,6 +171,43 @@ class DialoguePlanValidator:
             {instance.event_instance_id: instance.event_id for instance in trajectory.life_event_instances}
             if trajectory is not None else {}
         )
+        occurred_month_by_instance = (
+            {
+                instance.event_instance_id: instance.occurred_month
+                for instance in trajectory.life_event_instances
+                if instance.occurred_month is not None
+            }
+            if trajectory is not None
+            else {}
+        )
+        occurred_updates_by_instance: dict[str, Counter] = defaultdict(Counter)
+        if trajectory is not None:
+            for step in trajectory.timeline_steps:
+                for update in step.memory_updates:
+                    source = update.source_event_instance_id or ""
+                    operation = getattr(update.operation, "value", update.operation)
+                    if (
+                        step.month_index != occurred_month_by_instance.get(source)
+                        or (
+                            operation == "archive"
+                            and update.old_value is None
+                            and update.new_value is None
+                        )
+                    ):
+                        continue
+                    occurred_updates_by_instance[source][
+                        self._memory_update_signature(
+                            {
+                                "month_index": step.month_index,
+                                "path": update.path,
+                                "operation": operation,
+                                "old_value": update.old_value,
+                                "new_value": update.new_value,
+                                "event_status": update.event_status,
+                                "source_event_instance_id": source,
+                            }
+                        )
+                    ] += 1
         cue_use_by_bundle: dict[str, dict[str, str]] = defaultdict(dict)
         filler_counts: Counter = Counter()
         filler_overflow_months: set[int] = set()
@@ -161,6 +222,15 @@ class DialoguePlanValidator:
             event_context = plan.structured_context.get("event") or {}
             event_id = instance_event.get(plan.linked_event_instance_id or "") or event_context.get("event_id")
             status = plan.event_status_after_session
+            if plan.task_template_id and not plan.task_user_goal_instruction:
+                violations.append(
+                    self._violation(
+                        plan,
+                        trajectory_id,
+                        "task.missing_user_goal",
+                        "task-bearing plan has no single user-goal instruction",
+                    )
+                )
             if plan.session_type in evidence_types:
                 if not plan.task_template_id:
                     violations.append(self._violation(plan, trajectory_id, "task.missing_template", "evidence plan has no task_template_id"))
@@ -175,6 +245,10 @@ class DialoguePlanValidator:
                     allowed = set(self.templates[event_id].mapped_actions_by_status.get(status) or [])
                     if plan.mapped_action not in allowed or matched.get("fa_code") != plan.mapped_action:
                         violations.append(self._violation(plan, trajectory_id, "task.fa_not_allowed", f"{plan.mapped_action} is not allowed for {event_id}+{status}"))
+                    if matched.get("visible_task_ko") != plan.financial_task:
+                        violations.append(self._violation(plan, trajectory_id, "task.visible_task_mismatch", "financial_task differs from the selected registry task"))
+                    if matched.get("user_goal_instruction") != plan.task_user_goal_instruction:
+                        violations.append(self._violation(plan, trajectory_id, "task.user_goal_mismatch", "single user-goal instruction differs from the selected registry task"))
                     compatible = set(matched.get("compatible_memory_paths") or [])
                     grounding = set(plan.task_grounding_paths)
                     if compatible and not compatible.intersection(grounding):
@@ -186,6 +260,11 @@ class DialoguePlanValidator:
 
                 life_state = (plan.structured_context.get("current_state") or {}).get("life_state") or {}
                 task_text = plan.financial_task
+                target_residence = (
+                    (event_context.get("params") or {}).get("new_residence_status")
+                    if event_id == "housing_move"
+                    else None
+                )
                 target_introduces = status in {"weak_signal", "upcoming", "occurred", "cancelled"}
                 employment_event = str(event_id).startswith("career_") or str(event_id).startswith("retirement_")
                 if (
@@ -197,7 +276,11 @@ class DialoguePlanValidator:
                 if (
                     any(term in task_text for term in ("월세", "집주인"))
                     and life_state.get("residence_status") != "wolse"
-                    and not (event_id == "housing_move" and target_introduces)
+                    and not (
+                        event_id == "housing_move"
+                        and target_introduces
+                        and target_residence == "wolse"
+                    )
                 ):
                     violations.append(self._violation(plan, trajectory_id, "state.rent_impossible", "rent task conflicts with current residence state"))
                 if (
@@ -208,6 +291,32 @@ class DialoguePlanValidator:
                     violations.append(self._violation(plan, trajectory_id, "state.loan_impossible", "loan task has no current or pending loan context"))
 
             session_updates = list(plan.structured_context.get("session_memory_updates") or [])
+            if plan.session_type == "occurred_evidence":
+                if plan.desired_single_session_recoverability != "high":
+                    violations.append(
+                        self._violation(
+                            plan,
+                            trajectory_id,
+                            "memory.occurred_not_single_session",
+                            "occurred anchor is not marked high single-session recoverability",
+                        )
+                    )
+                expected = occurred_updates_by_instance.get(
+                    plan.linked_event_instance_id or "", Counter()
+                )
+                actual = Counter(
+                    self._memory_update_signature(update)
+                    for update in session_updates
+                )
+                if trajectory is not None and actual != expected:
+                    violations.append(
+                        self._violation(
+                            plan,
+                            trajectory_id,
+                            "memory.occurred_anchor_not_atomic",
+                            "occurred anchor does not contain the complete occurrence delta",
+                        )
+                    )
             for update in session_updates:
                 matches = [
                     cue for cue in plan.planned_cues
@@ -259,6 +368,19 @@ class DialoguePlanValidator:
                     violations.append(self._violation(plan, trajectory_id, "negative.operation", "hard negative expected operation is not no_update"))
             if plan.session_type == "routine_financial" and plan.planned_cues:
                 violations.append(self._violation(plan, trajectory_id, "negative.routine_event_cue", "routine plan contains an event cue"))
+            if plan.session_type == "routine_financial":
+                routine = self.routine_tasks.get(plan.task_template_id or "")
+                if routine is None:
+                    violations.append(self._violation(plan, trajectory_id, "task.unknown_routine", "routine plan does not use the routine registry"))
+                elif (
+                    routine.get("fa_code") != plan.mapped_action
+                    or routine.get("visible_task_ko") != plan.financial_task
+                    or routine.get("user_goal_instruction")
+                    != plan.task_user_goal_instruction
+                ):
+                    violations.append(self._violation(plan, trajectory_id, "task.routine_mismatch", "routine plan differs from its registry entry"))
+                if plan.expected_memory_operation != "no_update" or session_updates:
+                    violations.append(self._violation(plan, trajectory_id, "memory.routine_update", "routine plan must be an explicit no-update session"))
 
             if plan.filler_allowed_month_range is not None:
                 lo, hi = plan.filler_allowed_month_range

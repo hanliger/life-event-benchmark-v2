@@ -20,14 +20,6 @@ _SESSION_TYPE_BY_STATUS = {
     "cancelled": "cancellation_evidence",
 }
 
-_ROUTINE_TASKS = [
-    ("FA-01", "거래내역 조회"),
-    ("FA-02", "입금 알림 설정"),
-    ("FA-04", "예금 금리 조회"),
-    ("FA-01", "이체확인증 발급"),
-]
-
-
 class PlannerCoverageError(ValueError):
     """Raised when an evidence event/status has no valid concrete task."""
 
@@ -53,6 +45,10 @@ class EvidencePlanner:
         self.cfg = load_yaml(self.paths.generation / "dialogue.yaml")
         self.fa_registry = load_yaml(self.paths.registries / "financial_actions.yaml")
         self.task_registry = load_yaml(self.paths.registries / "dialogue_task_templates.yaml")
+        routine_registry = load_yaml(
+            self.paths.registries / "dialogue_routine_tasks.yaml"
+        )
+        self.routine_tasks = list(routine_registry.get("routine_tasks") or [])
         raw_cues = load_yaml(self.paths.registries / "dialogue_cue_templates.yaml")
         self.cue_registry = {key: value for key, value in raw_cues.items() if not key.startswith("_")}
         self.followup_registry = load_yaml(self.paths.registries / "dialogue_followup_tasks.yaml")
@@ -437,6 +433,11 @@ class EvidencePlanner:
                 mapped_action=spec["fa_code"],
                 financial_task=spec["visible_task_ko"],
                 task_template_id=spec["task_template_id"],
+                task_user_goal_instruction=(
+                    f"이전 값과 현재 값을 구분하기 위해 {spec['visible_task_ko']} 업무만 수행한다."
+                    if kind == "stale_recall"
+                    else f"이미 반영된 현재 상태와 연결된 {spec['visible_task_ko']} 업무만 수행한다."
+                ),
                 task_selection_score=2,
                 task_selection_reasons=["event_update_path_followup"],
                 task_grounding_paths=[update.path],
@@ -478,7 +479,32 @@ class EvidencePlanner:
         hard_counts: Counter,
     ) -> DialogueGenerationPlan:
         if not hard_negative:
-            fa_code, task = rng.choice(_ROUTINE_TASKS)
+            state, memory, actions = self._state_parts(trajectory, month)
+            action_types = {getattr(action, "type", "") for action in actions}
+            candidates = [
+                item
+                for item in self.routine_tasks
+                if self._conditions_match(
+                    item.get("when"), {}, state, memory, action_types
+                )
+            ]
+            if not candidates:
+                raise PlannerCoverageError(
+                    f"no state-compatible routine task at month {month}"
+                )
+            minimum = min(
+                hard_counts[f"routine:{item['task_template_id']}"]
+                for item in candidates
+            )
+            balanced = [
+                item
+                for item in candidates
+                if hard_counts[f"routine:{item['task_template_id']}"] == minimum
+            ]
+            item = rng.choice(
+                sorted(balanced, key=lambda value: value["task_template_id"])
+            )
+            hard_counts[f"routine:{item['task_template_id']}"] += 1
             return DialogueGenerationPlan(
                 trajectory_id=trajectory.trajectory_id,
                 month_index=month,
@@ -486,10 +512,14 @@ class EvidencePlanner:
                 transition_order=transition_order,
                 session_type="routine_financial",
                 event_status_after_session="no_event",
-                mapped_action=fa_code,
-                financial_task=task,
-                task_used_generic_fallback=True,
+                mapped_action=item["fa_code"],
+                financial_task=item["visible_task_ko"],
+                task_template_id=item["task_template_id"],
+                task_user_goal_instruction=item["user_goal_instruction"],
+                task_selection_reasons=["balanced_state_compatible_routine_registry"],
+                task_used_generic_fallback=False,
                 must_not_include_terms=self.all_labels,
+                expected_memory_operation="no_update",
                 structured_context=self._structured_context(trajectory, None, month, [], [], []),
                 desired_single_session_recoverability="low",
                 desired_cumulative_recoverability="medium",
@@ -535,6 +565,9 @@ class EvidencePlanner:
             mapped_action=item["fa_code"],
             financial_task=item["visible_task_ko"],
             task_template_id=item["task_template_id"],
+            task_user_goal_instruction=(
+                f"{item['visible_task_ko']} 업무만 수행한다. {item['explanation']}"
+            ),
             task_selection_score=0,
             task_selection_reasons=["state_compatible_typed_near_miss"],
             planned_cues=[cue],
@@ -563,6 +596,16 @@ class EvidencePlanner:
         impacts_by_key: dict[tuple[str, int], list[Any]] = {}
         for step in trajectory.timeline_steps:
             for update in step.memory_updates:
+                # Older trajectories may contain archive(null -> null)
+                # records produced before DeltaEngine filtered this no-op.
+                # Such records have no user-visible evidence and must not be
+                # promoted into mandatory dialogue memory facts.
+                if (
+                    self._enum_value(update.operation) == "archive"
+                    and update.old_value is None
+                    and update.new_value is None
+                ):
+                    continue
                 source = update.source_event_instance_id or ""
                 updates_by_key.setdefault((source, step.month_index), []).append(update)
                 updates_by_instance.setdefault(source, []).append((step.month_index, update))
@@ -570,7 +613,6 @@ class EvidencePlanner:
                 source = impact.source_event_instance_id or ""
                 impacts_by_key.setdefault((source, step.month_index), []).append(impact)
 
-        evidence_cfg = self.cfg.get("evidence", {})
         followup_cfg = self.cfg.get("followups", {})
         for instance in trajectory.life_event_instances:
             template = self.templates[instance.event_id]
@@ -579,11 +621,6 @@ class EvidencePlanner:
             ]
             prior_cue_ids: list[str] = []
             previous_tasks: list[str] = []
-            is_drift = (
-                instance.status == EventStatus.OCCURRED
-                and len(supported_history) >= 2
-                and rng.random() < float(evidence_cfg.get("drift_event_ratio", 0.30))
-            )
             for stage_index, item in enumerate(supported_history, start=1):
                 status = item.status.value
                 month_updates = updates_by_key.get((instance.event_instance_id, item.month_index), [])
@@ -592,7 +629,21 @@ class EvidencePlanner:
                 session_paths = _unique([update.path for update in month_updates])
                 event_paths = _unique([update.path for update in cumulative_updates])
                 state, memory, actions = self._state_parts(trajectory, item.month_index)
-                raw_candidates = list((self.task_registry.get(instance.event_id) or {}).get(status) or [])
+                action_types = {getattr(action, "type", "") for action in actions}
+                raw_candidates = [
+                    candidate
+                    for candidate in (
+                        (self.task_registry.get(instance.event_id) or {}).get(status)
+                        or []
+                    )
+                    if self._conditions_match(
+                        candidate.get("when"),
+                        instance.params,
+                        state,
+                        memory,
+                        action_types,
+                    )
+                ]
                 registry_paths = _unique(
                     [path for candidate in raw_candidates for path in candidate.get("compatible_memory_paths", [])]
                 )
@@ -630,6 +681,7 @@ class EvidencePlanner:
                     mapped_action=task["fa_code"],
                     financial_task=task["visible_task_ko"],
                     task_template_id=task["task_template_id"],
+                    task_user_goal_instruction=task["user_goal_instruction"],
                     task_selection_score=score,
                     task_selection_reasons=reasons,
                     task_grounding_paths=grounding or task.get("compatible_memory_paths", [])[:1],
@@ -658,7 +710,11 @@ class EvidencePlanner:
                         month_impacts,
                     ),
                     desired_single_session_recoverability=(
-                        "low" if is_drift or status == "weak_signal" else "medium"
+                        "low"
+                        if status == "weak_signal"
+                        else "high"
+                        if status in {"occurred", "cancelled"}
+                        else "medium"
                     ),
                     desired_cumulative_recoverability="high",
                 )

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 SESSION_TYPES = (
     "routine_financial",
@@ -74,6 +74,7 @@ class DialogueGenerationPlan(BaseModel):
     mapped_action: str | None = None  # FA code
     financial_task: str = ""
     task_template_id: str | None = None
+    task_user_goal_instruction: str | None = None
     task_selection_score: float | None = None
     task_selection_reasons: list[str] = Field(default_factory=list)
     task_grounding_paths: list[str] = Field(default_factory=list)
@@ -112,6 +113,16 @@ class QualitySelfCheck(BaseModel):
     turn_count_ok: bool = True
 
 
+class RawDialogueResponse(BaseModel):
+    """Provider structured-output contract before plan-aware validation."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    turns: list[Turn]
+    cue_annotations: list[CueAnnotation] = Field(default_factory=list)
+    quality_self_check: QualitySelfCheck = Field(default_factory=QualitySelfCheck)
+
+
 class Session(BaseModel):
     session_id: str
     trajectory_id: str
@@ -130,4 +141,5 @@ class Session(BaseModel):
     cue_annotations: list[CueAnnotation] = Field(default_factory=list)
     quality_self_check: QualitySelfCheck = Field(default_factory=QualitySelfCheck)
     generator: str = "mock"  # mock|openai|anthropic|dry_run
+    generation_metadata: dict[str, Any] = Field(default_factory=dict)
     plan: DialogueGenerationPlan | None = None

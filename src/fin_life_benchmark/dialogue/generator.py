@@ -21,27 +21,67 @@ from ..io import load_yaml
 from ..llm.client import LLMClient
 from ..persona.models import NormalizedPersona
 from ..fsm.registry import load_life_event_templates
-from ..validation.dialogue_validator import DialogueValidator
+from ..validation.dialogue_validator import DialogueValidator, grounded_concrete_values
 from .models import CueAnnotation, DialogueGenerationPlan, QualitySelfCheck, Session, Turn
 
 _HIGH_RISK_FA = {"FA-07", "FA-08", "FA-09", "FA-10"}
 
-_ASSISTANT_QUESTIONS = [
-    "네 고객님, 어떤 계좌 기준으로 도와드릴까요?",
-    "확인했습니다. 원하시는 날짜가 언제일까요?",
-    "네, 가능합니다. 금액은 어떻게 설정해 드릴까요?",
-    "네, 접수했습니다. 본인 명의 계좌가 맞으실까요?",
+_ASSISTANT_OPENINGS = [
+    "네, 요청하신 범위에서 현재 상태부터 확인하겠습니다.",
+    "알겠습니다. 해당 업무의 현재 설정을 먼저 살펴볼게요.",
+    "네, 앱에서 처리할 수 있는 범위를 우선 확인하겠습니다.",
+    "요청 내용을 확인했습니다. 필요한 항목만 차례로 볼게요.",
+    "네, 기존 상태와 선택 가능한 절차를 먼저 확인하겠습니다.",
+    "알겠습니다. 이 업무에 필요한 정보부터 점검하겠습니다.",
 ]
 
-_ASSISTANT_CLOSING = "처리해 드렸습니다. 더 필요하신 업무 있으실까요?"
-_ASSISTANT_CLOSING_HIGH_RISK = (
-    "이 변경은 출금이 발생하는 항목이라 바로 실행되지는 않고, 고객님 확인 후에 진행됩니다."
-)
+_ASSISTANT_MIDDLES = [
+    "현재 기준으로 확인한 뒤 선택이 필요한 부분만 안내드릴게요.",
+    "조회 결과를 바탕으로 이 업무에 필요한 단계만 이어가겠습니다.",
+    "불필요한 변경 없이 요청하신 항목만 확인해 보겠습니다.",
+    "적용 전 확인할 조건을 정리해서 보여드릴게요.",
+    "지금 설정을 유지한 채 가능한 선택지를 먼저 살펴보겠습니다.",
+    "확인 결과에서 고객님이 결정할 부분만 구분해 드리겠습니다.",
+]
 
-_FILLER_USER = [
-    "잔액 확인도 같이 부탁드려요",
-    "수수료는 따로 없는 거죠",
-    "알림도 같이 설정해 주세요",
+_ASSISTANT_CONFIRMATIONS = [
+    "최종 반영 전에는 변경 범위와 주의사항을 다시 보여드리겠습니다.",
+    "마지막 단계에서 요청 내용이 맞는지 한 번 더 확인하겠습니다.",
+    "적용되는 항목만 요약한 뒤 고객님 확인을 받겠습니다.",
+    "처리 전 화면에서 대상과 범위를 다시 확인할 수 있습니다.",
+    "확정하기 전에 바뀌는 부분을 따로 안내드리겠습니다.",
+    "마지막 확인 전까지는 현재 설정이 그대로 유지됩니다.",
+]
+
+_ASSISTANT_CLOSINGS = [
+    "요청하신 범위의 처리가 끝났습니다.",
+    "해당 업무를 요청하신 내용대로 마쳤습니다.",
+    "확인하신 범위로 처리가 완료됐습니다.",
+    "선택하신 내용만 반영해 마무리했습니다.",
+]
+_ASSISTANT_CLOSINGS_HIGH_RISK = [
+    "출금이 발생하는 항목이라 지금 바로 실행하지 않고, 고객님 최종 확인 후 진행됩니다.",
+    "자금 이동이 포함돼 현재는 준비만 됐으며, 확인 화면에서 승인해야 실행됩니다.",
+    "이 요청은 출금 전 최종 확인이 필요하며, 승인하기 전에는 반영되지 않습니다.",
+    "금액이 이동하는 변경이라 확인 단계까지 안내했고, 고객님 승인 후에만 처리됩니다.",
+]
+
+_DETAIL_USER = [
+    "현재 설정 기준으로 확인해 주세요",
+    "앱에서 진행할 수 있는 범위로 부탁드려요",
+    "요청한 항목만 기준으로 봐주세요",
+    "기존 상태를 먼저 확인하고 진행해 주세요",
+    "필요한 선택 항목만 알려주세요",
+    "지금 적용된 조건부터 보여주세요",
+]
+
+_CONFIRMATION_USER = [
+    "마지막 적용 전에 바뀌는 부분을 보여주세요",
+    "제가 확인해야 할 단계도 같이 안내해 주세요",
+    "처리 범위를 다시 확인한 뒤 결정할게요",
+    "현재 설정과 달라지는 항목만 알려주세요",
+    "최종 확인 전까지는 그대로 두면 됩니다",
+    "적용 전에 주의할 점도 확인할게요",
 ]
 
 _CUE_WRAPPER_BY_STATUS = {
@@ -248,10 +288,6 @@ class DialogueGenerator:
             safe_task = "자동이체 설정 확인"
 
         memory_facts = list(plan.structured_context.get("session_memory_updates") or [])
-        turns.append(Turn(speaker="user", text=f"{safe_task} 좀 하려고요"))
-        turns.append(Turn(speaker="assistant", text=_ASSISTANT_QUESTIONS[0]))
-
-        # cue turns (or fillers so length stays >= 8 turns)
         cue_texts = list(plan.must_include_cues)
         if not cue_texts:
             cue_texts = [
@@ -259,76 +295,63 @@ class DialogueGenerator:
                 for cue in plan.planned_cues
                 if cue.surface_hint and cue.cue_role != "memory_fact"
             ]
-        while len(cue_texts) < 2:
-            cue_texts.append(None)  # filler slot
-        memory_paths = list(plan.target_memory_paths) or [None]
+        opening_parts = [f"{safe_task} 좀 하려고요"]
         for i, cue in enumerate(cue_texts):
-            if cue is not None:
-                text = wrapper.format(cue=cue)
-                if i == 0 and memory_facts:
-                    text += ". " + ". ".join(_memory_fact_text(update) for update in memory_facts)
-                turns.append(Turn(speaker="user", text=text))
-                planned = next(
-                    (item for item in plan.planned_cues if item.surface_hint == cue),
-                    None,
-                )
-                cues.append(
-                    CueAnnotation(
-                        turn_index=len(turns) - 1,
-                        cue_type=planned.cue_id if planned else _slugify(cue),
-                        cue_text=cue,
-                        linked_memory_path=(planned.linked_memory_paths[0] if planned and planned.linked_memory_paths else None),
-                    )
-                )
-                if i == 0:
-                    for update in memory_facts:
-                        fact_text = _memory_fact_text(update)
-                        cues.append(
-                            CueAnnotation(
-                                turn_index=len(turns) - 1,
-                                cue_type="memory_fact",
-                                cue_text=fact_text,
-                                linked_memory_path=update.get("path"),
-                                linked_memory_operation=update.get("operation"),
-                                linked_memory_value=update.get("new_value"),
-                                evidence_text=fact_text,
-                            )
-                        )
-            else:
-                turns.append(Turn(speaker="user", text=rng.choice(_FILLER_USER)))
-            turns.append(Turn(speaker="assistant", text=_ASSISTANT_QUESTIONS[1 + i % (len(_ASSISTANT_QUESTIONS) - 1)]))
-
-        if memory_facts and not any(cue is not None for cue in cue_texts):
-            fact_turn_index = 2
-            turns[fact_turn_index].text += ". " + ". ".join(
-                _memory_fact_text(update) for update in memory_facts
+            opening_parts.append(wrapper.format(cue=cue))
+            planned = next(
+                (item for item in plan.planned_cues if item.surface_hint == cue),
+                None,
             )
-            for update in memory_facts:
-                cues.append(
-                    CueAnnotation(
-                        turn_index=fact_turn_index,
-                        cue_type="memory_fact",
-                        cue_text=_memory_fact_text(update),
-                        linked_memory_path=update.get("path"),
-                        linked_memory_operation=update.get("operation"),
-                        linked_memory_value=update.get("new_value"),
-                        evidence_text=_memory_fact_text(update),
-                    )
+            cues.append(
+                CueAnnotation(
+                    turn_index=0,
+                    cue_type=planned.cue_role if planned else _slugify(cue),
+                    cue_text=cue,
+                    evidence_text=cue,
+                    linked_memory_path=(
+                        planned.linked_memory_paths[0]
+                        if planned and planned.linked_memory_paths
+                        else None
+                    ),
                 )
+            )
+        for update in memory_facts:
+            fact_text = _memory_fact_text(update)
+            opening_parts.append(fact_text)
+            cues.append(
+                CueAnnotation(
+                    turn_index=0,
+                    cue_type="memory_fact",
+                    cue_text=fact_text,
+                    linked_memory_path=update.get("path"),
+                    linked_memory_operation=update.get("operation"),
+                    linked_memory_value=update.get("new_value"),
+                    evidence_text=fact_text,
+                )
+            )
 
-        turns_min = int(self.cfg.get("turns_min", 7))
-        turns_max = int(self.cfg.get("turns_max", 10))
-        target_turns = rng.randint(turns_min, turns_max)
-        if target_turns % 2 == 1:
-            target_turns = min(turns_max if turns_max % 2 == 0 else turns_max - 1, target_turns + 1)
-        target_turns = max(6, target_turns)
-        while len(turns) < target_turns - 2:
-            turns.append(Turn(speaker="user", text=rng.choice(_FILLER_USER)))
-            turns.append(Turn(speaker="assistant", text=rng.choice(_ASSISTANT_QUESTIONS)))
-
+        turns_min = int(self.cfg.get("turns_min", 8))
+        turns_max = int(self.cfg.get("turns_max", 8))
+        if turns_min != 8 or turns_max != 8:
+            raise ValueError("mock dialogue contract requires exactly 8 turns")
+        turns.append(Turn(speaker="user", text=". ".join(opening_parts)))
+        turns.append(Turn(speaker="assistant", text=rng.choice(_ASSISTANT_OPENINGS)))
+        turns.append(Turn(speaker="user", text=rng.choice(_DETAIL_USER)))
+        turns.append(Turn(speaker="assistant", text=rng.choice(_ASSISTANT_MIDDLES)))
+        turns.append(Turn(speaker="user", text=rng.choice(_CONFIRMATION_USER)))
+        turns.append(Turn(speaker="assistant", text=rng.choice(_ASSISTANT_CONFIRMATIONS)))
         turns.append(Turn(speaker="user", text="네 그렇게 해주세요"))
         high_risk = plan.mapped_action in _HIGH_RISK_FA
-        turns.append(Turn(speaker="assistant", text=_ASSISTANT_CLOSING_HIGH_RISK if high_risk else _ASSISTANT_CLOSING))
+        turns.append(
+            Turn(
+                speaker="assistant",
+                text=rng.choice(
+                    _ASSISTANT_CLOSINGS_HIGH_RISK
+                    if high_risk
+                    else _ASSISTANT_CLOSINGS
+                ),
+            )
+        )
 
         visible = " ".join(t.text for t in turns)
         check = QualitySelfCheck(
@@ -385,7 +408,15 @@ class DialogueGenerator:
             "{has_loan}": str(persona.financial_profile.has_loan).lower(),
             "{session_type}": plan.session_type,
             "{financial_task}": plan.financial_task,
+            "{task_user_goal_instruction}": str(
+                plan.task_user_goal_instruction or "지정된 금융 업무 하나만 수행한다."
+            ),
             "{event_status}": plan.event_status_after_session,
+            "{expected_memory_operation}": str(plan.expected_memory_operation),
+            "{allowed_concrete_values}": json.dumps(
+                sorted(grounded_concrete_values(plan.model_dump(mode="json"))),
+                ensure_ascii=False,
+            ),
             "{must_include_cues}": json.dumps(plan.must_include_cues, ensure_ascii=False),
             "{planned_cues}": json.dumps(
                 [cue.model_dump(mode="json") for cue in plan.planned_cues], ensure_ascii=False
@@ -393,15 +424,72 @@ class DialogueGenerator:
             "{must_not_include_terms}": json.dumps(plan.must_not_include_terms, ensure_ascii=False),
             "{target_memory_paths}": json.dumps(plan.target_memory_paths, ensure_ascii=False),
             "{structured_context}": json.dumps(plan.structured_context, ensure_ascii=False),
-            "{turns_min}": str(self.cfg.get("turns_min", 7)),
-            "{turns_max}": str(self.cfg.get("turns_max", 10)),
+            "{turns_min}": str(self.cfg.get("turns_min", 8)),
+            "{turns_max}": str(self.cfg.get("turns_max", 8)),
             "{user_turns_min}": str(self.cfg.get("user_turns_min", 4)),
-            "{user_turns_max}": str(self.cfg.get("user_turns_max", 6)),
+            "{user_turns_max}": str(self.cfg.get("user_turns_max", 4)),
         }
         prompt = self.prompt_template
         for key, value in replacements.items():
             prompt = prompt.replace(key, value)
         return prompt
+
+    def _build_repair_constraints(
+        self, plan: DialogueGenerationPlan
+    ) -> str:
+        """Build a compact, lossless contract for every repair attempt.
+
+        The full generation prompt can exceed 20k characters because state
+        aliases duplicate large structures. Prefix slicing that prompt drops
+        the forbidden terms and exact memory updates, so repairs must use this
+        deliberately compact representation instead.
+        """
+        context = plan.structured_context or {}
+        event = context.get("event") or {}
+        payload = {
+            "session_type": plan.session_type,
+            "event_status": plan.event_status_after_session,
+            "financial_task": plan.financial_task,
+            "task_user_goal_instruction": plan.task_user_goal_instruction,
+            "turn_limits": {
+                "total_min": int(self.cfg.get("turns_min", 8)),
+                "total_max": int(self.cfg.get("turns_max", 8)),
+                "user_min": int(self.cfg.get("user_turns_min", 4)),
+                "user_max": int(self.cfg.get("user_turns_max", 4)),
+            },
+            "must_include_cues": plan.must_include_cues,
+            "planned_cues": [
+                cue.model_dump(mode="json") for cue in plan.planned_cues
+            ],
+            "must_not_include_terms": plan.must_not_include_terms,
+            "target_memory_paths": plan.target_memory_paths,
+            "protected_memory_paths": plan.protected_memory_paths,
+            "expected_memory_operation": plan.expected_memory_operation,
+            "session_memory_updates": context.get("session_memory_updates") or [],
+            "event_params": event.get("params") or {},
+            "allowed_concrete_values": sorted(
+                grounded_concrete_values(plan.model_dump(mode="json"))
+            ),
+            "cue_annotation_output_contract": {
+                "required_field_names": [
+                    "turn_index",
+                    "cue_type",
+                    "linked_memory_path",
+                    "linked_memory_operation",
+                    "linked_memory_value",
+                    "evidence_text",
+                ],
+                "planner_aliases_not_for_output": [
+                    "cue_id",
+                    "cue_role",
+                    "path",
+                    "operation",
+                    "value",
+                    "linked_memory_paths",
+                ],
+            },
+        }
+        return json.dumps(payload, ensure_ascii=False, indent=2)
 
     @staticmethod
     def _parse_llm_json(raw: str) -> dict:
@@ -471,6 +559,8 @@ class DialogueGenerator:
         payload: dict[str, Any],
         plan: DialogueGenerationPlan,
         persona: NormalizedPersona,
+        *,
+        enforce_turn_limits: bool = False,
     ) -> tuple[list[Turn], list[CueAnnotation], QualitySelfCheck]:
         if not isinstance(payload, dict):
             raise LLMOutputValidationError("payload must be a JSON object")
@@ -500,6 +590,21 @@ class DialogueGenerator:
                 raise LLMOutputValidationError(f"turns[{index}].speaker must be '{expected}' for strict alternation")
         if turns[-1].speaker != "assistant":
             raise LLMOutputValidationError("dialogue must end with an assistant turn")
+        if enforce_turn_limits:
+            turns_min = int(self.cfg.get("turns_min", 1))
+            turns_max = int(self.cfg.get("turns_max", 10_000))
+            user_turns_min = int(self.cfg.get("user_turns_min", 1))
+            user_turns_max = int(self.cfg.get("user_turns_max", 10_000))
+            user_turn_count = sum(turn.speaker == "user" for turn in turns)
+            if not turns_min <= len(turns) <= turns_max:
+                raise LLMOutputValidationError(
+                    f"turn count must be {turns_min}..{turns_max}, got {len(turns)}"
+                )
+            if not user_turns_min <= user_turn_count <= user_turns_max:
+                raise LLMOutputValidationError(
+                    "user turn count must be "
+                    f"{user_turns_min}..{user_turns_max}, got {user_turn_count}"
+                )
         visible = " ".join(turn.text for turn in turns)
         employment_status = _session_context_value(
             plan, "employment.employment_status", persona.occupation_state.employment_status
@@ -551,7 +656,17 @@ class DialogueGenerator:
                     turn_index = one_based_candidate
                 else:
                     raise LLMOutputValidationError(f"cue_annotations[{index}].turn_index must point to a user turn")
+            cue_type = item.get("cue_type") or item.get("cue_role") or item.get("cue_id") or "unknown"
             linked_memory_path = item.get("linked_memory_path")
+            if linked_memory_path is None:
+                linked_memory_path = item.get("path")
+            linked_memory_operation = item.get("linked_memory_operation")
+            if linked_memory_operation is None:
+                linked_memory_operation = item.get("operation")
+            if "linked_memory_value" in item:
+                linked_memory_value = item.get("linked_memory_value")
+            else:
+                linked_memory_value = item.get("value")
             if linked_memory_path is not None and linked_memory_path not in allowed_memory_paths:
                 raise LLMOutputValidationError(
                     f"cue_annotations[{index}].linked_memory_path must be null or one of target_memory_paths"
@@ -559,11 +674,11 @@ class DialogueGenerator:
             cues.append(
                 CueAnnotation(
                     turn_index=turn_index,
-                    cue_type=str(item.get("cue_type", "unknown")),
+                    cue_type=str(cue_type),
                     cue_text=item.get("cue_text"),
                     linked_memory_path=linked_memory_path,
-                    linked_memory_operation=item.get("linked_memory_operation"),
-                    linked_memory_value=item.get("linked_memory_value"),
+                    linked_memory_operation=linked_memory_operation,
+                    linked_memory_value=linked_memory_value,
                     evidence_text=item.get("evidence_text") or item.get("cue_text"),
                 )
             )
@@ -604,11 +719,19 @@ class DialogueGenerator:
         check = QualitySelfCheck(**raw_check)
         return turns, cues, check
 
-    def _llm_session(self, plan: DialogueGenerationPlan, persona: NormalizedPersona, raw_dir: Path) -> Session:
+    def _llm_session(
+        self,
+        plan: DialogueGenerationPlan,
+        persona: NormalizedPersona,
+        raw_dir: Path,
+        *,
+        enforce_turn_limits: bool = False,
+    ) -> Session:
         assert self.client is not None, "llm mode requires an LLMClient"
         prompt = self._build_prompt(plan, persona)
         system = "당신은 은행 상담 대화 데이터 생성기입니다. JSON만 출력합니다."
         raw = self.client.generate(system, prompt)
+        response_metadata = [dict(getattr(self.client, "last_response_metadata", {}) or {})]
 
         raw_dir.mkdir(parents=True, exist_ok=True)
         raw_stem = f"{plan.trajectory_id}_{plan.session_id}{self.raw_filename_suffix}"
@@ -629,10 +752,24 @@ class DialogueGenerator:
         current_raw = raw
         last_error: Exception | None = None
         session: Session | None = None
+        validation_errors: list[str] = []
+        repair_count = 0
         for attempt in range(max_repair_attempts + 1):
             try:
+                current_metadata = response_metadata[-1] if response_metadata else {}
+                stop_reason = current_metadata.get("stop_reason") or current_metadata.get("finish_reason")
+                if stop_reason in {"max_tokens", "length"}:
+                    raise LLMOutputValidationError(
+                        "provider output was truncated at the token limit; "
+                        "return a concise, complete JSON object"
+                    )
                 payload = self._parse_llm_json(current_raw)
-                turns, cues, check = self._payload_to_parts(payload, plan, persona)
+                turns, cues, check = self._payload_to_parts(
+                    payload,
+                    plan,
+                    persona,
+                    enforce_turn_limits=enforce_turn_limits,
+                )
                 candidate = Session(
                     session_id=plan.session_id,
                     trajectory_id=plan.trajectory_id,
@@ -651,6 +788,7 @@ class DialogueGenerator:
                     cue_annotations=cues,
                     quality_self_check=check,
                     generator=self.client.provider,
+                    generation_metadata={},
                     plan=plan,
                 )
                 violations = self.validator.validate_session(candidate.model_dump(mode="json"))
@@ -661,24 +799,65 @@ class DialogueGenerator:
                 break
             except (ValueError, json.JSONDecodeError, LLMOutputValidationError) as exc:
                 last_error = exc
+                validation_errors.append(f"{type(exc).__name__}: {exc}")
                 if attempt >= max_repair_attempts:
                     raise LLMOutputValidationError(
                         f"{plan.trajectory_id}_{plan.session_id}: LLM output is invalid after "
                         f"{max_repair_attempts} repair attempts: {last_error}"
                     ) from exc
+                cumulative_violations = "\n".join(
+                    f"{index}. {error}"
+                    for index, error in enumerate(validation_errors, start=1)
+                )
                 repair = (
                     self.repair_template
-                    .replace("{violations}", str(exc))
-                    .replace("{original_prompt}", prompt[:4000])
-                    .replace("{previous_output}", current_raw[:4000])
+                    .replace("{violations}", cumulative_violations)
+                    .replace("{repair_constraints}", self._build_repair_constraints(plan))
+                    .replace("{original_prompt}", prompt)
+                    .replace("{previous_output}", current_raw)
                 )
                 current_raw = self.client.generate(system, repair)
+                repair_count += 1
+                response_metadata.append(dict(getattr(self.client, "last_response_metadata", {}) or {}))
                 self._write_raw_llm_output(repair_paths[attempt], current_raw)
         else:
             raise LLMOutputValidationError(f"{plan.trajectory_id}_{plan.session_id}: LLM output is invalid")
 
         if session is None:
             raise LLMOutputValidationError(f"{plan.trajectory_id}_{plan.session_id}: LLM output is invalid")
+        final_metadata = dict(response_metadata[-1] if response_metadata else {})
+        total_input = sum(
+            int(item.get("prompt_tokens") or item.get("input_tokens") or (item.get("usage") or {}).get("prompt_tokens") or (item.get("usage") or {}).get("input_tokens") or 0)
+            for item in response_metadata
+        )
+        total_output = sum(
+            int(item.get("completion_tokens") or item.get("output_tokens") or (item.get("usage") or {}).get("completion_tokens") or (item.get("usage") or {}).get("output_tokens") or 0)
+            for item in response_metadata
+        )
+        total_cached = sum(
+            int(item.get("cached_tokens") or (item.get("usage") or {}).get("cached_tokens") or (item.get("usage") or {}).get("cache_read_input_tokens") or 0)
+            for item in response_metadata
+        )
+        final_metadata.update(
+            {
+                "provider_request_count": sum(
+                    1 + int(item.get("retry_count") or 0) for item in response_metadata
+                ),
+                "repair_count": repair_count,
+                "input_tokens": total_input,
+                "output_tokens": total_output,
+                "cached_tokens": total_cached,
+                "request_duration_ms": round(sum(float(item.get("request_duration_ms") or 0) for item in response_metadata), 3),
+                "final_validation_status": "passed",
+                "validation_errors": validation_errors,
+                "responses": response_metadata,
+            }
+        )
+        session.generation_metadata = final_metadata
+        raw_path.with_suffix(".meta.json").write_text(
+            json.dumps(final_metadata, ensure_ascii=False, indent=2, sort_keys=True),
+            encoding="utf-8",
+        )
         return session
 
     # ------------------------------------------------------------------ main
@@ -692,4 +871,9 @@ class DialogueGenerator:
             raw_stem = f"{plan.trajectory_id}_{plan.session_id}{self.raw_filename_suffix}"
             (raw_dir / f"{raw_stem}_prompt.txt").write_text(prompt, encoding="utf-8")
             return None
-        return self._llm_session(plan, persona, raw_dir)
+        return self._llm_session(
+            plan,
+            persona,
+            raw_dir,
+            enforce_turn_limits=True,
+        )

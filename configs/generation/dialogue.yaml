@@ -1,8 +1,8 @@
 # Dialogue generation knobs.
-turns_min: 28
-turns_max: 32
-user_turns_min: 14
-user_turns_max: 16
+turns_min: 8
+turns_max: 8
+user_turns_min: 4
+user_turns_max: 4
 target_sessions_per_trajectory: 300
 routine_sessions_per_year: 2     # fallback when target_sessions_per_trajectory is unset
 hard_negative_ratio: 0.25        # fallback: hard-negative plans per evidence plan
@@ -16,7 +16,9 @@ task_selection:
   penalize_repeated_task: true
 
 evidence:
-  drift_event_ratio: 0.30
+  # An occurred event must be recoverable from its one occurred anchor.  Do
+  # not turn lifecycle stages into an accidental multi-hop requirement.
+  drift_event_ratio: 0.0
   require_occurred_financial_consequence: true
   prevent_cross_status_cue_reuse: true
   require_memory_fact_for_session_updates: true
@@ -40,3 +42,28 @@ controlled_layout:
   window_size: 15
   filler_month_strategy: balanced
   max_filler_sessions_per_month: 5
+
+canary:
+  trajectory_count: 1
+  required_sessions: 300
+  gates:
+    final_success_rate_min: 0.98
+    unrecovered_failure_count_max: 0
+    repair_session_rate_max: 0.20
+    event_label_leakage_max: 0
+    internal_metadata_leakage_max: 0
+    unsafe_high_risk_execution_max: 0
+    memory_fact_mismatch_max: 0
+    cancelled_commit_max: 0
+    weak_signal_overcommit_max: 0
+    hard_negative_update_max: 0
+    missing_required_cue_rate_max: 0.02
+    repeated_utterance_session_rate_max: 0.05
+    near_duplicate_session_rate_max: 0.05
+    offline_banking_violation_max: 0
+    turn_contract_violation_max: 0
+    opening_evidence_coupling_max: 0
+  warnings:
+    repair_session_rate: 0.10
+    filler_same_month_density: true
+    task_template_overconcentration: true

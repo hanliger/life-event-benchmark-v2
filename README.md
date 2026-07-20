@@ -139,7 +139,7 @@ conda run -n life_event python scripts/generate_dialogue_sessions.py \
 | `configs/generation/dialogue.yaml` | 세션 수, 턴 수, hard negative 비율, repair 횟수 |
 | `configs/registries/life_events.yaml` | 생애 사건, 발생 조건, lifecycle 설정 |
 
-현재 dialogue 기본값은 세션당 `28~32`턴이고, trajectory당 최대 `300`개 세션을 계획합니다. canonical subgraph simulation은 고정 10년을 목표로 하지 않고, occurred event target을 채운 시점에 종료합니다. `global_hazard_scale`은 legacy/background hazard fallback에만 적용됩니다.
+현재 dialogue 기본값은 세션당 정확히 `8`개 발화(고객 4 + assistant 4)이며, trajectory당 `300`개 세션을 계획합니다. 긴 horizon/context는 단일 상담을 늘이는 대신 시간순 300세션과 prefix checkpoint로 구성합니다. canonical subgraph simulation은 고정 10년을 목표로 하지 않고, occurred event target을 채운 시점에 종료합니다. `global_hazard_scale`은 legacy/background hazard fallback에만 적용됩니다.
 
 ## Current Stabilization Notes
 
@@ -162,13 +162,15 @@ conda run -n life_event python scripts/generate_dialogue_sessions.py \
 ### 3. Dialogue generation quality
 
 - dialogue는 모바일/인터넷뱅킹 챗봇 상황이어야 합니다. 오프라인 지점, 창구, 서명, 신청서 작성, 실물 신분증, 배송/수령 같은 장면은 금지합니다.
+- 한 세션은 하나의 `financial_task`만 다루고, evidence 세션은 첫 고객 발화에서 업무 요청과 관련 단서를 함께 제시합니다.
+- occurred event의 전체 memory delta는 하나의 occurred anchor 세션에서 근거화하며 여러 세션으로 쪼개지 않습니다.
 - 금지어는 user 발화뿐 아니라 assistant의 선택지, 예시, 확인 질문에도 나오면 안 됩니다.
 - LLM 출력은 저장 전 JSON parse, schema, speaker alternation, cue index, persona-state consistency, dialogue validator를 통과해야 합니다.
 - `weak_signal` validator는 이제 `확정`이라는 단어 하나만으로 실패시키지 않고, `이미 확정`, `확정됐`, `확정된 상태`처럼 event를 확정으로 못박는 표현만 잡습니다. 금융상품 문맥의 "금리는 신청 시 확정"은 허용합니다.
 
 ### 4. LLM/provider handling
 
-- 30턴 내외 대화를 안정적으로 받기 위해 `LLM_MAX_TOKENS=8192`를 기본으로 둡니다.
+- provider 출력 한도와 repair 여유를 위해 `LLM_MAX_TOKENS=8192`를 기본으로 두지만, 생성 계약 자체는 8개 발화입니다.
 - provider가 빈 text를 반환하면 repair prompt로 넘기지 않고 provider call 자체를 retry합니다.
 - Anthropic 응답의 `stop_reason`, `stop_sequence`, `content_block_types`, token usage를 raw output 옆 `.meta.json`으로 저장합니다.
 - `--continue-on-error` 실행 시 실패한 세션은 `errors_traj_*.jsonl`에 남기고, 가능하면 마지막 provider metadata도 함께 기록합니다.

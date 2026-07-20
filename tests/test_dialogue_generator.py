@@ -164,6 +164,8 @@ def test_llm_session_repairs_invented_linked_memory_path(tmp_path):
 def test_llm_session_repairs_dialogue_conflicting_with_retired_persona(tmp_path):
     persona = _persona()
     persona.occupation_state.employment_status = "retired"
+    plan = _plan()
+    plan.structured_context = {"event": {"params": {"payment_day": 25}}}
     broken = """
     {
       "turns": [
@@ -187,7 +189,7 @@ def test_llm_session_repairs_dialogue_conflicting_with_retired_persona(tmp_path)
     client = FakeLLMClient([broken, repaired])
     generator = DialogueGenerator(mode="llm", client=client, paths=RepoPaths.default())
 
-    session = generator._llm_session(_plan(), persona, tmp_path)
+    session = generator._llm_session(plan, persona, tmp_path)
 
     visible = " ".join(turn.text for turn in session.turns)
     assert "월급" not in visible
@@ -227,6 +229,277 @@ def test_llm_session_repairs_dialogue_validator_violations(tmp_path):
     visible = " ".join(turn.text for turn in session.turns)
     assert "ㅇㅇ" not in visible
     assert "dialogue validator violations" in client.requests[1][1]
+
+
+def test_llm_session_repairs_hard_negative_memory_fact(tmp_path):
+    plan = _plan()
+    plan.session_type = "hard_negative"
+    plan.expected_memory_operation = "no_update"
+    broken = """
+    {
+      "turns": [
+        {"speaker": "user", "text": "동호회 회비 계좌를 확인하려고요."},
+        {"speaker": "assistant", "text": "네, 확인해 드릴게요."}
+      ],
+      "cue_annotations": [
+        {
+          "turn_index": 0,
+          "cue_type": "memory_fact",
+          "linked_memory_path": null,
+          "linked_memory_operation": "update",
+          "linked_memory_value": "변경"
+        }
+      ],
+      "quality_self_check": {}
+    }
+    """
+    repaired = """
+    {
+      "turns": [
+        {"speaker": "user", "text": "동호회 회비 계좌를 확인하려고요."},
+        {"speaker": "assistant", "text": "네, 확인해 드릴게요."}
+      ],
+      "cue_annotations": [
+        {"turn_index": 0, "cue_type": "near_miss", "linked_memory_path": null}
+      ],
+      "quality_self_check": {}
+    }
+    """
+    client = FakeLLMClient([broken, repaired])
+    generator = DialogueGenerator(mode="llm", client=client, paths=RepoPaths.default())
+
+    session = generator._llm_session(plan, _persona(), tmp_path)
+
+    assert all(cue.cue_type != "memory_fact" for cue in session.cue_annotations)
+    assert "hard_negative_unintended_update" in client.requests[1][1]
+    assert '"expected_memory_operation": "no_update"' in client.requests[1][1]
+
+
+def test_repair_uses_compact_constraints_and_cumulative_violations(tmp_path):
+    plan = _plan()
+    plan.must_not_include_terms = ["집주인"]
+    plan.target_memory_paths = ["housing.rent_payee"]
+    plan.structured_context = {
+        "padding": "x" * 10_000,
+        "session_memory_updates": [
+            {
+                "path": "housing.rent_payee",
+                "operation": "archive",
+                "new_value": None,
+            }
+        ],
+    }
+    invalid_json = '{"turns": [{"speaker": "user"'
+    forbidden = """
+    {
+      "turns": [
+        {"speaker": "user", "text": "집주인에게 보내던 납부는 끝났어요."},
+        {"speaker": "assistant", "text": "네, 확인했습니다."}
+      ],
+      "cue_annotations": [
+        {
+          "turn_index": 0,
+          "cue_type": "memory_fact",
+          "linked_memory_path": "housing.rent_payee",
+          "linked_memory_operation": "archive",
+          "linked_memory_value": null,
+          "evidence_text": "집주인에게 보내던 납부는 끝났어요"
+        }
+      ],
+      "quality_self_check": {}
+    }
+    """
+    repaired = forbidden.replace("집주인에게", "이전 납부처에")
+    client = FakeLLMClient([invalid_json, forbidden, repaired])
+    generator = DialogueGenerator(mode="llm", client=client, paths=RepoPaths.default())
+
+    session = generator._llm_session(plan, _persona(), tmp_path)
+
+    assert "집주인" not in " ".join(turn.text for turn in session.turns)
+    final_repair_prompt = client.requests[2][1]
+    assert "no JSON object" in final_repair_prompt
+    assert "forbidden_term" in final_repair_prompt
+    assert '"must_not_include_terms": [\n    "집주인"' in final_repair_prompt
+    assert '"path": "housing.rent_payee"' in final_repair_prompt
+
+
+def test_llm_session_repairs_ungrounded_concrete_value(tmp_path):
+    broken = """
+    {
+      "turns": [
+        {"speaker": "user", "text": "예금 금리를 알려주세요."},
+        {"speaker": "assistant", "text": "현재 금리는 3.5%입니다."}
+      ],
+      "cue_annotations": [],
+      "quality_self_check": {}
+    }
+    """
+    repaired = """
+    {
+      "turns": [
+        {"speaker": "user", "text": "예금 금리를 알려주세요."},
+        {"speaker": "assistant", "text": "현재 적용 가능한 금리를 조회해 드릴게요."}
+      ],
+      "cue_annotations": [],
+      "quality_self_check": {}
+    }
+    """
+    client = FakeLLMClient([broken, repaired])
+    generator = DialogueGenerator(mode="llm", client=client, paths=RepoPaths.default())
+
+    session = generator._llm_session(_plan(), _persona(), tmp_path)
+
+    assert "3.5" not in " ".join(turn.text for turn in session.turns)
+    assert "concrete_value_hallucination" in client.requests[1][1]
+
+
+def test_initial_prompt_lists_allowed_concrete_values():
+    plan = _plan()
+    plan.structured_context = {
+        "event": {"params": {"payment_day": 25, "amount_krw": 350_000}}
+    }
+    generator = DialogueGenerator(paths=RepoPaths.default())
+
+    prompt = generator._build_prompt(plan, _persona())
+
+    assert "대화에서 사용할 수 있는 숫자의 정규화 목록" in prompt
+    assert '"25"' in prompt
+    assert '"350000"' in prompt
+
+
+def test_llm_session_normalizes_planner_style_cue_aliases(tmp_path):
+    plan = _plan()
+    plan.target_memory_paths = ["employment.employment_status"]
+    plan.structured_context = {
+        "session_memory_updates": [
+            {
+                "path": "employment.employment_status",
+                "operation": "update",
+                "new_value": "on_leave",
+            }
+        ]
+    }
+    raw = """
+    {
+      "turns": [
+        {"speaker": "user", "text": "회사 소속은 유지되고 지금은 쉬는 중이에요."},
+        {"speaker": "assistant", "text": "네, 현재 상태를 확인하겠습니다."}
+      ],
+      "cue_annotations": [
+        {
+          "turn_index": 0,
+          "cue_id": "memory_fact_employment_status",
+          "cue_role": "memory_fact",
+          "path": "employment.employment_status",
+          "operation": "update",
+          "value": "on_leave",
+          "evidence_text": "회사 소속은 유지되고 지금은 쉬는 중이에요"
+        }
+      ],
+      "quality_self_check": {}
+    }
+    """
+    client = FakeLLMClient([raw])
+    generator = DialogueGenerator(mode="llm", client=client, paths=RepoPaths.default())
+
+    session = generator._llm_session(plan, _persona(), tmp_path)
+
+    fact = session.cue_annotations[0]
+    assert fact.cue_type == "memory_fact"
+    assert fact.linked_memory_path == "employment.employment_status"
+    assert fact.linked_memory_operation == "update"
+    assert fact.linked_memory_value == "on_leave"
+
+
+def test_llm_session_repairs_provider_token_truncation(tmp_path):
+    truncated = '{"turns": [{"speaker": "user", "text": "잘린 응답"}'
+    repaired = """
+    {
+      "turns": [
+        {"speaker": "user", "text": "예금 금리를 확인하고 싶어요."},
+        {"speaker": "assistant", "text": "네, 조회해 드리겠습니다."}
+      ],
+      "cue_annotations": [],
+      "quality_self_check": {}
+    }
+    """
+    client = FakeLLMClient(
+        [truncated, repaired],
+        metadata=[{"stop_reason": "max_tokens"}, {"stop_reason": "end_turn"}],
+    )
+    generator = DialogueGenerator(mode="llm", client=client, paths=RepoPaths.default())
+
+    session = generator._llm_session(_plan(), _persona(), tmp_path)
+
+    assert session.turns[-1].speaker == "assistant"
+    assert "truncated at the token limit" in client.requests[1][1]
+
+
+def test_public_generation_repairs_out_of_range_turn_count(tmp_path):
+    def payload(turn_count: int) -> str:
+        turns = [
+            {
+                "speaker": "user" if index % 2 == 0 else "assistant",
+                "text": (
+                    f"예금 상품 조건을 확인하고 싶어요 항목 {index}"
+                    if index % 2 == 0
+                    else f"네 해당 조건을 순서대로 안내하겠습니다 항목 {index}"
+                ),
+            }
+            for index in range(turn_count)
+        ]
+        return json.dumps(
+            {"turns": turns, "cue_annotations": [], "quality_self_check": {}},
+            ensure_ascii=False,
+        )
+
+    plan = _plan()
+    plan.structured_context = {
+        "event": {"params": {"allowed_indices": list(range(8))}}
+    }
+    client = FakeLLMClient([payload(6), payload(8)])
+    generator = DialogueGenerator(
+        mode="llm",
+        client=client,
+        paths=RepoPaths.default(),
+        raw_output_dir=tmp_path,
+    )
+
+    session = generator.generate_session(plan, _persona())
+
+    assert session is not None
+    assert len(session.turns) == 8
+    assert sum(turn.speaker == "user" for turn in session.turns) == 4
+    assert "turn count must be 8..8, got 6" in client.requests[1][1]
+
+
+def test_mock_session_is_exactly_eight_turns_and_opens_with_evidence():
+    plan = _plan()
+    plan.session_type = "occurred_evidence"
+    plan.event_status_after_session = "occurred"
+    plan.must_include_cues = ["새 납부 정보"]
+    generator = DialogueGenerator(mode="mock", paths=RepoPaths.default())
+
+    session = generator.generate_session(plan, _persona())
+
+    assert session is not None
+    assert len(session.turns) == 8
+    assert [turn.speaker for turn in session.turns] == [
+        "user",
+        "assistant",
+        "user",
+        "assistant",
+        "user",
+        "assistant",
+        "user",
+        "assistant",
+    ]
+    assert "예금 금리 문의" in session.turns[0].text
+    assert "새 납부 정보" in session.turns[0].text
+    assert any(
+        cue.turn_index == 0 and cue.cue_type != "memory_fact"
+        for cue in session.cue_annotations
+    )
 
 
 def test_llm_session_normalizes_one_based_cue_index(tmp_path):

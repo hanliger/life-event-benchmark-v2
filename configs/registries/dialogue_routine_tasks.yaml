@@ -1,0 +1,39 @@
+# Low-risk, no-event banking tasks for routine filler sessions.
+# These tasks must not create long-term life-event memory updates.
+routine_tasks:
+  - {task_template_id: routine_recent_transactions, fa_code: FA-01, visible_task_ko: "최근 거래내역 조회", user_goal_instruction: "최근 거래내역만 확인하고 다른 업무로 전환하지 않는다."}
+  - {task_template_id: routine_incoming_history, fa_code: FA-01, visible_task_ko: "최근 입금내역 조회", user_goal_instruction: "최근 입금내역만 확인하고 입금의 배경을 추측하지 않는다."}
+  - {task_template_id: routine_outgoing_history, fa_code: FA-01, visible_task_ko: "최근 이체내역 조회", user_goal_instruction: "최근 이체내역만 확인하고 새 이체를 실행하지 않는다."}
+  - {task_template_id: routine_autopay_history, fa_code: FA-01, visible_task_ko: "자동납부 내역 조회", user_goal_instruction: "현재 자동납부 내역만 조회하고 설정 변경은 하지 않는다."}
+  - {task_template_id: routine_statement_download, fa_code: FA-01, visible_task_ko: "월간 거래명세서 내려받기", user_goal_instruction: "선택한 기간의 거래명세서 확인 방법만 안내받는다."}
+  - {task_template_id: routine_transfer_receipt, fa_code: FA-01, visible_task_ko: "이체확인증 발급", user_goal_instruction: "이미 완료된 이체의 확인증 발급만 처리한다."}
+  - {task_template_id: routine_fee_history, fa_code: FA-01, visible_task_ko: "수수료 출금내역 조회", user_goal_instruction: "최근 수수료 출금내역만 확인한다."}
+  - {task_template_id: routine_account_balances, fa_code: FA-01, visible_task_ko: "계좌별 잔액 조회", user_goal_instruction: "보유 계좌의 현재 잔액만 확인한다."}
+
+  - {task_template_id: routine_deposit_alert, fa_code: FA-02, visible_task_ko: "입금 알림 설정 확인", user_goal_instruction: "입금 알림의 현재 설정과 변경 방법만 확인한다."}
+  - {task_template_id: routine_withdrawal_alert, fa_code: FA-02, visible_task_ko: "출금 알림 설정 확인", user_goal_instruction: "출금 알림의 현재 설정과 변경 방법만 확인한다."}
+  - {task_template_id: routine_low_balance_alert, fa_code: FA-02, visible_task_ko: "잔액 부족 알림 설정", user_goal_instruction: "잔액 부족 알림 조건만 설정하고 자금 이동은 하지 않는다."}
+  - {task_template_id: routine_large_transfer_alert, fa_code: FA-02, visible_task_ko: "고액 이체 알림 설정", user_goal_instruction: "고액 이체 알림 기능만 확인하고 이체는 실행하지 않는다."}
+  - {task_template_id: routine_maturity_reminder, fa_code: FA-02, visible_task_ko: "예적금 만기 알림 설정", user_goal_instruction: "예적금 만기 알림만 설정하고 상품 가입이나 해지는 하지 않는다."}
+  - {task_template_id: routine_payment_reminder, fa_code: FA-02, visible_task_ko: "결제일 알림 설정", user_goal_instruction: "결제일 알림의 일정과 수신 방법만 확인한다."}
+  - {task_template_id: routine_exchange_alert, fa_code: FA-02, visible_task_ko: "환율 알림 설정", user_goal_instruction: "관심 통화의 환율 알림 기능만 확인하고 환전은 실행하지 않는다."}
+
+  - {task_template_id: routine_deposit_rate, fa_code: FA-04, visible_task_ko: "예금 금리 조회", user_goal_instruction: "현재 조회 가능한 예금 금리 조건만 비교한다."}
+  - {task_template_id: routine_savings_rate, fa_code: FA-04, visible_task_ko: "적금 금리 조회", user_goal_instruction: "현재 조회 가능한 적금 금리 조건만 비교한다."}
+  - {task_template_id: routine_after_tax_interest, fa_code: FA-04, visible_task_ko: "세후 이자 계산", user_goal_instruction: "입력한 조건의 예상 세후 이자만 계산한다."}
+  - {task_template_id: routine_savings_maturity, fa_code: FA-04, visible_task_ko: "적금 만기금액 계산", user_goal_instruction: "입력한 조건의 예상 만기금액만 계산한다."}
+  - {task_template_id: routine_loan_rate, fa_code: FA-04, visible_task_ko: "대출 금리 조건 조회", user_goal_instruction: "일반적인 대출 금리 조건만 조회하고 실행을 요청하지 않는다."}
+  - {task_template_id: routine_repayment_simulation, fa_code: FA-04, visible_task_ko: "대출 상환액 시뮬레이션", user_goal_instruction: "입력한 가정으로 상환액만 계산하고 대출을 실행하지 않는다."}
+  - {task_template_id: routine_exchange_fee, fa_code: FA-04, visible_task_ko: "환전 수수료 조건 조회", user_goal_instruction: "환전 수수료와 우대 조건만 조회하고 환전은 실행하지 않는다."}
+
+  - {task_template_id: routine_goal_pocket, fa_code: FA-05, visible_task_ko: "목적자금 공간 기능 조회", user_goal_instruction: "목적별 자금 분리 기능만 알아보고 구체적인 생애 목적은 말하지 않는다."}
+  - {task_template_id: routine_expense_account, fa_code: FA-05, visible_task_ko: "생활비 분리계좌 기능 조회", user_goal_instruction: "일상 지출을 분리하는 계좌 기능만 확인한다."}
+  - {task_template_id: routine_group_account, fa_code: FA-05, visible_task_ko: "모임통장 기능 조회", user_goal_instruction: "모임통장의 권한과 회비 관리 기능만 확인한다."}
+  - {task_template_id: routine_fx_account, fa_code: FA-05, visible_task_ko: "외화통장 기능 조회", user_goal_instruction: "외화통장의 보관 통화와 수수료 기능만 확인한다."}
+  - {task_template_id: routine_emergency_fund, fa_code: FA-05, visible_task_ko: "비상금 분리계좌 기능 조회", user_goal_instruction: "비상금을 별도로 관리하는 계좌 기능만 확인한다."}
+
+  - {task_template_id: routine_login_security, fa_code: FA-06, visible_task_ko: "최근 로그인 보안점검", user_goal_instruction: "최근 로그인 기록과 보안 상태만 점검한다."}
+  - {task_template_id: routine_registered_devices, fa_code: FA-06, visible_task_ko: "등록 기기 확인", user_goal_instruction: "현재 등록된 기기와 해제 방법만 확인한다."}
+  - {task_template_id: routine_security_alert, fa_code: FA-06, visible_task_ko: "보안 알림 설정 확인", user_goal_instruction: "보안 알림의 현재 설정과 수신 방법만 확인한다."}
+  - {task_template_id: routine_transfer_security, fa_code: FA-06, visible_task_ko: "이체 보안설정 점검", user_goal_instruction: "이체 관련 보안설정만 점검하고 자금 이동은 하지 않는다."}
+  - {task_template_id: routine_phishing_prevention, fa_code: FA-06, visible_task_ko: "보이스피싱 예방 기능 조회", user_goal_instruction: "예방 기능과 차단 설정만 확인하고 피해 발생을 암시하지 않는다."}

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from decimal import Decimal, InvalidOperation
 import re
 from typing import Any
 
@@ -62,6 +63,102 @@ _OFFLINE_BANKING_TERMS = [
     "창구 수령",
     "실물 수령",
 ]
+
+_CONCRETE_NUMBER_RE = re.compile(
+    r"(?<![0-9A-Za-z_])(?P<number>\d[\d,]*(?:\.\d+)?)"
+    r"\s*(?P<unit>천만|백만|십만|억|만|천|백)?(?P<currency>원)?"
+)
+_KOREAN_NUMBER_MULTIPLIERS = {
+    "억": Decimal("100000000"),
+    "천만": Decimal("10000000"),
+    "백만": Decimal("1000000"),
+    "십만": Decimal("100000"),
+    "만": Decimal("10000"),
+    "천": Decimal("1000"),
+    "백": Decimal("100"),
+}
+
+
+def _canonical_decimal(value: Decimal) -> str:
+    normalized = value.normalize()
+    return format(normalized, "f")
+
+
+def _numbers_in_text(text: str) -> list[str]:
+    values: list[str] = []
+    for match in _CONCRETE_NUMBER_RE.finditer(text):
+        try:
+            value = Decimal(match.group("number").replace(",", ""))
+        except InvalidOperation:
+            continue
+        unit = match.group("unit")
+        if unit:
+            value *= _KOREAN_NUMBER_MULTIPLIERS[unit]
+        values.append(_canonical_decimal(value))
+    return values
+
+
+def _collect_grounded_numbers(value: Any, result: set[str]) -> None:
+    if isinstance(value, bool) or value is None:
+        return
+    if isinstance(value, (int, float, Decimal)):
+        try:
+            result.add(_canonical_decimal(Decimal(str(value))))
+        except InvalidOperation:
+            return
+        return
+    if isinstance(value, str):
+        result.update(_numbers_in_text(value))
+        return
+    if isinstance(value, list):
+        for item in value:
+            _collect_grounded_numbers(item, result)
+        return
+    if isinstance(value, dict):
+        for item in value.values():
+            _collect_grounded_numbers(item, result)
+
+
+def grounded_concrete_values(plan: dict[str, Any]) -> set[str]:
+    """Return concrete numeric values explicitly available to dialogue.
+
+    Runtime metadata such as month_index and session_id is intentionally
+    excluded: it must not accidentally authorize an unrelated amount, date,
+    rate, or account suffix in visible dialogue.
+    """
+    context = plan.get("structured_context") or {}
+    event = context.get("event") or {}
+    sources = {
+        "financial_task": plan.get("financial_task"),
+        "must_include_cues": plan.get("must_include_cues") or [],
+        "planned_cues": [
+            {
+                "required_value": cue.get("required_value"),
+                "surface_hint": cue.get("surface_hint"),
+            }
+            for cue in (plan.get("planned_cues") or [])
+        ],
+        "event_params": event.get("params") or {},
+        "current_life_state": (context.get("current_state") or {}).get("life_state") or {},
+        "current_financial_memory": context.get("current_financial_memory") or context.get("current_memory") or {},
+        "session_memory_updates": context.get("session_memory_updates") or [],
+        "event_memory_updates": context.get("event_memory_updates") or [],
+        "stale_memory_pairs": plan.get("stale_memory_pairs") or [],
+    }
+    result: set[str] = set()
+    _collect_grounded_numbers(sources, result)
+    return result
+
+
+def ungrounded_concrete_values(
+    visible: str, plan: dict[str, Any]
+) -> list[str]:
+    grounded = grounded_concrete_values(plan)
+    ungrounded: list[str] = []
+    for value in _numbers_in_text(visible):
+        if value not in grounded and value not in ungrounded:
+            ungrounded.append(value)
+    return ungrounded
 
 
 class DialogueValidator:
@@ -159,6 +256,39 @@ class DialogueValidator:
 
         status = session.get("event_status_after_session", "no_event")
         session_type = session.get("session_type", "")
+
+        if session_type in {
+            "weak_signal_evidence",
+            "upcoming_evidence",
+            "occurred_evidence",
+            "cancellation_evidence",
+        } and not any(
+            cue.get("turn_index") == 0 and cue.get("cue_type") != "memory_fact"
+            for cue in cue_annotations
+        ):
+            flag(
+                "opening_evidence_not_coupled",
+                "first user turn lacks an event/cancellation cue tied to the task",
+            )
+
+        if session_type == "hard_negative" or plan.get("expected_memory_operation") == "no_update":
+            unexpected_facts = [
+                cue for cue in cue_annotations
+                if cue.get("cue_type") == "memory_fact"
+                or cue.get("linked_memory_operation") not in {None, "no_update"}
+            ]
+            if unexpected_facts:
+                flag(
+                    "hard_negative_unintended_update",
+                    "no-update session contains a memory fact or mutation annotation",
+                )
+
+        invented_values = ungrounded_concrete_values(visible, plan)
+        if invented_values:
+            flag(
+                "concrete_value_hallucination",
+                ", ".join(invented_values[:8]),
+            )
 
         # required cues present / forbidden absent
         for cue in plan.get("must_include_cues") or []:

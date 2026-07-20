@@ -11,6 +11,9 @@ EXECUTE ?= 0
 PERSONA_INPUT ?= Nemotron-Personas-Korea
 AGE_QUOTAS ?= 20-29:4 30-39:6 40-49:6 50-59:4
 RUN_ID ?= ko_KR_age20s4_30s6_40s6_50s4_seed$(SEED)
+MODEL_PROFILE ?= sonnet5
+CANARY_TRAJ ?= traj_001
+DIALOGUE_WORKERS ?= 4
 QUOTA_FLAGS := $(foreach quota,$(AGE_QUOTAS),--quota $(quota))
 SESSION_LIMIT_FLAGS := $(if $(MAX_SESSIONS),--max-sessions $(MAX_SESSIONS),)
 
@@ -30,6 +33,7 @@ ITEMS_DIR := $(RUN_DIR)/benchmark_items
 QUALITY := $(RUN_DIR)/quality_reports
 
 .PHONY: setup inventory normalize-personas initial-states simulate-smoke plan-dialogues audit-dialogue-plans \
+	dialogue-canary audit-dialogue-canary review-dialogue-canary dialogue-production-remaining \
 	coverage-trajectories dialogue-smoke-dry dialogue-smoke validate-dialogues \
 	export-gold build-items history-filter audit pipeline-smoke test clean-generated \
 	export-gold-controlled build-items-controlled audit-controlled export-public
@@ -85,6 +89,54 @@ audit-dialogue-plans:
 		--plans-dir $(PLAN_DIR) \
 		--trajectories-dir $(TRAJ_DIR) \
 		--output-dir $(RUN_DIR)/reports
+
+dialogue-canary:
+	$(PYTHON) scripts/generate_dialogue_sessions.py \
+		--trajectories-dir $(TRAJ_DIR) \
+		--plans-dir $(PLAN_DIR) \
+		--trajectory-id $(CANARY_TRAJ) \
+		--model-profile $(MODEL_PROFILE) \
+		--workers $(DIALOGUE_WORKERS) \
+		--output-dir $(RUN_DIR)/dialogues/canary/$(MODEL_PROFILE)/sessions \
+		--raw-output-dir $(RUN_DIR)/dialogues/canary/$(MODEL_PROFILE)/raw_outputs \
+		--overwrite --execute --continue-on-error
+
+audit-dialogue-canary:
+	$(PYTHON) scripts/audit_dialogue_generation.py \
+		--trajectories-dir $(TRAJ_DIR) \
+		--plans-dir $(PLAN_DIR) \
+		--sessions-dir $(RUN_DIR)/dialogues/canary/$(MODEL_PROFILE)/sessions \
+		--raw-output-dir $(RUN_DIR)/dialogues/canary/$(MODEL_PROFILE)/raw_outputs \
+		--output-dir $(RUN_DIR)/dialogues/canary/$(MODEL_PROFILE)/audit \
+		--trajectory-id $(CANARY_TRAJ)
+	$(PYTHON) scripts/check_dialogue_canary.py \
+		--trajectory-id $(CANARY_TRAJ) \
+		--plans-dir $(PLAN_DIR) \
+		--sessions-dir $(RUN_DIR)/dialogues/canary/$(MODEL_PROFILE)/sessions \
+		--audit-dir $(RUN_DIR)/dialogues/canary/$(MODEL_PROFILE)/audit \
+		--output-dir $(RUN_DIR)/dialogues/canary/$(MODEL_PROFILE)/audit
+
+review-dialogue-canary:
+	$(PYTHON) scripts/build_dialogue_review_packet.py \
+		--trajectory-id $(CANARY_TRAJ) \
+		--plans-dir $(PLAN_DIR) \
+		--sessions-dir $(RUN_DIR)/dialogues/canary/$(MODEL_PROFILE)/sessions \
+		--audit-dir $(RUN_DIR)/dialogues/canary/$(MODEL_PROFILE)/audit \
+		--output-dir $(RUN_DIR)/dialogues/canary/$(MODEL_PROFILE)/review \
+		--seed $(SEED)
+
+dialogue-production-remaining:
+	$(PYTHON) scripts/generate_dialogue_sessions.py \
+		--trajectories-dir $(TRAJ_DIR) \
+		--plans-dir $(PLAN_DIR) \
+		--exclude-trajectory-id $(CANARY_TRAJ) \
+		--model-profile $(MODEL_PROFILE) \
+		--canary-manifest $(RUN_DIR)/dialogues/canary/$(MODEL_PROFILE)/generation_manifest.json \
+		--require-canary-pass $(RUN_DIR)/dialogues/canary/$(MODEL_PROFILE)/audit/canary_decision.json \
+		--confirm-multi-trajectory-generation \
+		--output-dir $(SESS_DIR) \
+		--raw-output-dir $(RAW_DIALOGUE_DIR) \
+		--resume --retry-errors --execute --continue-on-error
 
 dialogue-smoke-dry:
 	$(PYTHON) scripts/generate_dialogue_sessions.py \

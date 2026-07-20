@@ -44,6 +44,32 @@ class DialoguePlanValidator:
             key: value for key, value in raw_cues.items() if not key.startswith("_")
         }
         self.cfg = load_yaml(self.paths.generation / "dialogue.yaml")
+        self.evidence_registry = load_yaml(
+            self.paths.registries / "dialogue_evidence_realization.yaml"
+        )
+        self.lifecycle_registry = load_yaml(
+            self.paths.registries / "dialogue_lifecycle_surface.yaml"
+        )
+        self.high_risk_registry = load_yaml(
+            self.paths.registries / "high_risk_action_contracts.yaml"
+        )
+
+    def _realization_spec(self, event_id: str, status: str) -> dict[str, Any]:
+        spec = dict((self.evidence_registry.get("_defaults") or {}).get(status) or {})
+        spec.update(
+            dict((self.evidence_registry.get(event_id) or {}).get(status) or {})
+        )
+        return spec
+
+    def registry_coverage_gaps(
+        self, combinations: Iterable[tuple[str, str]]
+    ) -> list[tuple[str, str]]:
+        """Return active event/status pairs without a realizable contract."""
+        return sorted(
+            (event_id, status)
+            for event_id, status in combinations
+            if not self._realization_spec(event_id, status).get("allowed_dimensions")
+        )
 
     @staticmethod
     def _violation(
@@ -258,6 +284,75 @@ class DialoguePlanValidator:
                 if plan.task_used_generic_fallback:
                     violations.append(self._violation(plan, trajectory_id, "task.generic_evidence_fallback", "evidence plan used a generic FA example"))
 
+                realization = self._realization_spec(str(event_id), status)
+                if not realization:
+                    violations.append(
+                        self._violation(
+                            plan,
+                            trajectory_id,
+                            "evidence.missing_contract",
+                            f"no realization contract for {event_id}+{status}",
+                        )
+                    )
+                dimension_ids = {
+                    item.dimension_id for item in plan.evidence_dimensions
+                }
+                required_dimensions = [
+                    item for item in plan.evidence_dimensions if item.required
+                ]
+                required_roles = {
+                    str(role) for role in realization.get("required_roles") or []
+                }
+                actual_roles = {item.role for item in required_dimensions}
+                if len(dimension_ids) < int(realization.get("min_distinct_dimensions", 1)):
+                    violations.append(
+                        self._violation(
+                            plan,
+                            trajectory_id,
+                            "evidence.insufficient_dimensions",
+                            "plan has fewer dimensions than its realization contract",
+                        )
+                    )
+                if not required_roles.issubset(actual_roles):
+                    violations.append(
+                        self._violation(
+                            plan,
+                            trajectory_id,
+                            "evidence.missing_required_role",
+                            ", ".join(sorted(required_roles - actual_roles)),
+                        )
+                    )
+                placement_specs = {
+                    item.get("strategy_id"): item
+                    for item in self.lifecycle_registry.get("placement_strategies") or []
+                }
+                placement = placement_specs.get(plan.evidence_placement_strategy)
+                if placement is None or list(placement.get("slots") or []) != list(
+                    plan.evidence_placement_slots
+                ):
+                    violations.append(
+                        self._violation(
+                            plan,
+                            trajectory_id,
+                            "evidence.invalid_placement_strategy",
+                            "placement strategy and slots do not match registry",
+                        )
+                    )
+                surface_specs = {
+                    item.get("variant_id"): item
+                    for item in self.lifecycle_registry.get(status) or []
+                }
+                surface = surface_specs.get(plan.lifecycle_surface_variant_id)
+                if surface is None or surface.get("family") != plan.lifecycle_surface_family:
+                    violations.append(
+                        self._violation(
+                            plan,
+                            trajectory_id,
+                            "evidence.invalid_lifecycle_surface",
+                            "lifecycle surface ID/family does not match registry",
+                        )
+                    )
+
                 life_state = (plan.structured_context.get("current_state") or {}).get("life_state") or {}
                 task_text = plan.financial_task
                 target_residence = (
@@ -366,6 +461,8 @@ class DialoguePlanValidator:
                     violations.append(self._violation(plan, trajectory_id, "negative.missing_metadata", "hard negative lacks type/explanation"))
                 if plan.expected_memory_operation != "no_update":
                     violations.append(self._violation(plan, trajectory_id, "negative.operation", "hard negative expected operation is not no_update"))
+                if not plan.hard_negative_surface_variant_id:
+                    violations.append(self._violation(plan, trajectory_id, "negative.missing_surface_variant", "hard negative lacks semantic surface variant"))
             if plan.session_type == "routine_financial" and plan.planned_cues:
                 violations.append(self._violation(plan, trajectory_id, "negative.routine_event_cue", "routine plan contains an event cue"))
             if plan.session_type == "routine_financial":
@@ -389,6 +486,27 @@ class DialoguePlanValidator:
                 filler_counts[plan.month_index] += 1
                 if plan.filler_placement_overflow:
                     filler_overflow_months.add(plan.month_index)
+
+            if plan.mapped_action in self.high_risk_registry:
+                contract = plan.action_execution_contract
+                if not contract.required_slots and contract.action_mode != "information_only":
+                    violations.append(
+                        self._violation(
+                            plan,
+                            trajectory_id,
+                            "action.missing_execution_contract",
+                            "high-risk execution task lacks required slots",
+                        )
+                    )
+                if contract.completion_allowed and contract.missing_slots:
+                    violations.append(
+                        self._violation(
+                            plan,
+                            trajectory_id,
+                            "action.completion_with_missing_slots",
+                            ", ".join(contract.missing_slots),
+                        )
+                    )
 
         cap = int(self.cfg.get("controlled_layout", {}).get("max_filler_sessions_per_month", 5))
         for month, count in filler_counts.items():
@@ -417,6 +535,18 @@ class DialoguePlanValidator:
             "fa_code": counts(plan.mapped_action for plan in plans),
             "task_template_id": counts(plan.task_template_id for plan in plans),
             "hard_negative_type": counts(plan.hard_negative_type for plan in plans),
+            "hard_negative_surface_variant_id": counts(
+                plan.hard_negative_surface_variant_id for plan in plans
+            ),
+            "evidence_placement_strategy": counts(
+                plan.evidence_placement_strategy for plan in plans
+            ),
+            "lifecycle_surface_family": counts(
+                plan.lifecycle_surface_family for plan in plans
+            ),
+            "lifecycle_surface_variant_id": counts(
+                plan.lifecycle_surface_variant_id for plan in plans
+            ),
             "evidence_path": counts(evidence_paths),
             "action_impact": counts(impact_types),
             "evidence_paths_without_committed_update": sum(

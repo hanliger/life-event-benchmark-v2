@@ -14,7 +14,7 @@ from typing import Any, Iterable
 from ..io import RepoPaths, load_yaml
 from .models import RawDialogueResponse
 
-PLANNER_INPUT_SCHEMA_VERSION = "dialogue-plan-v5"
+PLANNER_INPUT_SCHEMA_VERSION = "dialogue-plan-v6-semantic-contracts"
 FROZEN_MANIFEST_FIELDS = (
     "provider",
     "model",
@@ -23,6 +23,7 @@ FROZEN_MANIFEST_FIELDS = (
     "generation_prompt_hash",
     "repair_prompt_hash",
     "dialogue_config_hash",
+    "dialogue_contract_registry_hashes",
     "planner_input_schema_version",
 )
 
@@ -144,6 +145,17 @@ def build_generation_manifest(
     trajectory_ids = [path.stem for path in trajectory_files]
     plan_files = [plans_dir / f"plans_{trajectory_id}.jsonl" for trajectory_id in trajectory_ids]
     plan_files = [path for path in plan_files if path.exists()]
+    contract_registry_files = [
+        paths.registries / filename
+        for filename in (
+            "dialogue_evidence_realization.yaml",
+            "dialogue_lifecycle_surface.yaml",
+            "dialogue_event_disclosure_patterns.yaml",
+            "high_risk_action_contracts.yaml",
+            "bank_policy_profile.yaml",
+            "dialogue_hard_negative_templates.yaml",
+        )
+    ]
     return {
         "run_id": run_id,
         "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -158,6 +170,9 @@ def build_generation_manifest(
         "response_format": effective_model.get("response_format", "prompt_json"),
         "max_output_tokens": int(effective_model.get("max_tokens", 8192)),
         "dialogue_config_hash": sha256_file(paths.generation / "dialogue.yaml"),
+        "dialogue_contract_registry_hashes": {
+            path.name: sha256_file(path) for path in contract_registry_files
+        },
         "generation_prompt_hash": sha256_file(paths.prompts / "dialogue/generate_banking_session_ko.md"),
         "repair_prompt_hash": sha256_file(paths.prompts / "dialogue/repair_banking_session_ko.md"),
         "plans_directory": str(plans_dir.resolve()),
@@ -209,3 +224,21 @@ def require_canary_pass(path: Path | str) -> None:
     decision = json.loads(Path(path).read_text(encoding="utf-8"))
     if decision.get("decision") != "PASS":
         raise ValueError(f"production requires PASS canary, got {decision.get('decision')!r}")
+
+
+def require_human_review_pass(path: Path | str) -> None:
+    decision = json.loads(Path(path).read_text(encoding="utf-8"))
+    if decision.get("decision") != "PASS":
+        raise ValueError(
+            "production requires PASS human review, got "
+            f"{decision.get('decision')!r}"
+        )
+
+
+def require_regression_pass(path: Path | str) -> None:
+    decision = json.loads(Path(path).read_text(encoding="utf-8"))
+    if decision.get("decision") != "PASS":
+        raise ValueError(
+            "full canary v2 requires PASS regression canary, got "
+            f"{decision.get('decision')!r}"
+        )

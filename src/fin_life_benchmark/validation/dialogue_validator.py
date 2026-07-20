@@ -8,6 +8,7 @@ from typing import Any
 
 from ..fsm.models import LifeEventTemplate
 from ..fsm.registry import all_event_labels_ko
+from ..io import RepoPaths, load_yaml
 
 _ASSISTANT_LEAK_PATTERNS = [
     "이사하셨군요",
@@ -27,7 +28,16 @@ _CHOSEONG_RE = re.compile(r"[ㄱ-ㅎㅏ-ㅣ]{2,}")
 _FA_CODE_RE = re.compile(r"FA-\d{2}")
 
 _HIGH_RISK_FA = {"FA-07", "FA-08", "FA-09", "FA-10"}
-_EXECUTION_PHRASES = ["바로 실행했습니다", "즉시 변경했습니다", "자동으로 해지했습니다"]
+_COMPLETION_RE = re.compile(
+    r"(?:완료(?:되었|됐|되었습니다|됐습니다|했|했습니다)|"
+    r"처리(?:했|했습니다|되었|됐|되었습니다|됐습니다)|"
+    r"접수(?:되었|됐|되었습니다|됐습니다|했|했습니다)|"
+    r"적용(?:되었|됐|되었습니다|됐습니다|됩니다|했|했습니다)|"
+    r"등록(?:되었|됐|되었습니다|됐습니다|했|했습니다)|"
+    r"변경해\s*두었|변경해\s*뒀|해지(?:했|했습니다|되었|됐|되었습니다|됐습니다)|"
+    r"실행(?:했|했습니다|되었|됐|되었습니다|됐습니다)|요청을\s*받았습니다|"
+    r"다음\s*이체일부터\s*반영)"
+)
 _CONFIRMATION_PHRASES = ["확인 후", "확인 후에", "동의", "본인 확인"]
 _WEAK_SIGNAL_OVERCOMMIT_PHRASES = [
     "이미 확정",
@@ -77,6 +87,118 @@ _KOREAN_NUMBER_MULTIPLIERS = {
     "천": Decimal("1000"),
     "백": Decimal("100"),
 }
+
+_GENERIC_SLOT_VALUES = {
+    "해당 금액",
+    "정해둔 금액",
+    "설정한 금액",
+    "선택한 날짜",
+    "해당 날짜",
+    "매달 초",
+    "부모님 계좌",
+    "지정 계좌",
+}
+
+_VISIBLE_SLOT_ALIASES = {
+    "main_checking": ("주거래계좌", "주거래 계좌", "입출금계좌", "입출금 계좌"),
+    "spouse": ("배우자", "가족"),
+    "KRW": ("원화", "원"),
+    "USD": ("미국 달러", "달러", "USD"),
+    "JPY": ("일본 엔", "엔화", "JPY"),
+    "EUR": ("유로", "EUR"),
+}
+
+_LABEL_SUFFIX_RE = r"(?:하|해|했|할|한|하는|하려|를|을|가|이|는|은|로|으로|와|과|에|도|부터|까지|계획|예정)"
+
+
+def contains_contextual_event_label(text: str, label: str) -> bool:
+    """Match a Korean event label as a token/stem, never inside another word."""
+    if not text or not label:
+        return False
+    pattern = re.compile(
+        rf"(?<![0-9A-Za-z가-힣]){re.escape(label)}(?=$|[^0-9A-Za-z가-힣]|{_LABEL_SUFFIX_RE})"
+    )
+    return bool(pattern.search(text))
+
+
+def policy_claims(text: str) -> set[str]:
+    """Normalize the small set of policy claims used by trajectory audits."""
+    claims: set[str] = set()
+    if re.search(r"(?:공동명의|공동\s*명의).{0,18}(?:가능|등록할 수|만들 수 있)", text):
+        claims.add("joint_account:supported")
+    if re.search(r"(?:공동명의|공동\s*명의).{0,18}(?:불가능|지원하지 않|만들 수 없)", text):
+        claims.add("joint_account:unsupported")
+    if re.search(r"(?:대표\s*명의|한\s*명).{0,12}(?:필수|반드시|해야)", text):
+        claims.add("joint_account:unsupported")
+    return claims
+
+
+def completion_turn_indices(turns: list[dict[str, Any]]) -> list[int]:
+    indices: list[int] = []
+    for index, turn in enumerate(turns):
+        if turn.get("speaker") != "assistant":
+            continue
+        text = str(turn.get("text", ""))
+        if not _COMPLETION_RE.search(text):
+            continue
+        if any(
+            marker in text
+            for marker in (
+                "완료되지",
+                "처리하지",
+                "실행하지",
+                "적용되지",
+                "반영되지",
+                "완료 전",
+                "본인인증",
+                "인증이 완료",
+                "조회가 완료",
+                "확인이 완료",
+                "안내가 완료",
+                "확인 후",
+                "승인 후",
+                "승인해야",
+                "확인 후 진행",
+                "승인 후에만",
+            )
+        ):
+            continue
+        indices.append(index)
+    return indices
+
+
+def _slot_value_visible(slot: str, value: Any, user_text: str) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, bool):
+        return True
+    if isinstance(value, (int, float, Decimal)):
+        try:
+            canonical = _canonical_decimal(Decimal(str(value)))
+        except InvalidOperation:
+            return False
+        return canonical in _numbers_in_text(user_text)
+    if isinstance(value, str):
+        if value in user_text:
+            return True
+        if any(alias in user_text for alias in _VISIBLE_SLOT_ALIASES.get(value, ())):
+            return True
+        if slot == "product_or_goal":
+            tokens = [
+                token
+                for token in re.findall(r"[가-힣]{2,}", value)
+                if token not in {"설정", "확인", "준비", "변경"}
+            ]
+            return bool(tokens) and any(token in user_text for token in tokens)
+        return False
+    if isinstance(value, list):
+        return bool(value) and all(_slot_value_visible(slot, item, user_text) for item in value)
+    if isinstance(value, dict):
+        leaves = [item for item in value.values() if item is not None]
+        return bool(leaves) and any(
+            _slot_value_visible(slot, item, user_text) for item in leaves
+        )
+    return False
 
 
 def _canonical_decimal(value: Decimal) -> str:
@@ -162,9 +284,21 @@ def ungrounded_concrete_values(
 
 
 class DialogueValidator:
-    def __init__(self, templates: dict[str, LifeEventTemplate]):
+    def __init__(
+        self,
+        templates: dict[str, LifeEventTemplate],
+        paths: RepoPaths | None = None,
+    ):
+        self.paths = paths or RepoPaths.default()
         self.templates = templates
         self.event_labels = all_event_labels_ko(templates)
+        self.disclosure_registry = load_yaml(
+            self.paths.registries / "dialogue_event_disclosure_patterns.yaml"
+        )
+        self.policy_registry = load_yaml(
+            self.paths.registries / "bank_policy_profile.yaml"
+        )
+        self.cfg = load_yaml(self.paths.generation / "dialogue.yaml")
 
     def validate_session(self, session: dict[str, Any]) -> list[dict[str, str]]:
         """Return a list of violations: [{code, detail}]."""
@@ -199,7 +333,7 @@ class DialogueValidator:
         for label in self.event_labels:
             if any(label in cue for cue in plan_cues):
                 continue
-            if label in visible:
+            if contains_contextual_event_label(visible, label):
                 flag("event_label_leakage", f"label '{label}' in visible text")
         if _FA_CODE_RE.search(visible):
             flag("fa_code_leakage", "FA-XX code in visible text")
@@ -256,20 +390,124 @@ class DialogueValidator:
 
         status = session.get("event_status_after_session", "no_event")
         session_type = session.get("session_type", "")
-
-        if session_type in {
+        evidence_types = {
             "weak_signal_evidence",
             "upcoming_evidence",
             "occurred_evidence",
             "cancellation_evidence",
-        } and not any(
-            cue.get("turn_index") == 0 and cue.get("cue_type") != "memory_fact"
-            for cue in cue_annotations
-        ):
-            flag(
-                "opening_evidence_not_coupled",
-                "first user turn lacks an event/cancellation cue tied to the task",
+        }
+
+        if session_type in evidence_types:
+            opening = str(turns[0].get("text", ""))
+            task_terms = [
+                token
+                for token in re.findall(r"[가-힣]{2,}", str(plan.get("financial_task") or session.get("financial_task") or ""))
+                if token not in {"확인", "설정", "관리", "내역", "관련"}
+            ]
+            task_annotated = any(
+                cue.get("turn_index") == 0 and cue.get("cue_type") == "task_intent"
+                for cue in cue_annotations
             )
+            if not task_annotated and not any(term in opening for term in task_terms):
+                flag(
+                    "task_not_introduced_in_opening",
+                    "first user turn does not introduce the planned banking task",
+                )
+
+            dimensions = plan.get("evidence_dimensions") or []
+            dimension_by_id = {
+                str(item.get("dimension_id")): item for item in dimensions
+            }
+            realized: dict[str, list[int]] = {}
+            for cue in cue_annotations:
+                dimension_id = cue.get("evidence_dimension_id")
+                if not dimension_id:
+                    continue
+                if dimension_id not in dimension_by_id:
+                    flag(
+                        "evidence_dimension_annotation_mismatch",
+                        f"unknown evidence dimension '{dimension_id}'",
+                    )
+                    continue
+                expected_role = str(dimension_by_id[dimension_id].get("role"))
+                if cue.get("cue_type") not in {expected_role, "memory_fact"}:
+                    flag(
+                        "evidence_dimension_annotation_mismatch",
+                        f"{dimension_id} annotated as {cue.get('cue_type')}, expected {expected_role}",
+                    )
+                index = int(cue.get("turn_index", -1))
+                if 0 <= index < len(turns) and turns[index].get("speaker") == "user":
+                    realized.setdefault(str(dimension_id), []).append(index)
+            required_dimensions = [
+                item for item in dimensions if item.get("required", True)
+            ]
+            missing_dimensions = [
+                item
+                for item in required_dimensions
+                if str(item.get("dimension_id")) not in realized
+            ]
+            if missing_dimensions:
+                missing_ids = [str(item.get("dimension_id")) for item in missing_dimensions]
+                flag("required_evidence_not_realized", ", ".join(missing_ids))
+                flag("insufficient_event_evidence", ", ".join(missing_ids))
+            required_roles = {
+                str(item.get("role")) for item in required_dimensions
+            }
+            realized_roles = {
+                str(dimension_by_id[dimension_id].get("role"))
+                for dimension_id in realized
+                if dimension_id in dimension_by_id
+            }
+            for role in sorted(required_roles - realized_roles):
+                flag("missing_required_evidence_role", role)
+            if "subtype_disambiguation" in required_roles - realized_roles:
+                flag("subtype_not_disambiguated", "subtype-disambiguation evidence missing")
+            if dimensions and not realized_roles.intersection(
+                {"state_change", "entity_change", "subtype_disambiguation", "uncertainty", "future_timing", "cancellation", "prior_current_contrast"}
+            ):
+                flag("generic_financial_task_only", "only generic financial activity is evidenced")
+
+            realized_turns = sorted({turn for values in realized.values() for turn in values})
+            planned_slots = set(plan.get("evidence_placement_slots") or [])
+            if realized_turns and planned_slots and not set(realized_turns).issubset(planned_slots):
+                flag(
+                    "evidence_placement_strategy_mismatch",
+                    f"realized at {realized_turns}, planned {sorted(planned_slots)}",
+                )
+            dialogue_contract = (plan.get("structured_context") or {}).get("dialogue_contract") or {}
+            final_reveal = bool(dialogue_contract.get("explicit_final_reveal"))
+            deadline = int(
+                dialogue_contract.get(
+                    "evidence_deadline_user_turn",
+                    self.cfg.get("semantic_validity", {}).get("evidence_deadline_user_turn", 3),
+                )
+            )
+            user_indices = [index for index, turn in enumerate(turns) if turn.get("speaker") == "user"]
+            deadline_index = user_indices[min(max(deadline, 1), len(user_indices)) - 1]
+            if realized_turns and not final_reveal and max(realized_turns) > deadline_index:
+                flag(
+                    "evidence_revealed_too_late",
+                    f"evidence after user turn {deadline}",
+                )
+
+        event_id = str(((plan.get("structured_context") or {}).get("event") or {}).get("event_id") or "")
+        disclosure = self.disclosure_registry.get(event_id) or {}
+        direct_patterns = list(plan.get("forbidden_direct_event_patterns") or [])
+        direct_patterns.extend(disclosure.get("disallowed") or [])
+        status_exceptions = disclosure.get("status_exceptions") or {}
+        exception_spec = status_exceptions.get(status) or {}
+        exception_patterns = set(
+            exception_spec.get("allowed_direct_patterns") or []
+            if isinstance(exception_spec, dict)
+            else exception_spec or []
+        )
+        for pattern in dict.fromkeys(direct_patterns):
+            if pattern and pattern not in exception_patterns and pattern in visible:
+                flag("direct_event_disclosure", f"direct pattern '{pattern}'")
+                flag("forbidden_event_paraphrase", f"forbidden paraphrase '{pattern}'")
+        for pattern in disclosure.get("review_only") or []:
+            if pattern and pattern in visible:
+                flag("near_direct_event_disclosure", f"borderline pattern '{pattern}'")
 
         if session_type == "hard_negative" or plan.get("expected_memory_operation") == "no_update":
             unexpected_facts = [
@@ -299,7 +537,12 @@ class DialogueValidator:
             if cue and cue in visible and not any(cue in text for text in annotated_user_texts):
                 flag("required_cue_not_annotated", f"cue '{cue}' not present in any annotated user turn")
         for term in plan.get("must_not_include_terms") or []:
-            if term and term in visible:
+            prohibited = (
+                contains_contextual_event_label(visible, term)
+                if term in self.event_labels
+                else bool(term and term in visible)
+            )
+            if prohibited:
                 flag("forbidden_term", f"term '{term}' present")
 
         # status consistency
@@ -308,8 +551,6 @@ class DialogueValidator:
         if status == "occurred" and session_type == "occurred_evidence":
             if not (session.get("cue_annotations") or []):
                 flag("occurred_without_consequence_cue", "occurred_evidence session has no cue annotation")
-        if status == "cancelled" and "없던 일" not in visible and "취소" not in visible:
-            flag("cancelled_without_cancellation_cue", "no cancellation cue in visible text")
         if status == "weak_signal":
             if (
                 any(phrase in visible for phrase in _WEAK_SIGNAL_OVERCOMMIT_PHRASES)
@@ -317,12 +558,100 @@ class DialogueValidator:
             ):
                 flag("weak_signal_overcommitted", "weak_signal session implies confirmation")
 
-        # high-risk execution without confirmation
+        # High-risk completion is legal only when the planner supplied every
+        # concrete slot and the user explicitly confirmed in a visible turn.
         mapped = session.get("mapped_action")
         if mapped in _HIGH_RISK_FA:
-            for phrase in _EXECUTION_PHRASES:
-                if phrase in assistant_text and not any(c in assistant_text for c in _CONFIRMATION_PHRASES):
-                    flag("high_risk_auto_execution", f"assistant executed without confirmation: '{phrase}'")
+            contract = plan.get("action_execution_contract") or {}
+            resolution = session.get("action_resolution") or {}
+            completion_indices = completion_turn_indices(turns)
+            attempted_completion = bool(completion_indices) or resolution.get("mode") == "executed_after_confirmation"
+            confirmation_index = resolution.get("explicit_confirmation_turn_index")
+            visible_confirmation = (
+                isinstance(confirmation_index, int)
+                and 0 <= confirmation_index < len(turns)
+                and turns[confirmation_index].get("speaker") == "user"
+                and any(
+                    phrase in str(turns[confirmation_index].get("text", ""))
+                    for phrase in ("확인", "동의", "승인", "진행해", "실행해", "해주세요", "해 주세요")
+                )
+            )
+            provided = resolution.get("provided_slots") or {}
+            grounded = contract.get("grounded_slots") or {}
+            for slot, value in provided.items():
+                if (
+                    (isinstance(value, str) and value in _GENERIC_SLOT_VALUES)
+                    or slot not in grounded
+                    or grounded.get(slot) != value
+                ):
+                    flag("high_risk_unplanned_slot_value", f"{slot}={value!r}")
+            missing = list(contract.get("missing_slots") or [])
+            runtime_missing = [
+                slot
+                for slot in contract.get("required_slots") or []
+                if slot != "explicit_confirmation"
+                and (
+                    slot not in grounded
+                    or slot not in provided
+                    or provided.get(slot) != grounded.get(slot)
+                    or not _slot_value_visible(slot, grounded.get(slot), user_text)
+                )
+            ]
+            if attempted_completion and not contract.get("required_slots") and contract.get("action_mode") != "information_only":
+                flag("high_risk_missing_required_slot", "execution contract has no required slots")
+            if attempted_completion and (missing or runtime_missing):
+                flag(
+                    "high_risk_missing_required_slot",
+                    ", ".join(sorted(set(missing + runtime_missing))),
+                )
+            if attempted_completion and contract.get("confirmation_required") and not visible_confirmation:
+                flag("high_risk_missing_confirmation", "completion lacks visible explicit user confirmation")
+            if (
+                completion_indices
+                and visible_confirmation
+                and int(confirmation_index) >= min(completion_indices)
+            ):
+                flag("high_risk_missing_confirmation", "confirmation does not precede completion")
+            if attempted_completion and (
+                not contract.get("completion_allowed")
+                or missing
+                or runtime_missing
+                or (contract.get("confirmation_required") and not visible_confirmation)
+            ):
+                flag("high_risk_false_completion", f"completion at turns {completion_indices}")
+                flag("high_risk_auto_execution", f"unsafe completion at turns {completion_indices}")
+            recorded_completion = resolution.get("completion_turn_index")
+            if (recorded_completion is None) != (not completion_indices) or (
+                completion_indices and recorded_completion not in completion_indices
+            ):
+                flag("high_risk_action_resolution_mismatch", "completion index disagrees with visible dialogue")
+            expected_mode = (
+                "executed_after_confirmation"
+                if completion_indices
+                else contract.get("action_mode", "information_only")
+            )
+            if resolution.get("mode", "information_only") != expected_mode:
+                flag(
+                    "high_risk_action_resolution_mismatch",
+                    f"mode {resolution.get('mode')!r}, expected {expected_mode!r}",
+                )
+            expected_missing = sorted(missing)
+            if sorted(resolution.get("missing_slots") or []) != expected_missing:
+                flag("high_risk_action_resolution_mismatch", "missing slots disagree with plan contract")
+
+        policy_rules = (self.policy_registry.get("rules") or {})
+        for policy_key, rule in policy_rules.items():
+            if not isinstance(rule, dict):
+                continue
+            for pattern in rule.get("prohibited_patterns") or []:
+                if pattern and pattern in assistant_text:
+                    flag("unsupported_bank_policy_claim", f"{policy_key}: '{pattern}'")
+        normalized_claims = policy_claims(assistant_text)
+        if {
+            "joint_account:supported",
+            "joint_account:unsupported",
+        }.issubset(normalized_claims):
+            flag("bank_policy_contradiction", "contradictory joint-account claims")
 
         return violations
 

@@ -80,11 +80,16 @@ def main() -> int:
             for item in instance.status_history:
                 active_pairs.add((instance.event_id, item.status.value))
 
+    evidence_coverage_gaps = set(validator.registry_coverage_gaps(active_pairs))
     uncovered = sorted(
         f"{event_id}+{status}"
         for event_id, status in active_pairs
         if status in {"weak_signal", "upcoming", "occurred", "cancelled"}
-        and not (planner.task_registry.get(event_id) or {}).get(status)
+        and (
+            not (planner.task_registry.get(event_id) or {}).get(status)
+            or (event_id, status)
+            in evidence_coverage_gaps
+        )
     )
     counts = validator.audit_counts(all_plans)
     violation_codes = dict(sorted(Counter(item.code for item in all_violations).items()))

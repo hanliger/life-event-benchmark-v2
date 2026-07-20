@@ -1,25 +1,43 @@
-# Typed near misses. `when` is evaluated against the current snapshot.
+# Typed semantic near misses. Variants change intent and no-event reasoning,
+# never persona facts or protected memory state.
 career_employment:
   domain: employment
   action_matched_hard_negative:
-    - {task_template_id: hn_employment_one_off_deposit, fa_code: FA-01, visible_task_ko: "일회성 정산금 입금 내역 확인", explanation: "회사 경비나 일회성 정산금일 뿐 새로운 고용 또는 급여 등록이 아니다.", surface_hint: "이번 입금은 경비 정산금이라 내역만 확인할게요", protected_memory_paths: [employment.employer, employment.employment_status, employment.salary_account, employment.salary_day]}
+    - {surface_variant_id: employment_expense_reimbursement, task_template_id: hn_employment_one_off_deposit, fa_code: FA-01, visible_task_ko: "일회성 정산금 입금 내역 확인", explanation: "회사 경비나 일회성 정산금일 뿐 새로운 고용 또는 급여 등록이 아니다.", surface_hint: "이번 입금은 경비 정산금이라 내역만 확인할게요", evidence_placement_strategy: task_and_evidence_opening, dialogue_intent: transaction_identity_check, protected_memory_paths: [employment.employer, employment.employment_status, employment.salary_account, employment.salary_day]}
+    - {surface_variant_id: employment_bonus_not_payroll, task_template_id: hn_employment_bonus_deposit, fa_code: FA-02, visible_task_ko: "비정기 입금 알림 설정", explanation: "비정기 성과금 알림일 뿐 고용주나 정기 급여 조건의 변화가 아니다.", surface_hint: "정기 급여가 아닌 입금만 따로 알림 받고 싶어요", evidence_placement_strategy: task_first_evidence_turn_2, dialogue_intent: notification_setup, protected_memory_paths: [employment.employer, employment.employment_status, employment.salary_account, employment.salary_day]}
+    - {surface_variant_id: employment_old_payslip_lookup, task_template_id: hn_employment_historical_salary, fa_code: FA-01, visible_task_ko: "과거 급여 입금 내역 조회", explanation: "기존 급여 기록을 확인할 뿐 현재 고용 또는 급여계좌를 바꾸는 요청이 아니다.", surface_hint: "예전에 들어온 급여 기록만 찾아볼게요", evidence_placement_strategy: task_first_evidence_turn_3, dialogue_intent: historical_lookup, protected_memory_paths: [employment.employer, employment.employment_status, employment.salary_account, employment.salary_day]}
+
 relationship_marriage:
   domain: relationship
   sibling_event_negative:
-    - {task_template_id: hn_relationship_group_dues, fa_code: FA-05, visible_task_ko: "동호회 공동 회비 계좌 관리", explanation: "동호회 회비를 관리할 뿐 배우자나 가구 관계의 변화가 아니다.", surface_hint: "동호회 회비를 같이 관리할 계좌예요", protected_memory_paths: [household.marital_status, household.spouse_or_partner]}
+    - {surface_variant_id: relationship_club_dues, task_template_id: hn_relationship_group_dues, fa_code: FA-05, visible_task_ko: "동호회 공동 회비 계좌 관리", explanation: "동호회 회비를 관리할 뿐 배우자나 가구 관계의 변화가 아니다.", surface_hint: "동호회 회비를 같이 관리할 방법만 볼게요", evidence_placement_strategy: task_and_evidence_opening, dialogue_intent: group_dues_management, protected_memory_paths: [household.marital_status, household.spouse_or_partner]}
+    - {surface_variant_id: relationship_roommate_expense, task_template_id: hn_relationship_roommate_split, fa_code: FA-01, visible_task_ko: "동거인 생활비 정산 내역 확인", explanation: "동거인과 비용을 정산할 뿐 혼인 또는 배우자 등록의 변화가 아니다.", surface_hint: "함께 쓴 생활비 정산 내역만 확인하려고요", evidence_placement_strategy: task_first_evidence_turn_2, dialogue_intent: expense_reconciliation, protected_memory_paths: [household.marital_status, household.spouse_or_partner]}
+    - {surface_variant_id: relationship_family_gift_pot, task_template_id: hn_relationship_family_gift, fa_code: FA-05, visible_task_ko: "가족 행사비 목적계좌 비교", explanation: "가족 행사비를 모을 공간을 비교할 뿐 가구 관계를 등록하거나 바꾸지 않는다.", surface_hint: "가족 행사비를 잠깐 모을 용도만 비교해 주세요", evidence_placement_strategy: task_first_evidence_turn_3, dialogue_intent: temporary_goal_comparison, protected_memory_paths: [household.marital_status, household.spouse_or_partner]}
+
 housing_move:
   domain: housing
   existing_state_negative:
-    - {task_template_id: hn_housing_current_address, fa_code: FA-01, visible_task_ko: "현재 등록 주소 확인", explanation: "이미 사용 중인 주소를 확인할 뿐 새 주소나 주거 상태 변화가 없다.", surface_hint: "오래전부터 쓰던 등록 정보가 맞는지만 볼게요", protected_memory_paths: [housing.address, housing.residence_status, housing.contract_type]}
+    - {surface_variant_id: housing_existing_address_check, task_template_id: hn_housing_current_address, fa_code: FA-01, visible_task_ko: "현재 등록 주소 확인", explanation: "이미 사용 중인 주소를 확인할 뿐 새 주소나 주거 상태 변화가 없다.", surface_hint: "오래전부터 쓰던 등록 정보가 맞는지만 볼게요", evidence_placement_strategy: task_and_evidence_opening, dialogue_intent: current_record_check, protected_memory_paths: [housing.address, housing.residence_status, housing.contract_type]}
+    - {surface_variant_id: housing_statement_destination, task_template_id: hn_housing_statement_address, fa_code: FA-03, visible_task_ko: "전자명세서 주소 표시 확인", explanation: "명세서에 보이는 기존 주소를 확인할 뿐 주소 변경 요청이 아니다.", surface_hint: "전자명세서에 현재 주소가 어떻게 보이는지만 확인해 주세요", evidence_placement_strategy: task_first_evidence_turn_2, dialogue_intent: statement_display_check, protected_memory_paths: [housing.address, housing.residence_status, housing.contract_type]}
+    - {surface_variant_id: housing_existing_fee_history, task_template_id: hn_housing_fee_history, fa_code: FA-01, visible_task_ko: "기존 주거비 납부 내역 조회", explanation: "계속 납부하던 주거비 기록을 조회할 뿐 납부처나 거주지가 바뀌지 않는다.", surface_hint: "계속 내던 주거비 기록만 모아 보고 싶어요", evidence_placement_strategy: task_first_evidence_turn_3, dialogue_intent: payment_history_lookup, protected_memory_paths: [housing.address, housing.residence_status, housing.contract_type]}
+
 education_child_stage_entry:
   domain: education
   stale_value_no_change:
-    - {task_template_id: hn_education_existing_autopay, fa_code: FA-01, visible_task_ko: "기존 교육비 자동이체 내역 확인", explanation: "이미 적용 중인 납부를 확인할 뿐 새로운 교육 단계나 금액 변화가 없다.", surface_hint: "계속 내던 교육비 자동이체 내역만 볼게요", protected_memory_paths: [education.child_education_stage, goals.child_education_goal], when: {state_truthy: [has_children]}}
+    - {surface_variant_id: education_existing_autopay, task_template_id: hn_education_existing_autopay, fa_code: FA-01, visible_task_ko: "기존 교육비 자동이체 내역 확인", explanation: "이미 적용 중인 납부를 확인할 뿐 새로운 교육 단계나 금액 변화가 없다.", surface_hint: "계속 내던 교육비 자동이체 내역만 볼게요", evidence_placement_strategy: task_and_evidence_opening, dialogue_intent: existing_payment_check, protected_memory_paths: [education.child_education_stage, goals.child_education_goal], when: {state_truthy: [has_children]}}
+    - {surface_variant_id: education_old_receipt, task_template_id: hn_education_old_receipts, fa_code: FA-01, visible_task_ko: "지난 교육비 납부확인 내역 조회", explanation: "과거 교육비 증빙을 찾을 뿐 교육 단계나 현재 납부 설정을 갱신하지 않는다.", surface_hint: "지난번 교육비 납부 내역만 다시 찾으려고요", evidence_placement_strategy: task_first_evidence_turn_2, dialogue_intent: historical_receipt_lookup, protected_memory_paths: [education.child_education_stage, goals.child_education_goal], when: {state_truthy: [has_children]}}
+    - {surface_variant_id: education_goal_progress, task_template_id: hn_education_goal_progress, fa_code: FA-01, visible_task_ko: "기존 교육 목적저축 현황 확인", explanation: "이미 세운 교육 목적저축의 현황만 확인하며 자녀 교육 단계 변화는 없다.", surface_hint: "기존 교육 목적저축이 얼마나 모였는지만 볼게요", evidence_placement_strategy: task_first_evidence_turn_3, dialogue_intent: goal_progress_check, protected_memory_paths: [education.child_education_stage, goals.child_education_goal], when: {state_truthy: [has_children]}}
+
 crisis_financial_fraud:
   domain: crisis
   action_matched_hard_negative:
-    - {task_template_id: hn_security_routine_review, fa_code: FA-06, visible_task_ko: "정기 보안점검과 로그인 알림 확인", explanation: "예방 목적의 정기 보안점검일 뿐 피해나 의심 거래가 발생한 것이 아니다.", surface_hint: "정기적으로 로그인 알림 설정만 확인하고 있어요", protected_memory_paths: [cashflow.recent_one_off_expense]}
+    - {surface_variant_id: security_routine_login_review, task_template_id: hn_security_routine_review, fa_code: FA-06, visible_task_ko: "정기 보안점검과 로그인 알림 확인", explanation: "예방 목적의 정기 보안점검일 뿐 피해나 의심 거래가 발생한 것이 아니다.", surface_hint: "정기적으로 로그인 알림 설정만 확인하고 있어요", evidence_placement_strategy: task_and_evidence_opening, dialogue_intent: preventive_review, protected_memory_paths: [cashflow.recent_one_off_expense]}
+    - {surface_variant_id: security_device_cleanup, task_template_id: hn_security_device_review, fa_code: FA-06, visible_task_ko: "등록 기기와 접속 권한 점검", explanation: "사용하지 않는 기기를 정리하는 예방 업무이며 금융 피해가 발생한 상황이 아니다.", surface_hint: "예전에 쓰던 기기가 남아 있는지만 점검할게요", evidence_placement_strategy: task_first_evidence_turn_2, dialogue_intent: device_hygiene, protected_memory_paths: [cashflow.recent_one_off_expense]}
+    - {surface_variant_id: security_limit_review, task_template_id: hn_security_limit_review, fa_code: FA-06, visible_task_ko: "이체 보안 설정 현황 확인", explanation: "평소 보안 설정을 확인할 뿐 승인하지 않은 거래나 피해 신고가 아니다.", surface_hint: "평소 쓰는 이체 보안 설정만 확인하고 싶어요", evidence_placement_strategy: task_first_evidence_turn_3, dialogue_intent: settings_review, protected_memory_paths: [cashflow.recent_one_off_expense]}
+
 routine_neutral:
   domain: neutral
   routine_neutral:
-    - {task_template_id: hn_routine_balance, fa_code: FA-01, visible_task_ko: "주거래계좌 잔액 확인", explanation: "일상적인 잔액 확인으로 어떠한 생활 변화도 의미하지 않는다.", surface_hint: "평소처럼 잔액만 확인할게요", protected_memory_paths: []}
+    - {surface_variant_id: routine_balance, task_template_id: hn_routine_balance, fa_code: FA-01, visible_task_ko: "주거래계좌 잔액 확인", explanation: "일상적인 잔액 확인으로 어떠한 생활 변화도 의미하지 않는다.", surface_hint: "평소처럼 잔액만 확인할게요", evidence_placement_strategy: task_and_evidence_opening, dialogue_intent: balance_check, protected_memory_paths: []}
+    - {surface_variant_id: routine_alert, task_template_id: hn_routine_alert, fa_code: FA-02, visible_task_ko: "입출금 알림 상태 확인", explanation: "일상적인 알림 점검으로 어떠한 생활 변화도 의미하지 않는다.", surface_hint: "입출금 알림이 켜져 있는지만 볼게요", evidence_placement_strategy: task_first_evidence_turn_2, dialogue_intent: alert_check, protected_memory_paths: []}
+    - {surface_variant_id: routine_recent_history, task_template_id: hn_routine_recent_history, fa_code: FA-01, visible_task_ko: "최근 거래내역 조회", explanation: "최근 내역을 훑어보는 일상 업무로 생활 상태 변화가 아니다.", surface_hint: "최근 거래내역만 간단히 확인할게요", evidence_placement_strategy: task_first_evidence_turn_3, dialogue_intent: recent_history, protected_memory_paths: []}

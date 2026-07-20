@@ -23,6 +23,32 @@ evidence:
   prevent_cross_status_cue_reuse: true
   require_memory_fact_for_session_updates: true
 
+semantic_validity:
+  prohibit_direct_event_disclosure: true
+  min_occurred_evidence_dimensions: 2
+  require_subtype_disambiguation: true
+  allow_event_evidence_after_opening: true
+  evidence_deadline_user_turn: 3
+
+surface_diversity:
+  exact_opening_max_count: 2
+  exact_lifecycle_phrase_max_ratio: 0.15
+  lifecycle_phrase_family_max_ratio: 0.40
+  evidence_placement_max_ratio: 0.60
+  hard_negative_template_max_ratio: 0.15
+  min_placement_strategies_when_status_count_at_least: 3
+  placement_strategy_status_count_threshold: 10
+
+high_risk:
+  require_execution_contract: true
+  prohibit_completion_with_missing_slots: true
+  require_explicit_confirmation: true
+  allow_unplanned_concrete_values: false
+
+bank_policy:
+  profile_id: benchmark_neutral_bank
+  prohibit_unsupported_claims: true
+
 hard_negatives:
   target_ratio: 0.30
   balance_by_domain: true
@@ -62,8 +88,30 @@ canary:
     near_duplicate_session_rate_max: 0.05
     offline_banking_violation_max: 0
     turn_contract_violation_max: 0
-    opening_evidence_coupling_max: 0
+    task_not_introduced_in_opening_max: 0
+    required_evidence_not_realized_max: 0
+    evidence_revealed_too_late_max: 0
+    evidence_placement_strategy_mismatch_max: 0
+    direct_event_disclosure_max: 0
+    high_risk_missing_required_slot_max: 0
+    high_risk_false_completion_max: 0
+    high_risk_missing_confirmation_max: 0
+    high_risk_unplanned_slot_value_max: 0
+    high_risk_action_resolution_mismatch_max: 0
+    insufficient_event_evidence_max: 0
+    subtype_not_disambiguated_max: 0
+    unsupported_bank_policy_claim_max: 0
+    bank_policy_contradiction_max: 0
+    stale_old_current_confusion_max: 0
+    duplicate_opening_over_limit_max: 0
+    lifecycle_phrase_overconcentration_max: 0
+    evidence_placement_overconcentration_max: 0
+    event_strategy_overconcentration_max: 0
+    hard_negative_template_overconcentration_max: 0
   warnings:
     repair_session_rate: 0.10
-    filler_same_month_density: true
+    filler_same_month_density: false
     task_template_overconcentration: true
+
+regression_canary:
+  repair_session_rate_max: 0.10

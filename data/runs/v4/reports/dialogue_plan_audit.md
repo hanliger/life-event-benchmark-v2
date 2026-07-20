@@ -8,11 +8,11 @@
 ## Session types
 
 - cancellation_evidence: 51
-- consequence_session: 213
+- consequence_session: 212
 - hard_negative: 1800
 - occurred_evidence: 400
-- routine_financial: 2881
-- stale_recall_session: 100
+- routine_financial: 2879
+- stale_recall_session: 103
 - upcoming_evidence: 291
 - weak_signal_evidence: 264
 

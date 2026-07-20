@@ -31,9 +31,13 @@ GOLD_ALL := $(RUN_DIR)/gold/prefix_gold_all_sessions.jsonl
 GOLD_CHECKPOINTS := $(RUN_DIR)/gold/prefix_gold_checkpoints_15.jsonl
 ITEMS_DIR := $(RUN_DIR)/benchmark_items
 QUALITY := $(RUN_DIR)/quality_reports
+REGRESSION_CANARY_ROOT := $(RUN_DIR)/dialogues/regression_canary/$(MODEL_PROFILE)_v2
+CANARY_V2_ROOT := $(RUN_DIR)/dialogues/canary/$(MODEL_PROFILE)_v2
 
 .PHONY: setup inventory normalize-personas initial-states simulate-smoke plan-dialogues audit-dialogue-plans \
 	dialogue-canary audit-dialogue-canary review-dialogue-canary dialogue-production-remaining \
+	dialogue-regression-canary audit-dialogue-regression-canary dialogue-canary-v2 \
+	audit-dialogue-canary-v2 review-dialogue-canary-v2 score-dialogue-canary-v2 \
 	coverage-trajectories dialogue-smoke-dry dialogue-smoke validate-dialogues \
 	export-gold build-items history-filter audit pipeline-smoke test clean-generated \
 	export-gold-controlled build-items-controlled audit-controlled export-public
@@ -125,14 +129,76 @@ review-dialogue-canary:
 		--output-dir $(RUN_DIR)/dialogues/canary/$(MODEL_PROFILE)/review \
 		--seed $(SEED)
 
+dialogue-regression-canary:
+	$(PYTHON) scripts/sample_dialogue_regression_canary.py \
+		--trajectory-id $(CANARY_TRAJ) --plans-dir $(PLAN_DIR) \
+		--output-dir $(REGRESSION_CANARY_ROOT)/plans
+	$(PYTHON) scripts/generate_dialogue_sessions.py \
+		--trajectories-dir $(TRAJ_DIR) \
+		--plans-dir $(REGRESSION_CANARY_ROOT)/plans \
+		--trajectory-id $(CANARY_TRAJ) --allow-partial-plans \
+		--model-profile $(MODEL_PROFILE) --workers $(DIALOGUE_WORKERS) \
+		--output-dir $(REGRESSION_CANARY_ROOT)/sessions \
+		--raw-output-dir $(REGRESSION_CANARY_ROOT)/raw_outputs \
+		--overwrite --execute --continue-on-error
+
+audit-dialogue-regression-canary:
+	$(PYTHON) scripts/audit_dialogue_generation.py \
+		--trajectories-dir $(TRAJ_DIR) \
+		--plans-dir $(REGRESSION_CANARY_ROOT)/plans \
+		--sessions-dir $(REGRESSION_CANARY_ROOT)/sessions \
+		--raw-output-dir $(REGRESSION_CANARY_ROOT)/raw_outputs \
+		--output-dir $(REGRESSION_CANARY_ROOT)/audit \
+		--trajectory-id $(CANARY_TRAJ)
+	$(PYTHON) scripts/check_dialogue_regression_canary.py \
+		--audit $(REGRESSION_CANARY_ROOT)/audit/dialogue_generation_audit.json \
+		--output-dir $(REGRESSION_CANARY_ROOT)/audit
+
+dialogue-canary-v2:
+	$(PYTHON) scripts/generate_dialogue_sessions.py \
+		--trajectories-dir $(TRAJ_DIR) --plans-dir $(PLAN_DIR) \
+		--trajectory-id $(CANARY_TRAJ) --model-profile $(MODEL_PROFILE) \
+		--workers $(DIALOGUE_WORKERS) \
+		--require-regression-pass $(REGRESSION_CANARY_ROOT)/audit/regression_canary_decision.json \
+		--regression-manifest $(REGRESSION_CANARY_ROOT)/generation_manifest.json \
+		--output-dir $(CANARY_V2_ROOT)/sessions \
+		--raw-output-dir $(CANARY_V2_ROOT)/raw_outputs \
+		--overwrite --execute --continue-on-error
+
+audit-dialogue-canary-v2:
+	$(PYTHON) scripts/audit_dialogue_generation.py \
+		--trajectories-dir $(TRAJ_DIR) --plans-dir $(PLAN_DIR) \
+		--sessions-dir $(CANARY_V2_ROOT)/sessions \
+		--raw-output-dir $(CANARY_V2_ROOT)/raw_outputs \
+		--output-dir $(CANARY_V2_ROOT)/audit \
+		--trajectory-id $(CANARY_TRAJ)
+	$(PYTHON) scripts/check_dialogue_canary.py \
+		--trajectory-id $(CANARY_TRAJ) --plans-dir $(PLAN_DIR) \
+		--sessions-dir $(CANARY_V2_ROOT)/sessions \
+		--audit-dir $(CANARY_V2_ROOT)/audit \
+		--output-dir $(CANARY_V2_ROOT)/audit
+
+review-dialogue-canary-v2:
+	$(PYTHON) scripts/build_dialogue_review_packet.py \
+		--trajectory-id $(CANARY_TRAJ) --plans-dir $(PLAN_DIR) \
+		--sessions-dir $(CANARY_V2_ROOT)/sessions \
+		--audit-dir $(CANARY_V2_ROOT)/audit \
+		--output-dir $(CANARY_V2_ROOT)/review --seed $(SEED)
+
+score-dialogue-canary-v2:
+	$(PYTHON) scripts/score_dialogue_review_packet.py \
+		--input $(CANARY_V2_ROOT)/review/sampled_sessions.jsonl \
+		--output-dir $(CANARY_V2_ROOT)/review
+
 dialogue-production-remaining:
 	$(PYTHON) scripts/generate_dialogue_sessions.py \
 		--trajectories-dir $(TRAJ_DIR) \
 		--plans-dir $(PLAN_DIR) \
 		--exclude-trajectory-id $(CANARY_TRAJ) \
 		--model-profile $(MODEL_PROFILE) \
-		--canary-manifest $(RUN_DIR)/dialogues/canary/$(MODEL_PROFILE)/generation_manifest.json \
-		--require-canary-pass $(RUN_DIR)/dialogues/canary/$(MODEL_PROFILE)/audit/canary_decision.json \
+		--canary-manifest $(CANARY_V2_ROOT)/generation_manifest.json \
+		--require-canary-pass $(CANARY_V2_ROOT)/audit/canary_decision.json \
+		--require-human-review-pass $(CANARY_V2_ROOT)/review/human_review_decision.json \
 		--confirm-multi-trajectory-generation \
 		--output-dir $(SESS_DIR) \
 		--raw-output-dir $(RAW_DIALOGUE_DIR) \

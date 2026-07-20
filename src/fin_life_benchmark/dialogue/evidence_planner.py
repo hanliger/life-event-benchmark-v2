@@ -11,7 +11,13 @@ from ..fsm.models import EventStatus, LifeEventTemplate
 from ..io import RepoPaths, load_yaml
 from ..locale.loader import LocaleConfig
 from ..trajectory.models import Trajectory
-from .models import DialogueGenerationPlan, PlannedCue, StaleMemoryPair
+from .models import (
+    ActionExecutionContract,
+    DialogueGenerationPlan,
+    EvidenceDimension,
+    PlannedCue,
+    StaleMemoryPair,
+)
 
 _SESSION_TYPE_BY_STATUS = {
     "weak_signal": "weak_signal_evidence",
@@ -55,10 +61,198 @@ class EvidencePlanner:
         self.hard_negative_registry = load_yaml(
             self.paths.registries / "dialogue_hard_negative_templates.yaml"
         )
+        self.evidence_realization_registry = load_yaml(
+            self.paths.registries / "dialogue_evidence_realization.yaml"
+        )
+        self.lifecycle_surface_registry = load_yaml(
+            self.paths.registries / "dialogue_lifecycle_surface.yaml"
+        )
+        self.disclosure_registry = load_yaml(
+            self.paths.registries / "dialogue_event_disclosure_patterns.yaml"
+        )
+        self.high_risk_contract_registry = load_yaml(
+            self.paths.registries / "high_risk_action_contracts.yaml"
+        )
+        self.bank_policy_registry = load_yaml(
+            self.paths.registries / "bank_policy_profile.yaml"
+        )
 
         from ..fsm.registry import all_event_labels_ko
 
         self.all_labels = all_event_labels_ko(templates)
+
+    def _evidence_realization_spec(self, event_id: str, status: str) -> dict[str, Any]:
+        defaults = dict(
+            (self.evidence_realization_registry.get("_defaults") or {}).get(status)
+            or {}
+        )
+        override = dict(
+            (self.evidence_realization_registry.get(event_id) or {}).get(status)
+            or {}
+        )
+        defaults.update(override)
+        if not defaults:
+            raise PlannerCoverageError(
+                f"no evidence realization contract for {event_id} + {status}"
+            )
+        return defaults
+
+    def _realization_dimensions(
+        self, event_id: str, status: str, evidence_paths: list[str]
+    ) -> tuple[dict[str, Any], list[EvidenceDimension]]:
+        spec = self._evidence_realization_spec(event_id, status)
+        dimensions: list[EvidenceDimension] = []
+        for item in spec.get("allowed_dimensions") or []:
+            linked = _unique(list(item.get("linked_memory_paths") or []))
+            compatible = [path for path in linked if path in evidence_paths]
+            if linked:
+                linked = compatible or linked
+            elif evidence_paths:
+                linked = list(evidence_paths)
+            dimensions.append(
+                EvidenceDimension(
+                    dimension_id=item["dimension_id"],
+                    role=item["role"],
+                    semantic_instruction_ko=item["semantic_instruction_ko"],
+                    linked_memory_paths=linked,
+                    required=bool(item.get("required", True)),
+                    must_be_user_expressed=bool(
+                        item.get("must_be_user_expressed", True)
+                    ),
+                    exact_surface_required=bool(
+                        item.get("exact_surface_required", False)
+                    ),
+                )
+            )
+        return spec, dimensions
+
+    @staticmethod
+    def _balanced_choice(
+        choices: list[dict[str, Any]],
+        key: str,
+        counts: Counter,
+        prefix: str,
+        rng: random.Random,
+    ) -> dict[str, Any]:
+        if not choices:
+            raise PlannerCoverageError(f"no choices for {prefix}")
+        minimum = min(counts[f"{prefix}:{item[key]}"] for item in choices)
+        balanced = [
+            item for item in choices if counts[f"{prefix}:{item[key]}"] == minimum
+        ]
+        selected = rng.choice(sorted(balanced, key=lambda item: str(item[key])))
+        counts[f"{prefix}:{selected[key]}"] += 1
+        return selected
+
+    def _surface_and_placement(
+        self,
+        status: str,
+        spec: dict[str, Any],
+        counts: Counter,
+        rng: random.Random,
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
+        allowed_families = set(spec.get("surface_families") or [])
+        surfaces = [
+            item
+            for item in self.lifecycle_surface_registry.get(status) or []
+            if not allowed_families or item.get("family") in allowed_families
+        ]
+        surface = self._balanced_choice(
+            surfaces, "variant_id", counts, f"surface:{status}", rng
+        )
+        allowed_placements = set(spec.get("placement_strategies") or [])
+        placements = [
+            item
+            for item in self.lifecycle_surface_registry.get("placement_strategies")
+            or []
+            if not allowed_placements
+            or item.get("strategy_id") in allowed_placements
+        ]
+        placement = self._balanced_choice(
+            placements, "strategy_id", counts, f"placement:{status}", rng
+        )
+        return surface, placement
+
+    @staticmethod
+    def _flatten_grounding(value: Any, result: dict[str, Any]) -> None:
+        if isinstance(value, dict):
+            for key, item in value.items():
+                present = item is not None and item != "" and item != [] and item != {}
+                if isinstance(item, dict):
+                    cell_value = item.get("value")
+                    if (
+                        cell_value is not None
+                        and cell_value != ""
+                        and cell_value != []
+                        and cell_value != {}
+                    ):
+                        result.setdefault(str(key).split(".")[-1], cell_value)
+                if key == "value" and present:
+                    result.setdefault("value", item)
+                if not isinstance(item, (dict, list)) and present:
+                    result.setdefault(str(key), item)
+                EvidencePlanner._flatten_grounding(item, result)
+        elif isinstance(value, list):
+            for item in value:
+                EvidencePlanner._flatten_grounding(item, result)
+
+    def _action_execution_contract(
+        self, plan: DialogueGenerationPlan
+    ) -> ActionExecutionContract:
+        registry = self.high_risk_contract_registry.get(plan.mapped_action or "")
+        if not registry:
+            return ActionExecutionContract(action_mode="information_only")
+        # A lookup/check remains information-only even if its FA family can
+        # execute funds movement in other task subtypes.
+        if any(
+            term in plan.financial_task
+            for term in ("조회", "확인", "점검", "비교", "내역")
+        ) and not any(term in plan.financial_task for term in ("설정", "변경", "해지", "실행", "송금")):
+            return ActionExecutionContract(
+                action_mode="information_only", confirmation_required=False
+            )
+        subtype = registry.get("default_subtype")
+        spec = (registry.get("subtypes") or {}).get(subtype) or {}
+        required = list(spec.get("required_for_execution") or [])
+        if len(plan.target_action_ids) > 1 and "target_action_ids" not in required:
+            required.append("target_action_ids")
+        aliases = self.high_risk_contract_registry.get("slot_aliases") or {}
+        available: dict[str, Any] = {}
+        context = plan.structured_context or {}
+        self._flatten_grounding((context.get("event") or {}).get("params") or {}, available)
+        self._flatten_grounding(context.get("current_financial_memory") or {}, available)
+        self._flatten_grounding(context.get("current_standing_actions") or [], available)
+        self._flatten_grounding(context.get("action_impacts") or [], available)
+        if plan.target_action_ids:
+            available["target_action_ids"] = list(plan.target_action_ids)
+        grounded: dict[str, Any] = {}
+        for slot in required:
+            if slot == "explicit_confirmation":
+                continue
+            for alias in aliases.get(slot) or [slot]:
+                value = available.get(alias)
+                if value is not None and value != "" and value != [] and value != {}:
+                    grounded[slot] = value
+                    break
+        if "product_or_goal" in required and "product_or_goal" not in grounded:
+            if any(term in plan.financial_task for term in ("저축", "연금", "목적")):
+                grounded["product_or_goal"] = plan.financial_task
+        missing = [
+            slot
+            for slot in required
+            if slot != "explicit_confirmation" and slot not in grounded
+        ]
+        ready = not missing
+        return ActionExecutionContract(
+            action_mode=(
+                "ready_for_confirmation" if ready else "pending_required_information"
+            ),
+            required_slots=required,
+            grounded_slots=grounded,
+            missing_slots=missing,
+            completion_allowed=ready,
+            confirmation_required="explicit_confirmation" in required,
+        )
 
     @staticmethod
     def _enum_value(value: Any) -> Any:
@@ -241,8 +435,21 @@ class EvidencePlanner:
         status: str,
         session_updates: list[Any],
         evidence_paths: list[str],
+        evidence_dimensions: list[EvidenceDimension] | None = None,
     ) -> list[PlannedCue]:
         planned: list[PlannedCue] = []
+        for dimension in evidence_dimensions or []:
+            planned.append(
+                PlannedCue(
+                    cue_id=f"dimension_{dimension.dimension_id}",
+                    semantic_instruction_ko=dimension.semantic_instruction_ko,
+                    status=status,
+                    linked_memory_paths=list(dimension.linked_memory_paths),
+                    exact_surface_required=dimension.exact_surface_required,
+                    cue_role=dimension.role,
+                    evidence_dimension_id=dimension.dimension_id,
+                )
+            )
         for cue_id in task.get("cue_template_ids") or []:
             spec = self.cue_registry.get(cue_id)
             if spec is None:
@@ -284,6 +491,14 @@ class EvidencePlanner:
                     exact_surface_required=False,
                     cue_role="memory_fact",
                     linked_memory_operation=operation,
+                    evidence_dimension_id=next(
+                        (
+                            dimension.dimension_id
+                            for dimension in evidence_dimensions or []
+                            if update.path in dimension.linked_memory_paths
+                        ),
+                        None,
+                    ),
                 )
             )
         return planned
@@ -539,9 +754,24 @@ class EvidencePlanner:
         balanced = [item for item in candidates if deficits[item["type"]] == best_deficit]
         min_domain_count = min(hard_counts[f"domain:{item['domain']}"] for item in balanced)
         balanced = [item for item in balanced if hard_counts[f"domain:{item['domain']}"] == min_domain_count]
+        min_variant_count = min(
+            hard_counts[f"variant:{item.get('surface_variant_id', item['task_template_id'])}"]
+            for item in balanced
+        )
+        balanced = [
+            item
+            for item in balanced
+            if hard_counts[
+                f"variant:{item.get('surface_variant_id', item['task_template_id'])}"
+            ]
+            == min_variant_count
+        ]
         item = rng.choice(sorted(balanced, key=lambda value: value["task_template_id"]))
         hard_counts[item["type"]] += 1
         hard_counts[f"domain:{item['domain']}"] += 1
+        hard_counts[
+            f"variant:{item.get('surface_variant_id', item['task_template_id'])}"
+        ] += 1
         template = self.templates.get(item["event_id"])
         protected = list(item.get("protected_memory_paths") or [])
         cue = PlannedCue(
@@ -578,6 +808,22 @@ class EvidencePlanner:
             evidence_memory_paths=protected,
             target_memory_paths=protected,
             hard_negative_type=item["type"],
+            hard_negative_surface_variant_id=item.get("surface_variant_id"),
+            evidence_placement_strategy=item.get("evidence_placement_strategy"),
+            evidence_placement_slots=list(
+                next(
+                    (
+                        placement.get("slots") or []
+                        for placement in self.lifecycle_surface_registry.get(
+                            "placement_strategies"
+                        )
+                        or []
+                        if placement.get("strategy_id")
+                        == item.get("evidence_placement_strategy")
+                    ),
+                    [0],
+                )
+            ),
             near_miss_explanation=item["explanation"],
             protected_memory_paths=protected,
             expected_memory_operation="no_update",
@@ -591,6 +837,7 @@ class EvidencePlanner:
     def build_plans(self, trajectory: Trajectory, seed: int = 0) -> list[DialogueGenerationPlan]:
         rng = random.Random(f"{trajectory.trajectory_id}:{seed}")
         plans: list[DialogueGenerationPlan] = []
+        realization_counts: Counter = Counter()
         updates_by_key: dict[tuple[str, int], list[Any]] = {}
         updates_by_instance: dict[str, list[tuple[int, Any]]] = {}
         impacts_by_key: dict[tuple[str, int], list[Any]] = {}
@@ -648,6 +895,12 @@ class EvidencePlanner:
                     [path for candidate in raw_candidates for path in candidate.get("compatible_memory_paths", [])]
                 )
                 evidence_paths = _unique(session_paths + event_paths + registry_paths)
+                realization_spec, evidence_dimensions = self._realization_dimensions(
+                    instance.event_id, status, evidence_paths
+                )
+                lifecycle_surface, evidence_placement = self._surface_and_placement(
+                    status, realization_spec, realization_counts, rng
+                )
                 month_impacts = impacts_by_key.get((instance.event_instance_id, item.month_index), [])
                 task, score, reasons, grounding = self.select_task_template(
                     template,
@@ -663,7 +916,13 @@ class EvidencePlanner:
                     rng,
                 )
                 previous_tasks.append(task["task_template_id"])
-                cues = self._planned_cues(task, status, month_updates, evidence_paths)
+                cues = self._planned_cues(
+                    task,
+                    status,
+                    month_updates,
+                    evidence_paths,
+                    evidence_dimensions,
+                )
                 cue_ids = [cue.cue_id for cue in cues]
                 exact_cues = [
                     cue.surface_hint for cue in cues if cue.exact_surface_required and cue.surface_hint
@@ -717,7 +976,46 @@ class EvidencePlanner:
                         else "medium"
                     ),
                     desired_cumulative_recoverability="high",
+                    evidence_realization_strategy=(
+                        f"{instance.event_id}:{status}:"
+                        + "+".join(
+                            dimension.dimension_id
+                            for dimension in evidence_dimensions
+                            if dimension.required
+                        )
+                    ),
+                    evidence_placement_strategy=evidence_placement["strategy_id"],
+                    evidence_placement_slots=list(evidence_placement.get("slots") or []),
+                    evidence_dimensions=evidence_dimensions,
+                    forbidden_direct_event_patterns=_unique(
+                        list(realization_spec.get("forbidden_direct_paraphrases") or [])
+                        + list(
+                            (self.disclosure_registry.get(instance.event_id) or {}).get(
+                                "disallowed"
+                            )
+                            or []
+                        )
+                    ),
+                    lifecycle_surface_family=lifecycle_surface["family"],
+                    lifecycle_surface_variant_id=lifecycle_surface["variant_id"],
+                    directness_level="implicit",
+                    bank_policy_profile_id=self.bank_policy_registry.get(
+                        "profile_id", "benchmark_neutral_bank"
+                    ),
                 )
+                plan.structured_context["dialogue_contract"] = {
+                    "lifecycle_semantic_instruction_ko": lifecycle_surface[
+                        "semantic_instruction_ko"
+                    ],
+                    "evidence_deadline_user_turn": int(
+                        self.cfg.get("semantic_validity", {}).get(
+                            "evidence_deadline_user_turn", 3
+                        )
+                    ),
+                    "explicit_final_reveal": bool(
+                        evidence_placement.get("explicit_final_reveal", False)
+                    ),
+                }
                 plans.append(plan)
                 prior_cue_ids = plan.cumulative_cue_ids_after_session
 
@@ -876,4 +1174,8 @@ class EvidencePlanner:
             if plan.session_type == "occurred_evidence":
                 if plan.linked_event_instance_id != plan.window_event_instance_id:
                     raise AssertionError("controlled window contains a second occurred event")
+            plan.action_execution_contract = self._action_execution_contract(plan)
+            plan.bank_policy_profile_id = self.bank_policy_registry.get(
+                "profile_id", "benchmark_neutral_bank"
+            )
         return ordered

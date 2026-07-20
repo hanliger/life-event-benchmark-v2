@@ -1,5 +1,94 @@
 {
   "$defs": {
+    "ActionExecutionContract": {
+      "description": "Planner-owned boundary between discussion and executable action.",
+      "properties": {
+        "action_mode": {
+          "default": "information_only",
+          "title": "Action Mode",
+          "type": "string"
+        },
+        "required_slots": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Required Slots",
+          "type": "array"
+        },
+        "grounded_slots": {
+          "additionalProperties": true,
+          "title": "Grounded Slots",
+          "type": "object"
+        },
+        "missing_slots": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Missing Slots",
+          "type": "array"
+        },
+        "completion_allowed": {
+          "default": false,
+          "title": "Completion Allowed",
+          "type": "boolean"
+        },
+        "confirmation_required": {
+          "default": false,
+          "title": "Confirmation Required",
+          "type": "boolean"
+        }
+      },
+      "title": "ActionExecutionContract",
+      "type": "object"
+    },
+    "ActionResolution": {
+      "description": "Generated-session account of what, if anything, was resolved.",
+      "properties": {
+        "mode": {
+          "default": "information_only",
+          "title": "Mode",
+          "type": "string"
+        },
+        "provided_slots": {
+          "additionalProperties": true,
+          "title": "Provided Slots",
+          "type": "object"
+        },
+        "missing_slots": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Missing Slots",
+          "type": "array"
+        },
+        "explicit_confirmation_turn_index": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Explicit Confirmation Turn Index"
+        },
+        "completion_turn_index": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Completion Turn Index"
+        }
+      },
+      "title": "ActionResolution",
+      "type": "object"
+    },
     "CueAnnotation": {
       "properties": {
         "turn_index": {
@@ -61,6 +150,18 @@
           ],
           "default": null,
           "title": "Evidence Text"
+        },
+        "evidence_dimension_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Evidence Dimension Id"
         }
       },
       "required": [
@@ -451,6 +552,100 @@
           "default": "high",
           "title": "Desired Cumulative Recoverability",
           "type": "string"
+        },
+        "evidence_realization_strategy": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Evidence Realization Strategy"
+        },
+        "evidence_placement_strategy": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Evidence Placement Strategy"
+        },
+        "evidence_placement_slots": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "Evidence Placement Slots",
+          "type": "array"
+        },
+        "evidence_dimensions": {
+          "items": {
+            "$ref": "#/$defs/EvidenceDimension"
+          },
+          "title": "Evidence Dimensions",
+          "type": "array"
+        },
+        "forbidden_direct_event_patterns": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Forbidden Direct Event Patterns",
+          "type": "array"
+        },
+        "lifecycle_surface_family": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lifecycle Surface Family"
+        },
+        "lifecycle_surface_variant_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lifecycle Surface Variant Id"
+        },
+        "directness_level": {
+          "default": "implicit",
+          "title": "Directness Level",
+          "type": "string"
+        },
+        "action_execution_contract": {
+          "$ref": "#/$defs/ActionExecutionContract"
+        },
+        "bank_policy_profile_id": {
+          "default": "benchmark_neutral_bank",
+          "title": "Bank Policy Profile Id",
+          "type": "string"
+        },
+        "hard_negative_surface_variant_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Hard Negative Surface Variant Id"
         }
       },
       "required": [
@@ -460,6 +655,52 @@
         "session_type"
       ],
       "title": "DialogueGenerationPlan",
+      "type": "object"
+    },
+    "EvidenceDimension": {
+      "description": "One semantic fact needed to recover an event without naming it.",
+      "properties": {
+        "dimension_id": {
+          "title": "Dimension Id",
+          "type": "string"
+        },
+        "role": {
+          "title": "Role",
+          "type": "string"
+        },
+        "semantic_instruction_ko": {
+          "title": "Semantic Instruction Ko",
+          "type": "string"
+        },
+        "linked_memory_paths": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Linked Memory Paths",
+          "type": "array"
+        },
+        "required": {
+          "default": true,
+          "title": "Required",
+          "type": "boolean"
+        },
+        "must_be_user_expressed": {
+          "default": true,
+          "title": "Must Be User Expressed",
+          "type": "boolean"
+        },
+        "exact_surface_required": {
+          "default": false,
+          "title": "Exact Surface Required",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "dimension_id",
+        "role",
+        "semantic_instruction_ko"
+      ],
+      "title": "EvidenceDimension",
       "type": "object"
     },
     "PlannedCue": {
@@ -543,6 +784,18 @@
           "default": false,
           "title": "Allow Reuse Across Statuses",
           "type": "boolean"
+        },
+        "evidence_dimension_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Evidence Dimension Id"
         }
       },
       "required": [
@@ -756,6 +1009,9 @@
     },
     "quality_self_check": {
       "$ref": "#/$defs/QualitySelfCheck"
+    },
+    "action_resolution": {
+      "$ref": "#/$defs/ActionResolution"
     },
     "generator": {
       "default": "mock",

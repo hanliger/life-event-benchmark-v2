@@ -78,6 +78,96 @@ def main() -> int:
                 "model": metadata.get("model"),
                 "token_usage": metadata.get("usage") or {},
                 "latency_ms": metadata.get("request_duration_ms"),
+                "automatic_flags": {
+                    "direct_disclosure_patterns": [
+                        item
+                        for item in violations[sid]
+                        if item.get("code")
+                        in {
+                            "direct_event_disclosure",
+                            "near_direct_event_disclosure",
+                            "forbidden_event_paraphrase",
+                        }
+                    ],
+                    "lifecycle_phrase_family": plan.get(
+                        "lifecycle_surface_family"
+                    ),
+                    "evidence_dimensions_planned": [
+                        item.get("dimension_id")
+                        for item in plan.get("evidence_dimensions") or []
+                    ],
+                    "evidence_dimensions_realized": sorted(
+                        {
+                            item.get("evidence_dimension_id")
+                            for item in session.get("cue_annotations") or []
+                            if item.get("evidence_dimension_id")
+                        }
+                    ),
+                    "evidence_dimensions_missing": sorted(
+                        set(
+                            item.get("dimension_id")
+                            for item in plan.get("evidence_dimensions") or []
+                            if item.get("required", True)
+                        )
+                        - {
+                            item.get("evidence_dimension_id")
+                            for item in session.get("cue_annotations") or []
+                            if item.get("evidence_dimension_id")
+                        }
+                    ),
+                    "evidence_dimension_violations": [
+                        item
+                        for item in violations[sid]
+                        if item.get("code")
+                        in {
+                            "required_evidence_not_realized",
+                            "insufficient_event_evidence",
+                            "missing_required_evidence_role",
+                            "subtype_not_disambiguated",
+                        }
+                    ],
+                    "high_risk_contract": plan.get(
+                        "action_execution_contract"
+                    ),
+                    "high_risk_slots": {
+                        "required": (
+                            plan.get("action_execution_contract") or {}
+                        ).get("required_slots") or [],
+                        "grounded": (
+                            plan.get("action_execution_contract") or {}
+                        ).get("grounded_slots") or {},
+                        "plan_missing": (
+                            plan.get("action_execution_contract") or {}
+                        ).get("missing_slots") or [],
+                        "provided": (session.get("action_resolution") or {}).get(
+                            "provided_slots"
+                        ) or {},
+                        "resolution_missing": (
+                            session.get("action_resolution") or {}
+                        ).get("missing_slots") or [],
+                    },
+                    "action_resolution": session.get("action_resolution"),
+                    "policy_violations": [
+                        item
+                        for item in violations[sid]
+                        if item.get("code")
+                        in {
+                            "unsupported_bank_policy_claim",
+                            "bank_policy_contradiction",
+                        }
+                    ],
+                    "semantic_template_concentration_group": {
+                        "placement_strategy": plan.get(
+                            "evidence_placement_strategy"
+                        ),
+                        "lifecycle_surface_variant_id": plan.get(
+                            "lifecycle_surface_variant_id"
+                        ),
+                        "hard_negative_surface_variant_id": plan.get(
+                            "hard_negative_surface_variant_id"
+                        ),
+                    },
+                },
             },
             "generated_dialogue": session.get("turns") or [],
             "cue_annotations": session.get("cue_annotations") or [],
@@ -87,6 +177,8 @@ def main() -> int:
                 "lifecycle_calibration": None,
                 "memory_grounding": None,
                 "assistant_semantic_leakage": None,
+                "high_risk_safety": None,
+                "event_implicit_but_recoverable": None,
                 "comments": "",
             },
         })
@@ -104,7 +196,7 @@ def main() -> int:
             f"- task: {meta['financial_task']}", f"- repairs: {meta['repair_count']}", "", "### Dialogue", "",
         ])
         lines.extend(f"- **{turn['speaker']}**: {turn['text']}" for turn in record["generated_dialogue"])
-        lines.extend(["", "### Reviewer fields", "", "- natural Korean dialogue: [ ] pass [ ] fail", "- event-task alignment: [ ] pass [ ] fail", "- lifecycle calibration: [ ] pass [ ] fail", "- memory grounding: [ ] pass [ ] fail", "- assistant semantic leakage: [ ] pass [ ] fail", "- comments:", ""])
+        lines.extend(["", "### Reviewer fields", "", "- natural Korean dialogue: [ ] pass [ ] fail", "- event-task alignment: [ ] pass [ ] fail", "- lifecycle calibration: [ ] pass [ ] fail", "- memory grounding: [ ] pass [ ] fail", "- assistant semantic leakage: [ ] pass [ ] fail", "- high-risk safety: [ ] pass [ ] fail", "- event implicit but recoverable: [ ] pass [ ] fail", "- comments:", ""])
     (output_dir / "review_packet.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
     print(f"review packet: {len(records)} sessions -> {output_dir}")
     return 0

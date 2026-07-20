@@ -1,0 +1,39 @@
+career_employment: {disallowed: [새 직장에 들어, 취업했], review_only: [급여가 새로 들어], allowed_indirect: [급여 입금처 등록, 첫 급여 내역]}
+career_employment_end: {disallowed: [퇴사했, 회사를 그만뒀, 직장을 잃었], review_only: [마지막 급여], allowed_indirect: [급여 입금이 더 이어질지 불분명, 급여 연동 설정 점검]}
+career_job_change: {disallowed: [이직했, 직장을 옮겼], review_only: [새 회사], allowed_indirect: [급여 입금처가 달라짐]}
+career_leave_of_absence:
+  disallowed: [회사를 잠깐 쉬, 일을 잠시 쉬, 휴직했, 휴직 중, 휴직해서]
+  review_only: [급여가 잠시 멈춰]
+  allowed_indirect: [급여 입금이 일시 중단, 재직 관계는 유지, 급여 연동 설정을 잠시 점검]
+career_reinstatement: {disallowed: [복직했, 회사에 돌아갔], review_only: [급여가 다시 들어], allowed_indirect: [급여 입금 재개, 기존 급여 계좌 재사용]}
+career_self_employment: {disallowed: [사업을 시작했, 자영업자가 됐], review_only: [사업 매출], allowed_indirect: [정기 급여 대신 매출 흐름 관리]}
+crisis_accident_or_disaster: {disallowed: [사고가 났, 재해를 당했], review_only: [복구 비용], allowed_indirect: [예상하지 못한 긴급 지출]}
+crisis_financial_fraud: {disallowed: [사기를 당했, 보이스피싱 당했], review_only: [모르는 거래], allowed_indirect: [승인하지 않은 거래 확인]}
+crisis_health_event: {disallowed: [병에 걸렸, 수술했, 입원했], review_only: [의료비], allowed_indirect: [예상하지 못한 치료 관련 지출]}
+education_child_stage_entry:
+  disallowed: [초등학교 들어, 중학교 들어, 고등학교 들어, 입학했]
+  review_only: [교육 단계가 바뀌]
+  allowed_indirect: [교육비 납부처 변경, 교육 목적저축 점검]
+education_self_program_start: {disallowed: [학교에 들어, 교육 과정을 시작했], review_only: [등록금], allowed_indirect: [새 교육비 납부 일정]}
+education_study_abroad: {disallowed: [유학 가, 해외로 공부하러], review_only: [해외 등록금], allowed_indirect: [외화 교육비 송금 준비]}
+housing_home_purchase:
+  disallowed: [집을 샀, 새 집이 생, 주택을 구매, 내 집을 마련]
+  review_only: [소유권이 생]
+  allowed_indirect: [담보대출 실행 내역, 보유 주택 등록, 정산 대금]
+housing_home_sale: {disallowed: [집을 팔았, 주택을 매도], review_only: [매각 대금], allowed_indirect: [담보대출 상환, 보유 주택 기록 종료]}
+housing_move: {disallowed: [이사했, 이사할, 이사 계획], review_only: [새 주소], allowed_indirect: [등록 주소 변경, 납부처 전환]}
+relationship_adoption: {disallowed: [입양해서, 아이를 입양, 입양했], review_only: [보호자 등록], allowed_indirect: [가족관계 등록, 보호자 금융 설정]}
+relationship_childbirth:
+  disallowed: [태어나서, 막내가 태어, 아이가 태어, 애가 하나 더 생, 아이가 이번에 생, 출산해서]
+  review_only: [가족 수가 한 명 늘]
+  allowed_indirect: [자녀 등록 수 증가, 새 자녀 목적저축]
+relationship_dependent_addition: {disallowed: [부양가족이 생, 부양하게 됐], review_only: [가족 지원], allowed_indirect: [정기 지원 대상 추가]}
+relationship_dependent_end: {disallowed: [부양이 끝났, 부양가족에서 빠졌], review_only: [지원 종료], allowed_indirect: [정기 지원 이체 재검토]}
+relationship_divorce_or_separation: {disallowed: [이혼했, 별거 중, 헤어졌], review_only: [공동 생활비를 나눠], allowed_indirect: [공동 지출 분리 가능성, 지원 수취인 변경 가능성]}
+relationship_family_death: {disallowed: [돌아가셨, 사망했, 장례를 치렀], review_only: [장례 비용], allowed_indirect: [가족 관련 일회성 비용, 정기 지원 종료]}
+relationship_marriage:
+  disallowed: [배우자가 생, 결혼했, 신혼]
+  review_only: [공동 생활비]
+  allowed_indirect: [생활비 분담 이체, 가구 금융정보 등록]
+retirement_pension_start: {disallowed: [연금을 받기 시작, 연금 수령을 시작], review_only: [연금 입금], allowed_indirect: [정기 연금 입금 첫 내역]}
+retirement_start: {disallowed: [은퇴했, 퇴직 생활을 시작], review_only: [마지막 급여], allowed_indirect: [급여 입금 종료, 생활비 인출 구조 변경]}

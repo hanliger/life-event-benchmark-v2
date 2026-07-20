@@ -21,6 +21,8 @@ from fin_life_benchmark.dialogue.generation_control import (
     build_generation_manifest,
     raw_dialogue_json_schema,
     require_canary_pass,
+    require_human_review_pass,
+    require_regression_pass,
     resolve_model_profile,
     select_trajectory_files,
     verify_canary_manifest,
@@ -94,6 +96,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--model")
     parser.add_argument("--canary-manifest")
     parser.add_argument("--require-canary-pass")
+    parser.add_argument("--require-human-review-pass")
+    parser.add_argument("--require-regression-pass")
+    parser.add_argument("--regression-manifest")
     parser.add_argument("--allow-canary-config-mismatch", action="store_true")
     parser.add_argument("--resume", action="store_true")
     parser.add_argument("--retry-errors", action="store_true")
@@ -139,16 +144,40 @@ def main(argv: list[str] | None = None) -> int:
                 "--confirm-multi-trajectory-generation"
             )
 
-    production_mode = bool(args.canary_manifest or args.require_canary_pass)
+    production_mode = bool(
+        args.canary_manifest
+        or args.require_canary_pass
+        or args.require_human_review_pass
+    )
     if production_mode:
-        if not args.canary_manifest or not args.require_canary_pass:
-            raise SystemExit("production continuation requires both --canary-manifest and --require-canary-pass")
         if len(selected_ids) != 19:
             raise SystemExit(f"production continuation must select exactly 19 trajectories, got {len(selected_ids)}")
+        if not all(
+            (
+                args.canary_manifest,
+                args.require_canary_pass,
+                args.require_human_review_pass,
+            )
+        ):
+            raise SystemExit(
+                "production continuation requires --canary-manifest, "
+                "--require-canary-pass, and --require-human-review-pass"
+            )
         if args.overwrite:
             raise SystemExit("broad --overwrite is prohibited in production continuation mode")
         try:
             require_canary_pass(args.require_canary_pass)
+            require_human_review_pass(args.require_human_review_pass)
+        except ValueError as exc:
+            raise SystemExit(str(exc)) from exc
+    if bool(args.require_regression_pass) != bool(args.regression_manifest):
+        raise SystemExit(
+            "full canary v2 requires both --require-regression-pass and "
+            "--regression-manifest"
+        )
+    if args.require_regression_pass:
+        try:
+            require_regression_pass(args.require_regression_pass)
         except ValueError as exc:
             raise SystemExit(str(exc)) from exc
 
@@ -179,6 +208,18 @@ def main(argv: list[str] | None = None) -> int:
             )
         except ValueError as exc:
             raise SystemExit(str(exc)) from exc
+    if args.regression_manifest:
+        try:
+            verify_canary_manifest(manifest, args.regression_manifest, False)
+            manifest["regression_manifest"] = manifest.pop("canary_manifest")
+            manifest["regression_config_mismatch_fields"] = manifest.pop(
+                "canary_config_mismatch_fields"
+            )
+            manifest["regression_config_mismatch_override"] = manifest.pop(
+                "canary_config_mismatch_override"
+            )
+        except ValueError as exc:
+            raise SystemExit(f"regression {exc}") from exc
     output_dir = Path(args.output_dir)
     raw_output_dir = Path(args.raw_output_dir) if args.raw_output_dir else None
     manifest_path = output_dir.parent / "generation_manifest.json"

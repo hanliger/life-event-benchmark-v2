@@ -13,6 +13,7 @@ from __future__ import annotations
 import json
 import random
 import re
+from collections import Counter
 from pathlib import Path
 from typing import Any
 
@@ -22,9 +23,17 @@ from ..llm.client import LLMClient
 from ..persona.models import NormalizedPersona
 from ..fsm.registry import load_life_event_templates
 from ..validation.dialogue_validator import DialogueValidator, grounded_concrete_values
-from .models import CueAnnotation, DialogueGenerationPlan, QualitySelfCheck, Session, Turn
+from .models import (
+    ActionResolution,
+    CueAnnotation,
+    DialogueGenerationPlan,
+    QualitySelfCheck,
+    Session,
+    Turn,
+)
 
 _HIGH_RISK_FA = {"FA-07", "FA-08", "FA-09", "FA-10"}
+_REVIEW_ONLY_VALIDATION_CODES = {"near_direct_event_disclosure"}
 
 _ASSISTANT_OPENINGS = [
     "네, 요청하신 범위에서 현재 상태부터 확인하겠습니다.",
@@ -82,6 +91,22 @@ _CONFIRMATION_USER = [
     "현재 설정과 달라지는 항목만 알려주세요",
     "최종 확인 전까지는 그대로 두면 됩니다",
     "적용 전에 주의할 점도 확인할게요",
+]
+
+_MOCK_OPENING_PREFIXES = [
+    "먼저", "우선", "오늘은", "지금은", "일단", "앱에서", "현재 기준으로", "이번에는",
+    "필요한 범위에서", "가능한 절차부터", "다른 변경 없이", "기존 설정을 둔 채", "제가 원하는 범위만",
+    "관련 항목 가운데", "처리 전에", "선택할 내용만", "현재 화면에서", "급한 것부터", "이 기능으로",
+    "지금 적용된 기준에서",
+]
+_MOCK_OPENING_SUFFIXES = [
+    "확인하고 싶어요", "살펴봐 주세요", "진행 방법을 알려주세요", "필요한 단계만 보고 싶어요",
+    "가능한 범위를 확인해 주세요", "현재 상태부터 보여주세요", "바뀌는 항목을 알고 싶어요",
+    "앱에서 처리하려고요", "선택지를 보고 결정할게요", "적용 전 내용을 확인할게요",
+    "요청 범위만 점검해 주세요", "기존 값과 비교해 주세요", "필요한 조건을 알려주세요",
+    "어디까지 가능한지 볼게요", "관련 설정을 찾아주세요", "지금 상태를 기준으로 볼게요",
+    "변경 없이 먼저 조회할게요", "처리 순서를 확인해 주세요", "주의할 항목도 함께 볼게요",
+    "해당 메뉴에서 시작하려고요",
 ]
 
 _CUE_WRAPPER_BY_STATUS = {
@@ -201,6 +226,38 @@ def _memory_fact_text(update: dict[str, Any]) -> str:
     return f"{label}은 지금 {value}예요"
 
 
+def _mock_dimension_text(dimension_id: str, role: str, status: str) -> str:
+    """Safe indirect surfaces for offline tests; IDs stay annotation-only."""
+    if dimension_id == "guardian_family_registration_transition":
+        return "병원 관련 절차가 아니라 보호자와 가족관계 등록 기준으로 확인해 주세요"
+    if dimension_id == "employment_relationship_remains":
+        return "정기 입금은 멈췄지만 재직 정보 자체는 유지되고 있어요"
+    surfaces = {
+        "uncertainty": "현재 조건이 계속될지 몰라 연결된 금융 설정을 점검하고 싶어요",
+        "future_timing": "지금 값은 그대로고 정해진 시점 뒤에 새 설정이 유효해져요",
+        "state_change": "은행에 등록된 현재 정보가 예전 값과 달라진 걸 확인했어요",
+        "entity_change": "가족 금융 등록 대상이 한 명 늘어 관련 설정이 필요해요",
+        "financial_consequence": "관련 입금이나 납부 흐름이 달라져 금융 설정을 확인해야 해요",
+        "prior_current_contrast": "준비했던 값 대신 지금 유효한 설정을 유지해야 해요",
+        "cancellation": "준비하던 변경은 진행하지 않기로 했어요",
+        "subtype_disambiguation": "보호자와 가족관계 등록 기준으로 금융 설정을 확인해 주세요",
+    }
+    return surfaces.get(role, f"현재 금융 설정과 연결된 변화 가능성을 확인해 주세요")
+
+
+def _mock_task_opening(plan: DialogueGenerationPlan, safe_task: str) -> str:
+    try:
+        ordinal = max(0, int(plan.session_id.removeprefix("S")) - 1)
+    except ValueError:
+        ordinal = sum(ord(char) for char in plan.session_id)
+    prefix = _MOCK_OPENING_PREFIXES[ordinal % len(_MOCK_OPENING_PREFIXES)]
+    suffix = _MOCK_OPENING_SUFFIXES[
+        (ordinal // len(_MOCK_OPENING_PREFIXES))
+        % len(_MOCK_OPENING_SUFFIXES)
+    ]
+    return f"{prefix} {safe_task} 업무를 {suffix}"
+
+
 class LLMOutputValidationError(ValueError):
     """Raised when an LLM response is JSON but not a valid session payload."""
 
@@ -270,8 +327,6 @@ class DialogueGenerator:
         rng = random.Random(f"{plan.trajectory_id}:{plan.session_id}:mock")
         turns: list[Turn] = []
         cues: list[CueAnnotation] = []
-        wrapper = _CUE_WRAPPER_BY_STATUS.get(plan.event_status_after_session, _CUE_WRAPPER_BY_STATUS["no_event"])
-
         safe_task = plan.financial_task
         leaked = _contains_any(safe_task, plan.must_not_include_terms)
         if leaked is None:
@@ -288,59 +343,138 @@ class DialogueGenerator:
             safe_task = "자동이체 설정 확인"
 
         memory_facts = list(plan.structured_context.get("session_memory_updates") or [])
-        cue_texts = list(plan.must_include_cues)
-        if not cue_texts:
-            cue_texts = [
-                cue.surface_hint
-                for cue in plan.planned_cues
-                if cue.surface_hint and cue.cue_role != "memory_fact"
-            ]
-        opening_parts = [f"{safe_task} 좀 하려고요"]
-        for i, cue in enumerate(cue_texts):
-            opening_parts.append(wrapper.format(cue=cue))
-            planned = next(
-                (item for item in plan.planned_cues if item.surface_hint == cue),
-                None,
+        user_parts: dict[int, list[str]] = {
+            0: [_mock_task_opening(plan, safe_task)],
+            2: [rng.choice(_DETAIL_USER)],
+            4: [rng.choice(_CONFIRMATION_USER)],
+            6: ["안내받은 범위까지만 진행해 주세요"],
+        }
+        cues.append(
+            CueAnnotation(
+                turn_index=0,
+                cue_type="task_intent",
+                cue_text=safe_task,
+                evidence_text=safe_task,
             )
+        )
+        placement_slots = list(plan.evidence_placement_slots or [0])
+        for index, dimension in enumerate(plan.evidence_dimensions):
+            turn_index = placement_slots[index % len(placement_slots)]
+            evidence_text = _mock_dimension_text(
+                dimension.dimension_id, dimension.role, plan.event_status_after_session
+            )
+            user_parts[turn_index].append(evidence_text)
             cues.append(
                 CueAnnotation(
-                    turn_index=0,
-                    cue_type=planned.cue_role if planned else _slugify(cue),
-                    cue_text=cue,
-                    evidence_text=cue,
+                    turn_index=turn_index,
+                    cue_type=dimension.role,
+                    cue_text=evidence_text,
+                    evidence_text=evidence_text,
+                    evidence_dimension_id=dimension.dimension_id,
                     linked_memory_path=(
-                        planned.linked_memory_paths[0]
-                        if planned and planned.linked_memory_paths
+                        dimension.linked_memory_paths[0]
+                        if dimension.linked_memory_paths
+                        and dimension.linked_memory_paths[0] in plan.target_memory_paths
                         else None
                     ),
                 )
             )
-        for update in memory_facts:
-            fact_text = _memory_fact_text(update)
-            opening_parts.append(fact_text)
+        surface_cues = list(plan.must_include_cues)
+        if not surface_cues and plan.session_type == "hard_negative":
+            surface_cues = [
+                cue.surface_hint
+                for cue in plan.planned_cues
+                if cue.surface_hint and cue.cue_role != "memory_fact"
+            ]
+        for index, cue_text in enumerate(surface_cues):
+            turn_index = placement_slots[index % len(placement_slots)]
+            user_parts[turn_index].append(cue_text)
+            planned = next(
+                (item for item in plan.planned_cues if item.surface_hint == cue_text),
+                None,
+            )
             cues.append(
                 CueAnnotation(
-                    turn_index=0,
+                    turn_index=turn_index,
+                    cue_type=planned.cue_role if planned else _slugify(cue_text),
+                    cue_text=cue_text,
+                    evidence_text=cue_text,
+                    evidence_dimension_id=(
+                        planned.evidence_dimension_id if planned else None
+                    ),
+                    linked_memory_path=(
+                        planned.linked_memory_paths[0]
+                        if planned
+                        and planned.linked_memory_paths
+                        and planned.linked_memory_paths[0] in plan.target_memory_paths
+                        else None
+                    ),
+                )
+            )
+        for index, update in enumerate(memory_facts):
+            turn_index = placement_slots[index % len(placement_slots)]
+            fact_text = _memory_fact_text(update)
+            user_parts[turn_index].append(fact_text)
+            dimension_id = next(
+                (
+                    dimension.dimension_id
+                    for dimension in plan.evidence_dimensions
+                    if update.get("path") in dimension.linked_memory_paths
+                ),
+                None,
+            )
+            cues.append(
+                CueAnnotation(
+                    turn_index=turn_index,
                     cue_type="memory_fact",
                     cue_text=fact_text,
                     linked_memory_path=update.get("path"),
                     linked_memory_operation=update.get("operation"),
                     linked_memory_value=update.get("new_value"),
                     evidence_text=fact_text,
+                    evidence_dimension_id=dimension_id,
                 )
+            )
+        for pair in plan.stale_memory_pairs:
+            old_text = (
+                f"예전 {_MEMORY_LABELS_KO.get(pair.path, '등록 정보')} 값은 "
+                f"{_visible_memory_value(pair.old_value)}였어요"
+            )
+            current_text = (
+                f"지금 유효한 값은 {_visible_memory_value(pair.current_value)}예요"
+            )
+            user_parts[0].append(old_text)
+            user_parts[2].append(current_text)
+            cues.extend(
+                [
+                    CueAnnotation(
+                        turn_index=0,
+                        cue_type="stale_value",
+                        linked_memory_path=pair.path,
+                        linked_memory_value=pair.old_value,
+                        evidence_text=old_text,
+                    ),
+                    CueAnnotation(
+                        turn_index=2,
+                        cue_type="current_value",
+                        linked_memory_path=pair.path,
+                        linked_memory_value=pair.current_value,
+                        evidence_text=current_text,
+                    ),
+                ]
             )
 
         turns_min = int(self.cfg.get("turns_min", 8))
         turns_max = int(self.cfg.get("turns_max", 8))
         if turns_min != 8 or turns_max != 8:
             raise ValueError("mock dialogue contract requires exactly 8 turns")
-        turns.append(Turn(speaker="user", text=". ".join(opening_parts)))
+        turns.append(Turn(speaker="user", text=". ".join(user_parts[0])))
         turns.append(Turn(speaker="assistant", text=rng.choice(_ASSISTANT_OPENINGS)))
-        turns.append(Turn(speaker="user", text=rng.choice(_DETAIL_USER)))
+        turns.append(Turn(speaker="user", text=". ".join(user_parts[2])))
         turns.append(Turn(speaker="assistant", text=rng.choice(_ASSISTANT_MIDDLES)))
-        turns.append(Turn(speaker="user", text=rng.choice(_CONFIRMATION_USER)))
+        turns.append(Turn(speaker="user", text=". ".join(user_parts[4])))
         turns.append(Turn(speaker="assistant", text=rng.choice(_ASSISTANT_CONFIRMATIONS)))
-        turns.append(Turn(speaker="user", text="네 그렇게 해주세요"))
+        turns.append(Turn(speaker="user", text=". ".join(user_parts[6])))
         high_risk = plan.mapped_action in _HIGH_RISK_FA
         turns.append(
             Turn(
@@ -377,6 +511,11 @@ class DialogueGenerator:
             turns=turns,
             cue_annotations=cues,
             quality_self_check=check,
+            action_resolution=ActionResolution(
+                mode=plan.action_execution_contract.action_mode,
+                provided_slots=dict(plan.action_execution_contract.grounded_slots),
+                missing_slots=list(plan.action_execution_contract.missing_slots),
+            ),
             generator="mock",
             plan=plan,
         )
@@ -421,6 +560,27 @@ class DialogueGenerator:
             "{planned_cues}": json.dumps(
                 [cue.model_dump(mode="json") for cue in plan.planned_cues], ensure_ascii=False
             ),
+            "{evidence_realization_contract}": json.dumps(
+                {
+                    "strategy": plan.evidence_realization_strategy,
+                    "placement_strategy": plan.evidence_placement_strategy,
+                    "placement_slots": plan.evidence_placement_slots,
+                    "dimensions": [
+                        item.model_dump(mode="json")
+                        for item in plan.evidence_dimensions
+                    ],
+                    "lifecycle_surface_family": plan.lifecycle_surface_family,
+                    "lifecycle_surface_variant_id": plan.lifecycle_surface_variant_id,
+                    "forbidden_direct_event_patterns": plan.forbidden_direct_event_patterns,
+                    "directness_level": plan.directness_level,
+                },
+                ensure_ascii=False,
+            ),
+            "{action_execution_contract}": json.dumps(
+                plan.action_execution_contract.model_dump(mode="json"),
+                ensure_ascii=False,
+            ),
+            "{bank_policy_profile_id}": plan.bank_policy_profile_id,
             "{must_not_include_terms}": json.dumps(plan.must_not_include_terms, ensure_ascii=False),
             "{target_memory_paths}": json.dumps(plan.target_memory_paths, ensure_ascii=False),
             "{structured_context}": json.dumps(plan.structured_context, ensure_ascii=False),
@@ -465,6 +625,21 @@ class DialogueGenerator:
             "target_memory_paths": plan.target_memory_paths,
             "protected_memory_paths": plan.protected_memory_paths,
             "expected_memory_operation": plan.expected_memory_operation,
+            "evidence_realization_contract": {
+                "strategy": plan.evidence_realization_strategy,
+                "placement_strategy": plan.evidence_placement_strategy,
+                "placement_slots": plan.evidence_placement_slots,
+                "dimensions": [
+                    item.model_dump(mode="json") for item in plan.evidence_dimensions
+                ],
+                "forbidden_direct_event_patterns": plan.forbidden_direct_event_patterns,
+                "lifecycle_surface_family": plan.lifecycle_surface_family,
+                "lifecycle_surface_variant_id": plan.lifecycle_surface_variant_id,
+            },
+            "action_execution_contract": plan.action_execution_contract.model_dump(
+                mode="json"
+            ),
+            "bank_policy_profile_id": plan.bank_policy_profile_id,
             "session_memory_updates": context.get("session_memory_updates") or [],
             "event_params": event.get("params") or {},
             "allowed_concrete_values": sorted(
@@ -478,6 +653,7 @@ class DialogueGenerator:
                     "linked_memory_operation",
                     "linked_memory_value",
                     "evidence_text",
+                    "evidence_dimension_id",
                 ],
                 "planner_aliases_not_for_output": [
                     "cue_id",
@@ -561,7 +737,7 @@ class DialogueGenerator:
         persona: NormalizedPersona,
         *,
         enforce_turn_limits: bool = False,
-    ) -> tuple[list[Turn], list[CueAnnotation], QualitySelfCheck]:
+    ) -> tuple[list[Turn], list[CueAnnotation], QualitySelfCheck, ActionResolution]:
         if not isinstance(payload, dict):
             raise LLMOutputValidationError("payload must be a JSON object")
 
@@ -680,6 +856,7 @@ class DialogueGenerator:
                     linked_memory_operation=linked_memory_operation,
                     linked_memory_value=linked_memory_value,
                     evidence_text=item.get("evidence_text") or item.get("cue_text"),
+                    evidence_dimension_id=item.get("evidence_dimension_id"),
                 )
             )
         expected_memory_facts = list(
@@ -717,7 +894,13 @@ class DialogueGenerator:
         if not isinstance(raw_check, dict):
             raise LLMOutputValidationError("payload.quality_self_check must be an object when present")
         check = QualitySelfCheck(**raw_check)
-        return turns, cues, check
+        raw_resolution = payload.get("action_resolution") or {}
+        if not isinstance(raw_resolution, dict):
+            raise LLMOutputValidationError(
+                "payload.action_resolution must be an object when present"
+            )
+        resolution = ActionResolution(**raw_resolution)
+        return turns, cues, check, resolution
 
     def _llm_session(
         self,
@@ -764,7 +947,7 @@ class DialogueGenerator:
                         "return a concise, complete JSON object"
                     )
                 payload = self._parse_llm_json(current_raw)
-                turns, cues, check = self._payload_to_parts(
+                turns, cues, check, resolution = self._payload_to_parts(
                     payload,
                     plan,
                     persona,
@@ -787,13 +970,19 @@ class DialogueGenerator:
                     turns=turns,
                     cue_annotations=cues,
                     quality_self_check=check,
+                    action_resolution=resolution,
                     generator=self.client.provider,
                     generation_metadata={},
                     plan=plan,
                 )
                 violations = self.validator.validate_session(candidate.model_dump(mode="json"))
-                if violations:
-                    details = "; ".join(f"{v['code']}: {v['detail']}" for v in violations)
+                blocking_violations = [
+                    item
+                    for item in violations
+                    if item.get("code") not in _REVIEW_ONLY_VALIDATION_CODES
+                ]
+                if blocking_violations:
+                    details = "; ".join(f"{v['code']}: {v['detail']}" for v in blocking_violations)
                     raise LLMOutputValidationError(f"dialogue validator violations: {details}")
                 session = candidate
                 break
@@ -850,6 +1039,18 @@ class DialogueGenerator:
                 "request_duration_ms": round(sum(float(item.get("request_duration_ms") or 0) for item in response_metadata), 3),
                 "final_validation_status": "passed",
                 "validation_errors": validation_errors,
+                "repair_reason_counts": dict(
+                    sorted(
+                        Counter(
+                            code
+                            for error in validation_errors
+                            for code in re.findall(
+                                r"(?:violations:\s*|;\s*)([a-z][a-z0-9_]+):",
+                                error,
+                            )
+                        ).items()
+                    )
+                ),
                 "responses": response_metadata,
             }
         )

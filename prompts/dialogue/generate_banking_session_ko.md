@@ -20,6 +20,9 @@
 - 기대 메모리 연산(내부 정보): {expected_memory_operation}
 - 반드시 자연스럽게 포함할 단서 표현: {must_include_cues}
 - 의미를 보존해 자연스럽게 표현할 구조화 단서: {planned_cues}
+- 사건 증거 실현 계약(전략·배치·dimension): {evidence_realization_contract}
+- 고위험 업무 실행 계약: {action_execution_contract}
+- 은행 정책 프로필: {bank_policy_profile_id}
 - 절대 등장하면 안 되는 표현: {must_not_include_terms}
 - cue_annotations에서 연결 가능한 memory path: {target_memory_paths}
 - 구조화된 사실 컨텍스트: {structured_context}
@@ -56,9 +59,17 @@
 25. 정확한 날짜·금액·기간·금리·인원·횟수·계좌 끝자리는 위 "사용할 수 있는 숫자" 목록에 있는 값만 사용할 수 있습니다. 목록에 없다면 숫자를 만들지 말고 "선택한 날짜", "해당 금액", "최근 내역"처럼 일반적으로 표현합니다. 만원·억원 같은 단위 변환값은 정규화된 원 단위 값과 의미가 같을 때만 허용됩니다.
 26. 같은 정보성 문장을 세션 안에서 그대로 반복하지 않습니다. 짧은 확인 응답은 자연스러운 범위에서만 사용합니다.
 27. 세션 전체에서 위 financial_task 한 가지만 다룹니다. 다른 업무를 먼저 완료한 뒤 단서나 새 업무로 전환하지 않습니다.
-28. evidence 세션의 첫 user 발화는 financial_task 요청과 그 업무가 필요한 event_signal 또는 cancellation 단서를 하나의 자연스러운 맥락으로 함께 말합니다. 단서를 별도의 자기소개나 갑작스러운 후반 폭로로 붙이지 않습니다.
+28. 첫 user 발화는 financial_task를 자연스럽게 요청합니다. 사건 단서는 첫 발화에 억지로 넣지 말고 evidence_placement_slots에 지정된 user turn index(0, 2, 4, 6)에만 배치합니다. explicit_final_reveal이 아닌 한 필수 dimension은 세 번째 user 발화까지 모두 드러냅니다.
 29. 여러 session_memory_updates는 하나의 사건에서 동시에 생긴 사실 묶음입니다. 이를 여러 세션으로 나누거나 update마다 한 턴씩 늘리지 말고, 최대 두 개의 짧은 user 발화에 자연스럽게 묶습니다. 여러 memory_fact annotation이 같은 user 턴을 가리켜도 됩니다.
 30. 8턴 구조는 `업무 요청과 핵심 단서 → 필요한 확인 → 보충 사실 → 처리 범위 확인 → 고객 확인 → 결과/다음 단계`만 담습니다. 불필요한 서류 설명, 같은 확인의 반복, 별도 상품 권유를 넣지 않습니다.
+31. evidence_dimensions의 각 required dimension을 user 발화에서 실현하고 cue_annotations에 정확한 evidence_dimension_id를 기록합니다. 사건명이나 금지된 직설 표현을 사용해 dimension을 충족시키면 안 됩니다.
+32. lifecycle_surface_variant_id는 의미 전략이지 복사할 문장이 아닙니다. `아직 확정은 아니어서`, `조건만 미리`, `다음 달부터`, `이번에 실제로 반영`, `실제로 반영돼서`, `취소하려고요` 같은 상투 표현을 기본 문형으로 쓰지 않습니다.
+33. forbidden_direct_event_patterns는 정확한 이벤트명뿐 아니라 근접 직설 표현입니다. user와 assistant 어디에도 등장시키지 않습니다.
+34. action_execution_contract의 missing_slots가 하나라도 있거나 completion_allowed=false이면 완료·처리·접수·적용·등록·변경·해지·실행됐다는 결과 문장을 쓰지 않습니다. plan이 제공하지 않은 금액·계좌·수취인·날짜는 질문에 대한 답으로도 만들지 말고 pending으로 남깁니다.
+35. completion_allowed=true여도 confirmation_required=true이면 user의 명시적 확인 이후에만 완료할 수 있습니다. `해당 금액`, `정해둔 금액`, `선택한 날짜`, `매달 초`, `부모님 계좌`는 구체 실행 슬롯으로 간주하지 않습니다.
+36. 은행 정책은 중립적으로 표현합니다. 공동명의 지원 여부, 수수료 면제, 개설 자격·구비서류를 plan 근거 없이 단정하지 말고 앱에서 적용 가능한 선택지를 확인할 수 있다고 안내합니다.
+37. 첫 user 발화에는 cue_type="task_intent" annotation을 추가합니다. 모든 event evidence annotation에는 evidence_dimension_id를 넣습니다.
+38. action_resolution은 보이는 대화와 일치해야 합니다. 실행하지 않았으면 completion_turn_index는 null이고, plan의 missing_slots를 그대로 보존합니다.
 
 ## 출력 형식 (JSON만 출력)
 {
@@ -73,7 +84,8 @@
       "linked_memory_path": "employment.salary_day",
       "linked_memory_operation": "update",
       "linked_memory_value": 25,
-      "evidence_text": "급여가 매달 25일에 들어와요"
+      "evidence_text": "급여가 매달 25일에 들어와요",
+      "evidence_dimension_id": "observed_financial_consequence"
     }
   ],
   "quality_self_check": {
@@ -81,5 +93,12 @@
     "no_assistant_label_leakage": true,
     "financial_task_clear": true,
     "turn_count_ok": true
+  },
+  "action_resolution": {
+    "mode": "pending_required_information",
+    "provided_slots": {},
+    "missing_slots": [],
+    "explicit_confirmation_turn_index": null,
+    "completion_turn_index": null
   }
 }

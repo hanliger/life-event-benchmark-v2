@@ -1,0 +1,80 @@
+weak_signal:
+  - variant_id: weak_uncertain_continuation
+    family: uncertain_continuation
+    semantic_instruction_ko: 현재 조건이 계속될지 불분명해 관련 금융 설정을 점검한다.
+  - variant_id: weak_hypothetical_preparation
+    family: hypothetical_preparation
+    semantic_instruction_ko: 변화 가능성에 대비하되 결정되었다고 말하지 않는다.
+  - variant_id: weak_preliminary_eligibility
+    family: preliminary_eligibility
+    semantic_instruction_ko: 결정을 내리기 전 가능한 절차나 조건을 조회한다.
+  - variant_id: weak_possible_change_concern
+    family: possible_change_concern
+    semantic_instruction_ko: 가까운 미래의 변화 가능성이 기존 금융 흐름에 미칠 영향을 걱정한다.
+  - variant_id: weak_compare_before_deciding
+    family: compare_before_deciding
+    semantic_instruction_ko: 현재 설정과 대안을 비교하며 아직 어느 쪽도 선택하지 않는다.
+
+upcoming:
+  - variant_id: upcoming_known_effective_date
+    family: known_effective_date
+    semantic_instruction_ko: 적용 시점은 정해졌지만 현재 상태에는 아직 반영되지 않았다.
+  - variant_id: upcoming_submitted_not_effective
+    family: submitted_not_effective
+    semantic_instruction_ko: 필요한 요청은 제출됐지만 효력이 시작되기 전이다.
+  - variant_id: upcoming_future_payment
+    family: future_payment_or_registration
+    semantic_instruction_ko: 앞으로 시작될 납부나 등록에 맞춰 금융 업무를 준비한다.
+  - variant_id: upcoming_after_milestone
+    family: milestone_activation
+    semantic_instruction_ko: 정해진 절차가 끝난 뒤 새 값이 활성화됨을 현재 값과 구분한다.
+  - variant_id: upcoming_current_pending_contrast
+    family: current_pending_contrast
+    semantic_instruction_ko: 지금 유효한 값과 앞으로 유효해질 값을 명확히 대조한다.
+
+occurred:
+  - variant_id: occurred_bank_consequence_observed
+    family: bank_consequence_observed
+    semantic_instruction_ko: 새로운 상태 아래 첫 금융 결과가 이미 관찰됐음을 간접적으로 말한다.
+  - variant_id: occurred_current_record_changed
+    family: current_record_changed
+    semantic_instruction_ko: 은행에 등록된 현재 정보가 과거 정보와 달라졌음을 드러낸다.
+  - variant_id: occurred_old_action_mismatch
+    family: old_action_no_longer_fits
+    semantic_instruction_ko: 기존 자동 납부나 저축 설정이 현재 상황과 맞지 않게 되었음을 말한다.
+  - variant_id: occurred_first_new_transaction
+    family: first_transaction_new_state
+    semantic_instruction_ko: 바뀐 조건으로 실제 첫 입금·납부·이체가 발생했음을 보여 준다.
+  - variant_id: occurred_current_historical_contrast
+    family: current_historical_contrast
+    semantic_instruction_ko: 현재 유효한 값과 더 이상 쓰지 않는 과거 값을 구분한다.
+
+cancelled:
+  - variant_id: cancelled_request_withdrawn
+    family: pending_request_withdrawn
+    semantic_instruction_ko: 준비하던 요청을 철회해 현재 설정을 유지한다.
+  - variant_id: cancelled_date_removed
+    family: effective_date_removed
+    semantic_instruction_ko: 예정돼 있던 적용 시점이 더 이상 유효하지 않음을 말한다.
+  - variant_id: cancelled_payee_unchanged
+    family: payee_or_account_unchanged
+    semantic_instruction_ko: 바꾸려던 납부처나 계좌가 기존대로 유지됨을 드러낸다.
+  - variant_id: cancelled_transfer_unneeded
+    family: prepared_transfer_unneeded
+    semantic_instruction_ko: 준비했던 이체가 더 이상 필요하지 않아 실행하지 않는다.
+  - variant_id: cancelled_pending_cleared
+    family: pending_value_cleared
+    semantic_instruction_ko: 임시로 기록한 미래 값을 지우고 현재 값만 남긴다.
+
+placement_strategies:
+  - strategy_id: task_and_evidence_opening
+    slots: [0]
+  - strategy_id: task_first_evidence_turn_2
+    slots: [2]
+  - strategy_id: task_first_evidence_turn_3
+    slots: [4]
+  - strategy_id: task_first_evidence_split_turns_2_3
+    slots: [2, 4]
+  - strategy_id: final_user_turn_reveal
+    slots: [6]
+    explicit_final_reveal: true

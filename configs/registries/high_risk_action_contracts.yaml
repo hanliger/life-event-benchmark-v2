@@ -1,0 +1,38 @@
+FA-07:
+  default_subtype: transfer
+  subtypes:
+    transfer:
+      required_for_execution: [source_account, destination_name, destination_account, amount, currency, execution_date, explicit_confirmation]
+      optional: [fee_acknowledgement, exchange_rate_acknowledgement]
+FA-08:
+  default_subtype: recurring_transfer
+  subtypes:
+    recurring_transfer:
+      required_for_execution: [source_account, destination_name, destination_account, amount, recurrence_day, explicit_confirmation]
+      optional: [target_action_ids]
+FA-09:
+  default_subtype: recurring_savings
+  subtypes:
+    recurring_savings:
+      required_for_execution: [source_account, product_or_goal, amount, recurrence_day, explicit_confirmation]
+      optional: []
+FA-10:
+  default_subtype: repayment
+  subtypes:
+    repayment:
+      required_for_execution: [loan_reference, source_account, amount_or_schedule, execution_date_or_recurrence, explicit_confirmation]
+      optional: []
+
+slot_aliases:
+  source_account: [source_account, withdrawal_account, from_account, salary_account]
+  destination_name: [destination_name, recipient_name, payee_name, recipient, payee]
+  destination_account: [destination_account, recipient_account, payee_account, to_account]
+  amount: [amount, amount_krw, transfer_amount, savings_amount, payment_amount, joint_living_expense_amount]
+  currency: [currency, currency_code, target_currency]
+  execution_date: [execution_date, transfer_date, payment_date]
+  recurrence_day: [recurrence_day, transfer_day, payment_day, salary_day]
+  product_or_goal: [product_or_goal, product_id, goal_id, savings_goal]
+  loan_reference: [loan_reference, loan_id, mortgage_id]
+  amount_or_schedule: [amount_or_schedule, amount, amount_krw, repayment_amount, repayment_schedule]
+  execution_date_or_recurrence: [execution_date_or_recurrence, execution_date, repayment_date, recurrence_day]
+  target_action_ids: [target_action_ids]

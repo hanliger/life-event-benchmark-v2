@@ -32,6 +32,7 @@ class CueAnnotation(BaseModel):
     linked_memory_operation: str | None = None
     linked_memory_value: Any = None
     evidence_text: str | None = None
+    evidence_dimension_id: str | None = None
 
 
 class PlannedCue(BaseModel):
@@ -48,6 +49,40 @@ class PlannedCue(BaseModel):
     cue_role: str  # event_signal|memory_fact|cancellation|stale_value|current_value
     linked_memory_operation: str | None = None
     allow_reuse_across_statuses: bool = False
+    evidence_dimension_id: str | None = None
+
+
+class EvidenceDimension(BaseModel):
+    """One semantic fact needed to recover an event without naming it."""
+
+    dimension_id: str
+    role: str
+    semantic_instruction_ko: str
+    linked_memory_paths: list[str] = Field(default_factory=list)
+    required: bool = True
+    must_be_user_expressed: bool = True
+    exact_surface_required: bool = False
+
+
+class ActionExecutionContract(BaseModel):
+    """Planner-owned boundary between discussion and executable action."""
+
+    action_mode: str = "information_only"
+    required_slots: list[str] = Field(default_factory=list)
+    grounded_slots: dict[str, Any] = Field(default_factory=dict)
+    missing_slots: list[str] = Field(default_factory=list)
+    completion_allowed: bool = False
+    confirmation_required: bool = False
+
+
+class ActionResolution(BaseModel):
+    """Generated-session account of what, if anything, was resolved."""
+
+    mode: str = "information_only"
+    provided_slots: dict[str, Any] = Field(default_factory=dict)
+    missing_slots: list[str] = Field(default_factory=list)
+    explicit_confirmation_turn_index: int | None = None
+    completion_turn_index: int | None = None
 
 
 class StaleMemoryPair(BaseModel):
@@ -104,6 +139,19 @@ class DialogueGenerationPlan(BaseModel):
     structured_context: dict[str, Any] = Field(default_factory=dict)
     desired_single_session_recoverability: str = "medium"  # low|medium|high
     desired_cumulative_recoverability: str = "high"  # medium|high
+    evidence_realization_strategy: str | None = None
+    evidence_placement_strategy: str | None = None
+    evidence_placement_slots: list[int] = Field(default_factory=list)
+    evidence_dimensions: list[EvidenceDimension] = Field(default_factory=list)
+    forbidden_direct_event_patterns: list[str] = Field(default_factory=list)
+    lifecycle_surface_family: str | None = None
+    lifecycle_surface_variant_id: str | None = None
+    directness_level: str = "implicit"
+    action_execution_contract: ActionExecutionContract = Field(
+        default_factory=ActionExecutionContract
+    )
+    bank_policy_profile_id: str = "benchmark_neutral_bank"
+    hard_negative_surface_variant_id: str | None = None
 
 
 class QualitySelfCheck(BaseModel):
@@ -121,6 +169,7 @@ class RawDialogueResponse(BaseModel):
     turns: list[Turn]
     cue_annotations: list[CueAnnotation] = Field(default_factory=list)
     quality_self_check: QualitySelfCheck = Field(default_factory=QualitySelfCheck)
+    action_resolution: ActionResolution = Field(default_factory=ActionResolution)
 
 
 class Session(BaseModel):
@@ -140,6 +189,7 @@ class Session(BaseModel):
     turns: list[Turn] = Field(default_factory=list)
     cue_annotations: list[CueAnnotation] = Field(default_factory=list)
     quality_self_check: QualitySelfCheck = Field(default_factory=QualitySelfCheck)
+    action_resolution: ActionResolution = Field(default_factory=ActionResolution)
     generator: str = "mock"  # mock|openai|anthropic|dry_run
     generation_metadata: dict[str, Any] = Field(default_factory=dict)
     plan: DialogueGenerationPlan | None = None

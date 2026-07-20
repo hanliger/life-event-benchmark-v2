@@ -54,9 +54,29 @@ def evaluate_canary(audit: dict, plans: list[dict], gates: dict, warnings_cfg: d
             violations["turn_contract_violation"]
             + violations["user_turn_contract_violation"]
         ),
-        "opening_evidence_coupling_max": violations[
-            "opening_evidence_not_coupled"
-        ],
+        "task_not_introduced_in_opening_max": violations["task_not_introduced_in_opening"],
+        "required_evidence_not_realized_max": violations["required_evidence_not_realized"],
+        "evidence_revealed_too_late_max": violations["evidence_revealed_too_late"],
+        "evidence_placement_strategy_mismatch_max": violations["evidence_placement_strategy_mismatch"],
+        "direct_event_disclosure_max": violations["direct_event_disclosure"],
+        "high_risk_missing_required_slot_max": violations["high_risk_missing_required_slot"],
+        "high_risk_false_completion_max": violations["high_risk_false_completion"],
+        "high_risk_missing_confirmation_max": violations["high_risk_missing_confirmation"],
+        "high_risk_unplanned_slot_value_max": violations["high_risk_unplanned_slot_value"],
+        "high_risk_action_resolution_mismatch_max": violations["high_risk_action_resolution_mismatch"],
+        "insufficient_event_evidence_max": violations["insufficient_event_evidence"],
+        "subtype_not_disambiguated_max": violations["subtype_not_disambiguated"],
+        "unsupported_bank_policy_claim_max": violations["unsupported_bank_policy_claim"],
+        "bank_policy_contradiction_max": violations["bank_policy_contradiction"],
+        "stale_old_current_confusion_max": violations["stale_old_current_confusion"],
+        "duplicate_opening_over_limit_max": violations["duplicate_opening_over_limit"],
+        "lifecycle_phrase_overconcentration_max": (
+            violations["lifecycle_exact_phrase_overconcentration"]
+            + violations["lifecycle_phrase_family_overconcentration"]
+        ),
+        "evidence_placement_overconcentration_max": violations["evidence_placement_overconcentration"],
+        "event_strategy_overconcentration_max": violations["event_strategy_overconcentration"],
+        "hard_negative_template_overconcentration_max": violations["hard_negative_template_overconcentration"],
     }
     failures = []
     for key, threshold in gates.items():

@@ -235,13 +235,21 @@ def test_generation_audit_ignores_repeated_short_acknowledgements():
     assert report["quality"]["repeated_utterance_session_ids"] == []
 
 
-def test_generation_audit_hard_fails_turn_and_opening_evidence_contracts():
+def test_generation_audit_hard_fails_turn_and_missing_evidence_contracts():
     plan = {
         "session_id": "S001",
         "session_type": "occurred_evidence",
         "event_status_after_session": "occurred",
         "financial_task": "등록 정보 변경",
         "target_memory_paths": [],
+        "evidence_dimensions": [
+            {
+                "dimension_id": "state_changed",
+                "role": "state_change",
+                "semantic_instruction_ko": "현재 상태 변화",
+                "required": True,
+            }
+        ],
         "structured_context": {"session_memory_updates": []},
     }
     session = {
@@ -268,7 +276,8 @@ def test_generation_audit_hard_fails_turn_and_opening_evidence_contracts():
 
     assert report["violation_counts"]["turn_contract_violation"] == 1
     assert report["violation_counts"]["user_turn_contract_violation"] == 1
-    assert report["violation_counts"]["opening_evidence_not_coupled"] == 1
+    assert "opening_evidence_not_coupled" not in report["violation_counts"]
+    assert report["violation_counts"]["required_evidence_not_realized"] == 1
 
 
 def test_upcoming_audit_scopes_completion_to_pending_evidence():

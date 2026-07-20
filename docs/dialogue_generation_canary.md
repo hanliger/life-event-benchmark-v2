@@ -34,37 +34,60 @@ calls. Comparison artifacts are written under
 `data/runs/v4/dialogues/bakeoff/comparison/`. Cost remains unknown unless a
 currently effective, sourced entry is added to `configs/generation/model_pricing.yaml`.
 
-## 3. Generate exactly one full canary
+## 3. Run the semantic regression canary
+
+The regression subset includes every evidence, high-risk, stale-recall, and
+cancellation plan, plus policy-sensitive plans and coverage of the available
+hard-negative semantic variants. It writes a frozen subset before generation.
+
+```bash
+make dialogue-regression-canary \
+  RUN_ID=v4 MODEL_PROFILE=sonnet5 CANARY_TRAJ=traj_001
+make audit-dialogue-regression-canary \
+  RUN_ID=v4 MODEL_PROFILE=sonnet5 CANARY_TRAJ=traj_001
+```
+
+The second command must produce `regression_canary_decision.json` with
+`PASS`. It does not start the full canary or production automatically.
+
+## 4. Generate exactly one full canary v2
 
 Sonnet 5:
 
 ```bash
-make dialogue-canary RUN_ID=v4 MODEL_PROFILE=sonnet5 CANARY_TRAJ=traj_001
+make dialogue-canary-v2 RUN_ID=v4 MODEL_PROFILE=sonnet5 CANARY_TRAJ=traj_001
 ```
 
 Terra or Luna:
 
 ```bash
-make dialogue-canary RUN_ID=v4 MODEL_PROFILE=terra CANARY_TRAJ=traj_001
-make dialogue-canary RUN_ID=v4 MODEL_PROFILE=luna CANARY_TRAJ=traj_001
+make dialogue-canary-v2 RUN_ID=v4 MODEL_PROFILE=terra CANARY_TRAJ=traj_001
+make dialogue-canary-v2 RUN_ID=v4 MODEL_PROFILE=luna CANARY_TRAJ=traj_001
 ```
 
 API keys are read from environment variables or `.env`: `ANTHROPIC_API_KEY`
 for Sonnet and `OPENAI_API_KEY` for Terra/Luna. Keys are never stored in a
 manifest.
 
-## 4. Audit and build the review packet
+## 5. Audit and build the review packet
 
 ```bash
-make audit-dialogue-canary RUN_ID=v4 MODEL_PROFILE=sonnet5 CANARY_TRAJ=traj_001
-make review-dialogue-canary RUN_ID=v4 MODEL_PROFILE=sonnet5 CANARY_TRAJ=traj_001
+make audit-dialogue-canary-v2 RUN_ID=v4 MODEL_PROFILE=sonnet5 CANARY_TRAJ=traj_001
+make review-dialogue-canary-v2 RUN_ID=v4 MODEL_PROFILE=sonnet5 CANARY_TRAJ=traj_001
 ```
 
 Inspect `canary_decision.json`, the audit reports, per-trajectory
 `errors_*.jsonl`, raw response `.meta.json` files, and `review_packet.md`.
 `PASS` is required for production. `REVIEW_REQUIRED` and `FAIL` both block it.
 
-## 5. Human review, then the remaining 19
+Complete every reviewer field in `sampled_sessions.jsonl`, then score it:
+
+```bash
+make score-dialogue-canary-v2 \
+  RUN_ID=v4 MODEL_PROFILE=sonnet5 CANARY_TRAJ=traj_001
+```
+
+## 6. Human PASS, then the remaining 19
 
 ```bash
 make dialogue-production-remaining \
@@ -72,8 +95,9 @@ make dialogue-production-remaining \
 ```
 
 The command excludes the canary, requires exactly 19 selected trajectories,
-requires an accepted `PASS` decision, and verifies provider/model/reasoning,
-token limit, prompt hashes, config hash, and planner schema version against
+requires both automated and human-review `PASS` decisions, and verifies provider/model/reasoning,
+token limit, prompt hashes, config hash, semantic-contract registry hashes,
+and planner schema version against
 the canary manifest. This freeze keeps the canary evidence applicable to the
 remaining generation.
 

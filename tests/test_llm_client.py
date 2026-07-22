@@ -63,11 +63,20 @@ def test_anthropic_claude_5_omits_temperature():
 
 
 def test_anthropic_older_models_keep_temperature():
-    client, messages = _anthropic_client("claude-opus-4-8")
+    # Opus 4.6 and earlier still accept temperature.
+    client, messages = _anthropic_client("claude-opus-4-6")
 
     assert client.generate("system", "prompt") == "ok"
 
     assert messages.kwargs["temperature"] == 0.7
+
+
+def test_anthropic_opus_47_48_omit_temperature():
+    # Opus 4.7 / 4.8 reject temperature (HTTP 400) — the client must not send it.
+    for model in ("claude-opus-4-7", "claude-opus-4-8"):
+        client, messages = _anthropic_client(model)
+        assert client.generate("system", "prompt") == "ok"
+        assert "temperature" not in messages.kwargs, model
 
 
 def test_anthropic_empty_text_retries_provider_call():

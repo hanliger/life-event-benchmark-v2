@@ -1152,9 +1152,16 @@ class DialogueGenerator:
         raw_dir: Path,
         *,
         enforce_turn_limits: bool = False,
+        extra_guidance: str | None = None,
     ) -> Session:
         assert self.client is not None, "llm mode requires an LLMClient"
         prompt = self._build_prompt(plan, persona)
+        if extra_guidance:
+            # Optional evaluator feedback (e.g. from the advisory LLM judge). It
+            # steers a fresh regeneration but is never authoritative: the output
+            # still runs the full deterministic validator below, and the note is
+            # marked non-visible so it is not quoted into the dialogue.
+            prompt = f"{prompt}\n\n{extra_guidance}"
         system = "당신은 은행 상담 대화 데이터 생성기입니다. JSON만 출력합니다."
         raw = self.client.generate(system, prompt)
         response_metadata = [dict(getattr(self.client, "last_response_metadata", {}) or {})]
@@ -1314,13 +1321,21 @@ class DialogueGenerator:
         return session
 
     # ------------------------------------------------------------------ main
-    def generate_session(self, plan: DialogueGenerationPlan, persona: NormalizedPersona) -> Session | None:
+    def generate_session(
+        self,
+        plan: DialogueGenerationPlan,
+        persona: NormalizedPersona,
+        *,
+        extra_guidance: str | None = None,
+    ) -> Session | None:
         raw_dir = self.raw_output_dir or self.paths.raw_model_outputs / "dialogue"
         if self.mode == "mock":
             return self._mock_session(plan, persona)
         if self.mode == "dry_run":
             raw_dir.mkdir(parents=True, exist_ok=True)
             prompt = self._build_prompt(plan, persona)
+            if extra_guidance:
+                prompt = f"{prompt}\n\n{extra_guidance}"
             raw_stem = f"{plan.trajectory_id}_{plan.session_id}{self.raw_filename_suffix}"
             (raw_dir / f"{raw_stem}_prompt.txt").write_text(prompt, encoding="utf-8")
             return None
@@ -1329,4 +1344,5 @@ class DialogueGenerator:
             persona,
             raw_dir,
             enforce_turn_limits=True,
+            extra_guidance=extra_guidance,
         )

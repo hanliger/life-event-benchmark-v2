@@ -12,11 +12,19 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 
 
 def _anthropic_supports_temperature(model: str) -> bool:
-    """Newer Claude generation models reject the temperature parameter."""
+    """Newer Claude generation models reject the temperature parameter.
+
+    Opus 4.7 / 4.8, Sonnet 5, and the Fable/Mythos 5 family return HTTP 400 when
+    ``temperature`` (or ``top_p`` / ``top_k``) is sent. Opus 4.6 and earlier
+    still accept it.
+    """
     lowered = model.lower()
     return not (
         lowered.startswith("claude-")
-        and any(family in lowered for family in ("sonnet-5", "fable-5", "mythos-5", "opus-5"))
+        and any(
+            family in lowered
+            for family in ("opus-4-7", "opus-4-8", "sonnet-5", "fable-5", "mythos-5", "opus-5")
+        )
     )
 
 

@@ -13,7 +13,11 @@ AGE_QUOTAS ?= 20-29:4 30-39:6 40-49:6 50-59:4
 RUN_ID ?= ko_KR_age20s4_30s6_40s6_50s4_seed$(SEED)
 MODEL_PROFILE ?= sonnet5
 CANARY_TRAJ ?= traj_001
+CANARY_SUFFIX ?= v5
 DIALOGUE_WORKERS ?= 4
+JUDGE_PROVIDER ?= anthropic
+JUDGE_MODEL ?= claude-opus-4-8
+JUDGE_CONCURRENCY ?= 8
 QUOTA_FLAGS := $(foreach quota,$(AGE_QUOTAS),--quota $(quota))
 SESSION_LIMIT_FLAGS := $(if $(MAX_SESSIONS),--max-sessions $(MAX_SESSIONS),)
 
@@ -31,13 +35,18 @@ GOLD_ALL := $(RUN_DIR)/gold/prefix_gold_all_sessions.jsonl
 GOLD_CHECKPOINTS := $(RUN_DIR)/gold/prefix_gold_checkpoints_15.jsonl
 ITEMS_DIR := $(RUN_DIR)/benchmark_items
 QUALITY := $(RUN_DIR)/quality_reports
-REGRESSION_CANARY_ROOT := $(RUN_DIR)/dialogues/regression_canary/$(MODEL_PROFILE)_v2
-CANARY_V2_ROOT := $(RUN_DIR)/dialogues/canary/$(MODEL_PROFILE)_v2
+REGRESSION_CANARY_ROOT := $(RUN_DIR)/dialogues/regression_canary/$(MODEL_PROFILE)_$(CANARY_SUFFIX)
+CANARY_V2_ROOT := $(RUN_DIR)/dialogues/canary/$(MODEL_PROFILE)_$(CANARY_SUFFIX)
+DIALOGUE_JUDGE_ROOT := $(CANARY_V2_ROOT)/reports/dialogue_judge
+# Default production QA gate: the LLM judge decision. Override REVIEW_DECISION
+# with $(CANARY_V2_ROOT)/review/human_review_decision.json to gate on a human
+# packet score instead (same rubric).
+REVIEW_DECISION ?= $(DIALOGUE_JUDGE_ROOT)/judge_review_decision.json
 
 .PHONY: setup inventory normalize-personas initial-states simulate-smoke plan-dialogues audit-dialogue-plans \
 	dialogue-canary audit-dialogue-canary review-dialogue-canary dialogue-production-remaining \
 	dialogue-regression-canary audit-dialogue-regression-canary dialogue-canary-v2 \
-	audit-dialogue-canary-v2 review-dialogue-canary-v2 score-dialogue-canary-v2 \
+	audit-dialogue-canary-v2 review-dialogue-canary-v2 score-dialogue-canary-v2 dialogue-judge-gate \
 	coverage-trajectories dialogue-smoke-dry dialogue-smoke validate-dialogues \
 	export-gold build-items history-filter audit pipeline-smoke test clean-generated \
 	export-gold-controlled build-items-controlled audit-controlled export-public
@@ -190,15 +199,29 @@ score-dialogue-canary-v2:
 		--input $(CANARY_V2_ROOT)/review/sampled_sessions.jsonl \
 		--output-dir $(CANARY_V2_ROOT)/review
 
+# Default QA gate: LLM judge over the canary trajectory. Writes
+# judge_review_decision.json (consumed by dialogue-production-remaining) and
+# suggested_regeneration.jsonl. The human-review packet targets above remain
+# available as an optional cross-check on the same rubric.
+dialogue-judge-gate:
+	$(PYTHON) scripts/judge_dialogue_sessions.py \
+		--plans-dir $(PLAN_DIR) \
+		--sessions-dir $(CANARY_V2_ROOT)/sessions \
+		--output-dir $(DIALOGUE_JUDGE_ROOT) \
+		--trajectory-id $(CANARY_TRAJ) \
+		--provider $(JUDGE_PROVIDER) --model $(JUDGE_MODEL) \
+		--concurrency $(JUDGE_CONCURRENCY)
+
 dialogue-production-remaining:
 	$(PYTHON) scripts/generate_dialogue_sessions.py \
 		--trajectories-dir $(TRAJ_DIR) \
 		--plans-dir $(PLAN_DIR) \
 		--exclude-trajectory-id $(CANARY_TRAJ) \
 		--model-profile $(MODEL_PROFILE) \
+		--workers $(DIALOGUE_WORKERS) \
 		--canary-manifest $(CANARY_V2_ROOT)/generation_manifest.json \
 		--require-canary-pass $(CANARY_V2_ROOT)/audit/canary_decision.json \
-		--require-human-review-pass $(CANARY_V2_ROOT)/review/human_review_decision.json \
+		--require-review-pass $(REVIEW_DECISION) \
 		--confirm-multi-trajectory-generation \
 		--output-dir $(SESS_DIR) \
 		--raw-output-dir $(RAW_DIALOGUE_DIR) \

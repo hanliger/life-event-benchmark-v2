@@ -69,42 +69,89 @@ API keys are read from environment variables or `.env`: `ANTHROPIC_API_KEY`
 for Sonnet and `OPENAI_API_KEY` for Terra/Luna. Keys are never stored in a
 manifest.
 
-## 5. Audit and build the review packet
+## 5. Audit the canary
 
 ```bash
 make audit-dialogue-canary-v2 RUN_ID=v4 MODEL_PROFILE=sonnet5 CANARY_TRAJ=traj_001
-make review-dialogue-canary-v2 RUN_ID=v4 MODEL_PROFILE=sonnet5 CANARY_TRAJ=traj_001
 ```
 
 Inspect `canary_decision.json`, the audit reports, per-trajectory
-`errors_*.jsonl`, raw response `.meta.json` files, and `review_packet.md`.
-`PASS` is required for production. `REVIEW_REQUIRED` and `FAIL` both block it.
+`errors_*.jsonl`, and raw response `.meta.json` files. This automated
+`canary_decision.json` must be `PASS` for production; `REVIEW_REQUIRED` and
+`FAIL` both block it.
 
-Complete every reviewer field in `sampled_sessions.jsonl`, then score it:
+## 6. Quality review gate
+
+The dialogue-quality gate is a decision file with `decision == PASS`. Two
+producers share the **same rubric** (`score_records`: 3 per-session critical
+gates + 4 population rate gates), so their decisions are interchangeable at the
+production gate. The default is the LLM judge; a human packet score is an
+optional cross-check.
+
+### Default: LLM judge gate
 
 ```bash
-make score-dialogue-canary-v2 \
-  RUN_ID=v4 MODEL_PROFILE=sonnet5 CANARY_TRAJ=traj_001
+make dialogue-judge-gate RUN_ID=v4 MODEL_PROFILE=sonnet5 CANARY_TRAJ=traj_001
 ```
 
-## 6. Human PASS, then the remaining 19
+This runs the judge (`JUDGE_MODEL`, default `claude-opus-4-8`) over the whole
+canary trajectory and writes `reports/dialogue_judge/judge_review_decision.json`
+plus `suggested_regeneration.jsonl`. Flagging is gate-aware (Policy B): a session
+is flagged if it fails a critical dimension, or fails a soft dimension whose
+population pass rate is below threshold.
+
+Regenerate flagged sessions from the **frozen plans** (never rebuilt — pass
+`--plans-dir`), then re-judge; repeat up to 3 rounds and send anything still
+flagged to human review:
+
+```bash
+python scripts/regenerate_judged_sessions.py \
+  --regeneration-file .../reports/dialogue_judge/suggested_regeneration.jsonl \
+  --trajectories-dir data/runs/v4/trajectories \
+  --plans-dir data/runs/v4/dialogues/plans \
+  --sessions-dir .../sonnet5_v5/sessions \
+  --execute --provider anthropic --model claude-sonnet-5
+```
+
+### Optional: human cross-check (same rubric)
+
+```bash
+make review-dialogue-canary-v2 RUN_ID=v4 MODEL_PROFILE=sonnet5 CANARY_TRAJ=traj_001
+# fill every reviewer field in review/sampled_sessions.jsonl, then:
+make score-dialogue-canary-v2 RUN_ID=v4 MODEL_PROFILE=sonnet5 CANARY_TRAJ=traj_001
+```
+
+This writes `review/human_review_decision.json` with the identical rubric.
+Recommended as a spot-check on the sensitive dimensions (memory grounding,
+leakage, high-risk safety) where an LLM judge is least reliable.
+
+## 7. Review PASS, then the remaining 19
 
 ```bash
 make dialogue-production-remaining \
   RUN_ID=v4 MODEL_PROFILE=sonnet5 CANARY_TRAJ=traj_001
 ```
 
+Production gates on `REVIEW_DECISION`, which defaults to the judge decision
+(`judge_review_decision.json`). To gate on the human packet instead:
+
+```bash
+make dialogue-production-remaining RUN_ID=v4 MODEL_PROFILE=sonnet5 CANARY_TRAJ=traj_001 \
+  REVIEW_DECISION=data/runs/v4/dialogues/canary/sonnet5_v5/review/human_review_decision.json
+```
+
 The command excludes the canary, requires exactly 19 selected trajectories,
-requires both automated and human-review `PASS` decisions, and verifies provider/model/reasoning,
-token limit, prompt hashes, config hash, semantic-contract registry hashes,
-and planner schema version against
-the canary manifest. This freeze keeps the canary evidence applicable to the
-remaining generation.
+requires both the automated canary and the review `PASS` decisions, and verifies
+provider/model/reasoning, token limit, prompt hashes, config hash,
+semantic-contract registry hashes, and planner schema version against the canary
+manifest. This freeze keeps the canary evidence applicable to the remaining
+generation.
 
 Production uses session-level resume. Successful session IDs are skipped;
-failed or missing IDs are retried. To regenerate one successful session,
-invoke `generate_dialogue_sessions.py` directly with
-`--overwrite-session-id S123`. A progress manifest is atomically rewritten
-after every session, so interruption and restart are safe. A config mismatch
-is blocked unless `--allow-canary-config-mismatch` is explicitly supplied and
-recorded in the new manifest.
+failed or missing IDs are retried (`retry_failed_dialogue_sessions.py` also
+loads frozen plans via `--plans-dir`). To regenerate one successful session,
+invoke `generate_dialogue_sessions.py` directly with `--overwrite-session-id
+S123`. A progress manifest is atomically rewritten after every session, so
+interruption and restart are safe. A config mismatch is blocked unless
+`--allow-canary-config-mismatch` is explicitly supplied and recorded in the new
+manifest.

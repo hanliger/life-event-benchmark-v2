@@ -1,22 +1,23 @@
 #!/usr/bin/env python
-"""OPTIONAL, ADVISORY LLM judge over generated dialogue sessions.
+"""Default LLM judge QA gate over generated dialogue sessions.
 
-This tool is deliberately *outside* the required procedural gate chain
-(`--require-canary-pass` / `--require-human-review-pass` /
-`--require-regression-pass`). It never blocks production on its own. It runs an
-LLM evaluator over dialogue sessions and emits advisory artifacts:
+This is the default dialogue-quality reviewer. It runs an LLM evaluator over
+dialogue sessions and emits:
 
+- ``judge_review_decision.json`` — authoritative PASS/FAIL gate decision,
+  consumable by ``generate_dialogue_sessions.py --require-review-pass``
 - ``judge_report.{json,md}``   — per-dimension pass rates and gate view
 - ``judged_sessions.jsonl``    — one packet-shaped record per session
-- ``suggested_regeneration.jsonl`` — sessions the judge flagged as likely fails
+- ``suggested_regeneration.jsonl`` — sessions the judge flagged for regeneration
 
-The judge is an approximation, not ground truth. It shares the same rubric as
-the human review packet so its output can be calibrated against human labels,
-but its decision is NON-AUTHORITATIVE: use it to widen coverage (100% vs the
-canary sample) and to triage which sessions a human should look at, not to
-replace the human gate. The most trust-sensitive dimensions (memory grounding,
-semantic leakage, high-risk safety) are exactly where an LLM judge — especially
-one from the same model family that generated the dialogue — is least reliable.
+The judge shares the same rubric and gate logic (``score_records``) as the human
+review packet, so ``judge_review_decision.json`` is interchangeable with
+``human_review_decision.json`` at the production gate. The human-review branch
+remains available as an optional cross-check with the identical rubric — build
+the packet, fill it, and score it — but the default pipeline gates on this
+judge. Note the trust caveat: the most sensitive dimensions (memory grounding,
+semantic leakage, high-risk safety) are where an LLM judge is least reliable, so
+a human spot-check via the shared rubric is recommended for high-stakes runs.
 
 Example:
 
@@ -791,11 +792,36 @@ def main(argv: list[str] | None = None) -> int:
     scoring = score_records(scored) if scored else {"decision": "N/A"}
     usage = _aggregate_usage(records)
     parse_failures = sum(1 for r in records if not (r.get("judge_meta") or {}).get("parse_ok"))
+
+    # Authoritative review decision. Uses the same rubric/gate (score_records) as
+    # the human-review packet, so judge_review_decision.json and
+    # human_review_decision.json are interchangeable at the production gate. Any
+    # unparseable judgement is a hard failure — we must not pass a session the
+    # judge could not actually score.
+    decision = dict(scoring)
+    decision["producer"] = "llm_judge"
+    decision["provider"] = args.provider
+    decision["model"] = args.model
+    decision["judged_session_count"] = len(records)
+    decision["parse_failure_count"] = parse_failures
+    if parse_failures:
+        decision["decision"] = "FAIL"
+        decision.setdefault("hard_gate_failures", []).append(
+            {"gate": "judge_parse_failures", "actual": parse_failures, "threshold": 0}
+        )
+    (output_dir / "judge_review_decision.json").write_text(
+        json.dumps(decision, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
     report = {
-        "authoritative": False,
+        "authoritative": True,
         "note": (
-            "ADVISORY / NON-AUTHORITATIVE. This does not gate production. Calibrate "
-            "against human labels before trusting; keep humans on the critical gates."
+            "Default dialogue-quality QA gate. Shares the rubric (score_records) with "
+            "the optional human-review packet, so judge_review_decision.json is "
+            "interchangeable with human_review_decision.json at the production gate. "
+            "For a human cross-check, fill the review packet and score it with the "
+            "same rubric."
         ),
         "provider": args.provider,
         "model": args.model,
@@ -803,7 +829,8 @@ def main(argv: list[str] | None = None) -> int:
         "parsed_session_count": len(scored),
         "parse_failure_count": parse_failures,
         "suggested_regeneration_count": len(regeneration),
-        "advisory_scoring": scoring,
+        "review_decision": decision["decision"],
+        "scoring": scoring,
         "token_usage_total": usage,
     }
     (output_dir / "judge_report.json").write_text(
@@ -815,17 +842,18 @@ def main(argv: list[str] | None = None) -> int:
     rate_lines = [f"- {field}: {rate:.3f}" for field, rate in rates.items()] or ["- (none)"]
     usage_lines = [f"- {key}: {value}" for key, value in sorted(usage.items())] or ["- (none)"]
     lines = [
-        "# Dialogue LLM-judge report (ADVISORY — non-authoritative)",
+        "# Dialogue LLM-judge QA report (default gate)",
         "",
-        "> This report does not gate production. Calibrate against human labels; "
-        "keep humans on memory-grounding / leakage / high-risk-safety.",
+        "> Default dialogue-quality gate. Same rubric as the optional human-review "
+        "packet; a human cross-check is recommended for the sensitive dimensions "
+        "(memory-grounding / leakage / high-risk-safety).",
         "",
         f"- model: `{args.provider or 'env'}` / `{args.model or 'env'}`",
         f"- judged sessions: {len(records)} (parse ok: {len(scored)}, parse failures: {parse_failures})",
-        f"- advisory decision: **{scoring.get('decision', 'N/A')}**",
+        f"- review decision: **{decision['decision']}**",
         f"- suggested for regeneration: {len(regeneration)}",
         "",
-        "## Advisory pass rates",
+        "## Pass rates",
         "",
         *rate_lines,
         "",
@@ -835,9 +863,9 @@ def main(argv: list[str] | None = None) -> int:
     ]
     (output_dir / "judge_report.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
     print(
-        f"judge (advisory): {len(records)} sessions, "
+        f"judge QA gate: {len(records)} sessions, "
         f"{len(regeneration)} flagged for regeneration, "
-        f"decision={scoring.get('decision', 'N/A')} -> {output_dir}"
+        f"decision={decision['decision']} -> {output_dir}"
     )
     return 0
 

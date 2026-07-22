@@ -245,13 +245,28 @@ def require_canary_pass(path: Path | str) -> None:
         raise ValueError(f"production requires PASS canary, got {decision.get('decision')!r}")
 
 
-def require_human_review_pass(path: Path | str) -> None:
+def require_review_pass(path: Path | str) -> None:
+    """Gate on a dialogue-quality review decision file (``decision == PASS``).
+
+    The decision may be produced by either reviewer that shares the same rubric
+    (``score_records``): the LLM judge (``judge_review_decision.json``, the
+    default) or a human packet score (``human_review_decision.json``). The gate
+    is agnostic to the producer — it only checks the recorded decision.
+    """
     decision = json.loads(Path(path).read_text(encoding="utf-8"))
     if decision.get("decision") != "PASS":
         raise ValueError(
-            "production requires PASS human review, got "
-            f"{decision.get('decision')!r}"
+            f"production requires a PASS review decision, got {decision.get('decision')!r}"
         )
+
+
+def require_human_review_pass(path: Path | str) -> None:
+    """Backward-compatible alias for :func:`require_review_pass`.
+
+    Retained so the human-review branch and existing callers keep working; new
+    code should use ``require_review_pass``.
+    """
+    require_review_pass(path)
 
 
 def require_regression_pass(path: Path | str) -> None:

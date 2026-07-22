@@ -22,6 +22,7 @@ from fin_life_benchmark.dialogue.generation_control import (
     raw_dialogue_json_schema,
     require_canary_pass,
     require_human_review_pass,
+    require_review_pass,
     require_regression_pass,
     resolve_model_profile,
     select_trajectory_files,
@@ -96,7 +97,16 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--model")
     parser.add_argument("--canary-manifest")
     parser.add_argument("--require-canary-pass")
-    parser.add_argument("--require-human-review-pass")
+    parser.add_argument(
+        "--require-review-pass",
+        help="path to a dialogue-quality review decision (decision==PASS). Default "
+        "pipeline uses the LLM judge's judge_review_decision.json; a human packet "
+        "score (human_review_decision.json) is accepted interchangeably.",
+    )
+    parser.add_argument(
+        "--require-human-review-pass",
+        help="deprecated alias for --require-review-pass (human-review branch).",
+    )
     parser.add_argument("--require-regression-pass")
     parser.add_argument("--regression-manifest")
     parser.add_argument("--allow-canary-config-mismatch", action="store_true")
@@ -144,30 +154,29 @@ def main(argv: list[str] | None = None) -> int:
                 "--confirm-multi-trajectory-generation"
             )
 
+    # The review gate accepts either producer sharing the rubric: the LLM judge
+    # (default) or a human packet score. --require-human-review-pass is a
+    # deprecated alias for --require-review-pass.
+    review_pass_path = args.require_review_pass or args.require_human_review_pass
     production_mode = bool(
         args.canary_manifest
         or args.require_canary_pass
-        or args.require_human_review_pass
+        or review_pass_path
     )
     if production_mode:
         if len(selected_ids) != 19:
             raise SystemExit(f"production continuation must select exactly 19 trajectories, got {len(selected_ids)}")
-        if not all(
-            (
-                args.canary_manifest,
-                args.require_canary_pass,
-                args.require_human_review_pass,
-            )
-        ):
+        if not all((args.canary_manifest, args.require_canary_pass, review_pass_path)):
             raise SystemExit(
                 "production continuation requires --canary-manifest, "
-                "--require-canary-pass, and --require-human-review-pass"
+                "--require-canary-pass, and --require-review-pass "
+                "(or the deprecated --require-human-review-pass)"
             )
         if args.overwrite:
             raise SystemExit("broad --overwrite is prohibited in production continuation mode")
         try:
             require_canary_pass(args.require_canary_pass)
-            require_human_review_pass(args.require_human_review_pass)
+            require_review_pass(review_pass_path)
         except ValueError as exc:
             raise SystemExit(str(exc)) from exc
     if bool(args.require_regression_pass) != bool(args.regression_manifest):

@@ -8,7 +8,10 @@ import pytest
 
 from fin_life_benchmark.dialogue.evidence_planner import EvidencePlanner
 from fin_life_benchmark.dialogue.models import DialogueGenerationPlan
-from fin_life_benchmark.dialogue.generation_control import require_human_review_pass
+from fin_life_benchmark.dialogue.generation_control import (
+    require_human_review_pass,
+    require_review_pass,
+)
 from fin_life_benchmark.fsm.registry import load_life_event_templates
 from fin_life_benchmark.io import RepoPaths
 from fin_life_benchmark.locale import load_locale
@@ -378,11 +381,26 @@ def test_production_requires_human_review_pass_even_after_automated_gate(tmp_pat
         )
 
 
-def test_human_review_pass_file_is_required(tmp_path):
-    path = tmp_path / "human.json"
+def test_review_pass_file_is_required(tmp_path):
+    path = tmp_path / "review.json"
     path.write_text('{"decision":"FAIL"}', encoding="utf-8")
-    with pytest.raises(ValueError, match="human review"):
-        require_human_review_pass(path)
+    # Both the neutral gate and the deprecated human alias reject a non-PASS
+    # decision with the same producer-agnostic message.
+    for gate in (require_review_pass, require_human_review_pass):
+        with pytest.raises(ValueError, match="review decision"):
+            gate(path)
+
+
+def test_review_pass_accepts_pass_from_any_producer(tmp_path):
+    # judge_review_decision.json and human_review_decision.json are
+    # interchangeable at the gate: both are PASS decision files.
+    for name, producer in (("judge_review_decision.json", "llm_judge"),
+                           ("human_review_decision.json", "human")):
+        path = tmp_path / name
+        path.write_text(
+            f'{{"decision":"PASS","producer":"{producer}"}}', encoding="utf-8"
+        )
+        require_review_pass(path)  # must not raise
 
 
 def test_regression_sampler_selects_evidence_high_risk_stale_repaired_and_variants():

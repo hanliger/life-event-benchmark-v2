@@ -20,6 +20,7 @@ from tqdm import tqdm
 
 from fin_life_benchmark.dialogue.evidence_planner import EvidencePlanner
 from fin_life_benchmark.dialogue.generator import DialogueGenerator
+from fin_life_benchmark.dialogue.models import DialogueGenerationPlan
 from fin_life_benchmark.fsm.registry import load_life_event_templates
 from fin_life_benchmark.io import RepoPaths, read_jsonl, write_jsonl
 from fin_life_benchmark.llm.client import LLMClient
@@ -90,7 +91,15 @@ def main() -> int:
     parser.add_argument("--sessions-dir", required=True)
     parser.add_argument("--locale", default="ko_KR")
     parser.add_argument("--trajectory-id", default=None, help="retry a single trajectory id, e.g. traj_00078")
-    parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument(
+        "--plans-dir",
+        default=None,
+        help="load the FROZEN plans_<traj>.jsonl the sessions were generated from. "
+        "STRONGLY recommended: without it, plans are rebuilt via build_plans(--seed) "
+        "and will diverge from the frozen plans unless seed and planner code exactly "
+        "match plan-build time, silently retrying against the wrong financial_task.",
+    )
+    parser.add_argument("--seed", type=int, default=0, help="only used when --plans-dir is omitted (build_plans fallback)")
     parser.add_argument("--max-trajectories", type=int, default=None)
     parser.add_argument("--max-retry-sessions", type=int, default=None)
     parser.add_argument(
@@ -114,6 +123,15 @@ def main() -> int:
     parser.add_argument("--provider", default=None, help="override DEFAULT_LLM_PROVIDER")
     parser.add_argument("--model", default=None, help="override DEFAULT_GENERATION_MODEL")
     args = parser.parse_args()
+
+    if args.execute and not args.plans_dir:
+        print(
+            "WARNING: --execute without --plans-dir. Plans will be REBUILT via "
+            f"build_plans(seed={args.seed}) and may not match the frozen plans the "
+            "sessions were generated from, silently retrying against the wrong "
+            "financial_task. Pass --plans-dir to load the frozen plans.",
+            flush=True,
+        )
 
     paths = RepoPaths.default()
     locale = load_locale(args.locale, paths)
@@ -178,7 +196,11 @@ def main() -> int:
         print(f"{trajectory_id}: retry raw outputs -> {raw_output_dir}/*{raw_filename_suffix}.txt")
 
         existing_sessions = _load_existing_sessions(sessions_path)
-        plans = {plan.session_id: plan for plan in planner.build_plans(trajectory, seed=args.seed)}
+        if args.plans_dir:
+            plan_path = Path(args.plans_dir) / f"plans_{trajectory_id}.jsonl"
+            plans = {p.session_id: p for p in (DialogueGenerationPlan.model_validate(r) for r in read_jsonl(plan_path))}
+        else:
+            plans = {plan.session_id: plan for plan in planner.build_plans(trajectory, seed=args.seed)}
         missing_plans = [sid for sid in failed_session_ids if sid not in plans]
         if missing_plans:
             print(f"warning {trajectory_id}: no plans for {missing_plans}")

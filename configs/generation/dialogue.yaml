@@ -35,6 +35,9 @@ surface_diversity:
   exact_lifecycle_phrase_max_ratio: 0.15
   exact_lifecycle_phrase_min_count: 2
   lifecycle_phrase_family_max_ratio: 0.40
+  generation_avoid_lifecycle_phrases:
+    upcoming: ["미리 준비"]
+    cancelled: ["없던 일이 됐"]
   evidence_placement_max_ratio: 0.60
   hard_negative_template_max_ratio: 0.15
   min_placement_strategies_when_status_count_at_least: 3

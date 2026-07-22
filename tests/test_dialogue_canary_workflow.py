@@ -17,6 +17,7 @@ from fin_life_benchmark.dialogue.generation_control import (
     select_trajectory_files,
     sha256_file,
     verify_canary_manifest,
+    write_immutable_manifest,
 )
 from fin_life_benchmark.fsm.registry import load_life_event_templates
 from fin_life_benchmark.io import RepoPaths, read_jsonl
@@ -136,9 +137,54 @@ def test_manifest_hashes_are_deterministic(tmp_path):
     profile = resolve_model_profile("sonnet5", paths=RepoPaths.default())
     first = build_generation_manifest(run_id="test", trajectory_files=[trajectory], plans_dir=plans, effective_model=profile, mode="mock", seed=42, overwrite_policy={})
     second = build_generation_manifest(run_id="test", trajectory_files=[trajectory], plans_dir=plans, effective_model=profile, mode="mock", seed=42, overwrite_policy={})
-    for key in ("dialogue_config_hash", "generation_prompt_hash", "repair_prompt_hash", "plan_file_hashes", "trajectory_file_hashes"):
+    for key in (
+        "dialogue_config_hash",
+        "dialogue_pipeline_source_hashes",
+        "generation_prompt_hash",
+        "repair_prompt_hash",
+        "plan_file_hashes",
+        "trajectory_file_hashes",
+    ):
         assert first[key] == second[key]
     assert first["plan_file_hashes"][plan.name] == sha256_file(plan)
+
+
+def test_immutable_manifest_allows_operational_resume_policy_changes(tmp_path):
+    path = tmp_path / "generation_manifest.json"
+    initial = {
+        "generated_at": "first",
+        "model": "same",
+        "overwrite_policy": {"overwrite": True, "workers": 4},
+    }
+    continuation = {
+        "generated_at": "second",
+        "model": "same",
+        "overwrite_policy": {
+            "overwrite": False,
+            "resume": True,
+            "retry_errors": True,
+            "workers": 2,
+        },
+    }
+
+    write_immutable_manifest(path, initial)
+    write_immutable_manifest(path, continuation)
+
+    assert json.loads(path.read_text(encoding="utf-8")) == initial
+
+
+def test_immutable_manifest_still_rejects_generation_contract_changes(tmp_path):
+    path = tmp_path / "generation_manifest.json"
+    write_immutable_manifest(
+        path,
+        {"generated_at": "first", "model": "one", "overwrite_policy": {}},
+    )
+
+    with pytest.raises(ValueError, match="immutable generation manifest mismatch"):
+        write_immutable_manifest(
+            path,
+            {"generated_at": "second", "model": "two", "overwrite_policy": {}},
+        )
 
 
 def test_canary_mismatch_blocks_and_override_is_recorded(tmp_path):
@@ -337,7 +383,22 @@ def test_only_session_id_selects_after_full_plan_validation(tmp_path):
 
 
 def test_retry_errors_restores_only_failed_or_missing_session(tmp_path):
-    args = [
+    initial_args = [
+        "--trajectories-dir", "data/runs/v4/trajectories",
+        "--plans-dir", "data/runs/v4/dialogues/plans",
+        "--trajectory-id", "traj_001",
+        "--output-dir", str(tmp_path / "sessions"),
+        "--raw-output-dir", str(tmp_path / "raw"),
+        "--max-sessions", "2", "--overwrite", "--mock",
+    ]
+    assert generate_main(initial_args) == 0
+    session_path = tmp_path / "sessions/sessions_traj_001.jsonl"
+    records = list(read_jsonl(session_path))
+    original_s001 = records[0]
+    session_path.write_text(json.dumps(original_s001, ensure_ascii=False) + "\n", encoding="utf-8")
+    error_path = tmp_path / "sessions/errors_traj_001.jsonl"
+    error_path.write_text(json.dumps({"trajectory_id": "traj_001", "session_id": "S002", "error": "interrupted"}) + "\n", encoding="utf-8")
+    continuation_args = [
         "--trajectories-dir", "data/runs/v4/trajectories",
         "--plans-dir", "data/runs/v4/dialogues/plans",
         "--trajectory-id", "traj_001",
@@ -345,14 +406,7 @@ def test_retry_errors_restores_only_failed_or_missing_session(tmp_path):
         "--raw-output-dir", str(tmp_path / "raw"),
         "--max-sessions", "2", "--resume", "--retry-errors", "--mock",
     ]
-    assert generate_main(args) == 0
-    session_path = tmp_path / "sessions/sessions_traj_001.jsonl"
-    records = list(read_jsonl(session_path))
-    original_s001 = records[0]
-    session_path.write_text(json.dumps(original_s001, ensure_ascii=False) + "\n", encoding="utf-8")
-    error_path = tmp_path / "sessions/errors_traj_001.jsonl"
-    error_path.write_text(json.dumps({"trajectory_id": "traj_001", "session_id": "S002", "error": "interrupted"}) + "\n", encoding="utf-8")
-    assert generate_main(args) == 0
+    assert generate_main(continuation_args) == 0
     restored = list(read_jsonl(session_path))
     assert [item["session_id"] for item in restored] == ["S001", "S002"]
     assert restored[0] == original_s001

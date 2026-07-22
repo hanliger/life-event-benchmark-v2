@@ -21,7 +21,13 @@ _LIFECYCLE_PHRASE_FAMILIES = {
         "canonical_uncertainty": ("아직 확정은 아니어서", "조건만 미리", "확정된 건 아닌데"),
     },
     "upcoming": {
-        "canonical_future": ("다음 달부터", "다음 달쯤", "미리 준비", "예정이라"),
+        # Short temporal connectors such as "다음 달부터" and "예정이라"
+        # are ordinary Korean grammar needed to express an upcoming state.
+        # Treating them as canned lifecycle prose creates false positives.
+        # Keep the more template-like preparation phrases in this lexical
+        # diagnostic; semantic strategy diversity is audited separately from
+        # the frozen lifecycle_surface_family assignments below.
+        "canonical_future": ("다음 달쯤", "미리 준비"),
     },
     "occurred": {
         "canonical_actuality": ("이번에 실제로 반영", "실제로 반영돼서", "실제로 반영"),
@@ -284,6 +290,7 @@ def audit_dialogue_generation(
     phrase_concentrations: list[dict[str, Any]] = []
     family_concentrations: list[dict[str, Any]] = []
     placement_distribution: dict[str, dict[str, int]] = {}
+    lifecycle_status_generation_coverage: dict[str, dict[str, Any]] = {}
     exact_ratio_limit = float(
         diversity_cfg.get("exact_lifecycle_phrase_max_ratio", 0.15)
     )
@@ -304,13 +311,22 @@ def audit_dialogue_generation(
     )
     for status, status_plans in sorted(by_status.items()):
         status_ids = [str(plan.get("session_id")) for plan in status_plans]
+        generated_status_ids = [
+            session_id for session_id in status_ids if session_id in session_by_id
+        ]
+        status_complete = len(generated_status_ids) == len(status_ids)
+        lifecycle_status_generation_coverage[status] = {
+            "planned": len(status_ids),
+            "successful": len(generated_status_ids),
+            "complete": status_complete,
+        }
         for family, phrases in (_LIFECYCLE_PHRASE_FAMILIES.get(status) or {}).items():
             # Attribute an occurrence to the longest matching phrase only.
             # Without this, "이번에 실제로 반영" also counted as the nested
             # phrase "실제로 반영" and inflated one surface into two failures.
             phrase_ids: dict[str, list[str]] = {phrase: [] for phrase in phrases}
             ordered_phrases = sorted(phrases, key=len, reverse=True)
-            for session_id in status_ids:
+            for session_id in generated_status_ids:
                 visible = _visible(session_by_id.get(session_id) or {})
                 selected: list[str] = []
                 for phrase in ordered_phrases:
@@ -323,8 +339,16 @@ def audit_dialogue_generation(
             family_ids: set[str] = set()
             for phrase in phrases:
                 ids_for_phrase = phrase_ids[phrase]
-                ratio = len(ids_for_phrase) / len(status_ids) if status_ids else 0
-                if len(ids_for_phrase) >= exact_min_count and ratio > exact_ratio_limit:
+                ratio = (
+                    len(ids_for_phrase) / len(generated_status_ids)
+                    if generated_status_ids
+                    else 0
+                )
+                if (
+                    status_complete
+                    and len(ids_for_phrase) >= exact_min_count
+                    and ratio > exact_ratio_limit
+                ):
                     item = {
                         "status": status,
                         "phrase": phrase,
@@ -335,8 +359,12 @@ def audit_dialogue_generation(
                     phrase_concentrations.append(item)
                     violations.append({"session_id": ids_for_phrase[0], "code": "lifecycle_exact_phrase_overconcentration", "detail": str(item), "session_ids": ids_for_phrase})
                 family_ids.update(ids_for_phrase)
-            family_ratio = len(family_ids) / len(status_ids) if status_ids else 0
-            if family_ratio > family_ratio_limit:
+            family_ratio = (
+                len(family_ids) / len(generated_status_ids)
+                if generated_status_ids
+                else 0
+            )
+            if status_complete and family_ratio > family_ratio_limit:
                 item = {"status": status, "family": family, "ratio": round(family_ratio, 6), "session_ids": sorted(family_ids)}
                 family_concentrations.append(item)
                 violations.append({"session_id": sorted(family_ids)[0], "code": "lifecycle_phrase_family_overconcentration", "detail": str(item), "session_ids": sorted(family_ids)})
@@ -433,6 +461,7 @@ def audit_dialogue_generation(
         "duplicate_opening_groups": duplicate_openings,
         "lifecycle_exact_phrase_concentrations": phrase_concentrations,
         "lifecycle_phrase_family_concentrations": family_concentrations,
+        "lifecycle_status_generation_coverage": lifecycle_status_generation_coverage,
         "lifecycle_surface_family_frequency": dict(
             sorted(Counter(str(plan.get("lifecycle_surface_family")) for plan in evidence_plans).items())
         ),
@@ -488,7 +517,8 @@ def audit_dialogue_generation(
             "sessions_requiring_repair": repair_sessions,
             "sessions_failing_after_repairs": len(errors),
             "success_rate": round(successful / planned, 6) if planned else 0,
-            "repair_session_rate": round(repair_sessions / planned, 6) if planned else 0,
+            "repair_session_rate": round(repair_sessions / successful, 6) if successful else 0,
+            "repair_session_rate_planned": round(repair_sessions / planned, 6) if planned else 0,
             "repair_reason_counts": dict(sorted(repair_reason_counts.items())),
         },
         "violation_counts": dict(sorted(violation_counts.items())),
@@ -498,8 +528,8 @@ def audit_dialogue_generation(
             "repeated_utterance_session_ids": repeated_utterance_session_ids,
             "identical_dialogue_groups": identical_groups,
             "near_duplicate_pairs": near_duplicate_pairs,
-            "near_duplicate_session_rate": round(len({item for pair in near_duplicate_pairs for item in pair}) / planned, 6) if planned else 0,
-            "repeated_utterance_session_rate": round(quality_flags["repeated_utterance_session"] / planned, 6) if planned else 0,
+            "near_duplicate_session_rate": round(len({item for pair in near_duplicate_pairs for item in pair}) / successful, 6) if successful else 0,
+            "repeated_utterance_session_rate": round(quality_flags["repeated_utterance_session"] / successful, 6) if successful else 0,
         },
         "surface_diversity": diversity,
         "efficiency": {

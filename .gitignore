@@ -20,6 +20,15 @@ data/generated/
 data/personas/normalized/
 data/raw_model_outputs/
 
+# Dialogue execution artifacts. Keep frozen plans and source trajectories in
+# git; canaries, provider responses, logs, and generated sessions are local or
+# release artifacts and must not pollute the working tree.
+data/runs/*/dialogues/canary/
+data/runs/*/dialogues/regression_canary/
+data/runs/*/dialogues/logs/
+data/runs/*/dialogues/raw_outputs/
+data/runs/*/dialogues/sessions/
+
 # Local OS/editor noise.
 .DS_Store
 *.swp

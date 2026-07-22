@@ -63,14 +63,16 @@
 29. 여러 session_memory_updates는 하나의 사건에서 동시에 생긴 사실 묶음입니다. 이를 여러 세션으로 나누거나 update마다 한 턴씩 늘리지 말고, 최대 두 개의 짧은 user 발화에 자연스럽게 묶습니다. 여러 memory_fact annotation이 같은 user 턴을 가리켜도 됩니다.
 30. 8턴 구조는 `업무 요청과 핵심 단서 → 필요한 확인 → 보충 사실 → 처리 범위 확인 → 고객 확인 → 결과/다음 단계`만 담습니다. 불필요한 서류 설명, 같은 확인의 반복, 별도 상품 권유를 넣지 않습니다.
 31. evidence_dimensions의 각 required dimension을 user 발화에서 실현하고 cue_annotations에 정확한 evidence_dimension_id를 기록합니다. 이때 cue_type은 해당 dimension의 role 값을 정확히 사용합니다. 같은 근거가 memory_fact이기도 하면 role annotation과 memory_fact annotation을 각각 만듭니다. 사건명이나 금지된 직설 표현을 사용해 dimension을 충족시키면 안 됩니다.
-32. lifecycle_surface_variant_id는 의미 전략이지 복사할 문장이 아닙니다. 상태 라벨처럼 들리는 상투구를 만들지 말고, 해당 세션의 실제 시점·현재값·금융 결과를 이용해 고유한 문장으로 표현합니다.
-33. forbidden_direct_event_patterns는 정확한 이벤트명뿐 아니라 근접 직설 표현입니다. user와 assistant 어디에도 등장시키지 않습니다.
-34. action_execution_contract의 missing_slots가 하나라도 있거나 completion_allowed=false이면 완료·처리·접수·적용·등록·변경·해지·실행됐다는 결과 문장을 쓰지 않습니다. plan이 제공하지 않은 금액·계좌·수취인·날짜는 질문에 대한 답으로도 만들지 말고 pending으로 남깁니다.
-35. completion_allowed=true여도 confirmation_required=true이면 user의 명시적 확인 이후에만 완료할 수 있습니다. `해당 금액`, `정해둔 금액`, `선택한 날짜`, `매달 초`, `부모님 계좌`는 구체 실행 슬롯으로 간주하지 않습니다.
-36. 은행 정책은 중립적으로 표현합니다. 공동명의 지원 여부, 수수료 면제, 개설 자격·구비서류를 plan 근거 없이 단정하지 말고 앱에서 적용 가능한 선택지를 확인할 수 있다고 안내합니다.
-37. 첫 user 발화에는 cue_type="task_intent" annotation을 추가합니다. 모든 event evidence annotation에는 evidence_dimension_id를 넣습니다.
-38. action_resolution은 보이는 대화와 일치해야 합니다. 실행하지 않았으면 completion_turn_index는 null이고, plan의 missing_slots를 그대로 보존합니다. 필드명은 출력 예시의 mode, provided_slots, missing_slots, explicit_confirmation_turn_index, completion_turn_index만 사용합니다. planner 입력의 action_mode, grounded_slots, collected_slots, resolved_slots를 출력 필드명으로 복사하지 않습니다.
-39. stale_recall_session에서는 과거 값 annotation의 cue_type을 stale_value, 현재 값 annotation의 cue_type을 current_value로 기록하고, 각각의 linked_memory_path와 linked_memory_value를 plan의 stale_memory_pairs에서 정확히 복사합니다.
+32. dimension_slot_assignments의 각 dimension은 지정된 turn_index의 user 발화에서만 실현하고 annotation도 같은 turn_index를 가리킵니다. 특히 placement_slots가 두 개인 split 전략에서는 첫 슬롯에 모든 dimension을 몰아넣지 않습니다.
+33. lifecycle_surface_variant_id는 의미 전략이지 복사할 문장이 아닙니다. 상태 라벨처럼 들리는 상투구를 만들지 말고, 해당 세션의 실제 시점·현재값·금융 결과를 이용해 고유한 문장으로 표현합니다. lifecycle_avoid_terms는 turns, cue text, evidence_text 어디에도 사용하지 않습니다.
+34. forbidden_direct_event_patterns는 정확한 이벤트명뿐 아니라 근접 직설 표현입니다. user와 assistant 어디에도 등장시키지 않습니다.
+35. action_execution_contract의 missing_slots가 하나라도 있거나 completion_allowed=false이면 완료·처리·접수·적용·등록·변경·해지·실행됐다는 결과 문장을 쓰지 않습니다. plan이 제공하지 않은 금액·계좌·수취인·날짜는 질문에 대한 답으로도 만들지 말고 pending으로 남깁니다.
+36. event.params와 session_memory_updates의 값은 사건 증거일 뿐 실행 슬롯이 아닙니다. action_execution_contract.grounded_slots에 같은 slot/value가 명시된 경우에만 새 이체·송금·변경의 선택값으로 사용할 수 있습니다. 예를 들어 support_amount나 monthly_edu_cost를 새 이체 amount로, 가족관계를 destination_name으로, 일반적인 시점 표현을 recurrence_day로 전용하지 않습니다. missing_slots는 user 발화와 action_resolution 모두에서 미확정으로 유지합니다.
+37. completion_allowed=true여도 confirmation_required=true이면 user의 명시적 확인 이후에만 완료할 수 있습니다. `해당 금액`, `정해둔 금액`, `선택한 날짜`, `매달 초`, `부모님 계좌`는 구체 실행 슬롯으로 간주하지 않습니다.
+38. 은행 정책은 중립적으로 표현합니다. 공동명의 지원 여부, 수수료 면제, 개설 자격·구비서류를 plan 근거 없이 단정하지 말고 앱에서 적용 가능한 선택지를 확인할 수 있다고 안내합니다.
+39. 첫 user 발화에는 cue_type="task_intent" annotation을 추가합니다. 모든 event evidence annotation에는 evidence_dimension_id를 넣습니다.
+40. action_resolution은 보이는 대화와 일치해야 합니다. 실행하지 않았으면 completion_turn_index는 null이고, plan의 missing_slots를 그대로 보존합니다. provided_slots에는 grounded_slots만 그대로 복사하며 event context에서 추론한 값을 추가하지 않습니다. 필드명은 출력 예시의 mode, provided_slots, missing_slots, explicit_confirmation_turn_index, completion_turn_index만 사용합니다. planner 입력의 action_mode, grounded_slots, collected_slots, resolved_slots를 출력 필드명으로 복사하지 않습니다.
+41. stale_recall_session에서는 과거 값 annotation의 cue_type을 stale_value, 현재 값 annotation의 cue_type을 current_value로 기록하고, 각각의 linked_memory_path와 linked_memory_value를 plan의 stale_memory_pairs에서 정확히 복사합니다.
 
 ## 출력 형식 (JSON만 출력)
 {

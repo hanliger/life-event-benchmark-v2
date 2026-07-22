@@ -24,6 +24,7 @@ FROZEN_MANIFEST_FIELDS = (
     "repair_prompt_hash",
     "dialogue_config_hash",
     "dialogue_contract_registry_hashes",
+    "dialogue_pipeline_source_hashes",
     "planner_input_schema_version",
 )
 
@@ -173,6 +174,15 @@ def build_generation_manifest(
         "dialogue_contract_registry_hashes": {
             path.name: sha256_file(path) for path in contract_registry_files
         },
+        "dialogue_pipeline_source_hashes": {
+            path.name: sha256_file(path)
+            for path in (
+                paths.root / "src/fin_life_benchmark/dialogue/generator.py",
+                paths.root / "src/fin_life_benchmark/dialogue/models.py",
+                paths.root
+                / "src/fin_life_benchmark/validation/dialogue_validator.py",
+            )
+        },
         "generation_prompt_hash": sha256_file(paths.prompts / "dialogue/generate_banking_session_ko.md"),
         "repair_prompt_hash": sha256_file(paths.prompts / "dialogue/repair_banking_session_ko.md"),
         "plans_directory": str(plans_dir.resolve()),
@@ -192,8 +202,17 @@ def write_immutable_manifest(path: Path | str, manifest: dict[str, Any]) -> None
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.exists():
         previous = json.loads(path.read_text(encoding="utf-8"))
-        comparable = {key: value for key, value in manifest.items() if key != "generated_at"}
-        old_comparable = {key: value for key, value in previous.items() if key != "generated_at"}
+        # These fields describe an invocation, not the frozen generation
+        # contract.  A continuation must be allowed to replace --overwrite
+        # with --resume/--retry-errors (and to change worker parallelism)
+        # without making the original dataset manifest appear incompatible.
+        operational_fields = {"generated_at", "overwrite_policy"}
+        comparable = {
+            key: value for key, value in manifest.items() if key not in operational_fields
+        }
+        old_comparable = {
+            key: value for key, value in previous.items() if key not in operational_fields
+        }
         if comparable != old_comparable:
             raise ValueError(f"immutable generation manifest mismatch: {path}")
         return

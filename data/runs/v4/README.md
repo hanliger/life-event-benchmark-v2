@@ -5,21 +5,19 @@ prefix-state, chronological-session, and dialogue-grounding defects.
 
 - 20 trajectories, 20 occurred events per trajectory (400 total)
 - 20 windows × 15 sessions per trajectory (300 each, 6,000 total)
-- deterministic `generator: mock` dialogues only; no external LLM API calls
+- frozen trajectories and dialogue plans for the real-dialogue generation run
 - 6,000 all-session prefix-gold records and 400 checkpoint records
 - 400 stage-1 items and 783 stage-2 memory MCQs
 - stage-2 input uses the true trajectory initial memory plus visible dialogue
   turns; generation plans, structured context, and cue annotations are not
   included in the evaluated model prompt
-- `public/` contains answer-free sessions and items; trajectory state, gold,
-  cue annotations, event links, and option answer labels remain private
-- mock dialogues only establish the v4 artifact shape. A later real-dialogue
-  run must satisfy exact path/operation/value grounding for every memory update
+- generated dialogue sessions and the answer-free `public/` export are rebuilt
+  only after the real-dialogue canary and human-review gates pass
 
 Key validation results are in `reports/`:
 
 - controlled structure: 0 issues
-- dialogue validation: 6,000/6,000 passed
+- dialogue validation is pending completion of the real-dialogue generation run
 - occurred memory update grounding: 1,122/1,122
 - occurred events without a financial delta: 0
 - duplicate current/pending memory histories: 0

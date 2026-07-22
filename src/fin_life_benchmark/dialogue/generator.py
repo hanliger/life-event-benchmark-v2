@@ -14,6 +14,7 @@ import json
 import random
 import re
 from collections import Counter
+from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Any
 
@@ -593,6 +594,9 @@ class DialogueGenerator:
                     "strategy": plan.evidence_realization_strategy,
                     "placement_strategy": plan.evidence_placement_strategy,
                     "placement_slots": plan.evidence_placement_slots,
+                    "dimension_slot_assignments": self._dimension_slot_assignments(
+                        plan
+                    ),
                     "dimensions": [
                         item.model_dump(mode="json")
                         for item in plan.evidence_dimensions
@@ -601,6 +605,7 @@ class DialogueGenerator:
                     "lifecycle_surface_variant_id": plan.lifecycle_surface_variant_id,
                     "forbidden_direct_event_patterns": plan.forbidden_direct_event_patterns,
                     "directness_level": plan.directness_level,
+                    "lifecycle_avoid_terms": self._lifecycle_avoid_terms(plan),
                 },
                 ensure_ascii=False,
             ),
@@ -635,6 +640,37 @@ class DialogueGenerator:
             payloads.append(payload)
         return payloads
 
+    @staticmethod
+    def _dimension_slot_assignments(
+        plan: DialogueGenerationPlan,
+    ) -> list[dict[str, Any]]:
+        """Assign every required dimension to an explicit planned user slot.
+
+        A split placement such as [2, 4] is otherwise ambiguous to the model,
+        which commonly realizes every dimension at turn 2 and needs repair.
+        The final slot absorbs any additional dimensions so every planned slot
+        is used while the dialogue stays compact.
+        """
+        slots = list(plan.evidence_placement_slots)
+        if not slots:
+            return []
+        return [
+            {
+                "evidence_dimension_id": dimension.dimension_id,
+                "turn_index": slots[min(index, len(slots) - 1)],
+            }
+            for index, dimension in enumerate(plan.evidence_dimensions)
+        ]
+
+    def _lifecycle_avoid_terms(self, plan: DialogueGenerationPlan) -> list[str]:
+        diversity = self.cfg.get("surface_diversity") or {}
+        by_status = diversity.get("generation_avoid_lifecycle_phrases") or {}
+        return [
+            str(term)
+            for term in (by_status.get(plan.event_status_after_session) or [])
+            if str(term)
+        ]
+
     def _build_repair_constraints(
         self, plan: DialogueGenerationPlan
     ) -> str:
@@ -668,16 +704,25 @@ class DialogueGenerator:
                 "strategy": plan.evidence_realization_strategy,
                 "placement_strategy": plan.evidence_placement_strategy,
                 "placement_slots": plan.evidence_placement_slots,
+                "dimension_slot_assignments": self._dimension_slot_assignments(plan),
                 "dimensions": [
                     item.model_dump(mode="json") for item in plan.evidence_dimensions
                 ],
                 "forbidden_direct_event_patterns": plan.forbidden_direct_event_patterns,
                 "lifecycle_surface_family": plan.lifecycle_surface_family,
                 "lifecycle_surface_variant_id": plan.lifecycle_surface_variant_id,
+                "lifecycle_avoid_terms": self._lifecycle_avoid_terms(plan),
             },
             "action_execution_contract": plan.action_execution_contract.model_dump(
                 mode="json"
             ),
+            "action_slot_boundary": {
+                "grounded_action_slot_values": (
+                    plan.action_execution_contract.grounded_slots
+                ),
+                "must_remain_missing": plan.action_execution_contract.missing_slots,
+                "event_context_values_are_not_action_slot_values": True,
+            },
             "bank_policy_profile_id": plan.bank_policy_profile_id,
             "session_memory_updates": context.get("session_memory_updates") or [],
             "event_params": event.get("params") or {},
@@ -824,6 +869,29 @@ class DialogueGenerator:
             if len(fragment_matches) == 1:
                 cue.turn_index = fragment_matches[0]
                 cue.evidence_text = turns[fragment_matches[0]].text
+                continue
+
+            # Models often copy a faithful but slightly edited clause into
+            # evidence_text (punctuation, one inserted modifier, or a tense
+            # change).  That is annotation noise rather than a dialogue
+            # defect.  Keep only a substantial verbatim span from the best
+            # matching user turn; short accidental overlaps still fail and
+            # are sent through the normal LLM repair path.
+            near_matches: list[tuple[int, int, str]] = []
+            for index in user_indices:
+                turn_text = turns[index].text
+                match = SequenceMatcher(None, evidence_text, turn_text).find_longest_match()
+                fragment = evidence_text[match.a : match.a + match.size].strip(
+                    " ,.!?…"
+                )
+                if len(fragment) >= 8:
+                    near_matches.append((len(fragment), index, fragment))
+            if near_matches:
+                _, best_index, best_fragment = max(
+                    near_matches, key=lambda item: (item[0], -item[1])
+                )
+                cue.turn_index = best_index
+                cue.evidence_text = best_fragment
         return cues
 
     @staticmethod
@@ -1060,6 +1128,21 @@ class DialogueGenerator:
                 "payload.action_resolution must be an object when present"
             )
         resolution = self._normalize_action_resolution(raw_resolution)
+        if plan.action_execution_contract.action_mode == "information_only":
+            # This is output metadata, not a user-authorized action.  Models
+            # sometimes label an informational exchange as pending execution
+            # even though the visible dialogue contains no execution.  Keep
+            # the frozen plan contract authoritative; visible false-completion
+            # language is still checked independently by DialogueValidator.
+            resolution = ActionResolution(
+                mode="information_only",
+                provided_slots=dict(
+                    plan.action_execution_contract.grounded_slots
+                ),
+                missing_slots=list(plan.action_execution_contract.missing_slots),
+                explicit_confirmation_turn_index=None,
+                completion_turn_index=None,
+            )
         return turns, cues, check, resolution
 
     def _llm_session(
@@ -1141,6 +1224,15 @@ class DialogueGenerator:
                     for item in violations
                     if item.get("code") not in _REVIEW_ONLY_VALIDATION_CODES
                 ]
+                visible_candidate = " ".join(turn.text for turn in candidate.turns)
+                blocking_violations.extend(
+                    {
+                        "code": "lifecycle_lexical_avoid_term",
+                        "detail": f"avoid repeated lifecycle phrase {term!r}",
+                    }
+                    for term in self._lifecycle_avoid_terms(plan)
+                    if term in visible_candidate
+                )
                 if blocking_violations:
                     details = "; ".join(f"{v['code']}: {v['detail']}" for v in blocking_violations)
                     raise LLMOutputValidationError(f"dialogue validator violations: {details}")

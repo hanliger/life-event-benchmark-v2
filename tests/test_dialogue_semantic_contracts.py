@@ -276,6 +276,41 @@ def test_lifecycle_phrase_ratio_counts_only_longest_nested_phrase():
     assert [item["phrase"] for item in concentrations] == ["이번에 실제로 반영"]
 
 
+def test_lifecycle_phrase_gate_waits_for_complete_status_stratum():
+    plans, sessions = _lifecycle_audit_records(
+        status="occurred",
+        count=20,
+        phrase="이번에 실제로 반영됐습니다",
+        phrase_count=4,
+    )
+
+    report = audit_dialogue_generation(
+        plans, sessions[:10], [], load_life_event_templates(), 2, 8
+    )
+
+    assert report["violation_counts"].get(
+        "lifecycle_exact_phrase_overconcentration", 0
+    ) == 0
+    assert report["surface_diversity"]["lifecycle_status_generation_coverage"] == {
+        "occurred": {"planned": 20, "successful": 10, "complete": False}
+    }
+
+
+def test_partial_audit_rates_use_successful_session_denominator():
+    plans, sessions = _lifecycle_audit_records(
+        status="occurred", count=4, phrase="서로 다른 표현", phrase_count=0
+    )
+    sessions = sessions[:2]
+    sessions[0]["generation_metadata"] = {"repair_count": 1}
+
+    report = audit_dialogue_generation(
+        plans, sessions, [], load_life_event_templates(), 2, 8
+    )
+
+    assert report["summary"]["repair_session_rate"] == 0.5
+    assert report["summary"]["repair_session_rate_planned"] == 0.25
+
+
 def test_planner_realization_is_deterministic_and_varied():
     paths = RepoPaths.default()
     trajectory = Trajectory.model_validate(json.loads((paths.root / "data/runs/v4/trajectories/traj_001.json").read_text(encoding="utf-8")))

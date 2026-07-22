@@ -242,6 +242,155 @@ def test_non_binding_surface_hint_is_not_sent_to_provider():
     assert "이번에 실제로 반영" not in repair_contract
 
 
+def test_prompt_assigns_split_evidence_dimensions_to_distinct_slots():
+    plan = _plan()
+    plan.session_type = "upcoming_evidence"
+    plan.event_status_after_session = "upcoming"
+    plan.evidence_placement_slots = [2, 4]
+    plan.evidence_dimensions = [
+        EvidenceDimension(
+            dimension_id="pending_state_timing",
+            role="future_timing",
+            semantic_instruction_ko="미래 시점을 드러낸다.",
+        ),
+        EvidenceDimension(
+            dimension_id="scheduled_financial_adjustment",
+            role="financial_consequence",
+            semantic_instruction_ko="금융 조정 필요를 드러낸다.",
+        ),
+    ]
+    generator = DialogueGenerator(paths=RepoPaths.default())
+
+    prompt = generator._build_prompt(plan, _persona())
+
+    assert '"evidence_dimension_id": "pending_state_timing", "turn_index": 2' in prompt
+    assert '"evidence_dimension_id": "scheduled_financial_adjustment", "turn_index": 4' in prompt
+
+
+def test_prompt_separates_event_values_from_action_slot_values():
+    plan = _plan()
+    plan.mapped_action = "FA-08"
+    plan.action_execution_contract = ActionExecutionContract(
+        action_mode="pending_required_information",
+        required_slots=["amount", "destination_name", "explicit_confirmation"],
+        grounded_slots={},
+        missing_slots=["amount", "destination_name"],
+        completion_allowed=False,
+        confirmation_required=True,
+    )
+    plan.structured_context = {
+        "event": {"params": {"support_amount": 500000}}
+    }
+    generator = DialogueGenerator(paths=RepoPaths.default())
+
+    prompt = generator._build_prompt(plan, _persona())
+    repair_contract = generator._build_repair_constraints(plan)
+    repair_payload = json.loads(repair_contract)
+
+    assert "event.params와 session_memory_updates의 값은 사건 증거일 뿐 실행 슬롯이 아닙니다" in prompt
+    assert repair_payload["action_slot_boundary"] == {
+        "grounded_action_slot_values": {},
+        "must_remain_missing": ["amount", "destination_name"],
+        "event_context_values_are_not_action_slot_values": True,
+    }
+
+
+def test_llm_session_repairs_configured_lifecycle_reuse_phrase(tmp_path):
+    plan = _plan()
+    plan.session_type = "upcoming_evidence"
+    plan.event_status_after_session = "upcoming"
+    broken = """
+    {
+      "turns": [
+        {"speaker": "user", "text": "미리 준비하려고 예금 금리를 알아보고 있어요."},
+        {"speaker": "assistant", "text": "현재 예금 금리 조건만 안내해드리겠습니다."}
+      ],
+      "cue_annotations": []
+    }
+    """
+    repaired = """
+    {
+      "turns": [
+        {"speaker": "user", "text": "나중에 필요할 예금 금리를 지금 알아보고 있어요."},
+        {"speaker": "assistant", "text": "현재 확인 가능한 예금 금리만 안내해드리겠습니다."}
+      ],
+      "cue_annotations": []
+    }
+    """
+    client = FakeLLMClient([broken, repaired])
+    generator = DialogueGenerator(
+        mode="llm", client=client, paths=RepoPaths.default()
+    )
+
+    session = generator._llm_session(plan, _persona(), tmp_path)
+
+    assert len(client.requests) == 2
+    assert "lifecycle_lexical_avoid_term" in client.requests[1][1]
+    assert "미리 준비" not in " ".join(turn.text for turn in session.turns)
+
+
+def test_llm_session_canonicalizes_near_match_evidence_text_without_repair(
+    tmp_path,
+):
+    response = """
+    {
+      "turns": [
+        {"speaker": "user", "text": "예금 금리를 지금 자세히 알아보고 싶어요."},
+        {"speaker": "assistant", "text": "현재 확인 가능한 금리를 안내해드리겠습니다."}
+      ],
+      "cue_annotations": [
+        {
+          "turn_index": 0,
+          "cue_type": "task_intent",
+          "evidence_text": "예금 금리를 자세히 알아보고 싶어요"
+        }
+      ]
+    }
+    """
+    client = FakeLLMClient([response])
+    generator = DialogueGenerator(
+        mode="llm", client=client, paths=RepoPaths.default()
+    )
+
+    session = generator._llm_session(_plan(), _persona(), tmp_path)
+
+    assert len(client.requests) == 1
+    assert session.generation_metadata["repair_count"] == 0
+    assert session.cue_annotations[0].evidence_text == "자세히 알아보고 싶어요"
+
+
+def test_llm_session_canonicalizes_information_only_resolution_without_repair(
+    tmp_path,
+):
+    response = """
+    {
+      "turns": [
+        {"speaker": "user", "text": "예금 금리만 조회하고 싶어요."},
+        {"speaker": "assistant", "text": "현재 확인 가능한 금리를 안내해드리겠습니다."}
+      ],
+      "cue_annotations": [],
+      "action_resolution": {
+        "mode": "pending_required_information",
+        "provided_slots": {"amount": 100000},
+        "missing_slots": ["source_account"],
+        "explicit_confirmation_turn_index": null,
+        "completion_turn_index": null
+      }
+    }
+    """
+    client = FakeLLMClient([response])
+    generator = DialogueGenerator(
+        mode="llm", client=client, paths=RepoPaths.default()
+    )
+
+    session = generator._llm_session(_plan(), _persona(), tmp_path)
+
+    assert len(client.requests) == 1
+    assert session.action_resolution.mode == "information_only"
+    assert session.action_resolution.provided_slots == {}
+    assert session.action_resolution.missing_slots == []
+
+
 def test_llm_session_repairs_dialogue_that_ends_with_user(tmp_path):
     broken = """
     {

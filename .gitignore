@@ -29,6 +29,10 @@ data/runs/*/dialogues/logs/
 data/runs/*/dialogues/raw_outputs/
 data/runs/*/dialogues/sessions/
 
+# LLM-judge outputs (judged_sessions, decisions, reports, pipeline logs) are
+# derived release artifacts — regenerate from sessions + plans. Not tracked.
+data/runs/*/reports/dialogue_judge/
+
 # Local OS/editor noise.
 .DS_Store
 *.swp

@@ -263,9 +263,19 @@ def grounded_concrete_values(plan: dict[str, Any]) -> set[str]:
         "event_params": event.get("params") or {},
         "current_life_state": (context.get("current_state") or {}).get("life_state") or {},
         "current_financial_memory": context.get("current_financial_memory") or context.get("current_memory") or {},
+        "current_standing_actions": context.get("current_standing_actions") or [],
+        "action_impacts": context.get("action_impacts") or [],
         "session_memory_updates": context.get("session_memory_updates") or [],
         "event_memory_updates": context.get("event_memory_updates") or [],
         "stale_memory_pairs": plan.get("stale_memory_pairs") or [],
+        # The execution contract's grounded_slots are computed from the same
+        # structured_context sources above (see evidence_planner.py), so any
+        # value the planner already authorized for provided_slots must also
+        # be authorized here -- otherwise a session that correctly states its
+        # own grounded amount/day gets flagged as a hallucinated value.
+        "action_execution_contract_grounded_slots": (
+            plan.get("action_execution_contract") or {}
+        ).get("grounded_slots") or {},
     }
     result: set[str] = set()
     _collect_grounded_numbers(sources, result)
@@ -634,6 +644,21 @@ class DialogueValidator:
                     or not _slot_value_visible(slot, grounded.get(slot), user_text)
                 )
             ]
+            # NEW: catch ungrounded provided_slots even when the session never
+            # claims completion (pending_required_information sessions were
+            # previously exempt from this check entirely, since the flags below
+            # only fire when attempted_completion is True).
+            ungrounded_provided = [
+                slot
+                for slot in provided
+                if slot in grounded
+                and not _slot_value_visible(slot, grounded.get(slot), user_text)
+            ]
+            if ungrounded_provided:
+                flag(
+                    "provided_slot_not_grounded_in_dialogue",
+                    ", ".join(sorted(ungrounded_provided)),
+                )
             if attempted_completion and not contract.get("required_slots") and contract.get("action_mode") != "information_only":
                 flag("high_risk_missing_required_slot", "execution contract has no required slots")
             if attempted_completion and (missing or runtime_missing):

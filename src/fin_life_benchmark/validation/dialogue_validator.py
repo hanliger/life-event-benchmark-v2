@@ -634,6 +634,21 @@ class DialogueValidator:
                     or not _slot_value_visible(slot, grounded.get(slot), user_text)
                 )
             ]
+            # NEW: catch ungrounded provided_slots even when the session never
+            # claims completion (pending_required_information sessions were
+            # previously exempt from this check entirely, since the flags below
+            # only fire when attempted_completion is True).
+            ungrounded_provided = [
+                slot
+                for slot in provided
+                if slot in grounded
+                and not _slot_value_visible(slot, grounded.get(slot), user_text)
+            ]
+            if ungrounded_provided:
+                flag(
+                    "provided_slot_not_grounded_in_dialogue",
+                    ", ".join(sorted(ungrounded_provided)),
+                )
             if attempted_completion and not contract.get("required_slots") and contract.get("action_mode") != "information_only":
                 flag("high_risk_missing_required_slot", "execution contract has no required slots")
             if attempted_completion and (missing or runtime_missing):

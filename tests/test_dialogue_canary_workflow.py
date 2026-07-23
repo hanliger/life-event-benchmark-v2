@@ -207,7 +207,9 @@ def _clean_audit(planned=300):
 
 
 def _gates():
-    return RepoPaths.default() and __import__("yaml").safe_load((RepoPaths.default().generation / "dialogue.yaml").read_text())["canary"]
+    return RepoPaths.default() and __import__("yaml").safe_load(
+        (RepoPaths.default().generation / "dialogue.yaml").read_text(encoding="utf-8")
+    )["canary"]
 
 
 def test_canary_gate_decisions():

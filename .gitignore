@@ -28,6 +28,8 @@ data/runs/*/dialogues/regression_canary/
 data/runs/*/dialogues/logs/
 data/runs/*/dialogues/raw_outputs/
 data/runs/*/dialogues/sessions/
+# transient filtered-corpus symlink dirs (e.g. sessions_prod19) used to scope runs
+data/runs/*/dialogues/sessions_*/
 
 # LLM-judge outputs (judged_sessions, decisions, reports, pipeline logs) are
 # derived release artifacts — regenerate from sessions + plans. Not tracked.

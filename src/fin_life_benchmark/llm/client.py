@@ -101,11 +101,16 @@ class LLMClient:
         reasoning_effort: str | None = None,
         response_format: str = "prompt_json",
         response_schema: dict[str, Any] | None = None,
+        cache_prompt: bool = False,
     ):
         self.provider = provider
         self.model = model
         self.temperature = temperature
         self.max_tokens = max_tokens
+        # When True, mark the (stable) system prompt with cache_control so a fixed
+        # prefix reused across many calls (e.g. a judge rubric) bills at cache-read
+        # rates. Anthropic only; no-op for prefixes below the model's cache minimum.
+        self.cache_prompt = cache_prompt
         if reasoning_effort not in {None, "none", "low", "medium", "high", "xhigh", "max"}:
             raise ValueError(f"unsupported reasoning_effort: {reasoning_effort}")
         if response_format not in {"prompt_json", "json_schema"}:
@@ -153,6 +158,7 @@ class LLMClient:
         response_format: str = "prompt_json",
         response_schema: dict[str, Any] | None = None,
         max_tokens: int | None = None,
+        cache_prompt: bool = False,
     ) -> "LLMClient":
         load_dotenv()
         provider = provider or os.environ.get("DEFAULT_LLM_PROVIDER", "mock")
@@ -165,6 +171,7 @@ class LLMClient:
             reasoning_effort=reasoning_effort,
             response_format=response_format,
             response_schema=response_schema,
+            cache_prompt=cache_prompt,
         )
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=2, min=2, max=30), reraise=True)
@@ -222,10 +229,22 @@ class LLMClient:
             self._request_started_at = None
             return text
         if self.provider == "anthropic":
+            system_param: Any = system
+            if self.cache_prompt and isinstance(system, str) and system.strip():
+                # Cache the stable system prefix (rubric/instructions). The last
+                # cacheable block carries the breakpoint; per-request user content
+                # stays uncached after it.
+                system_param = [
+                    {
+                        "type": "text",
+                        "text": system,
+                        "cache_control": {"type": "ephemeral"},
+                    }
+                ]
             kwargs = {
                 "model": self.model,
                 "max_tokens": self.max_tokens,
-                "system": system,
+                "system": system_param,
                 "messages": [{"role": "user", "content": user}],
             }
             if _anthropic_supports_temperature(self.model):

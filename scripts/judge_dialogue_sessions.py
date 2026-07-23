@@ -711,6 +711,24 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--max-sessions", type=int, help="cap sessions judged (cost control / smoke test)")
     parser.add_argument("--concurrency", type=int, default=1)
     parser.add_argument(
+        "--session-ids-file",
+        help="judge ONLY the session_ids listed in this file (jsonl with a "
+        "session_id field, or one id per line). Use for cheap subset re-judging "
+        "after regeneration; pair with --merge-baseline to keep a full-corpus decision.",
+    )
+    parser.add_argument(
+        "--merge-baseline",
+        help="a prior judged_sessions.jsonl. Verdicts for sessions NOT re-judged "
+        "this run are carried over from here, and the decision / suggested "
+        "regeneration are recomputed over the merged full set. Requires --session-ids-file.",
+    )
+    parser.add_argument(
+        "--cache-prompt",
+        action="store_true",
+        help="mark the fixed rubric system prompt with cache_control so it bills at "
+        "cache-read rates across the run (Anthropic).",
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="build prompts and write them, but make no API calls",
@@ -721,8 +739,31 @@ def main(argv: list[str] | None = None) -> int:
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    if args.merge_baseline and not args.session_ids_file:
+        raise SystemExit("--merge-baseline requires --session-ids-file")
+
     trajectory_ids = _iter_trajectory_ids(sessions_dir, args.trajectory_id)
     pairs = _load_pairs(plans_dir, sessions_dir, trajectory_ids)
+
+    if args.session_ids_file:
+        # session_id is unique only WITHIN a trajectory (S001..S300 repeat across
+        # trajectories), so key on (trajectory_id, session_id).
+        wanted: set[tuple[str, str]] = set()
+        for line in Path(args.session_ids_file).read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                rec = json.loads(line)
+                wanted.add((rec["trajectory_id"], rec["session_id"]))
+            except (json.JSONDecodeError, KeyError, TypeError):
+                raise SystemExit(
+                    "--session-ids-file lines must be JSON with trajectory_id + session_id "
+                    "(e.g. suggested_regeneration.jsonl)"
+                )
+        pairs = [(t, p, s) for (t, p, s) in pairs if (t, s["session_id"]) in wanted]
+        print(f"subset: judging {len(pairs)} of {len(wanted)} requested (trajectory, session) ids")
+
     if args.max_sessions is not None:
         pairs = pairs[: args.max_sessions]
     if not pairs:
@@ -752,6 +793,7 @@ def main(argv: list[str] | None = None) -> int:
                 model=args.model,
                 reasoning_effort=args.reasoning_effort,
                 max_tokens=args.max_tokens,
+                cache_prompt=args.cache_prompt,
             )
             local.client = client
         return client
@@ -770,7 +812,23 @@ def main(argv: list[str] | None = None) -> int:
         for traj, plan, session in pairs:
             records.append(_judge_one(client, traj, plan, session))
 
-    records.sort(key=lambda r: r["evaluator_only"]["session_id"])
+    # (trajectory_id, session_id) — session_id alone is not unique across trajectories.
+    def _key(r: dict[str, Any]) -> tuple[str, str]:
+        e = r["evaluator_only"]
+        return (e["trajectory_id"], e["session_id"])
+
+    records.sort(key=_key)
+    # Token spend for THIS run only (before merging in carried-over baseline verdicts).
+    round_usage = _aggregate_usage(records)
+
+    if args.merge_baseline:
+        merged = {_key(r): r for r in read_jsonl(Path(args.merge_baseline))}
+        rejudged = len(records)
+        for r in records:  # override baseline with freshly re-judged verdicts
+            merged[_key(r)] = r
+        records = sorted(merged.values(), key=_key)
+        print(f"merged: {len(records)} total ({rejudged} re-judged this run + baseline carryover)")
+
     write_jsonl(output_dir / "judged_sessions.jsonl", records)
 
     soft_rates = _soft_pass_rates(records)
@@ -790,7 +848,7 @@ def main(argv: list[str] | None = None) -> int:
 
     scored = [r for r in records if (r.get("judge_meta") or {}).get("parse_ok")]
     scoring = score_records(scored) if scored else {"decision": "N/A"}
-    usage = _aggregate_usage(records)
+    usage = round_usage  # report THIS run's API spend, not the merged corpus
     parse_failures = sum(1 for r in records if not (r.get("judge_meta") or {}).get("parse_ok"))
 
     # Authoritative review decision. Uses the same rubric/gate (score_records) as

@@ -1,35 +1,58 @@
 #!/usr/bin/env bash
-# Judge -> regenerate loop over the v4 dialogue corpus.
+# Judge -> regenerate loop over the v4 dialogue corpus (19 production trajectories,
+# 5700 sessions; traj_001 canary excluded via the sessions_prod19 symlink dir).
 #
-# Round 0: LLM judge (opus-4-8) over ALL sessions -> authoritative PASS/FAIL gate.
-# Each subsequent round: regenerate judge-flagged sessions (sonnet-5, corpus-consistent),
-# then re-judge the full corpus. Stops when nothing is flagged or MAX_ROUNDS is hit.
+# Round 0: full LLM judge (opus-4-8) over ALL sessions -> authoritative gate.
+#          Skipped if round0/judge_review_decision.json already exists (expensive;
+#          ~$300, don't repeat).
+# Rounds 1..N: regenerate judge-flagged sessions (sonnet-5), then re-judge ONLY the
+#          regenerated sessions and MERGE with the previous round's verdicts, so the
+#          decision + suggested_regeneration are recomputed over the full corpus at
+#          subset cost (~$8/round vs ~$300). Prompt caching on the judge rubric.
+#          Stops when nothing is flagged or MAX_ROUNDS is hit.
 #
-# Token budgets are pinned to 16384 on every stage: the judge/regenerate defaults
-# (2048 / .env LLM_MAX_TOKENS=2048) starve Sonnet-5's thinking and yield empty output.
+# max_tokens pinned to 16384 everywhere: the 2048 default (.env LLM_MAX_TOKENS)
+# starves Sonnet-5 thinking and yields empty output.
 set -uo pipefail
 
 cd /home/mikelee/life-event-benchmark-v2
 
 TRAJ=data/runs/v4/trajectories
 PLANS=data/runs/v4/dialogues/plans
-SESS=data/runs/v4/dialogues/sessions
+SESS=data/runs/v4/dialogues/sessions_prod19
 BASE=data/runs/v4/reports/dialogue_judge
 
 JUDGE_MODEL=claude-opus-4-8
 GEN_MODEL=claude-sonnet-5
 MAXTOK=16384
 CONC=8
-MAX_ROUNDS=2
+MAX_ROUNDS=3
 
 ts() { date '+%Y-%m-%d %H:%M:%S'; }
 
-run_judge() {  # $1 = output dir
-  echo "[$(ts)] JUDGE -> $1 (model=$JUDGE_MODEL conc=$CONC max_tokens=$MAXTOK)"
+report_decision() {  # $1 = round dir
+  echo "[$(ts)] --- $1 decision + usage ---"
+  grep -E 'review decision|judged sessions|parse failures' "$1/judge_report.md" 2>/dev/null || true
+  grep -A6 'Token usage' "$1/judge_report.md" 2>/dev/null || true
+}
+
+run_full_judge() {  # $1 = output dir
+  echo "[$(ts)] FULL JUDGE -> $1 (model=$JUDGE_MODEL conc=$CONC max_tokens=$MAXTOK, cache on)"
   python3 scripts/judge_dialogue_sessions.py \
     --plans-dir "$PLANS" --sessions-dir "$SESS" --output-dir "$1" \
     --provider anthropic --model "$JUDGE_MODEL" \
-    --max-tokens "$MAXTOK" --concurrency "$CONC"
+    --max-tokens "$MAXTOK" --concurrency "$CONC" --cache-prompt
+  local rc=$?; report_decision "$1"; return $rc
+}
+
+run_subset_judge() {  # $1=out dir  $2=session-ids file  $3=baseline judged_sessions.jsonl
+  echo "[$(ts)] SUBSET JUDGE -> $1 (ids<-$(basename "$2"), merge<-$(basename "$(dirname "$3")"), cache on)"
+  python3 scripts/judge_dialogue_sessions.py \
+    --plans-dir "$PLANS" --sessions-dir "$SESS" --output-dir "$1" \
+    --provider anthropic --model "$JUDGE_MODEL" \
+    --max-tokens "$MAXTOK" --concurrency "$CONC" --cache-prompt \
+    --session-ids-file "$2" --merge-baseline "$3"
+  local rc=$?; report_decision "$1"; return $rc
 }
 
 run_regen() {  # $1 = suggested_regeneration.jsonl
@@ -44,7 +67,12 @@ run_regen() {  # $1 = suggested_regeneration.jsonl
 flagged_count() { [ -f "$1" ] && grep -c . "$1" 2>/dev/null || echo 0; }
 
 echo "[$(ts)] ===== JUDGE/REGEN PIPELINE START ====="
-run_judge "$BASE/round0" || { echo "[$(ts)] judge round0 FAILED"; exit 1; }
+if [ -f "$BASE/round0/judge_review_decision.json" ]; then
+  echo "[$(ts)] round0 already complete -> skipping the full judge"
+  report_decision "$BASE/round0"
+else
+  run_full_judge "$BASE/round0" || { echo "[$(ts)] round0 judge FAILED"; exit 1; }
+fi
 prev="$BASE/round0"
 
 for r in $(seq 1 "$MAX_ROUNDS"); do
@@ -56,7 +84,8 @@ for r in $(seq 1 "$MAX_ROUNDS"); do
     break
   fi
   run_regen "$sr" || { echo "[$(ts)] regen round $r FAILED"; break; }
-  run_judge "$BASE/round$r" || { echo "[$(ts)] judge round $r FAILED"; break; }
+  run_subset_judge "$BASE/round$r" "$sr" "$prev/judged_sessions.jsonl" \
+    || { echo "[$(ts)] subset judge round $r FAILED"; break; }
   prev="$BASE/round$r"
 done
 

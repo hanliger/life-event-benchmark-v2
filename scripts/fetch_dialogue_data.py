@@ -36,8 +36,9 @@ def main() -> None:
     )
     parser.add_argument("--repo-id", default=None, help=f"HF dataset id (default env/{DEFAULT_DIALOGUE_REPO})")
     parser.add_argument("--revision", default=None, help="git revision/branch/tag")
-    parser.add_argument("--subdir", default=None, help="path prefix inside the dataset")
     parser.add_argument("--token", default=None, help="HF access token (default env)")
+    parser.add_argument("--trajectory-id", action="append", default=[], help="restore only these trajectory ids (repeatable)")
+    parser.add_argument("--dialogues-only", action="store_true", help="answer-free dialogue turns only (do not join gold labels)")
     parser.add_argument(
         "--force",
         action="store_true",
@@ -49,8 +50,9 @@ def main() -> None:
         args.sessions_dir,
         repo_id=args.repo_id,
         revision=args.revision,
-        subdir=args.subdir,
         token=args.token,
+        include_gold=not args.dialogues_only,
+        trajectory_ids=args.trajectory_id or None,
         force=args.force,
     )
     n = len(sorted(sessions_dir.glob("sessions_*.jsonl")))

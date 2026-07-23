@@ -35,6 +35,7 @@ GOLD_ALL := $(RUN_DIR)/gold/prefix_gold_all_sessions.jsonl
 GOLD_CHECKPOINTS := $(RUN_DIR)/gold/prefix_gold_checkpoints_15.jsonl
 ITEMS_DIR := $(RUN_DIR)/benchmark_items
 QUALITY := $(RUN_DIR)/quality_reports
+EVAL_DIR := $(RUN_DIR)/eval
 REGRESSION_CANARY_ROOT := $(RUN_DIR)/dialogues/regression_canary/$(MODEL_PROFILE)_$(CANARY_SUFFIX)
 CANARY_V2_ROOT := $(RUN_DIR)/dialogues/canary/$(MODEL_PROFILE)_$(CANARY_SUFFIX)
 DIALOGUE_JUDGE_ROOT := $(CANARY_V2_ROOT)/reports/dialogue_judge
@@ -47,8 +48,8 @@ REVIEW_DECISION ?= $(DIALOGUE_JUDGE_ROOT)/judge_review_decision.json
 	dialogue-canary audit-dialogue-canary review-dialogue-canary dialogue-production-remaining \
 	dialogue-regression-canary audit-dialogue-regression-canary dialogue-canary-v2 \
 	audit-dialogue-canary-v2 review-dialogue-canary-v2 score-dialogue-canary-v2 dialogue-judge-gate \
-	coverage-trajectories fetch-dialogues dialogue-smoke-dry dialogue-smoke validate-dialogues \
-	export-gold build-items history-filter audit pipeline-smoke test clean-generated \
+	coverage-trajectories fetch-dialogues restore-frozen-run dialogue-smoke-dry dialogue-smoke validate-dialogues \
+	export-gold build-items evaluate history-filter audit pipeline-smoke test clean-generated \
 	export-gold-controlled build-items-controlled audit-controlled export-public
 
 setup:
@@ -95,6 +96,13 @@ coverage-trajectories:
 # automatically when the sessions dir is empty.
 fetch-dialogues:
 	$(PYTHON) scripts/fetch_dialogue_data.py --sessions-dir $(SESS_DIR)
+
+# Materialize the FROZEN run (20 trajectories + dialogue sessions) into
+# data/runs/$(RUN_ID)/ from tracked fixtures + HF. Does NOT regenerate the
+# frozen trajectories/sessions; downstream steps (plan/gold/items) rebuild on
+# top of them. Use this to run the next experiment on the existing corpus.
+restore-frozen-run:
+	$(PYTHON) scripts/restore_frozen_run.py --run-id $(RUN_ID)
 
 plan-dialogues:
 	$(PYTHON) scripts/build_dialogue_plans.py \
@@ -282,6 +290,15 @@ export-public:
 	$(PYTHON) scripts/export_public_benchmark.py \
 		--sessions-dir $(SESS_DIR) --items-dir $(ITEMS_DIR) \
 		--output-dir $(RUN_DIR)/public
+
+# Evaluate a model on the frozen benchmark items (the "next experiment").
+# EXECUTE=1 calls the real LLM (provider/model from .env); default is mock.
+evaluate:
+	$(PYTHON) scripts/evaluate_benchmark_items.py \
+		--items $(ITEMS_DIR)/stage1_event_status.jsonl $(ITEMS_DIR)/stage2_memory_mcq.jsonl \
+		--sessions-dir $(SESS_DIR) \
+		--output $(EVAL_DIR)/predictions.jsonl --report $(EVAL_DIR)/report.json \
+		$(if $(filter 1,$(EXECUTE)),--execute,)
 
 history-filter:
 ifeq ($(EXECUTE),1)

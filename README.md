@@ -101,22 +101,38 @@ conda run -n life_event make normalize-personas \
 
 `RUN_ID`를 지정하지 않으면 `ko_KR_age20s4_30s6_40s6_50s4_seed<SEED>` 아래에 저장됩니다.
 
-이 레포는 **코드 전용**입니다. `data/runs/<RUN_ID>/`, 정규화 persona, 생성 세션/gold/benchmark item 등 모든 파이프라인 산출물은 git에 넣지 않고 Makefile로 재생성합니다. 전체 corpus와 gold split은 private HuggingFace dataset에 있으며, 포맷 참고용 샘플 한 개만 `data/samples/`에 포함합니다 (`data/samples/README.md` 참고).
+이 레포는 **코드 전용**입니다. `data/runs/<RUN_ID>/`, 정규화 persona, 생성 세션/gold/benchmark item 등 모든 파이프라인 산출물은 git에 넣지 않습니다. 포맷 참고용 샘플 한 개만 `data/samples/`에 포함합니다 (`data/samples/README.md` 참고).
 
-### Dialogue 데이터 가져오기
+### Frozen 결과물 (재생성 금지)
 
-dialogue 세션이 로컬에 없으면 private HuggingFace dataset에서 받아옵니다. `.env`에 `HF_DIALOGUE_REPO`와 (private이면) `HF_TOKEN`을 설정합니다.
+현재 벤치마크의 **20개 trajectory와 dialogue session은 freeze된 생성 결과물**입니다. 이 둘은 재생성하지 않고 그대로 재사용합니다.
+
+- **trajectory** — `tests/fixtures/trajectories/traj_001.json` … `traj_020.json` (git에 tracked, byte-frozen).
+- **dialogue session** — HuggingFace dataset(`HF_DIALOGUE_REPO`). `dialogues`(정답 제거된 발화·문맥) + `gold`(`plan`/`cue_annotations`/`action_resolution`/`session_type` 등 정답) 두 config로 저장되며, `session_id` 기준으로 join해 `sessions_traj_XXX.jsonl`로 복원합니다.
+
+`make simulate-smoke` / `coverage-trajectories` / `dialogue-*` 같은 **생성 타깃은 명시적으로 실행할 때만** trajectory/session을 새로 만듭니다. 자동으로 도는 재생성 경로는 없고, HF fetch는 기존 파일을 덮어쓰지 않습니다. **freeze된 것을 유지하려면 위 생성 타깃을 frozen run의 `RUN_ID`에 대해 실행하지 마세요.** prefix gold·benchmark item 등 downstream 산출물은 frozen trajectory/session에서 결정적으로 다시 만들 수 있습니다.
+
+### Frozen run으로 다음 실험 세팅
+
+frozen trajectory(fixtures)와 session(HF)을 한 번에 `data/runs/<RUN_ID>/`로 복원합니다.
 
 ```bash
-# 현재 RUN_ID의 sessions 디렉터리로 명시적 fetch
-conda run -n life_event make fetch-dialogues
+# 20개 전체 복원 (trajectory 복사 + HF에서 session 복원)
+conda run -n life_event make restore-frozen-run RUN_ID=frozen
 
-# 직접 실행
-conda run -n life_event python scripts/fetch_dialogue_data.py \
-  --sessions-dir data/runs/<RUN_ID>/dialogues/sessions
+# 일부만
+conda run -n life_event python scripts/restore_frozen_run.py --run-id frozen \
+  --trajectory-id traj_001 --trajectory-id traj_002
 ```
 
-`validate-dialogues`, `export-gold`, `build-items`, `judge`, `evaluate`, `history-filter` 등 세션을 읽는 단계는 `sessions_*.jsonl`이 없을 때 자동으로 HF에서 fetch합니다. 로컬 mock 생성으로 세션이 이미 있으면 fetch하지 않습니다.
+그다음 downstream을 frozen 데이터 위에서 돌립니다 (생성 아님).
+
+```bash
+conda run -n life_event make export-gold-controlled build-items-controlled RUN_ID=frozen
+conda run -n life_event make evaluate RUN_ID=frozen   # 실험: 모델 평가
+```
+
+세션만 개별로 받으려면 `make fetch-dialogues` 또는 `scripts/fetch_dialogue_data.py --sessions-dir …`. `validate-dialogues`, `export-gold`, `build-items`, `judge`, `evaluate`, `history-filter` 등 세션을 읽는 단계는 `sessions_*.jsonl`이 없을 때 자동으로 HF에서 복원하고, 이미 있으면 건드리지 않습니다.
 
 ## LLM Config
 

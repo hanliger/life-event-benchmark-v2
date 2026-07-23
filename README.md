@@ -63,6 +63,8 @@ conda run -n life_event make normalize-personas \
 
 `RUN_ID`를 지정하지 않으면 `ko_KR_age20s4_30s6_40s6_50s4_seed<SEED>` 아래에 저장됩니다.
 
+이 레포는 **코드 전용**입니다. `data/runs/<RUN_ID>/`, 정규화 persona, 생성 세션/gold/benchmark item 등 모든 파이프라인 산출물은 git에 넣지 않고 Makefile로 재생성합니다. 전체 corpus와 gold split은 private HuggingFace dataset에 있으며, 포맷 참고용 샘플 한 개만 `data/samples/`에 포함합니다 (`data/samples/README.md` 참고).
+
 ## LLM Config
 
 `.env`에서 provider와 model을 정합니다.
@@ -253,8 +255,14 @@ LLM raw output이 없거나 세션 수가 적음
 | 문서 | 내용 |
 | --- | --- |
 | `docs/design_overview.md` | 전체 구조와 데이터 흐름 |
+| `docs/repo_inventory.md` | source/scripts/생성 데이터 레이아웃 |
 | `docs/life_state_fsm.md` | life-state guard와 event sampling |
+| `docs/event_lifecycle.md` | event lifecycle 상태 전이 |
 | `docs/dialogue_generation_strategy.md` | dialogue planning/generation/validation |
+| `docs/dialogue_generation_canary.md` | dialogue canary/regression QA gate |
 | `docs/financial_memory_schema.md` | 금융 memory schema |
+| `docs/standing_action_schema.md` | standing action schema |
+| `docs/history_filter.md` | history filter validator |
 | `docs/failure_modes.md` | 주요 실패 유형 |
 | `docs/coverage_generation.md` | rare event coverage 생성 |
+| `docs/locale_extension_guide.md` | locale 추가 가이드 |

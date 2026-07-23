@@ -1,7 +1,0 @@
-# Stale Distractor Audit
-
-- mcq_items: 710
-- mcq_with_stale_distractor: 537
-- stale_distractor_rate: 0.7563
-- prefixes_with_historical_values: 382
-- prefixes_total: 400

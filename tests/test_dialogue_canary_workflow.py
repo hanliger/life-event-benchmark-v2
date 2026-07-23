@@ -71,8 +71,8 @@ def test_exact_trajectory_selection_and_exclusion(tmp_path):
 def test_execute_multiple_requires_confirmation(tmp_path):
     with pytest.raises(SystemExit, match="requires --confirm"):
         generate_main([
-            "--trajectories-dir", "data/runs/v4/trajectories",
-            "--plans-dir", "data/runs/v4/dialogues/plans",
+            "--trajectories-dir", "tests/fixtures/trajectories",
+            "--plans-dir", "tests/fixtures/plans",
             "--output-dir", str(tmp_path / "sessions"),
             "--max-trajectories", "2", "--execute",
         ])
@@ -80,7 +80,7 @@ def test_execute_multiple_requires_confirmation(tmp_path):
 
 def test_remaining_selection_is_exactly_nineteen():
     selected = select_trajectory_files(
-        "data/runs/v4/trajectories", exclude_trajectory_ids=["traj_001"]
+        "tests/fixtures/trajectories", exclude_trajectory_ids=["traj_001"]
     )
     assert len(selected) == 19
 
@@ -88,8 +88,8 @@ def test_remaining_selection_is_exactly_nineteen():
 def test_production_command_rejects_non_nineteen_selection(tmp_path):
     with pytest.raises(SystemExit, match="exactly 19"):
         generate_main([
-            "--trajectories-dir", "data/runs/v4/trajectories",
-            "--plans-dir", "data/runs/v4/dialogues/plans",
+            "--trajectories-dir", "tests/fixtures/trajectories",
+            "--plans-dir", "tests/fixtures/plans",
             "--exclude-trajectory-id", "traj_001",
             "--exclude-trajectory-id", "traj_002",
             "--canary-manifest", str(tmp_path / "manifest.json"),
@@ -253,7 +253,7 @@ def test_production_refuses_non_pass_canary(tmp_path):
 
 
 def test_stratified_sampling_is_deterministic_and_preserves_ids():
-    records = list(read_jsonl("data/runs/v4/dialogues/plans/plans_traj_001.jsonl"))
+    records = list(read_jsonl("tests/fixtures/plans/plans_traj_001.jsonl"))
     first, _ = sample_plans(records, 48, 42)
     second, _ = sample_plans(records, 48, 42)
     assert [item["session_id"] for item in first] == [item["session_id"] for item in second]
@@ -351,8 +351,8 @@ def test_concrete_value_grounding_normalizes_korean_units_and_decimals():
 
 def test_mock_resume_skips_successful_sessions(tmp_path):
     args = [
-        "--trajectories-dir", "data/runs/v4/trajectories",
-        "--plans-dir", "data/runs/v4/dialogues/plans",
+        "--trajectories-dir", "tests/fixtures/trajectories",
+        "--plans-dir", "tests/fixtures/plans",
         "--trajectory-id", "traj_001",
         "--output-dir", str(tmp_path / "sessions"),
         "--raw-output-dir", str(tmp_path / "raw"),
@@ -369,8 +369,8 @@ def test_mock_resume_skips_successful_sessions(tmp_path):
 
 def test_only_session_id_selects_after_full_plan_validation(tmp_path):
     args = [
-        "--trajectories-dir", "data/runs/v4/trajectories",
-        "--plans-dir", "data/runs/v4/dialogues/plans",
+        "--trajectories-dir", "tests/fixtures/trajectories",
+        "--plans-dir", "tests/fixtures/plans",
         "--trajectory-id", "traj_001",
         "--output-dir", str(tmp_path / "sessions"),
         "--only-session-id", "S095",
@@ -386,8 +386,8 @@ def test_only_session_id_selects_after_full_plan_validation(tmp_path):
 
 def test_retry_errors_restores_only_failed_or_missing_session(tmp_path):
     initial_args = [
-        "--trajectories-dir", "data/runs/v4/trajectories",
-        "--plans-dir", "data/runs/v4/dialogues/plans",
+        "--trajectories-dir", "tests/fixtures/trajectories",
+        "--plans-dir", "tests/fixtures/plans",
         "--trajectory-id", "traj_001",
         "--output-dir", str(tmp_path / "sessions"),
         "--raw-output-dir", str(tmp_path / "raw"),
@@ -401,8 +401,8 @@ def test_retry_errors_restores_only_failed_or_missing_session(tmp_path):
     error_path = tmp_path / "sessions/errors_traj_001.jsonl"
     error_path.write_text(json.dumps({"trajectory_id": "traj_001", "session_id": "S002", "error": "interrupted"}) + "\n", encoding="utf-8")
     continuation_args = [
-        "--trajectories-dir", "data/runs/v4/trajectories",
-        "--plans-dir", "data/runs/v4/dialogues/plans",
+        "--trajectories-dir", "tests/fixtures/trajectories",
+        "--plans-dir", "tests/fixtures/plans",
         "--trajectory-id", "traj_001",
         "--output-dir", str(tmp_path / "sessions"),
         "--raw-output-dir", str(tmp_path / "raw"),

@@ -69,7 +69,7 @@ def test_observed_bad_mappings_are_impossible_by_registry(
 
 def test_v4_plans_have_grounded_lifecycle_and_roundtrip(planner_bundle):
     paths, templates, planner, validator = planner_bundle
-    trajectory = _trajectory(paths.root / "data/runs/v4/trajectories/traj_001.json")
+    trajectory = _trajectory(paths.root / "tests/fixtures/trajectories/traj_001.json")
     plans = planner.build_plans(trajectory, seed=42)
 
     assert len(plans) == 300
@@ -116,7 +116,7 @@ def test_v4_plans_have_grounded_lifecycle_and_roundtrip(planner_bundle):
 
 def test_task_condition_predicates_use_current_state(planner_bundle):
     paths, _, planner, _ = planner_bundle
-    trajectory = _trajectory(paths.root / "data/runs/v4/trajectories/traj_001.json")
+    trajectory = _trajectory(paths.root / "tests/fixtures/trajectories/traj_001.json")
     state, memory, actions = planner._state_parts(trajectory, 0)
     action_types = {action.type for action in actions}
     actual_has_children = state.life_state.has_children
@@ -131,7 +131,7 @@ def test_task_condition_predicates_use_current_state(planner_bundle):
 
 def test_routine_registry_is_expanded_balanced_and_no_update(planner_bundle):
     paths, _, planner, _ = planner_bundle
-    trajectory = _trajectory(paths.root / "data/runs/v4/trajectories/traj_001.json")
+    trajectory = _trajectory(paths.root / "tests/fixtures/trajectories/traj_001.json")
     plans = planner.build_plans(trajectory, seed=42)
     routine = [plan for plan in plans if plan.session_type == "routine_financial"]
 
@@ -152,7 +152,7 @@ def test_housing_move_tasks_follow_target_residence_subtype(
 ):
     paths, _, planner, _ = planner_bundle
     trajectory = _trajectory(
-        paths.root / f"data/runs/v4/trajectories/traj_{trajectory_number:03d}.json"
+        paths.root / f"tests/fixtures/trajectories/traj_{trajectory_number:03d}.json"
     )
     plans = planner.build_plans(trajectory, seed=42)
 
@@ -178,7 +178,7 @@ def test_housing_move_tasks_follow_target_residence_subtype(
 
 def test_occurred_event_is_one_atomic_high_recoverability_anchor(planner_bundle):
     paths, _, planner, validator = planner_bundle
-    trajectory = _trajectory(paths.root / "data/runs/v4/trajectories/traj_006.json")
+    trajectory = _trajectory(paths.root / "tests/fixtures/trajectories/traj_006.json")
     plans = planner.build_plans(trajectory, seed=42)
 
     occurred = [plan for plan in plans if plan.session_type == "occurred_evidence"]
@@ -196,7 +196,7 @@ def test_occurred_event_is_one_atomic_high_recoverability_anchor(planner_bundle)
 
 def test_same_seed_is_identical_and_different_seed_preserves_structure(planner_bundle):
     paths, _, planner, _ = planner_bundle
-    trajectory = _trajectory(paths.root / "data/runs/v4/trajectories/traj_002.json")
+    trajectory = _trajectory(paths.root / "tests/fixtures/trajectories/traj_002.json")
     first = planner.build_plans(trajectory, seed=42)
     repeat = planner.build_plans(trajectory, seed=42)
     other = planner.build_plans(trajectory, seed=43)
@@ -219,7 +219,7 @@ def test_same_seed_is_identical_and_different_seed_preserves_structure(planner_b
 def test_every_v4_trajectory_keeps_300_and_20_by_15(planner_bundle, trajectory_number):
     paths, _, planner, validator = planner_bundle
     trajectory = _trajectory(
-        paths.root / f"data/runs/v4/trajectories/traj_{trajectory_number:03d}.json"
+        paths.root / f"tests/fixtures/trajectories/traj_{trajectory_number:03d}.json"
     )
     plans = planner.build_plans(trajectory, seed=42)
     assert len(plans) == 300

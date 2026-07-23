@@ -44,6 +44,6 @@ Current hard invariants:
 
 ```bash
 python scripts/audit_life_stage_constraints.py \
-  --trajectories-dir data/generated/trajectories \
-  --output-dir data/generated/quality_reports
+  --trajectories-dir data/runs/<RUN_ID>/trajectories \
+  --output-dir data/runs/<RUN_ID>/quality_reports
 ```

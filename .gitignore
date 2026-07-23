@@ -13,27 +13,18 @@ __pycache__/
 Nemotron-Personas-Korea/data/*.parquet
 Nemotron-Personas-Korea/.cache/
 
-# Generated pipeline outputs — NOT tracked. Regenerate from source with the
-# Makefile targets (see README "실행 가이드라인"). Code, configs, prompts and
-# docs are enough to reproduce everything.
+# This repo is code-only. All pipeline outputs — normalized personas, run
+# directories, generated sessions, gold, benchmark items, reports, raw model
+# outputs — are regenerated from source via the Makefile. The full corpus and
+# gold splits live in the private HuggingFace dataset (see data/samples/README.md).
 data/generated/
 data/personas/normalized/
 data/raw_model_outputs/
+data/runs/
 
-# Dialogue execution artifacts. Keep frozen plans and source trajectories in
-# git; canaries, provider responses, logs, and generated sessions are local or
-# release artifacts and must not pollute the working tree.
-data/runs/*/dialogues/canary/
-data/runs/*/dialogues/regression_canary/
-data/runs/*/dialogues/logs/
-data/runs/*/dialogues/raw_outputs/
-data/runs/*/dialogues/sessions/
-# transient filtered-corpus symlink dirs (e.g. sessions_prod19) used to scope runs
-data/runs/*/dialogues/sessions_*/
-
-# LLM-judge outputs (judged_sessions, decisions, reports, pipeline logs) are
-# derived release artifacts — regenerate from sessions + plans. Not tracked.
-data/runs/*/reports/dialogue_judge/
+# Generated life-event subgraph visualizations (regenerate via
+# life_generator/visualize.py).
+life_generator/out/
 
 # Local OS/editor noise.
 .DS_Store

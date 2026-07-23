@@ -316,7 +316,7 @@ def test_partial_audit_rates_use_successful_session_denominator():
 
 def test_planner_realization_is_deterministic_and_varied():
     paths = RepoPaths.default()
-    trajectory = Trajectory.model_validate(json.loads((paths.root / "data/runs/v4/trajectories/traj_001.json").read_text(encoding="utf-8")))
+    trajectory = Trajectory.model_validate(json.loads((paths.root / "tests/fixtures/trajectories/traj_001.json").read_text(encoding="utf-8")))
     templates = load_life_event_templates(paths)
     planner = EvidencePlanner(templates, load_locale("ko_KR", paths), paths)
     first = planner.build_plans(trajectory, seed=42)
@@ -364,9 +364,9 @@ def test_production_requires_human_review_pass_even_after_automated_gate(tmp_pat
         generate_main(
             [
                 "--trajectories-dir",
-                "data/runs/v4/trajectories",
+                "tests/fixtures/trajectories",
                 "--plans-dir",
-                "data/runs/v4/dialogues/plans",
+                "tests/fixtures/plans",
                 "--exclude-trajectory-id",
                 "traj_001",
                 "--canary-manifest",
@@ -418,6 +418,6 @@ def test_regression_sampler_selects_evidence_high_risk_stale_repaired_and_varian
 
 def test_plan_serialization_round_trip_preserves_contracts():
     plan = DialogueGenerationPlan.model_validate_json(
-        next(open("data/runs/v4/dialogues/plans/plans_traj_001.jsonl", encoding="utf-8"))
+        next(open("tests/fixtures/plans/plans_traj_001.jsonl", encoding="utf-8"))
     )
     assert DialogueGenerationPlan.model_validate(plan.model_dump(mode="json")) == plan

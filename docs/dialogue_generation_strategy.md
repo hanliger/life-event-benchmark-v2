@@ -26,8 +26,10 @@ Direct script:
 
 ```bash
 python scripts/generate_dialogue_sessions.py \
-  --trajectories-dir data/generated/trajectories \
-  --output-dir data/generated/sessions \
+  --trajectories-dir data/runs/<RUN_ID>/trajectories \
+  --plans-dir data/runs/<RUN_ID>/dialogues/plans \
+  --output-dir data/runs/<RUN_ID>/dialogues/sessions \
+  --raw-output-dir data/runs/<RUN_ID>/dialogues/raw_outputs \
   --max-trajectories 2 \
   --execute \
   --continue-on-error
@@ -62,8 +64,8 @@ Repair is attempted once for:
 Raw files:
 
 ```text
-data/raw_model_outputs/dialogue/<trajectory>_<session>.txt
-data/raw_model_outputs/dialogue/<trajectory>_<session>_repair.txt
+data/runs/<RUN_ID>/dialogues/raw_outputs/<trajectory>_<session>.txt
+data/runs/<RUN_ID>/dialogues/raw_outputs/<trajectory>_<session>_repair.txt
 ```
 
 ## Checkpointing
@@ -71,7 +73,7 @@ data/raw_model_outputs/dialogue/<trajectory>_<session>_repair.txt
 Sessions are written one by one to JSONL. With `--continue-on-error`, failed sessions are logged to:
 
 ```text
-data/generated/sessions/errors_<trajectory_id>.jsonl
+data/runs/<RUN_ID>/dialogues/sessions/errors_<trajectory_id>.jsonl
 ```
 
 Successful sessions generated before a failure are preserved.

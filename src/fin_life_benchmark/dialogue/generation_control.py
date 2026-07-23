@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import importlib.metadata
 import json
+import os
 import platform
 import subprocess
 from datetime import datetime, timezone
@@ -50,9 +51,13 @@ def resolve_model_profile(
             raise ValueError(f"unknown dialogue model profile: {profile_name}")
         effective = dict(profiles[profile_name])
     else:
+        # No named profile: fall back to explicit overrides, then the .env
+        # defaults (DEFAULT_LLM_PROVIDER/DEFAULT_GENERATION_MODEL), then mock.
+        # This is why `--execute` with no --model-profile honors .env, as the
+        # README documents. Callers that run as a CLI load .env first.
         effective = {
-            "provider": provider_override or "mock",
-            "model": model_override or "mock",
+            "provider": provider_override or os.getenv("DEFAULT_LLM_PROVIDER") or "mock",
+            "model": model_override or os.getenv("DEFAULT_GENERATION_MODEL") or "mock",
             "reasoning_effort": None,
             "response_format": "prompt_json",
             "max_tokens": 8192,

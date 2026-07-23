@@ -429,4 +429,10 @@ def main(argv: list[str] | None = None) -> int:
 
 
 if __name__ == "__main__":
+    # Load .env only for CLI runs so `--execute` picks up DEFAULT_LLM_PROVIDER /
+    # DEFAULT_GENERATION_MODEL. Tests import main() directly and must not depend
+    # on a local .env, so this stays out of main().
+    from dotenv import load_dotenv
+
+    load_dotenv()
     raise SystemExit(main())

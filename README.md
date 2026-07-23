@@ -45,6 +45,44 @@ conda run -n life_event make pipeline-smoke LIMIT=2 NUM_TRAJ=2 HORIZON=8 EXECUTE
 conda run -n life_event make test
 ```
 
+## 처음부터 대화까지 단계별 실행
+
+아무 생성물이 없는 상태에서 `life event sampling → trajectory → planner → 대화 생성`을 순서대로 확인하는 최소 절차입니다. 하나의 `RUN_ID` 아래에 모든 산출물이 모입니다 (기본값을 그대로 쓰려면 `RUN_ID`를 생략).
+
+```bash
+export RUN_ID=smoke_check   # 원하는 이름
+
+# 1) persona 정규화 (Nemotron parquet 필요)
+conda run -n life_event make normalize-personas RUN_ID=$RUN_ID SEED=42 \
+  AGE_QUOTAS="20-29:2 30-39:2"
+
+# 2) 초기 금융 상태
+conda run -n life_event make initial-states RUN_ID=$RUN_ID LIMIT=4
+
+# 3) trajectory 생성 (= life-event sampling)
+conda run -n life_event make simulate-smoke RUN_ID=$RUN_ID NUM_TRAJ=2 \
+  HORIZON=10 TARGET_EVENTS=20 SEED=42
+
+# 4) dialogue planner (trajectory당 300 plan, violations=0 이어야 함)
+conda run -n life_event make plan-dialogues RUN_ID=$RUN_ID SEED=42
+
+# 5-a) 대화 생성 — mock (API 불필요, 배관 점검용)
+conda run -n life_event make dialogue-smoke RUN_ID=$RUN_ID NUM_TRAJ=2 \
+  EXECUTE=0 MAX_SESSIONS=10
+
+# 5-b) 대화 생성 — 실제 LLM. .env의 DEFAULT_LLM_PROVIDER/DEFAULT_GENERATION_MODEL을 사용
+conda run -n life_event make dialogue-smoke RUN_ID=$RUN_ID NUM_TRAJ=1 \
+  EXECUTE=1 MAX_SESSIONS=2
+```
+
+주의사항:
+
+- **mock과 execute를 같은 sessions 디렉터리에서 섞지 마세요.** 첫 생성이 `dialogues/generation_manifest.json`(immutable)을 고정하므로, mock으로 돌린 뒤 execute하면 `generation manifest mismatch`로 멈춥니다. 모드를 바꿀 때는 새 `RUN_ID`를 쓰거나 `data/runs/$RUN_ID/dialogues/{sessions,raw_outputs,generation_manifest.json}`을 지우세요.
+- `EXECUTE=1`은 `.env`의 `DEFAULT_LLM_PROVIDER`/`DEFAULT_GENERATION_MODEL`을 씁니다. 특정 프로파일(예: `claude-sonnet-5`)로 고정하려면 스크립트를 직접 실행하며 `--model-profile sonnet5`를 넘깁니다 (프로파일은 `configs/generation/dialogue_models.yaml`).
+- 실패한 세션은 `dialogues/sessions/errors_*.jsonl`에 기록되고 `--continue-on-error`로 나머지는 계속 생성됩니다. 검증이 엄격하므로 저사양 모델은 통과율이 낮을 수 있습니다 (canonical corpus는 `claude-sonnet-5` 기준).
+
+`make pipeline-smoke`는 위 1–5에 validate/gold/items/history-filter/audit까지 이어 붙인 한 방 타깃입니다.
+
 ## Data
 
 Nemotron persona parquet 파일은 기본적으로 아래 위치를 기대합니다.

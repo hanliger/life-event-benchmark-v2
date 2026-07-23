@@ -349,6 +349,7 @@ class DialogueGenerator:
         self.cfg = load_yaml(self.paths.generation / "dialogue.yaml")
         self.prompt_template = (self.paths.prompts / "dialogue" / "generate_banking_session_ko.md").read_text(encoding="utf-8")
         self.repair_template = (self.paths.prompts / "dialogue" / "repair_banking_session_ko.md").read_text(encoding="utf-8")
+        self.system_prompt = (self.paths.prompts / "system" / "dialogue_generator_ko.txt").read_text(encoding="utf-8").strip()
         self.validator = DialogueValidator(load_life_event_templates(self.paths))
 
     # ------------------------------------------------------------------ mock
@@ -1162,7 +1163,7 @@ class DialogueGenerator:
             # still runs the full deterministic validator below, and the note is
             # marked non-visible so it is not quoted into the dialogue.
             prompt = f"{prompt}\n\n{extra_guidance}"
-        system = "당신은 은행 상담 대화 데이터 생성기입니다. JSON만 출력합니다."
+        system = self.system_prompt
         raw = self.client.generate(system, prompt)
         response_metadata = [dict(getattr(self.client, "last_response_metadata", {}) or {})]
 

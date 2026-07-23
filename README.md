@@ -65,6 +65,21 @@ conda run -n life_event make normalize-personas \
 
 이 레포는 **코드 전용**입니다. `data/runs/<RUN_ID>/`, 정규화 persona, 생성 세션/gold/benchmark item 등 모든 파이프라인 산출물은 git에 넣지 않고 Makefile로 재생성합니다. 전체 corpus와 gold split은 private HuggingFace dataset에 있으며, 포맷 참고용 샘플 한 개만 `data/samples/`에 포함합니다 (`data/samples/README.md` 참고).
 
+### Dialogue 데이터 가져오기
+
+dialogue 세션이 로컬에 없으면 private HuggingFace dataset에서 받아옵니다. `.env`에 `HF_DIALOGUE_REPO`와 (private이면) `HF_TOKEN`을 설정합니다.
+
+```bash
+# 현재 RUN_ID의 sessions 디렉터리로 명시적 fetch
+conda run -n life_event make fetch-dialogues
+
+# 직접 실행
+conda run -n life_event python scripts/fetch_dialogue_data.py \
+  --sessions-dir data/runs/<RUN_ID>/dialogues/sessions
+```
+
+`validate-dialogues`, `export-gold`, `build-items`, `judge`, `evaluate`, `history-filter` 등 세션을 읽는 단계는 `sessions_*.jsonl`이 없을 때 자동으로 HF에서 fetch합니다. 로컬 mock 생성으로 세션이 이미 있으면 fetch하지 않습니다.
+
 ## LLM Config
 
 `.env`에서 provider와 model을 정합니다.
@@ -247,6 +262,17 @@ LLM raw output이 없거나 세션 수가 적음
 - `data/runs/<RUN_ID>/dialogues/sessions/errors_*.jsonl`을 먼저 봅니다.
 - provider metadata는 `data/runs/<RUN_ID>/dialogues/raw_outputs/*.meta.json`에 저장됩니다.
 - 빈 응답이 반복되면 metadata의 `stop_reason`, `content_block_types`, `usage`를 확인합니다.
+
+## Prompts
+
+모든 LLM prompt는 코드에 embed하지 않고 `prompts/` 아래 파일로 분리해 둡니다. 코드는 로드 후 placeholder만 치환합니다.
+
+| 파일 | 용도 |
+| --- | --- |
+| `prompts/dialogue/generate_banking_session_ko.md` | dialogue 생성 프롬프트 |
+| `prompts/dialogue/repair_banking_session_ko.md` | dialogue repair 프롬프트 |
+| `prompts/judge/judge_dialogue_sessions_ko.md` | LLM judge rubric (system) |
+| `prompts/system/*.txt` | 생성기/평가/history-filter의 system role 프롬프트 |
 
 ## Docs
 

@@ -16,7 +16,7 @@ from pathlib import Path
 import _bootstrap  # noqa: F401
 
 from fin_life_benchmark.fsm.registry import load_life_event_templates
-from fin_life_benchmark.io import read_jsonl
+from fin_life_benchmark.io import ensure_dialogue_sessions, read_jsonl
 from fin_life_benchmark.validation.dialogue_validator import DialogueValidator, summarize_report
 
 
@@ -26,6 +26,7 @@ def main() -> int:
     parser.add_argument("--output-dir", default="data/generated/quality_reports")
     parser.add_argument("--limit", type=int, default=None)
     args = parser.parse_args()
+    ensure_dialogue_sessions(args.sessions_dir)
 
     templates = load_life_event_templates()
     validator = DialogueValidator(templates)

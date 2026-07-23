@@ -30,7 +30,7 @@ import _bootstrap  # noqa: F401
 from dotenv import load_dotenv
 from tqdm import tqdm
 
-from fin_life_benchmark.io import read_jsonl, write_jsonl
+from fin_life_benchmark.io import RepoPaths, ensure_dialogue_sessions, read_jsonl, write_jsonl
 from fin_life_benchmark.llm.client import LLMClient
 
 
@@ -244,6 +244,7 @@ def main() -> int:
     parser.add_argument("--temperature", type=float, default=0.0)
     parser.add_argument("--max-tokens", type=int, default=4096)
     args = parser.parse_args()
+    ensure_dialogue_sessions(args.sessions_dir)
 
     load_dotenv()
     provider = args.provider or ("mock" if not args.execute else None)
@@ -271,7 +272,9 @@ def main() -> int:
     output.write_text("", encoding="utf-8")
 
     records: list[dict[str, Any]] = []
-    system = "당신은 금융 상담 이력 기반 벤치마크를 푸는 평가 대상 모델입니다. 반드시 요청된 JSON만 출력하세요."
+    system = (
+        RepoPaths.default().prompts / "system" / "benchmark_evaluator_ko.txt"
+    ).read_text(encoding="utf-8").strip()
     for item in tqdm(items, desc="evaluate"):
         visible = _visible_sessions(item, sessions_by_id)
         prompt = _build_prompt(item, visible)

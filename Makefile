@@ -47,7 +47,7 @@ REVIEW_DECISION ?= $(DIALOGUE_JUDGE_ROOT)/judge_review_decision.json
 	dialogue-canary audit-dialogue-canary review-dialogue-canary dialogue-production-remaining \
 	dialogue-regression-canary audit-dialogue-regression-canary dialogue-canary-v2 \
 	audit-dialogue-canary-v2 review-dialogue-canary-v2 score-dialogue-canary-v2 dialogue-judge-gate \
-	coverage-trajectories dialogue-smoke-dry dialogue-smoke validate-dialogues \
+	coverage-trajectories fetch-dialogues dialogue-smoke-dry dialogue-smoke validate-dialogues \
 	export-gold build-items history-filter audit pipeline-smoke test clean-generated \
 	export-gold-controlled build-items-controlled audit-controlled export-public
 
@@ -88,6 +88,13 @@ coverage-trajectories:
 	$(PYTHON) scripts/generate_coverage_trajectories.py \
 		--personas $(PERSONAS) --locale ko_KR --horizon-years 12 \
 		--output-dir $(TRAJ_DIR) --seed 500 --max-per-pair 2
+
+# Fetch the dialogue corpus from the private HF dataset into the run's sessions
+# dir. Configure HF_DIALOGUE_REPO / HF_TOKEN in .env. Consumers (validate,
+# export-gold, build-items, judge, evaluate, history-filter) also fetch
+# automatically when the sessions dir is empty.
+fetch-dialogues:
+	$(PYTHON) scripts/fetch_dialogue_data.py --sessions-dir $(SESS_DIR)
 
 plan-dialogues:
 	$(PYTHON) scripts/build_dialogue_plans.py \

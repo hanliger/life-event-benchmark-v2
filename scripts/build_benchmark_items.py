@@ -19,7 +19,7 @@ import _bootstrap  # noqa: F401
 from fin_life_benchmark.benchmark.item_builder import ItemBuilder
 from fin_life_benchmark.gold.loader import read_prefix_gold
 from fin_life_benchmark.gold.prefix_gold_exporter import serialize_memory_state
-from fin_life_benchmark.io import read_jsonl, write_jsonl
+from fin_life_benchmark.io import ensure_dialogue_sessions, read_jsonl, write_jsonl
 from fin_life_benchmark.trajectory.models import Trajectory
 
 
@@ -32,6 +32,7 @@ def main() -> int:
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--max-items", type=int, default=None, help="cap per stage")
     args = parser.parse_args()
+    ensure_dialogue_sessions(args.sessions_dir)
 
     prefixes = list(read_prefix_gold(Path(args.prefix_gold)))
     if not prefixes:

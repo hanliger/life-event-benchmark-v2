@@ -24,7 +24,7 @@ import _bootstrap  # noqa: F401
 
 from dotenv import load_dotenv
 
-from fin_life_benchmark.io import read_jsonl, write_jsonl
+from fin_life_benchmark.io import ensure_dialogue_sessions, read_jsonl, write_jsonl
 from fin_life_benchmark.validation.history_filter import MODES, parse_validators, run_filter
 
 
@@ -39,6 +39,7 @@ def main() -> int:
     parser.add_argument("--output", default=None, help="default: <items>.filtered.jsonl")
     parser.add_argument("--report", default="data/generated/quality_reports/history_filter_report.json")
     args = parser.parse_args()
+    ensure_dialogue_sessions(args.sessions_dir)
 
     load_dotenv()
     spec = args.validators or os.environ.get("HISTORY_FILTER_VALIDATORS", "mock:mock-validator")

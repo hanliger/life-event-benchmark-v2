@@ -20,6 +20,7 @@ import hashlib
 import json
 from typing import Any
 
+from ..io import RepoPaths
 from ..llm.client import LLMClient
 
 MODES = ("single_session", "partial_prefix", "no_history_option")
@@ -95,10 +96,13 @@ class LLMValidator:
         self.name = f"{provider}:{model}"
         self.provider = provider
         self.client = LLMClient(provider=provider, model=model, temperature=0.0, max_tokens=64)
+        self.system = (
+            RepoPaths.default().prompts / "system" / "history_filter_validator_ko.txt"
+        ).read_text(encoding="utf-8").strip()
 
     def answer(self, item: dict[str, Any], prompt: str, mode: str) -> str:
         raw = self.client.generate(
-            system="당신은 금융 벤치마크 검증자입니다. JSON만 출력합니다.",
+            system=self.system,
             user=prompt,
         )
         try:

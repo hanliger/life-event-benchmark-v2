@@ -19,7 +19,7 @@ import _bootstrap  # noqa: F401
 from tqdm import tqdm
 
 from fin_life_benchmark.gold.prefix_gold_exporter import export_prefix_gold
-from fin_life_benchmark.io import read_jsonl, write_jsonl
+from fin_life_benchmark.io import ensure_dialogue_sessions, read_jsonl, write_jsonl
 from fin_life_benchmark.trajectory.models import Trajectory
 
 
@@ -36,6 +36,7 @@ def main() -> int:
         help="emit only every N sessions (v3 main evaluation uses 15); default emits every prefix",
     )
     args = parser.parse_args()
+    ensure_dialogue_sessions(args.sessions_dir)
 
     trajectory_files = sorted(Path(args.trajectories_dir).glob("traj_*.json"))
     if args.limit is not None:

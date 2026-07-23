@@ -41,6 +41,9 @@ try:
 except ModuleNotFoundError:  # imported as scripts.regenerate_judged_sessions in tests
     from scripts import _bootstrap  # type: ignore # noqa: F401
 
+import threading
+from concurrent.futures import ThreadPoolExecutor
+
 from tqdm import tqdm
 
 from fin_life_benchmark.dialogue.evidence_planner import EvidencePlanner
@@ -140,6 +143,10 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--seed", type=int, default=0, help="only used when --plans-dir is omitted (build_plans fallback)")
     parser.add_argument("--max-sessions", type=int, help="cap total sessions regenerated this pass")
+    parser.add_argument(
+        "--workers", type=int, default=1,
+        help="parallel session-regeneration workers (per-thread LLM client). Default 1 (sequential).",
+    )
     parser.add_argument("--raw-output-dir", default=None)
     parser.add_argument(
         "--max-tokens",
@@ -181,24 +188,33 @@ def main(argv: list[str] | None = None) -> int:
     raw_output_dir.mkdir(parents=True, exist_ok=True)
     sessions_dir = Path(args.sessions_dir)
 
-    if args.execute:
-        client = LLMClient.from_env(
-            provider=args.provider,
-            model=args.model,
-            reasoning_effort=args.reasoning_effort,
-            max_tokens=args.max_tokens,
-        )
-        if client.provider == "mock":
-            raise SystemExit("--execute requires DEFAULT_LLM_PROVIDER=openai|anthropic in .env")
-        generator = DialogueGenerator(
-            mode="llm", client=client, paths=paths,
-            raw_output_dir=raw_output_dir, raw_filename_suffix=f"_{args.retry_label}",
-        )
-    else:
-        generator = DialogueGenerator(
-            mode="mock", paths=paths,
-            raw_output_dir=raw_output_dir, raw_filename_suffix=f"_{args.retry_label}",
-        )
+    workers = max(1, args.workers)
+    _local = threading.local()
+
+    def _generator() -> DialogueGenerator:
+        # One generator (and LLM client) per worker thread — the client holds
+        # mutable per-request state, so it must not be shared across threads.
+        gen = getattr(_local, "generator", None)
+        if gen is not None:
+            return gen
+        if args.execute:
+            client = LLMClient.from_env(
+                provider=args.provider, model=args.model,
+                reasoning_effort=args.reasoning_effort, max_tokens=args.max_tokens,
+            )
+            if client.provider == "mock":
+                raise SystemExit("--execute requires DEFAULT_LLM_PROVIDER=openai|anthropic in .env")
+            gen = DialogueGenerator(
+                mode="llm", client=client, paths=paths,
+                raw_output_dir=raw_output_dir, raw_filename_suffix=f"_{args.retry_label}",
+            )
+        else:
+            gen = DialogueGenerator(
+                mode="mock", paths=paths,
+                raw_output_dir=raw_output_dir, raw_filename_suffix=f"_{args.retry_label}",
+            )
+        _local.generator = gen
+        return gen
 
     budget = args.max_sessions
     results: list[dict[str, Any]] = []
@@ -218,8 +234,9 @@ def main(argv: list[str] | None = None) -> int:
         sessions_path = sessions_dir / f"sessions_{trajectory_id}.jsonl"
         existing = _load_existing_sessions(sessions_path)
 
-        recovered = 0
-        for session_id, feedback in tqdm(feedback_by_session.items(), desc=trajectory_id, leave=False):
+        # Build this trajectory's worklist (respecting the global budget).
+        work: list[tuple[str, Any, Any]] = []
+        for session_id, feedback in feedback_by_session.items():
             if budget is not None and budget <= 0:
                 break
             plan = plans.get(session_id)
@@ -228,16 +245,33 @@ def main(argv: list[str] | None = None) -> int:
                 continue
             if budget is not None:
                 budget -= 1
+            work.append((session_id, plan, feedback))
+        if not work:
+            continue
+
+        def _regen(item: tuple[str, Any, Any]) -> tuple[str, Any, str | None]:
+            session_id, plan, feedback = item
             try:
-                session = generator.generate_session(plan, trajectory.persona, extra_guidance=feedback)
+                session = _generator().generate_session(plan, trajectory.persona, extra_guidance=feedback)
+                return (session_id, session, None)
             except Exception as exc:  # noqa: BLE001 — keep regenerating the rest
+                return (session_id, None, f"{type(exc).__name__}: {exc}")
+
+        if workers > 1:
+            with ThreadPoolExecutor(max_workers=workers) as pool:
+                outs = list(tqdm(pool.map(_regen, work), total=len(work), desc=trajectory_id, leave=False))
+        else:
+            outs = [_regen(it) for it in tqdm(work, desc=trajectory_id, leave=False)]
+
+        recovered = 0
+        for session_id, session, err in outs:
+            if err is not None:
                 results.append({
                     "trajectory_id": trajectory_id, "session_id": session_id,
-                    "status": "failed", "error": f"{type(exc).__name__}: {exc}",
+                    "status": "failed", "error": err,
                 })
                 total_failed += 1
-                continue
-            if session is not None:
+            elif session is not None:
                 existing[session.session_id] = session.model_dump(mode="json")
                 recovered += 1
                 total_recovered += 1

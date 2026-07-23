@@ -26,6 +26,7 @@ JUDGE_MODEL=claude-opus-4-8
 GEN_MODEL=claude-sonnet-5
 MAXTOK=16384
 CONC=8
+REGEN_WORKERS=8
 MAX_ROUNDS=3
 
 ts() { date '+%Y-%m-%d %H:%M:%S'; }
@@ -61,7 +62,7 @@ run_regen() {  # $1 = suggested_regeneration.jsonl
     --regeneration-file "$1" \
     --trajectories-dir "$TRAJ" --sessions-dir "$SESS" --plans-dir "$PLANS" \
     --provider anthropic --model "$GEN_MODEL" \
-    --max-tokens "$MAXTOK" --retry-label judge_regen --execute
+    --max-tokens "$MAXTOK" --workers "$REGEN_WORKERS" --retry-label judge_regen --execute
 }
 
 flagged_count() { [ -f "$1" ] && grep -c . "$1" 2>/dev/null || echo 0; }
@@ -76,6 +77,14 @@ fi
 prev="$BASE/round0"
 
 for r in $(seq 1 "$MAX_ROUNDS"); do
+  # Per-round idempotency: a round already completed (e.g. round1 done out-of-band
+  # during a resume) is skipped rather than repeated.
+  if [ -f "$BASE/round$r/judge_review_decision.json" ]; then
+    echo "[$(ts)] round$r already complete -> skipping"
+    report_decision "$BASE/round$r"
+    prev="$BASE/round$r"
+    continue
+  fi
   sr="$prev/suggested_regeneration.jsonl"
   n=$(flagged_count "$sr")
   echo "[$(ts)] flagged after $(basename "$prev"): $n"

@@ -515,6 +515,267 @@ def test_prefix_gold_dedup_roundtrips(tmp_path):
             assert rec["gold_life_events"] == last_events
 
 
+def test_stage2_policy_matches_confirmed_event_questions():
+    from fin_life_benchmark.benchmark.mcq_input import load_stage2_question_policy
+
+    policy = load_stage2_question_policy(
+        "configs/registries/stage2_question_policy.yaml"
+    )
+    expected_paths = {
+        "career_employment": "employment.employer",
+        "career_job_change": "employment.employer",
+        "career_employment_end": "employment.employment_status",
+        "career_leave_of_absence": "employment.income_stability",
+        "career_reinstatement": "employment.income_stability",
+        "career_self_employment": "employment.income_stability",
+        "crisis_accident_or_disaster": "cashflow.recent_one_off_expense",
+        "crisis_financial_fraud": "cashflow.recent_one_off_expense",
+        "crisis_health_event": "cashflow.recent_one_off_expense",
+        "education_child_stage_entry": "education.child_education_stage",
+        "education_self_program_start": "education.self_education_status",
+        "education_study_abroad": "education.self_education_status",
+        "retirement_pension_start": "financial_products.pension_or_irp",
+        "retirement_start": "employment.employment_status",
+        "housing_home_purchase": "housing.properties",
+        "housing_home_sale": "housing.properties",
+        "housing_move": "housing.contract_type",
+        "relationship_adoption": "household.dependents",
+    }
+
+    assert {
+        event_id: policy[event_id]["target_memory_path"]
+        for event_id in expected_paths
+    } == expected_paths
+    assert policy["career_job_change"]["question_scope"] == "latest_window"
+    assert policy["education_child_stage_entry"]["value_selector"] == "stage_transition"
+    assert policy["education_child_stage_entry"]["allow_noop_current_value"] is True
+    assert policy["relationship_adoption"]["option_pool"] == (1, 2, 3, 4)
+    assert policy["relationship_childbirth"]["option_pool"] == (1, 2, 3, 4)
+    assert policy["relationship_dependent_addition"]["option_pool"] == (1, 2, 3, 4)
+    assert policy["relationship_dependent_end"]["option_pool"] == (0, 1, 2, 3)
+    assert policy["relationship_divorce_or_separation"]["option_pool"] == ("single", "married", "separated", "divorced")
+    assert policy["relationship_marriage"]["option_pool"] == ("single", "married", "separated", "divorced")
+    for event_id in (
+        "crisis_accident_or_disaster",
+        "crisis_financial_fraud",
+        "crisis_health_event",
+        "relationship_family_death",
+    ):
+        assert policy[event_id]["value_selector"] == "amount_krw"
+        assert policy[event_id]["question_scope"] == "latest_window"
+        assert policy[event_id]["option_pool_type"] == "numeric"
+    assert policy["relationship_family_death"]["option_pool"] == (3000000, 4000000, 5000000, 7000000)
+    assert policy["housing_home_purchase"]["value_selector"] == "property_loan_type"
+    assert policy["housing_move"]["allow_noop_current_value"] is True
+
+
+def test_stage2_checkpoint_allows_configured_noop_current_value():
+    from fin_life_benchmark.benchmark.mcq_input import build_stage2_checkpoints
+
+    visible_sessions = [f"S{i:03d}" for i in range(1, 16)]
+    prefixes = [{
+        "trajectory_id": "traj_noop",
+        "prefix_id": "traj_noop_pfx015",
+        "checkpoint_session_count": 15,
+        "visible_sessions": visible_sessions,
+        "gold_life_events": [{
+            "event_instance_id": "traj_noop_ev001",
+            "event_id": "housing_move",
+            "life_event_label": "이사",
+            "occurred": True,
+            "evidence_turns": ["S015:2"],
+        }],
+        "gold_memory_updates": [],
+        "gold_full_memory_state": {
+            "housing.contract_type": {
+                "value": "wolse",
+                "status": "current",
+                "pending_proposal": None,
+            }
+        },
+    }]
+    initial_memory = {
+        "traj_noop": {
+            "housing.contract_type": {
+                "value": "wolse",
+                "status": "current",
+                "pending_proposal": None,
+            }
+        }
+    }
+    sessions = {
+        "traj_noop": [{
+            "session_id": "S015",
+            "linked_event_instance_id": "traj_noop_ev001",
+            "event_status_after_session": "occurred",
+        }]
+    }
+    policy = {
+        "housing_move": {
+            "target_memory_path": "housing.contract_type",
+            "question_label": "주거 유형",
+            "allow_noop_current_value": True,
+            "option_pool_type": "categorical",
+            "option_pool": ("jeonse", "wolse", "family_home", "other"),
+        }
+    }
+
+    checkpoints = build_stage2_checkpoints(
+        prefixes,
+        sessions_by_traj=sessions,
+        initial_memory_by_traj=initial_memory,
+        question_policy=policy,
+    )
+
+    assert len(checkpoints) == 1
+    assert len(checkpoints[0].targets) == 1
+    target = checkpoints[0].targets[0]
+    assert target.operation == "no_change"
+    assert target.after_state["value"] == "wolse"
+
+
+def test_stage2_child_stage_noop_maps_to_change_none():
+    from fin_life_benchmark.benchmark.mcq_input import Stage2Checkpoint, Stage2Target
+
+    target = Stage2Target(
+        canonical_target_id="traj_child:ev001:education.child_education_stage:no_change:abc123",
+        trajectory_id="traj_child",
+        target_event_instance_id="traj_child_ev001",
+        target_event_id="education_child_stage_entry",
+        target_event_label="자녀 교육 단계 진입",
+        memory_path="education.child_education_stage",
+        operation="no_change",
+        first_visible_checkpoint=15,
+        evidence_sessions=("S015",),
+        evidence_turns=("S015:2",),
+        before_state={"value": "high", "status": "current", "pending_proposal": None},
+        after_state={"value": "high", "status": "current", "pending_proposal": None},
+        value_selector="stage_transition",
+        question_template=(
+            "제공된 전체 상담 이력을 참고하여, {window_range}에서 "
+            "자녀 교육 단계에 반영된 변화는 무엇인가?"
+        ),
+        question_label="자녀 교육 단계 변화",
+        option_pool_type="categorical",
+        option_pool=("primary", "middle", "high", "no_change"),
+    )
+    checkpoint = Stage2Checkpoint(
+        trajectory_id="traj_child",
+        prefix_id="traj_child_pfx015",
+        checkpoint_session_count=15,
+        visible_session_ids=tuple(f"S{i:03d}" for i in range(1, 16)),
+        targets=(target,),
+    )
+
+    item = ItemBuilder(seed=0).build_stage2([checkpoint])[0]
+
+    assert item.gold["answer_value"] == "no_change"
+    assert item.question == (
+        "제공된 전체 상담 이력을 참고하여, S001~S015에서 "
+        "자녀 교육 단계에 반영된 변화는 무엇인가?"
+    )
+    assert [option.text for option in item.options] == [
+        "초등학교",
+        "중학교",
+        "고등학교",
+        "변화 없음",
+    ]
+    assert item.options[3].correct is True
+
+
+def test_stage2_latest_window_template_uses_exact_session_range():
+    from fin_life_benchmark.benchmark.mcq_input import Stage2Checkpoint, Stage2Target
+
+    target = Stage2Target(
+        canonical_target_id="traj_job:ev010:employment.employer:update:abc123",
+        trajectory_id="traj_job",
+        target_event_instance_id="traj_job_ev010",
+        target_event_id="career_job_change",
+        target_event_label="이직",
+        memory_path="employment.employer",
+        operation="update",
+        first_visible_checkpoint=150,
+        evidence_sessions=("S150",),
+        evidence_turns=("S150:2",),
+        before_state={"value": "이전 직장", "status": "current", "pending_proposal": None},
+        after_state={"value": "새 직장", "status": "current", "pending_proposal": None},
+        question_template=(
+            "제공된 전체 상담 이력을 참고하여, {window_range}에서 "
+            "새로 반영된 현재 직장은 무엇인가?"
+        ),
+        question_label="현재 직장",
+        question_scope="latest_window",
+        option_pool_type="entity",
+        option_pool=("가나직장", "나나직장", "다나직장", "새 직장"),
+    )
+    checkpoint = Stage2Checkpoint(
+        trajectory_id="traj_job",
+        prefix_id="traj_job_pfx150",
+        checkpoint_session_count=150,
+        visible_session_ids=tuple(f"S{i:03d}" for i in range(1, 151)),
+        targets=(target,),
+    )
+
+    item = ItemBuilder(seed=0).build_stage2([checkpoint], window_size=15)[0]
+
+    assert item.question == (
+        "제공된 전체 상담 이력을 참고하여, S136~S150에서 "
+        "새로 반영된 현재 직장은 무엇인가?"
+    )
+
+
+def test_stage2_home_purchase_uses_the_event_property_loan_type():
+    from fin_life_benchmark.benchmark.mcq_input import Stage2Checkpoint, Stage2Target
+
+    target = Stage2Target(
+        canonical_target_id="traj_purchase:ev001:housing.properties:update:abc123",
+        trajectory_id="traj_purchase",
+        target_event_instance_id="traj_purchase_ev001",
+        target_event_id="housing_home_purchase",
+        target_event_label="주택 구매",
+        memory_path="housing.properties",
+        operation="update",
+        first_visible_checkpoint=15,
+        evidence_sessions=("S015",),
+        evidence_turns=("S015:2",),
+        before_state={"value": [], "status": "current", "pending_proposal": None},
+        after_state={
+            "value": [{
+                "property_id": "property_1",
+                "acquisition_event_instance_id": "traj_purchase_ev001",
+                "mortgage_status": "active",
+                "ownership_status": "owned",
+            }],
+            "status": "current",
+            "pending_proposal": None,
+        },
+        value_selector="property_loan_type",
+        question_template="해당 부동산에 연결된 대출 유형은 무엇인가?",
+        question_label="해당 부동산의 대출 유형",
+        option_pool_type="categorical",
+        option_pool=("none", "credit_loan", "jeonse_loan", "mortgage"),
+    )
+    checkpoint = Stage2Checkpoint(
+        trajectory_id="traj_purchase",
+        prefix_id="traj_purchase_pfx015",
+        checkpoint_session_count=15,
+        visible_session_ids=tuple(f"S{i:03d}" for i in range(1, 16)),
+        targets=(target,),
+    )
+
+    item = ItemBuilder(seed=0).build_stage2([checkpoint])[0]
+
+    assert item.question == "해당 부동산에 연결된 대출 유형은 무엇인가?"
+    assert item.gold["answer_value"] == "mortgage"
+    assert [option.text for option in item.options] == [
+        "대출 없음",
+        "신용대출",
+        "전세자금대출",
+        "주택담보대출",
+    ]
+    assert item.options[3].correct is True
+
+
 def test_forced_event_is_guarded_and_impacts_actions():
     paths = RepoPaths.default()
     locale = load_locale("ko_KR", paths)
@@ -553,10 +814,10 @@ def test_forced_event_is_guarded_and_impacts_actions():
 
 
 
-def test_stage2_memory_mcq_reuses_canonical_target_across_checkpoints():
+def test_stage2_memory_mcq_targets_only_latest_event_per_checkpoint():
     from fin_life_benchmark.benchmark.mcq_input import Stage2Checkpoint, Stage2Target
 
-    target = Stage2Target(
+    target_1 = Stage2Target(
         canonical_target_id="traj_mem:ev001:employment.salary_day:update:abc123",
         trajectory_id="traj_mem",
         target_event_instance_id="traj_mem_ev001",
@@ -567,16 +828,28 @@ def test_stage2_memory_mcq_reuses_canonical_target_across_checkpoints():
         first_visible_checkpoint=15,
         evidence_sessions=("S015",),
         evidence_turns=("S015:2",),
-        before_state={
-            "value": 10,
-            "status": "current",
-            "pending_proposal": None,
-        },
-        after_state={
-            "value": 25,
-            "status": "current",
-            "pending_proposal": None,
-        },
+        before_state={"value": 10, "status": "current", "pending_proposal": None},
+        after_state={"value": 25, "status": "current", "pending_proposal": None},
+        option_pool_type="numeric",
+        option_pool=(10, 15, 20, 25),
+        question_label="급여일",
+    )
+    target_2 = Stage2Target(
+        canonical_target_id="traj_mem:ev002:employment.employer:update:def456",
+        trajectory_id="traj_mem",
+        target_event_instance_id="traj_mem_ev002",
+        target_event_id="career_job_change",
+        target_event_label="이직",
+        memory_path="employment.employer",
+        operation="update",
+        first_visible_checkpoint=30,
+        evidence_sessions=("S030",),
+        evidence_turns=("S030:2",),
+        before_state={"value": "이전 직장", "status": "current", "pending_proposal": None},
+        after_state={"value": "새 직장", "status": "current", "pending_proposal": None},
+        option_pool_type="entity",
+        option_pool=("가나직장", "나나직장", "다나직장", "새 직장"),
+        question_label="현재 직장",
     )
     checkpoints = [
         Stage2Checkpoint(
@@ -584,14 +857,14 @@ def test_stage2_memory_mcq_reuses_canonical_target_across_checkpoints():
             prefix_id="traj_mem_pfx015",
             checkpoint_session_count=15,
             visible_session_ids=tuple(f"S{i:03d}" for i in range(1, 16)),
-            targets=(target,),
+            targets=(target_1,),
         ),
         Stage2Checkpoint(
             trajectory_id="traj_mem",
             prefix_id="traj_mem_pfx030",
             checkpoint_session_count=30,
             visible_session_ids=tuple(f"S{i:03d}" for i in range(1, 31)),
-            targets=(target,),
+            targets=(target_1, target_2),
         ),
     ]
 
@@ -603,28 +876,226 @@ def test_stage2_memory_mcq_reuses_canonical_target_across_checkpoints():
                     "value": 10,
                     "status": "current",
                     "historical_values": [],
-                }
+                },
+                "employment.employer": {
+                    "value": "이전 직장",
+                    "status": "current",
+                    "historical_values": [],
+                },
             }
         },
     )
 
     assert len(items) == 2
-    assert items[0].stage == "stage2_memory_mcq"
-    assert items[0].question == items[1].question
-    assert [option.model_dump() for option in items[0].options] == [
-        option.model_dump() for option in items[1].options
-    ]
-    assert items[0].gold["canonical_target_id"] == items[1].gold["canonical_target_id"]
-    assert len(items[0].visible_sessions) == 15
-    assert len(items[1].visible_sessions) == 30
+    assert items[0].item_id.startswith("traj_mem_s015_")
+    assert items[1].item_id.startswith("traj_mem_s030_")
+    assert items[0].gold["canonical_target_id"] == target_1.canonical_target_id
+    assert items[1].gold["canonical_target_id"] == target_2.canonical_target_id
+    assert items[0].visible_sessions == [f"S{i:03d}" for i in range(1, 16)]
+    assert items[1].visible_sessions == [f"S{i:03d}" for i in range(1, 31)]
+    assert all("제공된 전체 상담 이력 기준, 현재" in item.question for item in items)
+    assert items[0].question != items[1].question
 
     for item in items:
         correct = [option for option in item.options if option.correct]
         assert len(item.options) == 4
         assert len(correct) == 1
         assert item.gold["correct_option"] == correct[0].option_id
-        assert item.gold["memory_path"] == "employment.salary_day"
-        assert any(
-            option.error_type == "stale_memory_carryover"
-            for option in item.options
+
+def test_stage2_memory_mcq_keeps_noop_final_value_and_property_ownership():
+    from fin_life_benchmark.benchmark.mcq_input import Stage2Checkpoint, Stage2Target
+
+    move_target = Stage2Target(
+        canonical_target_id="traj_noop:ev001:housing.contract_type:update:abc123",
+        trajectory_id="traj_noop",
+        target_event_instance_id="traj_noop_ev001",
+        target_event_id="housing_move",
+        target_event_label="이사",
+        memory_path="housing.contract_type",
+        operation="update",
+        first_visible_checkpoint=15,
+        evidence_sessions=("S015",),
+        evidence_turns=("S015:2",),
+        before_state={"value": "wolse", "status": "current", "pending_proposal": None},
+        after_state={"value": "wolse", "status": "current", "pending_proposal": None},
+        option_pool_type="categorical",
+        option_pool=("jeonse", "wolse", "family_home", "other"),
+        question_label="주거 유형",
+    )
+    sale_target = Stage2Target(
+        canonical_target_id="traj_sale:ev001:housing.properties:update:def456",
+        trajectory_id="traj_sale",
+        target_event_instance_id="traj_sale_ev001",
+        target_event_id="housing_home_sale",
+        target_event_label="주택 매각",
+        memory_path="housing.properties",
+        operation="update",
+        first_visible_checkpoint=15,
+        evidence_sessions=("S015",),
+        evidence_turns=("S015:2",),
+        before_state={
+            "value": [{"property_id": "p1", "ownership_status": "owned"}],
+            "status": "current",
+            "pending_proposal": None,
+        },
+        after_state={
+            "value": [{
+                "property_id": "p1",
+                "ownership_status": "sold",
+                "disposal_event_instance_id": "traj_sale_ev001",
+            }],
+            "status": "current",
+            "pending_proposal": None,
+        },
+        value_selector="property_ownership_status",
+        question_template="담보대출 상환과 관련된 부동산의 현재 소유 상태는 무엇인가?",
+        question_label="담보대출 상환과 관련된 부동산의 현재 소유 상태",
+        option_pool_type="categorical",
+        option_pool=("owned", "sold", "pending_sale", "unknown"),
+    )
+    checkpoints = [
+        Stage2Checkpoint(
+            trajectory_id="traj_noop",
+            prefix_id="traj_noop_pfx015",
+            checkpoint_session_count=15,
+            visible_session_ids=tuple(f"S{i:03d}" for i in range(1, 16)),
+            targets=(move_target,),
+        ),
+        Stage2Checkpoint(
+            trajectory_id="traj_sale",
+            prefix_id="traj_sale_pfx015",
+            checkpoint_session_count=15,
+            visible_session_ids=tuple(f"S{i:03d}" for i in range(1, 16)),
+            targets=(sale_target,),
+        ),
+    ]
+
+    items = ItemBuilder(seed=0).build_stage2(
+        checkpoints,
+        initial_memory_by_traj={
+            "traj_noop": {
+                "housing.contract_type": {
+                    "value": "wolse",
+                    "status": "current",
+                    "historical_values": [],
+                }
+            },
+            "traj_sale": {
+                "housing.properties": {
+                    "value": [{"property_id": "p1", "ownership_status": "owned"}],
+                    "status": "current",
+                    "historical_values": [],
+                }
+            },
+        },
+    )
+
+    move_item, sale_item = items
+    assert move_item.gold["answer_value"] == "wolse"
+    assert any(option.text == "월세" and option.correct for option in move_item.options)
+    assert sale_item.question == "담보대출 상환과 관련된 부동산의 현재 소유 상태는 무엇인가?"
+    assert sale_item.gold["answer_value"] == "sold"
+    assert [option.text for option in sale_item.options] == [
+        "현재 보유 중",
+        "매각 완료",
+        "매각 예정",
+        "확인 불가",
+    ]
+    assert any(option.text == "매각 완료" and option.correct for option in sale_item.options)
+
+
+def test_stage2_fixed_four_option_pool_is_authoritative():
+    from fin_life_benchmark.benchmark.mcq_input import Stage2Checkpoint, Stage2Target
+
+    count_target = Stage2Target(
+        canonical_target_id="traj_fixed:ev001:household.dependents:update",
+        trajectory_id="traj_fixed",
+        target_event_instance_id="traj_fixed_ev001",
+        target_event_id="relationship_dependent_addition",
+        target_event_label="부양가족 추가",
+        memory_path="household.dependents",
+        operation="update",
+        first_visible_checkpoint=15,
+        evidence_sessions=("S015",),
+        evidence_turns=("S015:2",),
+        before_state={"value": 0, "status": "current"},
+        after_state={"value": 1, "status": "current"},
+        option_pool_type="count",
+        option_pool=(1, 2, 3, 4),
+    )
+    amount_target = Stage2Target(
+        canonical_target_id="traj_fixed:ev002:cashflow.recent_one_off_expense:update",
+        trajectory_id="traj_fixed",
+        target_event_instance_id="traj_fixed_ev002",
+        target_event_id="relationship_family_death",
+        target_event_label="가족 사망",
+        memory_path="cashflow.recent_one_off_expense",
+        operation="update",
+        first_visible_checkpoint=30,
+        evidence_sessions=("S030",),
+        evidence_turns=("S030:2",),
+        before_state={"value": {"amount_krw": 2000000}, "status": "current"},
+        after_state={"value": {"amount_krw": 3000000}, "status": "current"},
+        value_selector="amount_krw",
+        question_scope="latest_window",
+        option_pool_type="numeric",
+        option_pool=(3000000, 4000000, 5000000, 7000000),
+    )
+    checkpoints = [
+        Stage2Checkpoint(
+            trajectory_id="traj_fixed",
+            prefix_id="traj_fixed_pfx015",
+            checkpoint_session_count=15,
+            visible_session_ids=tuple(f"S{i:03d}" for i in range(1, 16)),
+            targets=(count_target,),
+        ),
+        Stage2Checkpoint(
+            trajectory_id="traj_fixed",
+            prefix_id="traj_fixed_pfx030",
+            checkpoint_session_count=30,
+            visible_session_ids=tuple(f"S{i:03d}" for i in range(1, 31)),
+            targets=(count_target, amount_target),
+        ),
+    ]
+
+    items = ItemBuilder(seed=0).build_stage2(checkpoints)
+
+    assert [option.text for option in items[0].options] == [
+        "1명", "2명", "3명", "4명"
+    ]
+    assert [option.text for option in items[1].options] == [
+        "3,000,000원", "4,000,000원", "5,000,000원", "7,000,000원"
+    ]
+
+
+def test_stage2_numeric_distractors_are_trajectory_local():
+    from fin_life_benchmark.benchmark.mcq_input import Stage2Checkpoint, Stage2Target
+
+    def target(trajectory_id, event_id, value):
+        return Stage2Target(
+            canonical_target_id=f"{trajectory_id}:{event_id}",
+            trajectory_id=trajectory_id,
+            target_event_instance_id=f"{trajectory_id}_ev001",
+            target_event_id="crisis_health_event",
+            target_event_label="건강 사건",
+            memory_path="cashflow.recent_one_off_expense",
+            operation="update",
+            first_visible_checkpoint=15,
+            evidence_sessions=("S015",),
+            evidence_turns=("S015:2",),
+            before_state={"value": None, "status": "not_applicable"},
+            after_state={"value": {"amount_krw": value}, "status": "current"},
+            value_selector="amount_krw",
+            option_pool_type="numeric",
+            option_pool=(100, 200, 300, 400, 500, 600, 700, 800),
         )
+
+    local = target("traj_a", "ev_a", 100)
+    foreign = target("traj_b", "ev_b", 900)
+    checkpoints = [
+        Stage2Checkpoint("traj_a", "pfx_a", 15, ("S001",), (local,)),
+        Stage2Checkpoint("traj_b", "pfx_b", 15, ("S001",), (foreign,)),
+    ]
+    items = ItemBuilder(seed=0).build_stage2(checkpoints)
+
+    assert all("900" not in option.text for option in items[0].options)

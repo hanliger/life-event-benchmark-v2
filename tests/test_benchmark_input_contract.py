@@ -83,3 +83,19 @@ def test_public_exports_strip_private_annotations_and_gold():
     assert set(safe_session) == {"session_id", "trajectory_id", "turns"}
     assert "gold" not in safe_item
     assert set(safe_item["options"][0]) == {"option_id", "text"}
+
+
+def test_visible_sessions_rejects_incomplete_context():
+    item = {
+        "trajectory_id": "traj_001",
+        "visible_sessions": ["S001", "S002"],
+    }
+    sessions = {
+        ("traj_001", "S001"): {"trajectory_id": "traj_001", "session_id": "S001"},
+    }
+    try:
+        _visible_sessions(item, sessions)
+    except ValueError as exc:
+        assert "S002" in str(exc)
+    else:
+        raise AssertionError("missing visible sessions must fail loudly")

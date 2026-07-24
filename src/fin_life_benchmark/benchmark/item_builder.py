@@ -103,6 +103,8 @@ class ItemBuilder:
             if isinstance(value, dict):
                 return value.get("amount_krw", value.get("amount"))
             return value
+        if selector == "stage_transition":
+            return "no_change" if target.operation == "no_change" else value
         if selector == "property_address":
             if isinstance(value, list):
                 matched: list[Any] = []
@@ -124,6 +126,33 @@ class ItemBuilder:
                 return None
             if isinstance(value, dict):
                 return value.get("address", value)
+        if selector in {"property_loan_type", "property_ownership_status"}:
+            property_record: dict[str, Any] | None = None
+            if isinstance(value, list):
+                for item in value:
+                    if not isinstance(item, dict):
+                        continue
+                    event_keys = {
+                        item.get("acquisition_event_instance_id"),
+                        item.get("disposal_event_instance_id"),
+                        item.get("event_instance_id"),
+                    }
+                    if target.target_event_instance_id in event_keys:
+                        property_record = item
+            elif isinstance(value, dict):
+                property_record = value
+
+            if property_record is None:
+                return None
+            if selector == "property_ownership_status":
+                return property_record.get("ownership_status")
+
+            mortgage_status = property_record.get("mortgage_status")
+            if mortgage_status == "active":
+                return "mortgage"
+            if mortgage_status == "none":
+                return "none"
+            return mortgage_status
         return value
 
     @staticmethod
@@ -149,7 +178,35 @@ class ItemBuilder:
         if isinstance(value, (int, float)):
             if target.value_selector == "amount_krw" or "expense" in target.memory_path:
                 return f"{value:,.0f}원"
+            if target.option_pool_type == "count":
+                return f"{value:,.0f}명"
             return f"{value:,}" if isinstance(value, int) else str(value)
+        if target.memory_path == "housing.contract_type" and value == "other":
+            return "주거 유형이 언급되지 않음"
+        if target.value_selector == "property_loan_type":
+            loan_labels = {
+                "none": "대출 없음",
+                "credit_loan": "신용대출",
+                "jeonse_loan": "전세자금대출",
+                "mortgage": "주택담보대출",
+            }
+            return loan_labels.get(str(value), str(value))
+        if target.memory_path == "housing.mortgage_status":
+            mortgage_labels = {
+                "none": "주택담보대출 없음",
+                "active": "주택담보대출 보유",
+                "closed": "주택담보대출 종료",
+                "unknown": "주택담보대출 상태 확인 필요",
+            }
+            return mortgage_labels.get(str(value), str(value))
+        if target.value_selector == "property_ownership_status":
+            ownership_labels = {
+                "owned": "현재 보유 중",
+                "sold": "매각 완료",
+                "pending_sale": "매각 예정",
+                "unknown": "확인 불가",
+            }
+            return ownership_labels.get(str(value), str(value))
         translations = {
             "stable": "안정적",
             "variable": "변동적",
@@ -176,6 +233,7 @@ class ItemBuilder:
             "enrolled": "교육 과정 등록",
             "study_abroad": "유학 중",
             "completed": "교육 과정 완료",
+            "no_change": "변화 없음",
             "irp": "IRP",
             "receiving": "연금 수령",
             "both": "IRP 및 연금 수령",
@@ -202,6 +260,17 @@ class ItemBuilder:
         all_targets: list[Stage2Target],
     ) -> tuple[Any, list[Any]]:
         correct = self._project_value(target, target.after_state)
+        policy_values = self._unique_values(list(target.option_pool))
+        if len(policy_values) == 4:
+            policy_keys = {self._value_key(value) for value in policy_values}
+            if self._value_key(correct) not in policy_keys:
+                raise ValueError(
+                    "Stage 2 gold value is outside the fixed four-option policy pool: "
+                    f"{target.canonical_target_id}; value={correct!r}; "
+                    f"pool={policy_values!r}"
+                )
+            return correct, policy_values
+
         before = self._project_value(target, target.before_state)
         candidates: list[Any] = [correct]
         if self._value_key(before) != self._value_key(correct):
@@ -212,6 +281,8 @@ class ItemBuilder:
         # same trajectory, while keeping the correct value tied to this event.
         if target.option_pool_type in {"entity", "numeric"}:
             for sibling in all_targets:
+                if sibling.trajectory_id != target.trajectory_id:
+                    continue
                 if sibling.memory_path != target.memory_path:
                     continue
                 sibling_value = self._project_value(sibling, sibling.after_state)
@@ -327,6 +398,13 @@ class ItemBuilder:
             )
 
         correct_options = [option for option in options if option.correct]
+        option_ids = [option.option_id for option in options]
+        option_texts = [option.text for option in options]
+        if option_ids != list("ABCD") or len(set(option_texts)) != 4:
+            raise ValueError(
+                f"stage2 target must have four distinct A-D options: "
+                f"{target.canonical_target_id}"
+            )
         if len(correct_options) != 1:
             raise ValueError(
                 f"stage2 target must have exactly one correct option: "
@@ -339,14 +417,39 @@ class ItemBuilder:
         target: Stage2Target,
         initial_memory_by_traj: dict[str, dict[str, Any]],
         all_targets: list[Stage2Target],
+        window_size: int,
     ) -> tuple[str, list[CounterfactualOption], dict[str, Any], dict[str, Any]]:
         question_label = target.question_label
         if question_label in {"memory", target.memory_path}:
             question_label = self._memory_label(target.memory_path)
+        if question_label.startswith("현재 "):
+            question_label = question_label.removeprefix("현재 ")
         particle = self._topic_particle(question_label)
-        question = (
-            f"상담 이력에서 확인되는 {question_label}{particle} 무엇인가?"
-        )
+        window_end = target.first_visible_checkpoint
+        window_start = max(1, window_end - window_size + 1)
+        window_range = f"S{window_start:03d}~S{window_end:03d}"
+        if target.question_scope == "latest_window":
+            question_prefix = (
+                f"제공된 전체 상담 이력을 참고하여, {window_range}에서 "
+                f"가장 최근에 기록된 {question_label}{particle}"
+            )
+        else:
+            question_prefix = (
+                f"제공된 전체 상담 이력 기준, 현재 {question_label}{particle}"
+            )
+        if target.question_template:
+            question = (
+                target.question_template
+                .replace("{window_start}", f"S{window_start:03d}")
+                .replace("{window_end}", f"S{window_end:03d}")
+                .replace("{window_range}", window_range)
+            )
+        elif target.option_pool_type == "count":
+            question = f"{question_prefix} 몇 명인가?"
+        elif target.option_pool_type == "numeric" and target.value_selector == "amount_krw":
+            question = f"{question_prefix} 얼마인가?"
+        else:
+            question = f"{question_prefix} 무엇인가?"
         options, correct_id = self._stage2_options_for_target(target, all_targets)
         gold = {
             "correct_option": correct_id,
@@ -370,9 +473,10 @@ class ItemBuilder:
             "target_event_label": target.target_event_label,
             "memory_path": target.memory_path,
             "value_selector": target.value_selector,
+            "question_template": target.question_template,
             "question_label": target.question_label,
+            "question_scope": target.question_scope,
             "option_pool_type": target.option_pool_type,
-            "policy_fallback": target.policy_fallback,
             "operation": target.operation,
             "first_visible_checkpoint": target.first_visible_checkpoint,
             "evidence_sessions": list(target.evidence_sessions),
@@ -386,11 +490,16 @@ class ItemBuilder:
     def build_stage2(
         self,
         checkpoints: list[Stage2Checkpoint],
-        sessions_by_traj: dict[str, list[dict[str, Any]]] | None = None,
         initial_memory_by_traj: dict[str, dict[str, Any]] | None = None,
+        window_size: int = 15,
     ) -> list[BenchmarkItem]:
-        """Build every prior event question at every cumulative checkpoint."""
-        del sessions_by_traj  # session records are used while building targets
+        """Build one question for the event in each checkpoint's latest window.
+
+        The visible context remains cumulative, but previously occurred events
+        are not re-asked at later checkpoints.
+        """
+        if window_size <= 0:
+            raise ValueError("window_size must be positive")
         initial_memory_by_traj = initial_memory_by_traj or {}
         all_targets_by_id: dict[str, Stage2Target] = {}
         for checkpoint in checkpoints:
@@ -404,8 +513,19 @@ class ItemBuilder:
         items: list[BenchmarkItem] = []
 
         for checkpoint in checkpoints:
+            current_targets = [
+                target
+                for target in checkpoint.targets
+                if target.first_visible_checkpoint
+                == checkpoint.checkpoint_session_count
+            ]
+            if len(current_targets) > 1:
+                raise ValueError(
+                    "Stage 2 expects one newly occurred event target per checkpoint: "
+                    f"{checkpoint.trajectory_id}/S{checkpoint.checkpoint_session_count:03d}"
+                )
             ordered_targets = sorted(
-                checkpoint.targets,
+                current_targets,
                 key=lambda target: target.canonical_target_id,
             )
             for target in ordered_targets:
@@ -415,6 +535,7 @@ class ItemBuilder:
                         target,
                         initial_memory_by_traj,
                         all_targets,
+                        window_size,
                     )
                     canonical_cache[target.canonical_target_id] = payload
 

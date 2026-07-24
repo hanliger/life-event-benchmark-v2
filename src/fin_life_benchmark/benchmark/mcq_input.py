@@ -44,7 +44,8 @@ class Stage2Target:
 
     The target is created once, at the first 15-session checkpoint where the
     occurred event and its dialogue-grounded memory update are both visible.
-    Later checkpoints reuse this exact target and its answer choices.
+    Later checkpoints retain it as eligible context, while the item builder
+    emits only the target newly created at the current checkpoint.
     """
 
     canonical_target_id: str
@@ -60,10 +61,11 @@ class Stage2Target:
     before_state: dict[str, Any]
     after_state: dict[str, Any]
     value_selector: str = "value"
+    question_template: str | None = None
     question_label: str = "memory"
+    question_scope: str = "current_prefix"
     option_pool_type: str = "categorical"
     option_pool: tuple[Any, ...] = ()
-    policy_fallback: bool = False
 
 
 @dataclass(frozen=True)
@@ -141,9 +143,37 @@ def load_stage2_question_policy(path: Path | str) -> dict[str, dict[str, Any]]:
         option_pool = config.get("option_pool") or []
         if not isinstance(option_pool, list):
             raise ValueError(f"Stage 2 option_pool for {event_id!r} must be a list")
+        target_memory_path = str(config.get("target_memory_path") or "")
+        if not target_memory_path:
+            raise ValueError(
+                f"Stage 2 policy for {event_id!r} must define target_memory_path"
+            )
+        option_pool_type = str(config.get("option_pool_type") or "categorical")
+        if option_pool_type not in {"categorical", "count", "numeric", "entity"}:
+            raise ValueError(
+                f"unsupported Stage 2 option_pool_type for {event_id!r}: "
+                f"{option_pool_type!r}"
+            )
+        unique_pool = {
+            json.dumps(value, ensure_ascii=False, sort_keys=True, default=str)
+            for value in option_pool
+        }
+        if len(unique_pool) < 4:
+            raise ValueError(
+                f"Stage 2 option_pool for {event_id!r} must contain at least four "
+                "distinct values"
+            )
+        question_scope = str(config.get("question_scope") or "current_prefix")
+        if question_scope not in {"current_prefix", "latest_window"}:
+            raise ValueError(
+                f"unsupported Stage 2 question_scope for {event_id!r}: "
+                f"{question_scope!r}"
+            )
         policy[str(event_id)] = {
             **config,
-            "target_memory_path": str(config.get("target_memory_path") or ""),
+            "target_memory_path": target_memory_path,
+            "option_pool_type": option_pool_type,
+            "question_scope": question_scope,
             "option_pool": tuple(option_pool),
         }
     return policy
@@ -311,10 +341,6 @@ def _memory_cell_snapshot(cell: dict[str, Any] | None) -> dict[str, Any]:
     }
 
 
-def _state_signature(state: dict[str, Any]) -> str:
-    return json.dumps(state, ensure_ascii=False, sort_keys=True, default=str)
-
-
 def _update_fingerprint(
     source_event_instance_id: str,
     path: str,
@@ -456,32 +482,44 @@ def build_stage2_checkpoints(
                 config = question_policy.get(event_id, {})
                 preferred_path = str(config.get("target_memory_path") or "")
                 candidates = updates_by_source.get(source, [])
-                if not candidates:
-                    continue
-                def meaningful(update: dict[str, Any]) -> bool:
-                    update_path = str(update.get("path") or "")
-                    before = _memory_cell_snapshot(previous_state.get(update_path))
-                    after = _memory_cell_snapshot(current_state.get(update_path))
-                    return _state_signature(before) != _state_signature(after)
-
                 preferred = [
                     update for update in candidates
                     if str(update.get("path") or "") == preferred_path
-                    and meaningful(update)
                 ]
-                meaningful_candidates = [update for update in candidates if meaningful(update)]
-                policy_fallback = not bool(preferred)
-                if not meaningful_candidates:
-                    continue
-                selected = sorted(
-                    preferred or meaningful_candidates,
-                    key=lambda update: (
-                        {"update": 0, "archive": 1, "mark_stale": 2}.get(
-                            str(update.get("operation") or ""), 9
+                if preferred:
+                    selected = sorted(
+                        preferred,
+                        key=lambda update: (
+                            {"update": 0, "archive": 1, "mark_stale": 2}.get(
+                                str(update.get("operation") or ""), 9
+                            ),
+                            str(update.get("path") or ""),
                         ),
-                        str(update.get("path") or ""),
-                    ),
-                )[0]
+                    )[0]
+                elif (
+                    config.get("allow_noop_current_value") is True
+                    and preferred_path
+                    and isinstance(current_state.get(preferred_path), dict)
+                ):
+                    # Some events keep the same value, so the delta engine
+                    # correctly omits an update. The checkpoint memory remains
+                    # authoritative for these explicitly configured policies.
+                    previous_cell = previous_state.get(preferred_path) or {}
+                    current_cell = current_state.get(preferred_path) or {}
+                    selected = {
+                        "path": preferred_path,
+                        "operation": "no_change",
+                        "old_value": copy.deepcopy(previous_cell.get("value")),
+                        "new_value": copy.deepcopy(current_cell.get("value")),
+                        "source_event_instance_id": source,
+                        "evidence_turns": copy.deepcopy(
+                            event.get("evidence_turns") or []
+                        ),
+                    }
+                else:
+                    # Keep the event-to-memory policy fixed. Do not silently
+                    # replace a missing target path with another memory path.
+                    continue
                 operation = str(selected.get("operation") or "")
                 path = str(selected.get("path") or "")
 
@@ -511,8 +549,6 @@ def build_stage2_checkpoints(
 
                 before_state = _memory_cell_snapshot(previous_state.get(path))
                 after_state = _memory_cell_snapshot(current_state.get(path))
-                if _state_signature(before_state) == _state_signature(after_state):
-                    continue
 
                 target_id = _update_fingerprint(
                     source,
@@ -538,22 +574,7 @@ def build_stage2_checkpoints(
                         turn for turn in evidence_turns if turn.split(":", 1)[0] in occurred_set
                     )
 
-                if policy_fallback:
-                    if (
-                        path.endswith(".address")
-                        or path.endswith(".employer")
-                        or path == "housing.properties"
-                    ):
-                        fallback_option_pool_type = "entity"
-                    elif "expense" in path or path.endswith(".amount"):
-                        fallback_option_pool_type = "numeric"
-                    else:
-                        fallback_option_pool_type = "categorical"
-                    target_config = {
-                        "option_pool_type": fallback_option_pool_type,
-                    }
-                else:
-                    target_config = config
+                target_config = config
                 targets[target_id] = Stage2Target(
                     canonical_target_id=target_id,
                     trajectory_id=trajectory_id,
@@ -570,14 +591,21 @@ def build_stage2_checkpoints(
                     before_state=before_state,
                     after_state=after_state,
                     value_selector=str(target_config.get("value_selector") or "value"),
+                    question_template=(
+                        str(target_config["question_template"])
+                        if target_config.get("question_template")
+                        else None
+                    ),
                     question_label=str(
                         target_config.get("question_label") or path
+                    ),
+                    question_scope=str(
+                        target_config.get("question_scope") or "current_prefix"
                     ),
                     option_pool_type=str(
                         target_config.get("option_pool_type") or "categorical"
                     ),
                     option_pool=tuple(target_config.get("option_pool") or []),
-                    policy_fallback=policy_fallback,
                 )
 
             missing_sources = [
@@ -596,7 +624,7 @@ def build_stage2_checkpoints(
                         f"{source}({event.get('event_id')})"
                     )
                 raise ValueError(
-                    f"occurred event has no non-pending memory transition at "
+                    f"occurred event has no configured memory-path update at "
                     f"its {window_size}-session checkpoint: "
                     f"{trajectory_id}/S{checkpoint_count:03d}; "
                     f"events={details}"

@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 
 import _bootstrap  # noqa: F401
@@ -43,9 +44,19 @@ def _load_session_records(directory: Path) -> dict[str, list[dict]]:
             trajectory_id = session.get("trajectory_id")
             if not trajectory_id:
                 raise ValueError(f"session record missing trajectory_id: {path}")
-            records_by_traj.setdefault(str(trajectory_id), []).append(session)
+            session_id = str(session.get("session_id") or "")
+            if not re.fullmatch(r"S\d+", session_id):
+                raise ValueError(
+                    f"session record has invalid session_id={session_id!r}: {path}"
+                )
+            records = records_by_traj.setdefault(str(trajectory_id), [])
+            if any(str(row.get("session_id")) == session_id for row in records):
+                raise ValueError(
+                    f"duplicate session_id {trajectory_id}/{session_id}: {path}"
+                )
+            records.append(session)
     for records in records_by_traj.values():
-        records.sort(key=lambda row: str(row["session_id"]))
+        records.sort(key=lambda row: int(str(row["session_id"])[1:]))
     return records_by_traj
 
 
@@ -55,7 +66,16 @@ def main() -> int:
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("--prefix-gold", required=True)
-    parser.add_argument("--sessions-dir", required=True)
+    parser.add_argument(
+        "--trajectory-id",
+        default=None,
+        help="build items for one trajectory only",
+    )
+    parser.add_argument(
+        "--sessions-dir",
+        default=None,
+        help="legacy input directory used to infer the sibling gold directory",
+    )
     parser.add_argument(
         "--gold-dir",
         default=None,
@@ -80,14 +100,63 @@ def main() -> int:
     ensure_dialogue_sessions(args.sessions_dir)
 
     prefixes = list(read_prefix_gold(Path(args.prefix_gold)))
+    if args.trajectory_id:
+        prefixes = [
+            prefix
+            for prefix in prefixes
+            if str(prefix.get("trajectory_id")) == args.trajectory_id
+        ]
     if not prefixes:
-        raise SystemExit("empty prefix gold — run export_prefix_gold.py first")
+        scope = f" for {args.trajectory_id}" if args.trajectory_id else ""
+        raise SystemExit(
+            f"empty prefix gold{scope} — run export_prefix_gold.py first"
+        )
 
-    sessions_dir = Path(args.sessions_dir)
-    gold_dir = Path(args.gold_dir) if args.gold_dir else sessions_dir.parent / "gold"
+    sessions_dir = Path(args.sessions_dir) if args.sessions_dir else None
+    if args.gold_dir:
+        gold_dir = Path(args.gold_dir)
+    elif sessions_dir:
+        gold_dir = sessions_dir.parent / "gold"
+    else:
+        raise SystemExit("provide --gold-dir (or legacy --sessions-dir)")
     sessions_by_traj = _load_session_records(gold_dir)
     if not sessions_by_traj:
         raise SystemExit(f"no session-level gold JSONL files under {gold_dir}")
+    prefix_trajectory_ids = {str(prefix["trajectory_id"]) for prefix in prefixes}
+    missing_session_gold = sorted(prefix_trajectory_ids - set(sessions_by_traj))
+    if missing_session_gold:
+        raise SystemExit(
+            "session-level gold is missing for prefix trajectories: "
+            f"{missing_session_gold}; expected files under {gold_dir}"
+        )
+    missing_session_ids: dict[str, list[str]] = {}
+    for trajectory_id in sorted(prefix_trajectory_ids):
+        expected = {
+            str(session_id)
+            for prefix in prefixes
+            if str(prefix["trajectory_id"]) == trajectory_id
+            for session_id in prefix.get("visible_sessions") or []
+        }
+        actual = {
+            str(session.get("session_id"))
+            for session in sessions_by_traj[trajectory_id]
+        }
+        missing = sorted(
+            expected - actual,
+            key=lambda session_id: int(session_id[1:]),
+        )
+        if missing:
+            missing_session_ids[trajectory_id] = missing
+    if missing_session_ids:
+        details = "; ".join(
+            f"{trajectory_id}: {missing[:5]}"
+            + (" ..." if len(missing) > 5 else "")
+            for trajectory_id, missing in missing_session_ids.items()
+        )
+        raise SystemExit(
+            "session-level gold is incomplete for prefix sessions: "
+            f"{details}; expected files under {gold_dir}"
+        )
 
     initial_memory_by_traj: dict[str, dict] = {}
     for path in sorted(Path(args.trajectories_dir).glob("traj_*.json")):
@@ -96,6 +165,14 @@ def main() -> int:
         )
         initial_memory_by_traj[trajectory.trajectory_id] = serialize_memory_state(
             trajectory.initial_financial_memory_state
+        )
+    missing_initial_memory = sorted(
+        prefix_trajectory_ids - set(initial_memory_by_traj)
+    )
+    if missing_initial_memory:
+        raise SystemExit(
+            "initial trajectory state is missing for prefix trajectories: "
+            f"{missing_initial_memory}; expected files under {args.trajectories_dir}"
         )
 
     question_policy = load_stage2_question_policy(args.stage2_policy)
@@ -111,6 +188,7 @@ def main() -> int:
     items = builder.build_stage2(
         checkpoints,
         initial_memory_by_traj=initial_memory_by_traj,
+        window_size=args.window_size,
     )
     if args.max_items is not None:
         items = items[: args.max_items]

@@ -72,7 +72,10 @@ def _load_sessions_by_id(sessions_dir: Path) -> dict[tuple[str, str], dict[str, 
 
 def _load_dialogues_by_id(dialogues_dir: Path) -> dict[tuple[str, str], dict[str, Any]]:
     dialogues: dict[tuple[str, str], dict[str, Any]] = {}
-    for path in sorted(dialogues_dir.glob("traj_*.jsonl")):
+    paths = sorted(dialogues_dir.glob("traj_*.jsonl"))
+    if not paths:
+        paths = sorted(dialogues_dir.glob("sessions_*.jsonl"))
+    for path in paths:
         for dialogue in read_jsonl(path):
             key = (dialogue["trajectory_id"], dialogue["session_id"])
             if key in dialogues:
@@ -84,18 +87,25 @@ def _visible_sessions(
     sessions_by_id: dict[tuple[str, str], dict[str, Any]],
 ) -> list[dict[str, Any]]:
     trajectory_id = item["trajectory_id"]
-    return [
-        sessions_by_id[(trajectory_id, session_id)]
-        for session_id in item.get("visible_sessions", [])
-        if (trajectory_id, session_id) in sessions_by_id
+    session_ids = list(item.get("visible_sessions", []))
+    missing = [
+        session_id
+        for session_id in session_ids
+        if (trajectory_id, session_id) not in sessions_by_id
     ]
+    if missing:
+        raise ValueError(
+            f"missing visible sessions for {trajectory_id}: {missing[:5]}"
+            + (" ..." if len(missing) > 5 else "")
+        )
+    return [sessions_by_id[(trajectory_id, session_id)] for session_id in session_ids]
 
 
 def _build_stage2_prompt(item: dict[str, Any], sessions: list[dict[str, Any]]) -> str:
     lines = [
         "다음은 한 고객의 은행 상담 세션 이력입니다.",
-        "전체 상담 이력을 참고하되, 문제에 지정된 occurred Life Event 이후의 memory path 변화만 판단하세요.",
-        "초기 금융 메모리는 변화 전 상태를 확인하는 참고 정보로 사용하세요. 추측하지 말고, 보기 중 하나만 고르세요.",
+        "제공된 전체 상담 이력과 질문에 지정된 시간 범위를 기준으로 memory 상태를 판단하세요.",
+        "초기 금융 메모리는 전체 이력의 시작 상태를 확인하는 참고 정보로 사용하세요. 추측하지 말고, 보기 중 하나만 고르세요.",
         "",
         _format_sessions(sessions),
         "",
@@ -255,15 +265,15 @@ def main() -> int:
     if not items:
         raise SystemExit("no benchmark items loaded")
 
-    has_direct_stage1 = any(item.get("stage") == "stage1_event_identification" for item in items)
-    sessions_by_id = _load_sessions_by_id(Path(args.sessions_dir)) if not has_direct_stage1 else {}
-    dialogues_by_id = (
-        _load_dialogues_by_id(Path(args.dialogues_dir))
-        if has_direct_stage1 and args.dialogues_dir
-        else {}
-    )
-    if has_direct_stage1 and not dialogues_by_id:
-        raise SystemExit("stage1_event_identification requires --dialogues-dir")
+    has_stage1 = any(item.get("stage") == "stage1_event_identification" for item in items)
+    has_stage2 = any(item.get("stage") == "stage2_memory_mcq" for item in items)
+    dialogue_input_dir = Path(args.dialogues_dir or args.sessions_dir)
+    sessions_by_id = _load_sessions_by_id(dialogue_input_dir) if has_stage2 else {}
+    dialogues_by_id = _load_dialogues_by_id(dialogue_input_dir) if has_stage1 else {}
+    if has_stage1 and not dialogues_by_id:
+        raise SystemExit(f"no dialogue records under {dialogue_input_dir}")
+    if has_stage2 and not sessions_by_id:
+        raise SystemExit(f"no dialogue records under {dialogue_input_dir}")
     client = None
     if args.execute:
         client = LLMClient(provider=provider, model=model, temperature=args.temperature, max_tokens=args.max_tokens)
@@ -280,11 +290,7 @@ def main() -> int:
     ).read_text(encoding="utf-8").strip()
     for item in tqdm(items, desc="evaluate"):
         if item.get("stage") == "stage1_event_identification":
-            visible = [
-                dialogues_by_id[(item["trajectory_id"], session_id)]
-                for session_id in item.get("visible_sessions", [])
-                if (item["trajectory_id"], session_id) in dialogues_by_id
-            ]
+            visible = _visible_sessions(item, dialogues_by_id)
         else:
             visible = _visible_sessions(item, sessions_by_id)
         prompt = _build_prompt(item, visible)

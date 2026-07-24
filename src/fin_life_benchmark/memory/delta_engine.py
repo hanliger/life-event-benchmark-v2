@@ -49,8 +49,10 @@ class DeltaEngine:
         paths = paths or RepoPaths.default()
         self.registry: dict[str, Any] = load_yaml(paths.registries / "event_to_memory_delta.yaml")
 
-    def _resolve_value(self, spec: dict[str, Any], instance: EventInstance) -> Any:
-        value_from = spec.get("value_from")
+    def _resolve_value(
+        self, spec: dict[str, Any], instance: EventInstance, key: str = "value_from"
+    ) -> Any:
+        value_from = spec.get(key)
         if value_from is None:
             return None
         if value_from.startswith("param:"):
@@ -217,6 +219,11 @@ class DeltaEngine:
                 path=spec["path"],
                 operation=op,
                 new_value=self._resolve_value(spec, instance),
+                # An explicit old_value_from pins the prior value from event
+                # params instead of letting memory.apply() read it from a shared
+                # cell (e.g. education stage, where the cell may hold another
+                # child's stage). None leaves apply() to fill it as before.
+                old_value=self._resolve_value(spec, instance, key="old_value_from"),
                 month_index=month_index,
                 source_event_instance_id=instance.event_instance_id,
                 event_status=to_status.value,

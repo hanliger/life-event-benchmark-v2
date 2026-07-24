@@ -15,6 +15,7 @@ from ..actions.impact_engine import ImpactEngine
 from ..actions.models import StandingAction
 from ..fsm.event_lifecycle import (
     apply_occurred_to_life_state,
+    education_previous_stage,
     plan_lifecycle,
     sample_event_params,
     validate_event_params,
@@ -201,7 +202,12 @@ class TrajectorySimulator:
                     )
                     if child is not None:
                         params["child_age_months"] = child.age * 12
-                        params["previous_stage"] = child.education_stage
+                        # Prior stage is the step below new_stage in the ordered
+                        # progression, not the shared education cell (which may
+                        # hold another child's or a later stage).
+                        params["previous_stage"] = education_previous_stage(
+                            params.get("new_stage")
+                        )
                 validate_event_params(template, life_state, params)
             event_instance_id = f"{trajectory_id}_ev{instance_counter:03d}"
             if template.event_id == "housing_home_purchase":

@@ -434,7 +434,14 @@ def test_end_to_end_mock_pipeline_in_memory():
     # too, but generation now reconciles grounded slots against the realized
     # turns, so ungrounded provided_slots no longer occur -- see
     # DialogueGenerator._reconcile_with_dialogue.)
-    mock_allowed = {"near_direct_event_disclosure"}
+    # calc_result_without_required_input and assistant_premature_slot_disclosure
+    # are content rules real generation satisfies via reject+repair; the mock's
+    # fixed templates cannot, so they are mock-generation limitations here too.
+    mock_allowed = {
+        "near_direct_event_disclosure",
+        "calc_result_without_required_input",
+        "assistant_premature_slot_disclosure",
+    }
     violations = [
         violation
         for session in sessions

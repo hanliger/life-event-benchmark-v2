@@ -555,11 +555,13 @@ education_child_stage_entry:
       - path: education.child_education_stage
         operation: set_pending
         value_from: "param:new_stage"
+        old_value_from: "param:previous_stage"
   on_occurred:
     memory_updates:
       - path: education.child_education_stage
         operation: update
         value_from: "param:new_stage"
+        old_value_from: "param:previous_stage"
       - path: goals.child_education_goal
         operation: update
         value_from: "literal:active"

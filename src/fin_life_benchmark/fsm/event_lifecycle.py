@@ -16,6 +16,24 @@ from .models import EventStatus, LifeEventTemplate
 
 MAX_COUNT_BELOW_FIVE = 4
 
+# Ordered child education stages. A stage-entry event always advances by one, so
+# the recorded transition is derived from this order (previous = the stage right
+# below new_stage) rather than from the shared, non-child-specific
+# education.child_education_stage memory cell -- which could otherwise hold
+# another child's stage or a later stage and yield a same-stage/backward update.
+_EDU_STAGE_ORDER = ["pre_school", "primary", "middle", "high"]
+
+
+def _normalize_edu_stage(stage: Any) -> str:
+    return "pre_school" if stage in (None, "preschool") else str(stage)
+
+
+def education_previous_stage(new_stage: Any) -> str:
+    """The stage immediately below ``new_stage`` in the education progression."""
+    new = _normalize_edu_stage(new_stage)
+    idx = _EDU_STAGE_ORDER.index(new) if new in _EDU_STAGE_ORDER else 0
+    return _EDU_STAGE_ORDER[idx - 1] if idx > 0 else _EDU_STAGE_ORDER[0]
+
 
 def plan_lifecycle(
     template: LifeEventTemplate,
@@ -207,8 +225,11 @@ def sample_event_params(
         child, stage = candidates[0] if candidates else (state.children[0], "primary")
         params["child_id"] = child.child_id
         params["child_age_months"] = child.age * 12
-        params["previous_stage"] = child.education_stage
         params["new_stage"] = stage
+        # Derive the prior stage from the ordered progression so the transition
+        # is always a real forward step for THIS child, independent of the shared
+        # education memory cell.
+        params["previous_stage"] = education_previous_stage(stage)
         params["monthly_edu_cost"] = pick("savings_amounts_krw")
     elif event_id == "crisis_health_event":
         params["one_off_cost"] = rng.choice([1500000, 3000000, 5000000])

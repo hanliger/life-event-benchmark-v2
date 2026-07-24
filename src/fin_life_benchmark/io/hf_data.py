@@ -27,19 +27,38 @@ Configuration (env; all optional except a token for a gated dataset):
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 from pathlib import Path
+import shutil
 from typing import Iterable
 
 DEFAULT_DIALOGUE_REPO = "hangyeul-lee/life-event-benchmark-v2-dialogues"
 SESSION_GLOB = "sessions_*.jsonl"
 DEFAULT_DIALOGUES_SUBDIR = "dialogues"
 DEFAULT_GOLD_SUBDIR = "gold"
+DEFAULT_COUNTERFACTUAL_FILLERS_SUBDIR = "counterfactual_fillers/v1"
 
 
 def _has_sessions(sessions_dir: Path) -> bool:
     return sessions_dir.is_dir() and any(sessions_dir.glob(SESSION_GLOB))
+
+
+def _has_counterfactual_fillers(
+    output_root: Path,
+    trajectory_ids: Iterable[str] | None = None,
+) -> bool:
+    sessions_dir = output_root / "sessions"
+    available = {
+        path.stem.removeprefix("fillers_")
+        for path in sessions_dir.glob("fillers_traj_*.jsonl")
+    }
+    if trajectory_ids is not None:
+        return set(trajectory_ids) <= available
+    # The frozen v1 bank contract contains exactly 20 persona files. Treat a
+    # partial prior fetch as absent when the caller requests the full bank.
+    return len(available) >= 20
 
 
 def _token(explicit: str | None) -> str | None:
@@ -54,6 +73,14 @@ def _read_jsonl(path: Path) -> list[dict]:
             if line:
                 rows.append(json.loads(line))
     return rows
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def ensure_dialogue_sessions(
@@ -179,3 +206,177 @@ def fetch_dialogue_sessions(
             f"(requested: {sorted(wanted) if wanted else 'all'})."
         )
     return sessions_dir
+
+
+def ensure_counterfactual_fillers(
+    output_root: Path | str,
+    *,
+    repo_id: str | None = None,
+    revision: str | None = None,
+    token: str | None = None,
+    trajectory_ids: Iterable[str] | None = None,
+    force: bool = False,
+) -> Path:
+    """Return a local timeless filler bank, fetching the frozen v1 bank if absent."""
+    output_root = Path(output_root)
+    if not force and _has_counterfactual_fillers(output_root, trajectory_ids):
+        return output_root
+    return fetch_counterfactual_fillers(
+        output_root,
+        repo_id=repo_id,
+        revision=revision,
+        token=token,
+        trajectory_ids=trajectory_ids,
+    )
+
+
+def fetch_counterfactual_fillers(
+    output_root: Path | str,
+    *,
+    repo_id: str | None = None,
+    revision: str | None = None,
+    token: str | None = None,
+    trajectory_ids: Iterable[str] | None = None,
+) -> Path:
+    """Download the frozen counterfactual filler bank and reproducibility metadata.
+
+    HF layout::
+
+        counterfactual_fillers/v1/
+          sessions/fillers_traj_XXX.jsonl
+          plans/plans_traj_XXX.jsonl
+          audit/*
+          filler_generation_manifest.json
+          artifact_manifest.json
+
+    The same relative layout is materialized under ``output_root``.
+    """
+    output_root = Path(output_root)
+    repo_id = repo_id or os.getenv("HF_DIALOGUE_REPO") or DEFAULT_DIALOGUE_REPO
+    revision = revision or os.getenv("HF_DIALOGUE_REVISION") or None
+    token = _token(token)
+    remote_subdir = (
+        os.getenv("HF_COUNTERFACTUAL_FILLERS_SUBDIR")
+        or DEFAULT_COUNTERFACTUAL_FILLERS_SUBDIR
+    ).strip("/")
+    wanted = set(trajectory_ids) if trajectory_ids is not None else None
+
+    try:
+        from huggingface_hub import snapshot_download
+        from huggingface_hub.utils import HfHubHTTPError
+    except ModuleNotFoundError as exc:  # pragma: no cover
+        raise RuntimeError(
+            "huggingface_hub is required to fetch counterfactual fillers. "
+            "Install it (`pip install huggingface_hub`)."
+        ) from exc
+
+    allow = [
+        f"{remote_subdir}/artifact_manifest.json",
+        f"{remote_subdir}/filler_generation_manifest.json",
+        f"{remote_subdir}/audit/*",
+    ]
+    if wanted:
+        allow.extend(
+            f"{remote_subdir}/{kind}/{prefix}{trajectory_id}.jsonl"
+            for trajectory_id in sorted(wanted)
+            for kind, prefix in (
+                ("sessions", "fillers_"),
+                ("plans", "plans_"),
+            )
+        )
+    else:
+        allow.extend(
+            (
+                f"{remote_subdir}/sessions/*.jsonl",
+                f"{remote_subdir}/plans/*.jsonl",
+            )
+        )
+    try:
+        local_root = Path(
+            snapshot_download(
+                repo_id=repo_id,
+                repo_type="dataset",
+                revision=revision,
+                token=token,
+                allow_patterns=allow,
+            )
+        )
+    except HfHubHTTPError as exc:  # pragma: no cover
+        raise RuntimeError(
+            f"failed to download counterfactual fillers from HF dataset "
+            f"'{repo_id}'{f' (revision {revision})' if revision else ''}: {exc}. "
+            "Set HF_TOKEN for a gated dataset or override HF_DIALOGUE_REPO."
+        ) from exc
+
+    source_root = local_root / remote_subdir
+    session_files = sorted((source_root / "sessions").glob("fillers_traj_*.jsonl"))
+    if wanted is not None:
+        session_files = [
+            path
+            for path in session_files
+            if path.stem.removeprefix("fillers_") in wanted
+        ]
+    if not session_files:
+        raise RuntimeError(
+            f"no counterfactual filler sessions found under "
+            f"'{repo_id}/{remote_subdir}/sessions'."
+        )
+
+    for source in source_root.rglob("*"):
+        if not source.is_file():
+            continue
+        relative = source.relative_to(source_root)
+        if wanted is not None and relative.parent.name in {"sessions", "plans"}:
+            stem = relative.stem.removeprefix("fillers_").removeprefix("plans_")
+            if stem not in wanted:
+                continue
+        destination = output_root / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, destination)
+
+    manifest_path = output_root / "artifact_manifest.json"
+    if manifest_path.exists():
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        hashes = manifest.get("artifact_file_sha256") or {}
+        prefix = f"{remote_subdir}/"
+        for remote_path, expected in hashes.items():
+            if not remote_path.startswith(prefix):
+                continue
+            destination = output_root / remote_path.removeprefix(prefix)
+            # A trajectory-filtered fetch intentionally omits the other persona
+            # files. Verify every artifact that was actually materialized.
+            if destination.exists():
+                actual = _sha256(destination)
+                if actual != expected:
+                    raise RuntimeError(
+                        f"counterfactual filler artifact checksum mismatch: "
+                        f"{destination} (expected {expected}, got {actual})"
+                    )
+
+    copied_sessions = sorted(
+        (output_root / "sessions").glob("fillers_traj_*.jsonl")
+    )
+    selected_sessions = [
+        path
+        for path in copied_sessions
+        if wanted is None or path.stem.removeprefix("fillers_") in wanted
+    ]
+    row_count = 0
+    for path in selected_sessions:
+        rows = _read_jsonl(path)
+        if len(rows) != 20:
+            raise RuntimeError(
+                f"invalid counterfactual filler bank {path}: expected 20 rows, "
+                f"got {len(rows)}"
+            )
+        if any(row.get("source_kind") != "synthetic_reserve" for row in rows):
+            raise RuntimeError(
+                f"invalid counterfactual filler bank {path}: "
+                "source_kind must be synthetic_reserve"
+            )
+        row_count += len(rows)
+    print(
+        f"counterfactual fillers: {len(selected_sessions)} persona file(s), "
+        f"{row_count} rows -> {output_root}"
+    )
+    return output_root

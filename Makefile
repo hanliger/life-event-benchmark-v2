@@ -36,6 +36,7 @@ GOLD_CHECKPOINTS := $(RUN_DIR)/gold/prefix_gold_checkpoints_15.jsonl
 ITEMS_DIR := $(RUN_DIR)/benchmark_items
 QUALITY := $(RUN_DIR)/quality_reports
 EVAL_DIR := $(RUN_DIR)/eval
+CF_ROOT := $(RUN_DIR)/counterfactual_fillers
 REGRESSION_CANARY_ROOT := $(RUN_DIR)/dialogues/regression_canary/$(MODEL_PROFILE)_$(CANARY_SUFFIX)
 CANARY_V2_ROOT := $(RUN_DIR)/dialogues/canary/$(MODEL_PROFILE)_$(CANARY_SUFFIX)
 DIALOGUE_JUDGE_ROOT := $(CANARY_V2_ROOT)/reports/dialogue_judge
@@ -48,7 +49,8 @@ REVIEW_DECISION ?= $(DIALOGUE_JUDGE_ROOT)/judge_review_decision.json
 	dialogue-canary audit-dialogue-canary review-dialogue-canary dialogue-production-remaining \
 	dialogue-regression-canary audit-dialogue-regression-canary dialogue-canary-v2 \
 	audit-dialogue-canary-v2 review-dialogue-canary-v2 score-dialogue-canary-v2 dialogue-judge-gate \
-	coverage-trajectories fetch-dialogues restore-frozen-run dialogue-smoke-dry dialogue-smoke validate-dialogues \
+	coverage-trajectories fetch-dialogues fetch-counterfactual-fillers restore-frozen-run counterfactual-ablation \
+	dialogue-smoke-dry dialogue-smoke validate-dialogues \
 	export-gold build-items evaluate history-filter audit pipeline-smoke test clean-generated \
 	export-gold-controlled build-items-controlled audit-controlled export-public
 
@@ -97,12 +99,22 @@ coverage-trajectories:
 fetch-dialogues:
 	$(PYTHON) scripts/fetch_dialogue_data.py --sessions-dir $(SESS_DIR)
 
+fetch-counterfactual-fillers:
+	$(PYTHON) scripts/fetch_counterfactual_fillers.py --output-root $(CF_ROOT)
+
 # Materialize the FROZEN run (20 trajectories + dialogue sessions) into
 # data/runs/$(RUN_ID)/ from tracked fixtures + HF. Does NOT regenerate the
 # frozen trajectories/sessions; downstream steps (plan/gold/items) rebuild on
 # top of them. Use this to run the next experiment on the existing corpus.
 restore-frozen-run:
 	$(PYTHON) scripts/restore_frozen_run.py --run-id $(RUN_ID)
+
+# One-command reproducible signal-ablation dataset build. Frozen trajectories
+# come from git; canonical sessions and the v1 persona filler bank are fetched
+# from HF only when absent, then complete counterfactual PrefixGold is rebuilt
+# and audited locally. Pin with HF_DIALOGUE_REVISION=<HF commit SHA>.
+counterfactual-ablation:
+	$(PYTHON) scripts/run_counterfactual_ablation.py --run-id $(RUN_ID)
 
 plan-dialogues:
 	$(PYTHON) scripts/build_dialogue_plans.py \

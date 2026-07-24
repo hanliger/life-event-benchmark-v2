@@ -221,21 +221,37 @@ class EvidencePlanner:
         if len(plan.target_action_ids) > 1 and "target_action_ids" not in required:
             required.append("target_action_ids")
         aliases = self.high_risk_contract_registry.get("slot_aliases") or {}
-        available: dict[str, Any] = {}
         context = plan.structured_context or {}
-        self._flatten_grounding((context.get("event") or {}).get("params") or {}, available)
-        self._flatten_grounding(context.get("current_financial_memory") or {}, available)
-        self._flatten_grounding(context.get("current_standing_actions") or [], available)
-        self._flatten_grounding(context.get("action_impacts") or [], available)
-        if plan.target_action_ids:
-            available["target_action_ids"] = list(plan.target_action_ids)
+        # Resolve each slot with source priority, not just alias priority: the
+        # triggering event's params are authoritative for THIS action, so they
+        # win over the persona's pre-existing state. Without this, an alias early
+        # in the list (e.g. a standing transfer's `amount`) would beat the
+        # event's own value (e.g. `amount_krw`) purely by alias order, stamping a
+        # persona-constant amount onto an unrelated action.
+        event_available: dict[str, Any] = {}
+        self._flatten_grounding((context.get("event") or {}).get("params") or {}, event_available)
+        prior_available: dict[str, Any] = {}
+        self._flatten_grounding(context.get("current_financial_memory") or {}, prior_available)
+        self._flatten_grounding(context.get("current_standing_actions") or [], prior_available)
+        self._flatten_grounding(context.get("action_impacts") or [], prior_available)
         grounded: dict[str, Any] = {}
         for slot in required:
             if slot == "explicit_confirmation":
                 continue
-            for alias in aliases.get(slot) or [slot]:
-                value = available.get(alias)
-                if value is not None and value != "" and value != [] and value != {}:
+            if slot == "target_action_ids":
+                if plan.target_action_ids:
+                    grounded[slot] = list(plan.target_action_ids)
+                continue
+            for source in (event_available, prior_available):
+                value = next(
+                    (
+                        source[alias]
+                        for alias in (aliases.get(slot) or [slot])
+                        if source.get(alias) not in (None, "", [], {})
+                    ),
+                    None,
+                )
+                if value is not None:
                     grounded[slot] = value
                     break
         if "product_or_goal" in required and "product_or_goal" not in grounded:

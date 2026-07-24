@@ -23,8 +23,13 @@ from ..io import load_yaml
 from ..llm.client import LLMClient
 from ..persona.models import NormalizedPersona
 from ..fsm.registry import load_life_event_templates
-from ..validation.dialogue_validator import DialogueValidator, grounded_concrete_values
+from ..validation.dialogue_validator import (
+    DialogueValidator,
+    grounded_concrete_values,
+    reconcile_provided_slots,
+)
 from .models import (
+    ActionExecutionContract,
     ActionResolution,
     CueAnnotation,
     DialogueGenerationPlan,
@@ -35,6 +40,24 @@ from .models import (
 
 _HIGH_RISK_FA = {"FA-07", "FA-08", "FA-09", "FA-10"}
 _REVIEW_ONLY_VALIDATION_CODES = {"near_direct_event_disclosure"}
+
+# Calculation/simulation tasks require the user to state a concrete monetary
+# input (principal or monthly deposit) before any result is shown -- otherwise
+# the assistant would present a computed figure it has no inputs for. The base
+# prompt and every repair carry this directive so the model produces a
+# user-stated amount instead of a vague "정해둔 금액".
+_CALC_INPUT_TASKS = {
+    "적금 만기금액 계산",
+    "대출 상환액 시뮬레이션",
+    "세후 이자 계산",
+    "주택대출 중도상환 시뮬레이션",
+}
+_CALC_INPUT_DIRECTIVE = (
+    "이 세션은 계산/시뮬레이션 유형입니다. 사용자(user) 발화에 계산의 필수 입력인 "
+    "원금 또는 월 납입액을 반드시 구체적 숫자(예: 3,000만원, 매달 50만원)로 포함하세요. "
+    "그 금액이 사용자 발화에 등장하기 전에는 assistant가 계산 결과·예상 금액·'계산해 "
+    "화면에 보여드릴게요' 류의 완료성 발언을 해서는 안 됩니다. 금리·기간만으로는 계산할 수 없습니다."
+)
 _GENERIC_EVIDENCE_CUE_TYPES = {
     "dimension",
     "event_dimension",
@@ -524,6 +547,12 @@ class DialogueGenerator:
             financial_task_clear=bool(safe_task),
             turn_count_ok=turns_min <= len(turns) <= turns_max,
         )
+        resolution = ActionResolution(
+            mode=plan.action_execution_contract.action_mode,
+            provided_slots=dict(plan.action_execution_contract.grounded_slots),
+            missing_slots=list(plan.action_execution_contract.missing_slots),
+        )
+        session_plan, resolution = self._reconcile_with_dialogue(plan, resolution, turns)
         return Session(
             session_id=plan.session_id,
             trajectory_id=plan.trajectory_id,
@@ -541,13 +570,9 @@ class DialogueGenerator:
             turns=turns,
             cue_annotations=cues,
             quality_self_check=check,
-            action_resolution=ActionResolution(
-                mode=plan.action_execution_contract.action_mode,
-                provided_slots=dict(plan.action_execution_contract.grounded_slots),
-                missing_slots=list(plan.action_execution_contract.missing_slots),
-            ),
+            action_resolution=resolution,
             generator="mock",
-            plan=plan,
+            plan=session_plan,
         )
 
     # ------------------------------------------------------------------- llm
@@ -626,6 +651,8 @@ class DialogueGenerator:
         prompt = self.prompt_template
         for key, value in replacements.items():
             prompt = prompt.replace(key, value)
+        if plan.financial_task in _CALC_INPUT_TASKS:
+            prompt = f"{prompt}\n\n## 계산 세션 필수 조건\n{_CALC_INPUT_DIRECTIVE}"
         return prompt
 
     @staticmethod
@@ -726,6 +753,11 @@ class DialogueGenerator:
             },
             "bank_policy_profile_id": plan.bank_policy_profile_id,
             "session_memory_updates": context.get("session_memory_updates") or [],
+            **(
+                {"calc_input_requirement": _CALC_INPUT_DIRECTIVE}
+                if plan.financial_task in _CALC_INPUT_TASKS
+                else {}
+            ),
             "event_params": event.get("params") or {},
             "allowed_concrete_values": sorted(
                 grounded_concrete_values(plan.model_dump(mode="json"))
@@ -957,6 +989,36 @@ class DialogueGenerator:
             annotated_keys.add(key)
 
         return repaired
+
+    @staticmethod
+    def _reconcile_with_dialogue(
+        plan: DialogueGenerationPlan,
+        resolution: ActionResolution,
+        turns: list[Turn],
+    ) -> tuple[DialogueGenerationPlan, ActionResolution]:
+        """Drop grounded/provided slots not surfaced in the realized dialogue.
+
+        The planner grounds slots from the persona's structured context before
+        any dialogue exists; this reconciles the frozen contract against the
+        turns actually produced (rule-based, deterministic) so a slot survives
+        only when its value appears in the user's dialogue. Returns a plan copy
+        with the reconciled contract plus the reconciled resolution.
+        """
+        new_contract, new_resolution, dropped = reconcile_provided_slots(
+            plan.action_execution_contract.model_dump(mode="json"),
+            resolution.model_dump(mode="json"),
+            [turn.model_dump(mode="json") for turn in turns],
+        )
+        if not dropped:
+            return plan, resolution
+        reconciled_plan = plan.model_copy(
+            update={
+                "action_execution_contract": ActionExecutionContract.model_validate(
+                    new_contract
+                )
+            }
+        )
+        return reconciled_plan, ActionResolution.model_validate(new_resolution)
 
     def _payload_to_parts(
         self,
@@ -1204,6 +1266,15 @@ class DialogueGenerator:
                     persona,
                     enforce_turn_limits=enforce_turn_limits,
                 )
+                # Reconcile the planner's pre-dialogue grounding against the turns
+                # actually generated: a grounded slot survives only if its value
+                # is surfaced in the user's dialogue, else it becomes missing and
+                # the action downgrades to pending. Deterministic; keeps the
+                # frozen contract honest instead of rejecting valid pending
+                # dialogues where the user simply hasn't stated every slot yet.
+                session_plan, resolution = self._reconcile_with_dialogue(
+                    plan, resolution, turns
+                )
                 candidate = Session(
                     session_id=plan.session_id,
                     trajectory_id=plan.trajectory_id,
@@ -1224,7 +1295,7 @@ class DialogueGenerator:
                     action_resolution=resolution,
                     generator=self.client.provider,
                     generation_metadata={},
-                    plan=plan,
+                    plan=session_plan,
                 )
                 violations = self.validator.validate_session(candidate.model_dump(mode="json"))
                 blocking_violations = [

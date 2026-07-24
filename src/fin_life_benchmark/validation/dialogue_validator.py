@@ -28,6 +28,35 @@ _CHOSEONG_RE = re.compile(r"[ㄱ-ㅎㅏ-ㅣ]{2,}")
 _FA_CODE_RE = re.compile(r"FA-\d{2}")
 
 _HIGH_RISK_FA = {"FA-07", "FA-08", "FA-09", "FA-10"}
+
+# Calculation/simulation tasks whose result requires a concrete monetary input
+# (principal or monthly deposit) that the user must state. The assistant must not
+# present a computed result until that amount is visible in the user's dialogue.
+_CALC_TASKS = {
+    "적금 만기금액 계산",
+    "대출 상환액 시뮬레이션",
+    "세후 이자 계산",
+    "주택대출 중도상환 시뮬레이션",
+}
+# Assistant phrasing that presents a calculation as done/shown (vs. still asking).
+_CALC_RESULT_MARKERS = (
+    "계산한",
+    "계산해 드릴게요",
+    "계산해드릴게요",
+    "만기금액",
+    "상환액",
+    "예상 이자",
+    "세후 이자",
+    "결과를",
+    "결과가",
+    "보여드릴게요",
+    "보여 드릴게요",
+    "화면에서 확인",
+    "화면에 표시",
+    "확인하실 수 있어요",
+)
+# A day-of-month reference ("15일") that is not a duration ("15일간/동안/째").
+_DAY_OF_MONTH_RE = re.compile(r"(?<!\d)(\d{1,2})\s*일(?!\s*(?:간|동안|째|치))")
 _COMPLETION_RE = re.compile(
     r"(?:완료(?:되었|됐|되었습니다|됐습니다|했|했습니다)|"
     r"처리(?:했|했습니다|되었|됐|되었습니다|됐습니다)|"
@@ -201,6 +230,44 @@ def _slot_value_visible(slot: str, value: Any, user_text: str) -> bool:
     return False
 
 
+def _premature_slot_disclosure(
+    turns: list[dict[str, Any]], grounded: dict[str, Any]
+) -> list[str]:
+    """Slots whose value an assistant turn surfaces before any prior user turn.
+
+    Scans the dialogue in order tracking what the user has stated so far. Returns
+    the grounded slots (``amount`` and/or ``recurrence_day``) that first appear in
+    an assistant turn -- i.e. the bot volunteered the value instead of collecting
+    it. Rule-based; reuses the Korean-aware number parser.
+    """
+    flagged: list[str] = []
+    amount = grounded.get("amount")
+    day = grounded.get("recurrence_day")
+    amount_str = None
+    if isinstance(amount, (int, float)):
+        amount_str = _canonical_decimal(Decimal(str(int(amount))))
+    day_int = int(day) if isinstance(day, (int, float)) else None
+
+    for index, turn in enumerate(turns):
+        if turn.get("speaker") != "assistant":
+            continue
+        prior_user = " ".join(
+            str(t.get("text", ""))
+            for t in turns[:index]
+            if t.get("speaker") == "user"
+        )
+        text = str(turn.get("text", ""))
+        if amount_str is not None and "amount" not in flagged:
+            if amount_str in _numbers_in_text(text) and amount_str not in _numbers_in_text(prior_user):
+                flagged.append("amount")
+        if day_int is not None and "recurrence_day" not in flagged:
+            a_days = {int(m) for m in _DAY_OF_MONTH_RE.findall(text)}
+            u_days = {int(m) for m in _DAY_OF_MONTH_RE.findall(prior_user)}
+            if day_int in a_days and day_int not in u_days:
+                flagged.append("recurrence_day")
+    return flagged
+
+
 def _canonical_decimal(value: Decimal) -> str:
     normalized = value.normalize()
     return format(normalized, "f")
@@ -283,14 +350,94 @@ def grounded_concrete_values(plan: dict[str, Any]) -> set[str]:
 
 
 def ungrounded_concrete_values(
-    visible: str, plan: dict[str, Any]
+    visible: str, plan: dict[str, Any], extra_allowed: set[str] | None = None
 ) -> list[str]:
     grounded = grounded_concrete_values(plan)
+    if extra_allowed:
+        grounded = grounded | extra_allowed
     ungrounded: list[str] = []
     for value in _numbers_in_text(visible):
         if value not in grounded and value not in ungrounded:
             ungrounded.append(value)
     return ungrounded
+
+
+def reconcile_provided_slots(
+    contract: dict[str, Any],
+    resolution: dict[str, Any],
+    turns: list[dict[str, Any]],
+) -> tuple[dict[str, Any], dict[str, Any], list[str]]:
+    """Drop grounded/provided slot values not surfaced in the user dialogue.
+
+    Rule-based, deterministic reconciliation of an execution contract against the
+    dialogue that was actually generated for it. A slot value is kept only when
+    :func:`_slot_value_visible` finds it in the user turns -- the same predicate
+    the ``provided_slot_not_grounded_in_dialogue`` validator uses -- so the
+    reconciled session passes that check by construction.
+
+    The planner grounds slots (e.g. ``amount``) from the persona's structured
+    context before the dialogue exists, so a value like a standing transfer's
+    amount can be stamped onto a session whose dialogue is about something else
+    entirely. This moves any such slot to ``missing_slots`` and, when a required
+    execution slot is no longer grounded, downgrades the action to
+    ``pending_required_information`` (``completion_allowed=False``) and clears the
+    completion/confirmation turn indices.
+
+    Returns new ``(contract, resolution, dropped_slots)``; the inputs are not
+    mutated. A no-op (empty ``dropped_slots``) for ``information_only`` contracts,
+    contracts without grounded slots, and sessions already fully grounded.
+    """
+    contract = dict(contract or {})
+    resolution = dict(resolution or {})
+    grounded = dict(contract.get("grounded_slots") or {})
+    if not grounded:
+        return contract, resolution, []
+
+    user_text = " ".join(
+        str(turn.get("text", ""))
+        for turn in turns
+        if turn.get("speaker") == "user"
+    )
+    dropped = [
+        slot
+        for slot, value in grounded.items()
+        if not _slot_value_visible(slot, value, user_text)
+    ]
+    if not dropped:
+        return contract, resolution, []
+
+    for slot in dropped:
+        grounded.pop(slot, None)
+    required = list(contract.get("required_slots") or [])
+    # Mirror the planner's own missing/readiness definition
+    # (EvidencePlanner._action_execution_contract): explicit_confirmation is a
+    # confirmation act, never a grounded value, so it never counts as missing.
+    missing = [
+        slot
+        for slot in required
+        if slot != "explicit_confirmation" and slot not in grounded
+    ]
+    ready = not missing
+
+    contract["grounded_slots"] = grounded
+    contract["missing_slots"] = missing
+    contract["completion_allowed"] = ready
+    if contract.get("action_mode") not in (None, "information_only"):
+        contract["action_mode"] = (
+            "ready_for_confirmation" if ready else "pending_required_information"
+        )
+
+    provided = dict(resolution.get("provided_slots") or {})
+    for slot in dropped:
+        provided.pop(slot, None)
+    resolution["provided_slots"] = provided
+    resolution["missing_slots"] = missing
+    if not ready:
+        resolution["mode"] = "pending_required_information"
+        resolution["completion_turn_index"] = None
+        resolution["explicit_confirmation_turn_index"] = None
+
+    return contract, resolution, dropped
 
 
 class DialogueValidator:
@@ -568,7 +715,15 @@ class DialogueValidator:
                     "no-update session contains a memory fact or mutation annotation",
                 )
 
-        invented_values = ungrounded_concrete_values(visible, plan)
+        # In a calculation/simulation session the user supplies a hypothetical
+        # principal/monthly amount that is not (and should not be) grounded in
+        # planned memory -- it is a legitimate user input, not a hallucinated
+        # fact. Allow concrete numbers the user introduces; the assistant is
+        # still held to grounded values.
+        extra_allowed = None
+        if session.get("financial_task") in _CALC_TASKS:
+            extra_allowed = set(_numbers_in_text(user_text))
+        invented_values = ungrounded_concrete_values(visible, plan, extra_allowed)
         if invented_values:
             flag(
                 "concrete_value_hallucination",
@@ -659,6 +814,13 @@ class DialogueValidator:
                     "provided_slot_not_grounded_in_dialogue",
                     ", ".join(sorted(ungrounded_provided)),
                 )
+            # Premature disclosure: the assistant must collect execution values
+            # from the user, never volunteer them. Flag when an assistant turn
+            # first surfaces the grounded amount or recurrence day before any
+            # earlier user turn has stated it.
+            premature = _premature_slot_disclosure(turns, grounded)
+            for slot in premature:
+                flag("assistant_premature_slot_disclosure", slot)
             if attempted_completion and not contract.get("required_slots") and contract.get("action_mode") != "information_only":
                 flag("high_risk_missing_required_slot", "execution contract has no required slots")
             if attempted_completion and (missing or runtime_missing):
@@ -700,6 +862,19 @@ class DialogueValidator:
             expected_missing = sorted(missing)
             if sorted(resolution.get("missing_slots") or []) != expected_missing:
                 flag("high_risk_action_resolution_mismatch", "missing slots disagree with plan contract")
+
+        # Calculation sessions must obtain the required monetary input (principal
+        # or monthly deposit) from the user before presenting a result. Flag when
+        # the assistant presents a computed result but no KRW amount appears in
+        # the user's turns.
+        if session.get("financial_task") in _CALC_TASKS:
+            if any(marker in assistant_text for marker in _CALC_RESULT_MARKERS):
+                user_amounts = [n for n in _numbers_in_text(user_text) if int(n) >= 10000]
+                if not user_amounts:
+                    flag(
+                        "calc_result_without_required_input",
+                        f"{session.get('financial_task')}: no principal/deposit amount stated by user",
+                    )
 
         policy_rules = (self.policy_registry.get("rules") or {})
         for policy_key, rule in policy_rules.items():

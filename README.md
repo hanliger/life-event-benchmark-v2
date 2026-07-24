@@ -120,6 +120,7 @@ ANTHROPIC_API_KEY=...            # 쓰는 provider의 키만 채우면 됨
 
 # 대화 corpus를 받아올 HuggingFace 데이터셋
 HF_DIALOGUE_REPO=hangyeul-lee/life-event-benchmark-v2-dialogues
+HF_DIALOGUE_REVISION=             # 정확한 재현 시 HF commit SHA로 고정
 HF_TOKEN=                        # 데이터셋이 gated일 때만 필요
 ```
 
@@ -189,6 +190,248 @@ make plan-dialogues     RUN_ID=$RUN_ID SEED=42
 - **특정 모델 고정**: `scripts/generate_dialogue_sessions.py`에 `--model-profile sonnet5`(정의: `configs/generation/dialogue_models.yaml`)를 넘기면 `.env`와 무관하게 그 모델로 생성합니다. canonical corpus는 `claude-sonnet-5` 기준이며, 검증이 엄격해 저사양 모델은 통과율이 낮을 수 있습니다.
 - 전체를 한 번에: `make pipeline-smoke LIMIT=2 NUM_TRAJ=2 EXECUTE=0` 은 1~7을 offline으로 이어서 돌립니다.
 
+### C. Signal ablation: prefix-gold counterfactual lifecycle masking
+
+#### C.1 실험 질문과 통제 변수
+
+사건은 `weak_signal → upcoming → occurred`(또는 `cancelled`)로 진행하고, 모델은 아직 확정되지 않은 단계에서는 **확정 상태 갱신을 하지 않아야(abstain)** 합니다(→ §2.3). 단계별 원본 prefix를 단순 비교하면 뒤 단계일수록 prefix 길이, 평가 위치, recency가 함께 달라져 evidence strength와 long-context 효과가 섞입니다.
+
+Counterfactual masking은 한 사건의 최종 linked session까지를 **동일 checkpoint**로 고정하고, 대상 사건의 evidence session 내용만 중립 대화로 치환합니다. 다음 값은 모든 level에서 동일합니다.
+
+- trajectory/persona와 전체 prefix session 수
+- 각 session의 `session_id`, `month_index`, position, turn 수
+- 대상 외 session의 내용과 순서
+- 평가 checkpoint
+
+level 간 바뀌는 것은 대상 사건의 가시적 evidence뿐입니다. 이 조건에서 모델이 확정 갱신에서 abstention으로 이동하는지를 측정합니다.
+
+#### C.2 Timeless persona filler bank
+
+기존 trajectory의 미래 routine session을 donor로 쓰면 late checkpoint에서 donor가 부족하고, early checkpoint에서는 수십 개월 뒤 대화가 들어갈 수 있습니다. 따라서 canonical timeline과 분리된 **20-session/persona reserve bank**를 Sonnet 5로 생성합니다.
+
+reserve filler 계약:
+
+- canonical `Sxxx`가 아닌 `CF001..CF020`; `month_index=null`
+- 같은 persona의 말투(`formality`, `verbosity`)만 사용
+- 나이·직업·회사·주소·가족·건강·자산 등 persona state는 prompt에 전달하지 않음
+- lifecycle/event/memory fact가 없고 cue는 deterministic `task_intent` 하나뿐
+- 정확히 8턴, user/assistant 교대, `information_only`
+- 숫자·금액·금리·계좌/기기/거래 건수 및 개인화된 조회 결과를 생성하지 않음
+- 이체 실행·가입·해지·설정 변경을 완료하지 않고 화면 경로와 조회 절차만 안내
+- 10개의 state-independent task를 두 surface variant로 생성하여 persona당 20개 구성
+
+현재 corpus에서 한 event가 필요로 하는 최대 donor는 5개이므로 20개 bank는 모든 event를 커버하고 donor 표현도 분산할 수 있습니다. bank는 부족한 late event에만 fallback으로 쓰지 않고 **모든 event에 동일하게 적용**합니다. donor source와 checkpoint가 결합되는 것을 막기 위해서입니다.
+
+#### C.3 생성·audit 절차
+
+아래 경로 구조를 사용합니다.
+
+```text
+data/runs/<RUN_ID>/counterfactual_fillers/
+├── plans/plans_traj_XXX.jsonl
+├── sessions/fillers_traj_XXX.jsonl
+├── raw/{canary,full}/
+├── audit/{canary,full}/
+└── logs/
+```
+
+먼저 frozen trajectory와 session을 복원하고 교육단계 전이 기록을 보정합니다.
+
+```bash
+export RUN_ID=exp1
+export CF_ROOT=data/runs/$RUN_ID/counterfactual_fillers
+make restore-frozen-run RUN_ID=$RUN_ID
+python scripts/fix_education_stage_trajectory.py \
+    --in-dir data/runs/$RUN_ID/trajectories \
+    --out-dir data/runs/$RUN_ID/trajectories_fixed
+mkdir -p "$CF_ROOT"/{plans,sessions,raw/canary,raw/full,audit/canary,audit/full,logs}
+```
+
+20 persona의 frozen filler plan은 API 호출 없이 생성합니다.
+
+```bash
+nohup python scripts/plan_counterfactual_fillers.py \
+    --trajectories-dir data/runs/$RUN_ID/trajectories_fixed \
+    --out-dir "$CF_ROOT/plans" --overwrite \
+    > "$CF_ROOT/logs/plan_all.log" 2>&1 < /dev/null &
+```
+
+`traj_001` 한 persona를 Sonnet 5 canary로 생성하고 deterministic audit를 통과시킵니다.
+
+```bash
+nohup python scripts/generate_counterfactual_fillers.py \
+    --plans-dir "$CF_ROOT/plans" \
+    --output-dir "$CF_ROOT/sessions" \
+    --raw-output-dir "$CF_ROOT/raw/canary" \
+    --trajectory-id traj_001 --model-profile sonnet5 \
+    --batch-size 4 --workers 4 --execute --overwrite \
+    > "$CF_ROOT/logs/canary_generate.log" 2>&1 < /dev/null &
+
+nohup python scripts/audit_counterfactual_fillers.py \
+    --plans-dir "$CF_ROOT/plans" \
+    --fillers-dir "$CF_ROOT/sessions" \
+    --out-dir "$CF_ROOT/audit/canary" \
+    --trajectory-id traj_001 \
+    > "$CF_ROOT/logs/canary_audit.log" 2>&1 < /dev/null &
+```
+
+canary decision이 `PASS`인 경우에만 나머지 19 persona를 병렬 생성하고 전체 400개를 audit합니다.
+
+```bash
+nohup python scripts/generate_counterfactual_fillers.py \
+    --plans-dir "$CF_ROOT/plans" \
+    --output-dir "$CF_ROOT/sessions" \
+    --raw-output-dir "$CF_ROOT/raw/full" \
+    --exclude-trajectory-id traj_001 --model-profile sonnet5 \
+    --batch-size 4 --workers 8 --execute --resume \
+    > "$CF_ROOT/logs/full_generate.log" 2>&1 < /dev/null &
+
+nohup python scripts/audit_counterfactual_fillers.py \
+    --plans-dir "$CF_ROOT/plans" \
+    --fillers-dir "$CF_ROOT/sessions" \
+    --out-dir "$CF_ROOT/audit/full" \
+    > "$CF_ROOT/logs/full_audit.log" 2>&1 < /dev/null &
+```
+
+audit는 persona별 정확히 20개/전체 400개, plan ID와 task 일치, 8턴 교대, cue/action 계약, lifecycle 표현, 숫자와 개인화 조회 결과, exact duplicate를 검사합니다.
+
+#### C.4 고정 donor mapping과 masking level
+
+각 target event에 대해 masking 대상이 될 모든 lifecycle slot을 먼저 모으고, `slot_session_id → CF donor` mapping을 **한 번만 결정**합니다. 같은 event의 모든 level은 이 mapping을 공유합니다. 예를 들어 terminal slot에 배정된 `CF007`은 `mask_terminal`, `mask_upcoming`, `mask_all`에서 항상 `CF007`입니다. level마다 donor를 다시 뽑아 이미 masked된 slot 내용까지 달라지는 교란을 허용하지 않습니다.
+
+| 레벨 | 치환하는 대상 event session | 기대 target-event gold | 정답 행동 |
+| --- | --- | --- | --- |
+| `full` | 없음 | `occurred` 또는 `cancelled` | occurred만 갱신 허용 |
+| `mask_terminal` | terminal + downstream | 남은 최신 단계(`upcoming`, 없으면 `weak_signal`) | abstain |
+| `mask_upcoming` | terminal + downstream + upcoming | `weak_signal`(없으면 `no_event`) | abstain |
+| `mask_all` | 모든 target lifecycle evidence | `no_event` | abstain |
+
+치환 시 slot의 위치 정보와 8턴 길이는 유지하지만 다음 event-bearing 필드는 제거합니다.
+
+- `linked_event_instance_id`, `window_event_instance_id`
+- `event_status_after_session`
+- `cue_annotations`
+- donor나 원본의 hidden `plan/current_state`
+
+visible `turns`, `financial_task`, `mapped_action`, `action_resolution`만 중립 donor에서 가져옵니다.
+
+#### C.5 Counterfactual prefix gold 재계산
+
+masking 실행:
+
+```bash
+nohup python scripts/mask_lifecycle_experiment.py \
+    --trajectories-dir data/runs/$RUN_ID/trajectories_fixed \
+    --sessions-dir data/runs/$RUN_ID/dialogues/sessions \
+    --fillers-dir "$CF_ROOT/sessions" \
+    --out data/runs/$RUN_ID/masking_ladder.json \
+    --prefix-gold-out data/runs/$RUN_ID/masking_ladder_prefix_gold.jsonl \
+    --max-events 10000 --quiet \
+    > "$CF_ROOT/logs/masking_full.log" 2>&1 < /dev/null &
+```
+
+생성 완료 후 ladder, replacement recipe, complete PrefixGold를 함께 audit합니다.
+
+```bash
+nohup python scripts/audit_lifecycle_masking.py \
+    --ladder data/runs/$RUN_ID/masking_ladder.json \
+    --prefix-gold data/runs/$RUN_ID/masking_ladder_prefix_gold.jsonl \
+    --exclusions data/runs/$RUN_ID/masking_ladder.exclusions.json \
+    --out-dir "$CF_ROOT/audit/masking_full" \
+    --expected-events 451 \
+    > "$CF_ROOT/logs/masking_full_audit.log" 2>&1 < /dev/null &
+```
+
+event별 fixed checkpoint는 그 event의 마지막 linked session까지입니다. 각 level에서 해당 prefix를 slot-preserving replacement로 materialize한 다음 `export_prefix_gold(trajectory, visible_variant, checkpoint_stride=checkpoint)`를 다시 실행합니다. 원본 trajectory의 최종 gold를 복사하지 않습니다.
+
+재계산 규칙:
+
+1. **Event status:** 치환 후에도 `linked_event_instance_id`가 남은 target session 중 최신 가시 단계에서 계산합니다. 모두 제거되면 `no_event`입니다.
+2. **Memory:** 가시 session의 `memory_fact` cue만 순서대로 replay합니다. masked session의 cue는 제거되므로 그 session이 근거였던 pending/commit/update도 gold에서 사라집니다.
+3. **Action decision:** 가시적인 `occurred` evidence가 있는 source event의 impact만 replay합니다. upcoming/weak/cancelled/masked 상태에서는 확정 실행을 허용하지 않습니다.
+4. **다른 event:** target이 아닌 session은 바꾸지 않으므로 그 event의 status/evidence와 update의 source/path/operation/new value, action decision은 유지됩니다. 단, target update를 제거한 뒤 memory를 처음부터 replay하므로 같은 path를 나중에 만지는 다른 event update의 `old_value`와 최종 full-memory state는 달라질 수 있습니다. 이는 collateral session 변경이 아니라 의도된 counterfactual state 전파입니다.
+
+`update_allowed`는 `full + occurred`에서만 참이며 모든 masked level과 `cancelled`에서는 거짓이어야 합니다.
+
+산출물:
+
+| 파일 | 내용 |
+| --- | --- |
+| `masking_ladder.json` | event별 4-level target status, update 여부, donor provenance |
+| `masking_ladder.exclusions.json` | bank 부족/계약 불일치로 만들지 못한 event; 정상 full run 기대값은 빈 배열 |
+| `masking_ladder_prefix_gold.jsonl` | `case_id`, checkpoint, masked slot, 고정 replacement recipe와 complete recalculated `PrefixGold` |
+
+`masking_ladder_prefix_gold.jsonl`은 원본 session 파일과 persona bank 파일을 가리키는 recipe를 함께 가지므로, 평가기는 동일 counterfactual prefix를 결정론적으로 재구성할 수 있습니다. 실험 전 검증에서는 terminal event 451개, exclusion 0개, 총 prefix-gold case 1,804개, cross-persona/level-inconsistent donor 0개를 요구합니다.
+
+이 단계는 signal ablation dataset 구축까지만 포함합니다. filler 자체의 문체 효과를 재는 placebo arm과 실제 model evaluation은 별도 단계입니다.
+
+#### C.6 Hugging Face freeze에서 바로 재현
+
+생성된 v1 filler bank는 canonical dialogue와 같은 `HF_DIALOGUE_REPO`의
+`counterfactual_fillers/v1/`에 freeze되어 있습니다. 로컬 `data/runs/`가 비어
+있어도 다음 한 명령이 필요한 데이터를 HF에서 받고 masking과 audit까지
+연결합니다.
+
+```bash
+export RUN_ID=cf_repro
+
+# main의 최신 frozen artifact 사용
+make counterfactual-ablation RUN_ID=$RUN_ID
+
+# 논문/결과 재현에서는 v1 filler 업로드 commit을 고정
+export HF_DIALOGUE_REVISION=f45f9603a8e6da31d244ca81e99f0c94c797475c
+make counterfactual-ablation RUN_ID=$RUN_ID
+```
+
+장시간 실행을 terminal과 분리해 로그를 남기려면 같은 target을 `nohup`으로
+감쌉니다.
+
+```bash
+mkdir -p data/runs/$RUN_ID/counterfactual_fillers/logs
+nohup env HF_DIALOGUE_REVISION=f45f9603a8e6da31d244ca81e99f0c94c797475c \
+    make counterfactual-ablation RUN_ID=$RUN_ID \
+    > data/runs/$RUN_ID/counterfactual_fillers/logs/hf_reproduce.log \
+    2>&1 < /dev/null &
+```
+
+이 target의 동작 순서는 다음과 같습니다.
+
+1. git에 추적된 20개 frozen trajectory를 `data/runs/$RUN_ID/trajectories/`로 복사
+2. canonical sessions가 없으면 HF의 `dialogues/`+`gold/`를 join하여 복원
+3. filler bank가 없으면 HF의 `counterfactual_fillers/v1/` sessions/plans/audit/manifest를 복원
+4. 교육단계 전이 기록을 보정
+5. 451-event/4-level masking과 complete PrefixGold 1,804개 생성
+6. exclusion, donor 고정성, gold 단조성과 collateral drift audit
+
+filler만 미리 받으려면 다음을 사용합니다.
+
+```bash
+make fetch-counterfactual-fillers RUN_ID=$RUN_ID
+
+# 또는 revision/trajectory를 직접 지정
+python scripts/fetch_counterfactual_fillers.py \
+    --output-root data/runs/$RUN_ID/counterfactual_fillers \
+    --revision f45f9603a8e6da31d244ca81e99f0c94c797475c \
+    --trajectory-id traj_001
+```
+
+fetch는 `sessions/fillers_traj_XXX.jsonl`, frozen plan, generation/audit manifest를
+동일한 상대경로로 materialize합니다. 기존 파일이 있으면 network no-op이며,
+`--force`에서만 다시 받습니다. fetch가 HF의 `artifact_manifest.json`에 기록된
+artifact SHA256을 자동 검증하며, manifest에는 관련 구현 파일의 SHA256도 있어
+고정 revision과 함께 생성 환경을 추적할 수 있습니다.
+
+maintainer가 검증된 새 filler freeze를 올릴 때는 dry-run 후 명시적으로
+`--execute`를 사용합니다. raw provider output과 log는 업로드하지 않습니다.
+
+```bash
+python scripts/publish_counterfactual_fillers_to_hf.py \
+    --fillers-root data/runs/$RUN_ID/counterfactual_fillers
+
+python scripts/publish_counterfactual_fillers_to_hf.py \
+    --fillers-root data/runs/$RUN_ID/counterfactual_fillers --execute
+```
+
 ---
 
 ## 6. 데이터 정책
@@ -196,7 +439,8 @@ make plan-dialogues     RUN_ID=$RUN_ID SEED=42
 이 저장소는 코드만 담고, 데이터는 다음 규칙으로 관리합니다.
 
 - **생성물은 git에 없음**: `data/runs/<RUN_ID>/`(persona, trajectory, 세션, gold, 문항, 리포트)는 모두 재생성 대상이라 추적하지 않습니다.
-- **frozen 코퍼스는 HuggingFace에**: 확정된 대화 세션은 `HF_DIALOGUE_REPO` 데이터셋에 있습니다. `dialogues/`(정답 제거된 발화·문맥)와 `gold/`(정답 라벨) 두 config로 나뉘어 있고, 세션을 읽는 단계는 로컬에 세션이 없으면 이 둘을 `session_id`로 join해 `sessions_traj_XXX.jsonl`로 자동 복원합니다(있으면 건드리지 않음). 명시적으로 받으려면 `make fetch-dialogues`.
+- **frozen 코퍼스는 HuggingFace에**: `HF_DIALOGUE_REPO`에는 `dialogues`(정답 제거 발화), `gold`(정답 라벨), `counterfactual_fillers`(v1 reserve sessions), `counterfactual_filler_plans` config가 있습니다. canonical session은 `dialogues`+`gold`를 join해 복원하고 filler는 frozen file layout 그대로 받습니다. 로컬 파일이 있으면 network no-op입니다. 명시적으로 받으려면 `make fetch-dialogues` 또는 `make fetch-counterfactual-fillers`.
+- **revision pin**: 기본값은 HF main 최신 상태입니다. 재현 가능한 결과에는 업로드 commit SHA를 `HF_DIALOGUE_REVISION`으로 고정합니다.
 - **frozen trajectory는 git에**: 확정된 20개 trajectory는 `tests/fixtures/trajectories/`에 byte 단위로 고정 추적됩니다.
 - **참고 샘플**: `data/samples/`에 한 persona의 dialogues-only 예시 1건.
 
@@ -216,6 +460,9 @@ make plan-dialogues     RUN_ID=$RUN_ID SEED=42
 | `data/runs/<RUN_ID>/benchmark_items/*.jsonl` | Stage 1/2 문항 |
 | `data/runs/<RUN_ID>/quality_reports/*` | 검증·audit 리포트 |
 | `data/runs/<RUN_ID>/eval/report.json` | 모델 평가 결과 |
+| `data/runs/<RUN_ID>/masking_ladder.json` | lifecycle masking abstention 사다리 (§5-C) |
+| `data/runs/<RUN_ID>/masking_ladder_prefix_gold.jsonl` | counterfactual recipe + 재계산된 complete PrefixGold (§5-C) |
+| `data/runs/<RUN_ID>/counterfactual_fillers/` | persona별 timeless filler plan/session/audit/log (§5-C) |
 
 ---
 
@@ -266,3 +513,4 @@ make plan-dialogues     RUN_ID=$RUN_ID SEED=42
 | `generation manifest mismatch` | 같은 sessions 폴더에서 mock↔execute를 섞었습니다. 새 `RUN_ID`를 쓰거나 그 `dialogues/` 폴더를 지우세요. |
 | 세션이 0개 생성됨 | 모델 출력이 검증을 통과하지 못한 것입니다. `dialogues/sessions/errors_*.jsonl`에서 이유를 확인하고, 가능하면 `--model-profile sonnet5`로 시도하세요. |
 | HF 세션을 못 받음 | `HF_DIALOGUE_REPO`(및 gated면 `HF_TOKEN`)를 확인하세요. |
+| HF filler를 못 받음 | dataset revision에 `counterfactual_fillers/v1/`이 있는지 확인하고, 고정한 `HF_DIALOGUE_REVISION`이 너무 오래된 commit은 아닌지 확인하세요. |

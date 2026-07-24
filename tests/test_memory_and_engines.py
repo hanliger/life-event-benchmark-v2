@@ -257,3 +257,38 @@ def test_history_never_deleted(op):
     memory = _memory_with("housing.address", "옛주소")
     memory.apply(MemoryUpdate(path="housing.address", operation=MemoryOperation(op), new_value="새주소", month_index=1))
     assert memory.history("housing.address")[0].value == "옛주소"
+
+
+def test_education_previous_stage_is_ordered_predecessor():
+    from fin_life_benchmark.fsm.event_lifecycle import education_previous_stage
+
+    assert education_previous_stage("primary") == "pre_school"
+    assert education_previous_stage("middle") == "primary"
+    assert education_previous_stage("high") == "middle"
+    # normalization + floor
+    assert education_previous_stage("preschool") == "pre_school"
+    assert education_previous_stage("pre_school") == "pre_school"
+
+
+def test_education_delta_records_forward_transition_not_shared_cell():
+    """The education stage update must record predecessor(new)->new via
+    old_value_from param, not the shared cell's (possibly another child's) value."""
+    engine = DeltaEngine()
+    memory = FinancialMemoryState()
+    # Shared education cell already holds another child's 'primary' stage.
+    memory.set_initial("education.child_education_stage", "primary")
+    instance = EventInstance(
+        event_instance_id="ev_test",
+        event_id="education_child_stage_entry",
+        label_ko="자녀 학교 진학",
+        domain="education",
+        start_month=10,
+        params={"child_id": "child_001", "previous_stage": "pre_school", "new_stage": "primary"},
+    )
+    engine.apply_transition(memory, instance, EventStatus.UPCOMING, 9, random.Random(0))
+    updates = engine.apply_transition(memory, instance, EventStatus.OCCURRED, 10, random.Random(0))
+    edu = [u for u in updates if u.path == "education.child_education_stage"]
+    assert edu, "expected an education stage update"
+    # old_value pinned from param (pre_school), not the shared cell's 'primary'
+    assert edu[0].old_value == "pre_school"
+    assert edu[0].new_value == "primary"

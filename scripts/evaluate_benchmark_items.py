@@ -11,9 +11,8 @@ Examples:
     --output data/generated/eval/stage2_claude_sonnet_5_predictions.jsonl \
     --report data/generated/eval/stage2_claude_sonnet_5_report.json
 
-Stage 2 MCQ is scored by exact option match. Stage 1 event-status items are
-also supported with exact set matching over (life_event_label, event_status),
-but Stage 2 is the cleaner first-pass accuracy benchmark.
+Stage 2 MCQ is scored by exact option match. Stage 1 event-identification
+items are scored by exact event_id match.
 """
 
 from __future__ import annotations
@@ -61,12 +60,25 @@ def _format_initial_memory(memory: dict[str, Any]) -> str:
 
 def _load_sessions_by_id(sessions_dir: Path) -> dict[tuple[str, str], dict[str, Any]]:
     sessions: dict[tuple[str, str], dict[str, Any]] = {}
-    for path in sorted(sessions_dir.glob("sessions_*.jsonl")):
+    files = sorted(sessions_dir.glob("traj_*.jsonl"))
+    if not files:
+        files = sorted(sessions_dir.glob("sessions_*.jsonl"))
+    for path in files:
         for session in read_jsonl(path):
             sessions[(session["trajectory_id"], session["session_id"])] = session
     return sessions
 
 
+
+def _load_dialogues_by_id(dialogues_dir: Path) -> dict[tuple[str, str], dict[str, Any]]:
+    dialogues: dict[tuple[str, str], dict[str, Any]] = {}
+    for path in sorted(dialogues_dir.glob("traj_*.jsonl")):
+        for dialogue in read_jsonl(path):
+            key = (dialogue["trajectory_id"], dialogue["session_id"])
+            if key in dialogues:
+                raise ValueError(f"duplicate dialogue key: {key}")
+            dialogues[key] = dialogue
+    return dialogues
 def _visible_sessions(
     item: dict[str, Any],
     sessions_by_id: dict[tuple[str, str], dict[str, Any]],
@@ -82,8 +94,8 @@ def _visible_sessions(
 def _build_stage2_prompt(item: dict[str, Any], sessions: list[dict[str, Any]]) -> str:
     lines = [
         "다음은 한 고객의 은행 상담 세션 이력입니다.",
-        "현재 보이는 상담 이력과 초기 금융 메모리만 근거로 문제를 푸세요.",
-        "추측하지 말고, 보기 중 가장 적절한 선택지 하나만 고르세요.",
+        "전체 상담 이력을 참고하되, 문제에 지정된 occurred Life Event 이후의 memory path 변화만 판단하세요.",
+        "초기 금융 메모리는 변화 전 상태를 확인하는 참고 정보로 사용하세요. 추측하지 말고, 보기 중 하나만 고르세요.",
         "",
         _format_sessions(sessions),
         "",
@@ -102,24 +114,31 @@ def _build_stage2_prompt(item: dict[str, Any], sessions: list[dict[str, Any]]) -
     return "\n".join(lines)
 
 
-def _build_stage1_prompt(item: dict[str, Any], sessions: list[dict[str, Any]]) -> str:
+def _build_stage1_event_identification_prompt(
+    item: dict[str, Any], sessions: list[dict[str, Any]]
+) -> str:
+    metadata = item.get("metadata") or {}
+    candidates = metadata.get("candidate_events") or []
+    candidate_lines = [
+        f"- {event['event_id']}: {event['label_ko']}" for event in candidates
+    ]
     lines = [
-        "다음은 한 고객의 은행 상담 세션 이력입니다.",
-        "현재 보이는 상담 이력만 근거로 감지되는 Life Event와 상태를 답하세요.",
-        "상태는 weak_signal, upcoming, occurred, cancelled 중 하나입니다.",
-        "확인되는 이벤트가 없으면 no_event로 답하세요.",
+        "다음은 한 고객의 전체 은행 상담 세션 이력입니다.",
+        "전체 이력을 참고하되, 질문에 지정된 최근 15개 세션 범위만 대상으로 판단하세요.",
+        "해당 범위에서 실제로 발생한(occurred) Life Event 하나를 가능한 목록에서 고르세요.",
+        "Event 상태나 설명은 답하지 말고 event_id 하나만 답하세요.",
         "",
         _format_sessions(sessions),
         "",
+        f"대상 범위: {metadata.get('target_session_start')}~{metadata.get('target_session_end')}",
         item["question"],
         "",
-        "JSON만 답하세요.",
-        '이벤트가 있으면: {"life_events": [{"life_event_label": "이사", "event_status": "weak_signal"}]}',
-        '이벤트가 없으면: {"life_events": [{"life_event_label": null, "event_status": "no_event"}]}',
+        "가능한 Life Event 목록:",
+        *candidate_lines,
+        "",
+        'JSON만 답하세요. 예: {"event_id": "career_employment"}',
     ]
     return "\n".join(lines)
-
-
 def _extract_json(raw: str) -> dict[str, Any] | None:
     raw = raw.strip()
     try:
@@ -146,56 +165,29 @@ def _parse_mcq_answer(raw: str) -> str:
     return match.group(1) if match else ""
 
 
-def _event_key(event: dict[str, Any]) -> tuple[str | None, str]:
-    label = event.get("life_event_label")
-    status = event.get("event_status")
-    if status == "no_event":
-        label = None
-    return label, str(status)
-
-
-def _parse_stage1_answer(raw: str) -> list[dict[str, Any]]:
+def _parse_stage1_event_identification_answer(raw: str) -> str:
     payload = _extract_json(raw)
     if not payload:
-        return []
-    events = payload.get("life_events")
-    if isinstance(events, dict):
-        events = [events]
-    if not isinstance(events, list):
-        return []
-    parsed = []
-    for event in events:
-        if not isinstance(event, dict):
-            continue
-        parsed.append(
-            {
-                "life_event_label": event.get("life_event_label"),
-                "event_status": event.get("event_status"),
-            }
-        )
-    return parsed
-
-
+        return ""
+    return str(payload.get("event_id", "")).strip()
 def _score_item(item: dict[str, Any], raw: str) -> tuple[Any, Any, bool, str | None]:
     stage = item.get("stage")
     if stage == "stage2_memory_mcq":
         pred = _parse_mcq_answer(raw)
         gold = (item.get("gold") or {}).get("correct_option")
         return pred, gold, pred == gold, None if pred else "parse_error"
-    if stage == "stage1_event_status":
-        pred_events = _parse_stage1_answer(raw)
-        gold_events = (item.get("gold") or {}).get("life_events") or []
-        pred = sorted({_event_key(event) for event in pred_events})
-        gold = sorted({_event_key(event) for event in gold_events})
-        return pred_events, gold_events, pred == gold, None if pred_events else "parse_error"
+    if stage == "stage1_event_identification":
+        pred = _parse_stage1_event_identification_answer(raw)
+        gold = (item.get("gold") or {}).get("event_id")
+        return pred, gold, pred == gold, None if pred else "parse_error"
     return None, None, False, f"unsupported_stage:{stage}"
 
 
 def _build_prompt(item: dict[str, Any], sessions: list[dict[str, Any]]) -> str:
     if item.get("stage") == "stage2_memory_mcq":
         return _build_stage2_prompt(item, sessions)
-    if item.get("stage") == "stage1_event_status":
-        return _build_stage1_prompt(item, sessions)
+    if item.get("stage") == "stage1_event_identification":
+        return _build_stage1_event_identification_prompt(item, sessions)
     raise ValueError(f"unsupported stage: {item.get('stage')}")
 
 
@@ -203,7 +195,9 @@ def _mock_answer(item: dict[str, Any]) -> str:
     if item.get("stage") == "stage2_memory_mcq":
         options = item.get("options") or []
         return json.dumps({"answer": options[0]["option_id"] if options else "A"})
-    return json.dumps({"life_events": [{"life_event_label": None, "event_status": "no_event"}]}, ensure_ascii=False)
+    if item.get("stage") == "stage1_event_identification":
+        return json.dumps({"event_id": (item.get("gold") or {}).get("event_id", "")})
+    raise ValueError(f"unsupported stage: {item.get('stage')}")
 
 
 def _summarize(records: list[dict[str, Any]], provider: str, model: str) -> dict[str, Any]:
@@ -235,6 +229,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--items", nargs="+", required=True, help="benchmark item jsonl file(s)")
     parser.add_argument("--sessions-dir", default="data/generated/sessions")
+    parser.add_argument("--dialogues-dir", default=None)
     parser.add_argument("--provider", default=None)
     parser.add_argument("--model", default=None)
     parser.add_argument("--execute", action="store_true", help="call real LLM API; otherwise use mock answers")
@@ -260,7 +255,15 @@ def main() -> int:
     if not items:
         raise SystemExit("no benchmark items loaded")
 
-    sessions_by_id = _load_sessions_by_id(Path(args.sessions_dir))
+    has_direct_stage1 = any(item.get("stage") == "stage1_event_identification" for item in items)
+    sessions_by_id = _load_sessions_by_id(Path(args.sessions_dir)) if not has_direct_stage1 else {}
+    dialogues_by_id = (
+        _load_dialogues_by_id(Path(args.dialogues_dir))
+        if has_direct_stage1 and args.dialogues_dir
+        else {}
+    )
+    if has_direct_stage1 and not dialogues_by_id:
+        raise SystemExit("stage1_event_identification requires --dialogues-dir")
     client = None
     if args.execute:
         client = LLMClient(provider=provider, model=model, temperature=args.temperature, max_tokens=args.max_tokens)
@@ -276,7 +279,14 @@ def main() -> int:
         RepoPaths.default().prompts / "system" / "benchmark_evaluator_ko.txt"
     ).read_text(encoding="utf-8").strip()
     for item in tqdm(items, desc="evaluate"):
-        visible = _visible_sessions(item, sessions_by_id)
+        if item.get("stage") == "stage1_event_identification":
+            visible = [
+                dialogues_by_id[(item["trajectory_id"], session_id)]
+                for session_id in item.get("visible_sessions", [])
+                if (item["trajectory_id"], session_id) in dialogues_by_id
+            ]
+        else:
+            visible = _visible_sessions(item, sessions_by_id)
         prompt = _build_prompt(item, visible)
         if args.execute:
             assert client is not None

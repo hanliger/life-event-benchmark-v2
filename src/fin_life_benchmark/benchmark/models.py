@@ -15,6 +15,7 @@ ERROR_TYPES = (
     "historical_state_contamination",
     "no_event_false_positive",
     "cancelled_ignored",
+    "value_distractor",
 )
 
 
@@ -27,7 +28,7 @@ class CounterfactualOption(BaseModel):
 
 class BenchmarkItem(BaseModel):
     item_id: str
-    stage: str  # stage1_event_status|stage2_memory_mcq
+    stage: str  # stage1_event_identification|stage2_memory_mcq
     trajectory_id: str
     prefix_id: str
     visible_sessions: list[str]

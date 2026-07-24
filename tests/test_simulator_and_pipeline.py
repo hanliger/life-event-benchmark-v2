@@ -551,77 +551,80 @@ def test_forced_event_is_guarded_and_impacts_actions():
             assert any(month < instance.occurred_month for month in marriage_months)
 
 
-def test_stage2_memory_mcq_builds_single_and_multi_hop_items():
-    prefixes = [
-        {
-            "prefix_id": "traj_mem_pfx001",
-            "trajectory_id": "traj_mem",
-            "visible_sessions": ["S001"],
-            "gold_memory_updates": [
-                {
-                    "path": "employment.salary_day",
-                    "operation": "update",
-                    "old_value": 10,
-                    "new_value": 25,
-                    "evidence_turns": ["S001:0"],
-                }
-            ],
-            "gold_full_memory_state": {
-                "employment.salary_day": {
-                    "value": 25,
-                    "status": "current",
-                    "historical_values": [10],
-                }
-            },
+
+
+def test_stage2_memory_mcq_reuses_canonical_target_across_checkpoints():
+    from fin_life_benchmark.benchmark.mcq_input import Stage2Checkpoint, Stage2Target
+
+    target = Stage2Target(
+        canonical_target_id="traj_mem:ev001:employment.salary_day:update:abc123",
+        trajectory_id="traj_mem",
+        target_event_instance_id="traj_mem_ev001",
+        target_event_id="career_employment",
+        target_event_label="취업",
+        memory_path="employment.salary_day",
+        operation="update",
+        first_visible_checkpoint=15,
+        evidence_sessions=("S015",),
+        evidence_turns=("S015:2",),
+        before_state={
+            "value": 10,
+            "status": "current",
+            "pending_proposal": None,
         },
-        {
-            "prefix_id": "traj_mem_pfx002",
-            "trajectory_id": "traj_mem",
-            "visible_sessions": ["S001", "S002"],
-            "gold_memory_updates": [
-                {
-                    "path": "employment.salary_day",
-                    "operation": "update",
-                    "old_value": 10,
-                    "new_value": 25,
-                    "evidence_turns": ["S001:0"],
-                },
-                {
-                    "path": "housing.rent_payee",
-                    "operation": "update",
-                    "old_value": "기존 임대인",
-                    "new_value": "새 임대인",
-                    "evidence_turns": ["S002:0"],
-                },
-            ],
-            "gold_full_memory_state": {
-                "employment.salary_day": {
-                    "value": 25,
-                    "status": "current",
-                    "historical_values": [10],
-                },
-                "housing.rent_payee": {
-                    "value": "새 임대인",
-                    "status": "needs_verification",
-                    "historical_values": ["기존 임대인"],
-                },
-            },
+        after_state={
+            "value": 25,
+            "status": "current",
+            "pending_proposal": None,
         },
+    )
+    checkpoints = [
+        Stage2Checkpoint(
+            trajectory_id="traj_mem",
+            prefix_id="traj_mem_pfx015",
+            checkpoint_session_count=15,
+            visible_session_ids=tuple(f"S{i:03d}" for i in range(1, 16)),
+            targets=(target,),
+        ),
+        Stage2Checkpoint(
+            trajectory_id="traj_mem",
+            prefix_id="traj_mem_pfx030",
+            checkpoint_session_count=30,
+            visible_session_ids=tuple(f"S{i:03d}" for i in range(1, 31)),
+            targets=(target,),
+        ),
     ]
 
-    true_initial = {
-        "traj_mem": {
-            "employment.salary_day": {"value": 10, "status": "current", "historical_values": []},
-            "housing.rent_payee": {"value": "기존 임대인", "status": "current", "historical_values": []},
-        }
-    }
-    items = ItemBuilder(seed=0).build_stage2(prefixes, {"traj_mem": []}, true_initial)
-    assert {item.stage for item in items} == {"stage2_memory_mcq"}
-    assert {"single", "multi"} <= {item.metadata["hop_type"] for item in items}
+    items = ItemBuilder(seed=0).build_stage2(
+        checkpoints,
+        initial_memory_by_traj={
+            "traj_mem": {
+                "employment.salary_day": {
+                    "value": 10,
+                    "status": "current",
+                    "historical_values": [],
+                }
+            }
+        },
+    )
+
+    assert len(items) == 2
+    assert items[0].stage == "stage2_memory_mcq"
+    assert items[0].question == items[1].question
+    assert [option.model_dump() for option in items[0].options] == [
+        option.model_dump() for option in items[1].options
+    ]
+    assert items[0].gold["canonical_target_id"] == items[1].gold["canonical_target_id"]
+    assert len(items[0].visible_sessions) == 15
+    assert len(items[1].visible_sessions) == 30
 
     for item in items:
         correct = [option for option in item.options if option.correct]
+        assert len(item.options) == 4
         assert len(correct) == 1
         assert item.gold["correct_option"] == correct[0].option_id
-        assert "memory_updates" not in item.gold
-        assert any(option.error_type == "stale_memory_carryover" for option in item.options)
+        assert item.gold["memory_path"] == "employment.salary_day"
+        assert any(
+            option.error_type == "stale_memory_carryover"
+            for option in item.options
+        )

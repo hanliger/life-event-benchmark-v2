@@ -1,39 +1,14 @@
-"""Build benchmark items from prefix gold.
-
-Stage 1 — event status detection      (prefix -> event label/status/occurred)
-Stage 2 — financial memory MCQ        (prefix + initial memory -> current state)
-"""
+"""Build benchmark items from prefix gold and trajectory-level MCQ inputs."""
 
 from __future__ import annotations
 
-import random
+import copy
+import json
+import re
 from typing import Any
 
+from .mcq_input import McqWindow, Stage2Checkpoint, Stage2Target
 from .models import BenchmarkItem, CounterfactualOption
-
-_EVIDENCE_TYPES = {
-    "weak_signal_evidence",
-    "upcoming_evidence",
-    "occurred_evidence",
-    "cancellation_evidence",
-    "consequence_session",
-    "hard_negative",
-    "stale_recall_session",
-}
-
-_STAGE1_QUESTION = (
-    "지금까지의 상담 세션 이력만을 근거로, 감지되는 고객 Life Event와 "
-    "각 이벤트의 상태(weak_signal/upcoming/occurred/cancelled)를 모두 나열하시오. "
-    "확인되는 이벤트가 없으면 no_event라고 답하시오."
-)
-def _session_lookup(sessions: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
-    return {s["session_id"]: s for s in sessions}
-
-
-def _last_session_type(prefix: dict[str, Any], lookup: dict[str, dict[str, Any]]) -> str:
-    last_id = prefix["visible_sessions"][-1]
-    session = lookup.get(last_id) or {}
-    return session.get("session_type", "")
 
 
 class ItemBuilder:
@@ -41,36 +16,44 @@ class ItemBuilder:
         self.seed = seed
 
     # ------------------------------------------------------------- stage 1
-    def build_stage1(
+    def build_stage1_event_identification(
         self,
-        prefixes: list[dict[str, Any]],
-        sessions_by_traj: dict[str, list[dict[str, Any]]],
+        windows: list[McqWindow],
+        event_templates: dict[str, Any],
     ) -> list[BenchmarkItem]:
+        """Build one occurred-event item per cumulative 15-session window."""
+        candidate_events = [
+            {"event_id": template.event_id, "label_ko": template.label_ko}
+            for template in sorted(event_templates.values(), key=lambda item: item.event_id)
+            if template.active
+        ]
         items: list[BenchmarkItem] = []
-        for prefix in prefixes:
-            lookup = _session_lookup(sessions_by_traj.get(prefix["trajectory_id"], []))
-            gold_events = [
-                {
-                    "life_event_label": e["life_event_label"],
-                    "event_status": e["event_status"],
-                    "occurred": e["occurred"],
-                    "evidence_sessions": e["evidence_sessions"],
-                }
-                for e in prefix["gold_life_events"]
-            ]
+        for window in windows:
+            prefix_id = f"{window.trajectory_id}_w{window.window_index:02d}"
             items.append(
                 BenchmarkItem(
-                    item_id=f"{prefix['prefix_id']}_s1",
-                    stage="stage1_event_status",
-                    trajectory_id=prefix["trajectory_id"],
-                    prefix_id=prefix["prefix_id"],
-                    visible_sessions=prefix["visible_sessions"],
-                    question=_STAGE1_QUESTION,
-                    gold={"life_events": gold_events or [{"life_event_label": None, "event_status": "no_event"}]},
+                    item_id=f"{prefix_id}_s1_event",
+                    stage="stage1_event_identification",
+                    trajectory_id=window.trajectory_id,
+                    prefix_id=prefix_id,
+                    visible_sessions=list(window.visible_session_ids),
+                    question=(
+                        "전체 상담 이력을 참고하되, "
+                        f"{window.target_session_start}~{window.target_session_end}에서 "
+                        "occurred한 Life Event는 무엇인가? 가능한 목록에서 하나를 선택하시오."
+                    ),
+                    gold={
+                        "event_id": window.target_event_id,
+                        "event_label": window.target_event_label,
+                        "event_instance_id": window.target_event_instance_id,
+                    },
                     metadata={
-                        "last_session_type": _last_session_type(prefix, lookup),
-                        "checkpoint_session_count": prefix.get("checkpoint_session_count"),
-                        "occurred_event_count": prefix.get("occurred_event_count"),
+                        "window_index": window.window_index,
+                        "window_size": window.window_size,
+                        "target_session_start": window.target_session_start,
+                        "target_session_end": window.target_session_end,
+                        "target_event_status": window.target_event_status,
+                        "candidate_events": candidate_events,
                     },
                 )
             )
@@ -78,307 +61,388 @@ class ItemBuilder:
 
     # ------------------------------------------------------------- stage 2
     @staticmethod
-    def _evidenced_updates(updates: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        return [update for update in updates if update.get("evidence_turns")]
-
-    @staticmethod
-    def _initial_memory_subset(initial_memory: dict[str, Any], paths: list[str]) -> dict[str, Any]:
-        return {path: initial_memory.get(path) for path in paths}
-
-    def build_stage2(
-        self,
-        prefixes: list[dict[str, Any]],
-        sessions_by_traj: dict,
-        initial_memory_by_traj: dict[str, dict[str, Any]],
-    ) -> list[BenchmarkItem]:
-        items: list[BenchmarkItem] = []
-        seen_counts: dict[str, int] = {}
-        for prefix in prefixes:
-            traj = prefix["trajectory_id"]
-            updates = self._evidenced_updates(prefix["gold_memory_updates"])
-            n_updates = len(updates)
-            previous = seen_counts.get(traj, 0)
-            if n_updates == 0 or n_updates == previous:
-                seen_counts[traj] = n_updates
-                continue
-            seen_counts[traj] = n_updates
-            new_updates = updates[previous:n_updates]
-            if traj not in initial_memory_by_traj:
-                raise ValueError(f"missing true initial memory for {traj}")
-            initial_memory = initial_memory_by_traj[traj]
-            single = self._stage2_single_hop_item(prefix, new_updates, initial_memory)
-            if single is not None:
-                items.append(single)
-            multi = self._stage2_multi_hop_item(prefix, updates, initial_memory)
-            if multi is not None:
-                items.append(multi)
-        return items
-
-    @staticmethod
-    def _format_memory_value(value: Any) -> str:
-        if value is None:
-            return "값 없음"
-        if isinstance(value, bool):
-            return "예" if value else "아니오"
-        if isinstance(value, (int, float)):
-            return f"{value:,}" if isinstance(value, int) else str(value)
-        if isinstance(value, list):
-            return ", ".join(str(v) for v in value) if value else "빈 목록"
-        if isinstance(value, dict):
-            parts = [f"{k}={v}" for k, v in sorted(value.items())[:3]]
-            return ", ".join(parts) if parts else "빈 객체"
-        return str(value)
+    def _initial_memory_subset(
+        initial_memory: dict[str, Any],
+        paths: list[str],
+    ) -> dict[str, Any]:
+        return {path: copy.deepcopy(initial_memory.get(path)) for path in paths}
 
     @staticmethod
     def _memory_label(path: str) -> str:
         labels = {
             "employment.salary_day": "급여일",
+            "employment.salary_account": "급여 계좌",
             "employment.employment_status": "고용 상태",
             "employment.employer": "직장",
+            "employment.income_stability": "소득 안정성",
             "housing.address": "거주지",
             "housing.residence_status": "주거 상태",
             "housing.contract_type": "주거 계약 유형",
             "housing.rent_amount": "월세 금액",
             "housing.rent_payee": "월세 수취인",
             "housing.mortgage_status": "주택담보대출 상태",
+            "housing.properties": "주택 정보",
             "household.marital_status": "혼인 상태",
+            "household.dependents": "부양가족 수",
             "household.dependents_count": "부양가족 수",
             "household.children_ages": "자녀 나이",
-            "financial_products.loans": "대출 정보",
+            "education.child_education_stage": "자녀 교육 단계",
+            "education.self_education_status": "본인 교육 상태",
+            "cashflow.recent_one_off_expense": "최근 일회성 지출",
+            "financial_products.pension_or_irp": "연금·IRP 상태",
         }
         return labels.get(path, path)
 
-    def _memory_option_text(
-        self,
-        path: str,
-        value: Any,
-        status: str,
-        pending: dict[str, Any] | None = None,
-    ) -> str:
-        text = f"{self._memory_label(path)}: 상태={status}, 값={self._format_memory_value(value)}"
-        if pending is not None:
-            text += f", 변경 예정={self._format_memory_value(pending.get('value'))}"
-        return text
+    @staticmethod
+    def _project_value(target: Stage2Target, state: dict[str, Any]) -> Any:
+        """Project a memory cell to the scalar asked by the policy."""
 
-    def _stage2_options_for_path(
-        self,
-        prefix: dict[str, Any],
-        update: dict[str, Any],
-        rng: random.Random,
-    ) -> tuple[list[CounterfactualOption], str] | None:
-        path = update["path"]
-        memory = prefix.get("gold_full_memory_state") or {}
-        cell = memory.get(path) or {}
-        correct_value = cell.get("value", update.get("new_value"))
-        correct_status = cell.get("status", "current")
-        correct_pending = cell.get("pending_proposal")
-        historical = list(cell.get("historical_values") or [])
-        if update.get("old_value") is not None:
-            historical.append(update.get("old_value"))
+        value = copy.deepcopy(state.get("value"))
+        selector = target.value_selector
+        if selector == "amount_krw":
+            if isinstance(value, dict):
+                return value.get("amount_krw", value.get("amount"))
+            return value
+        if selector == "property_address":
+            if isinstance(value, list):
+                matched: list[Any] = []
+                for item in value:
+                    if not isinstance(item, dict):
+                        continue
+                    event_keys = {
+                        item.get("acquisition_event_instance_id"),
+                        item.get("disposal_event_instance_id"),
+                        item.get("event_instance_id"),
+                    }
+                    if target.target_event_instance_id in event_keys:
+                        matched.append(item.get("address"))
+                if matched:
+                    return matched[-1]
+                for item in reversed(value):
+                    if isinstance(item, dict) and item.get("address"):
+                        return item["address"]
+                return None
+            if isinstance(value, dict):
+                return value.get("address", value)
+        return value
 
-        option_specs: list[tuple[str, str | None, bool]] = [
-            (self._memory_option_text(path, correct_value, correct_status, correct_pending), None, True)
-        ]
-        if historical:
-            stale_value = historical[-1]
-            option_specs.append(
-                (self._memory_option_text(path, stale_value, "current"), "stale_memory_carryover", False)
-            )
-        else:
-            option_specs.append((f"{self._memory_label(path)}: 기존 정보에서 바뀐 점이 없다.", "missed_update", False))
+    @staticmethod
+    def _value_key(value: Any) -> str:
+        return json.dumps(value, ensure_ascii=False, sort_keys=True, default=str)
 
-        if correct_status == "current":
-            option_specs.append(
-                (self._memory_option_text(path, correct_value, "needs_verification"), "premature_update", False)
-            )
-        else:
-            option_specs.append((self._memory_option_text(path, correct_value, "current"), "false_commit", False))
+    @staticmethod
+    def _topic_particle(label: str) -> str:
+        """Return the Korean topic particle for a memory label."""
 
-        option_specs.append((f"{self._memory_label(path)}: 관련 생애 사건이 없으므로 갱신하지 않는다.", "missed_update", False))
+        last = label[-1:]
+        if last and "가" <= last <= "힣":
+            has_final = (ord(last) - 0xAC00) % 28 != 0
+            return "은" if has_final else "는"
+        return "은"
 
-        # Add a wrong sibling path when available so models must track the path,
-        # not just reuse a salient value from the prompt.
-        for other_path, other_cell in sorted(memory.items()):
-            if other_path == path:
+    @staticmethod
+    def _format_option_value(target: Stage2Target, value: Any) -> str:
+        if value is None:
+            return "값 없음"
+        if isinstance(value, bool):
+            return "예" if value else "아니오"
+        if isinstance(value, (int, float)):
+            if target.value_selector == "amount_krw" or "expense" in target.memory_path:
+                return f"{value:,.0f}원"
+            return f"{value:,}" if isinstance(value, int) else str(value)
+        translations = {
+            "stable": "안정적",
+            "variable": "변동적",
+            "reduced": "감소",
+            "unstable": "불안정",
+            "employed": "재직",
+            "self_employed": "자영업",
+            "unemployed": "무직",
+            "retired": "은퇴",
+            "owner": "자가",
+            "jeonse": "전세",
+            "wolse": "월세",
+            "family_home": "가족과 거주",
+            "single": "미혼",
+            "married": "기혼",
+            "separated": "별거",
+            "divorced": "이혼",
+            "widowed": "사별",
+            "pre_school": "취학 전",
+            "primary": "초등학교",
+            "middle": "중학교",
+            "high": "고등학교",
+            "none": "해당 없음",
+            "enrolled": "교육 과정 등록",
+            "study_abroad": "유학 중",
+            "completed": "교육 과정 완료",
+            "irp": "IRP",
+            "receiving": "연금 수령",
+            "both": "IRP 및 연금 수령",
+        }
+        if isinstance(value, (list, dict)):
+            return json.dumps(value, ensure_ascii=False, sort_keys=True, default=str)
+        return translations.get(str(value), str(value))
+
+    @staticmethod
+    def _unique_values(values: list[Any]) -> list[Any]:
+        result: list[Any] = []
+        seen: set[str] = set()
+        for value in values:
+            key = ItemBuilder._value_key(value)
+            if key in seen:
                 continue
-            if other_cell.get("value") is not None:
-                option_specs.append(
-                    (
-                        self._memory_option_text(
-                            other_path,
-                            other_cell.get("value"),
-                            other_cell.get("status", "current"),
-                            other_cell.get("pending_proposal"),
-                        ),
-                        "wrong_sibling_event",
-                        False,
+            seen.add(key)
+            result.append(value)
+        return result
+
+    def _candidate_values(
+        self,
+        target: Stage2Target,
+        all_targets: list[Stage2Target],
+    ) -> tuple[Any, list[Any]]:
+        correct = self._project_value(target, target.after_state)
+        before = self._project_value(target, target.before_state)
+        candidates: list[Any] = [correct]
+        if self._value_key(before) != self._value_key(correct):
+            candidates.append(before)
+        candidates.extend(target.option_pool)
+
+        # Entity and numeric policies can reuse values already grounded in the
+        # same trajectory, while keeping the correct value tied to this event.
+        if target.option_pool_type in {"entity", "numeric"}:
+            for sibling in all_targets:
+                if sibling.memory_path != target.memory_path:
+                    continue
+                sibling_value = self._project_value(sibling, sibling.after_state)
+                if sibling_value is not None:
+                    candidates.append(sibling_value)
+
+        if len(self._unique_values(candidates)) < 4:
+            if isinstance(correct, (int, float)) and not isinstance(correct, bool):
+                step = 1 if isinstance(correct, int) else 0.5
+                candidates.extend(
+                    [correct - step, correct + step, correct - 2 * step, correct + 2 * step]
+                )
+            elif target.option_pool_type == "count":
+                candidates.extend([0, 1, 2, 3, 4])
+            elif target.option_pool_type == "entity":
+                candidates.extend(["기타 지역", "기타 직장", "기타 기관", "기타 주소"])
+            elif target.option_pool_type == "categorical":
+                candidates.extend(["미정", "변경 없음", "기타", "해당 없음"])
+
+        unique = self._unique_values(candidates)
+        if len(unique) < 4:
+            raise ValueError(
+                f"Stage 2 target cannot form four distinct options: "
+                f"{target.canonical_target_id}; values={unique!r}"
+            )
+        return correct, unique[:]
+
+    @staticmethod
+    def _option_sort_key(target: Stage2Target, value: Any) -> tuple[int, Any]:
+        """Return a stable ascending order for the option value."""
+
+        if value is None:
+            return (9, "")
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            return (0, value)
+        if target.option_pool_type == "count":
+            try:
+                return (0, int(value))
+            except (TypeError, ValueError):
+                pass
+        if target.option_pool_type == "categorical":
+            pool_order = {
+                ItemBuilder._value_key(candidate): index
+                for index, candidate in enumerate(target.option_pool)
+            }
+            key = ItemBuilder._value_key(value)
+            if key in pool_order:
+                return (1, pool_order[key])
+        return (2, ItemBuilder._format_option_value(target, value))
+
+    def _select_four_candidates(
+        self,
+        target: Stage2Target,
+        candidates: list[Any],
+        correct_value: Any,
+    ) -> list[Any]:
+        ordered = sorted(
+            candidates,
+            key=lambda value: self._option_sort_key(target, value),
+        )
+        if len(ordered) <= 4:
+            return ordered
+
+        correct_key = self._value_key(correct_value)
+        correct_index = next(
+            index
+            for index, value in enumerate(ordered)
+            if self._value_key(value) == correct_key
+        )
+        if target.option_pool_type == "count":
+            start = max(0, min(correct_index - 3, len(ordered) - 4))
+            return ordered[start : start + 4]
+
+        selected = ordered[:4]
+        if not any(self._value_key(value) == correct_key for value in selected):
+            selected[-1] = correct_value
+            selected.sort(key=lambda value: self._option_sort_key(target, value))
+        return selected
+
+    def _stage2_options_for_target(
+        self,
+        target: Stage2Target,
+        all_targets: list[Stage2Target],
+    ) -> tuple[list[CounterfactualOption], str]:
+        """Create four deterministic value-based options for one event target."""
+
+        correct_value, candidates = self._candidate_values(target, all_targets)
+        candidates = self._select_four_candidates(
+            target, candidates, correct_value
+        )
+        correct_key = self._value_key(correct_value)
+
+        options: list[CounterfactualOption] = []
+        before_value = self._project_value(target, target.before_state)
+        before_key = self._value_key(before_value)
+        for index, value in enumerate(candidates):
+            value_key = self._value_key(value)
+            is_correct = value_key == correct_key
+            error_type = None
+            if not is_correct:
+                error_type = (
+                    "stale_memory_carryover"
+                    if value_key == before_key
+                    else "value_distractor"
+                )
+            options.append(
+                CounterfactualOption(
+                    option_id="ABCD"[index],
+                    text=self._format_option_value(target, value),
+                    error_type=error_type,
+                    correct=is_correct,
+                )
+            )
+
+        correct_options = [option for option in options if option.correct]
+        if len(correct_options) != 1:
+            raise ValueError(
+                f"stage2 target must have exactly one correct option: "
+                f"{target.canonical_target_id}"
+            )
+        return options, correct_options[0].option_id
+
+    def _build_canonical_stage2_payload(
+        self,
+        target: Stage2Target,
+        initial_memory_by_traj: dict[str, dict[str, Any]],
+        all_targets: list[Stage2Target],
+    ) -> tuple[str, list[CounterfactualOption], dict[str, Any], dict[str, Any]]:
+        question_label = target.question_label
+        if question_label in {"memory", target.memory_path}:
+            question_label = self._memory_label(target.memory_path)
+        particle = self._topic_particle(question_label)
+        question = (
+            f"상담 이력에서 확인되는 {question_label}{particle} 무엇인가?"
+        )
+        options, correct_id = self._stage2_options_for_target(target, all_targets)
+        gold = {
+            "correct_option": correct_id,
+            "answer_value": self._project_value(target, target.after_state),
+            "canonical_target_id": target.canonical_target_id,
+            "target_event_instance_id": target.target_event_instance_id,
+            "target_event_id": target.target_event_id,
+            "target_event_label": target.target_event_label,
+            "memory_path": target.memory_path,
+            "value_selector": target.value_selector,
+            "operation": target.operation,
+            "before_state": copy.deepcopy(target.before_state),
+            "after_state": copy.deepcopy(target.after_state),
+            "evidence_sessions": list(target.evidence_sessions),
+            "evidence_turns": list(target.evidence_turns),
+        }
+        metadata = {
+            "canonical_target_id": target.canonical_target_id,
+            "target_event_instance_id": target.target_event_instance_id,
+            "target_event_id": target.target_event_id,
+            "target_event_label": target.target_event_label,
+            "memory_path": target.memory_path,
+            "value_selector": target.value_selector,
+            "question_label": target.question_label,
+            "option_pool_type": target.option_pool_type,
+            "policy_fallback": target.policy_fallback,
+            "operation": target.operation,
+            "first_visible_checkpoint": target.first_visible_checkpoint,
+            "evidence_sessions": list(target.evidence_sessions),
+            "initial_memory": self._initial_memory_subset(
+                initial_memory_by_traj.get(target.trajectory_id, {}),
+                [target.memory_path],
+            ),
+        }
+        return question, options, gold, metadata
+
+    def build_stage2(
+        self,
+        checkpoints: list[Stage2Checkpoint],
+        sessions_by_traj: dict[str, list[dict[str, Any]]] | None = None,
+        initial_memory_by_traj: dict[str, dict[str, Any]] | None = None,
+    ) -> list[BenchmarkItem]:
+        """Build every prior event question at every cumulative checkpoint."""
+        del sessions_by_traj  # session records are used while building targets
+        initial_memory_by_traj = initial_memory_by_traj or {}
+        all_targets_by_id: dict[str, Stage2Target] = {}
+        for checkpoint in checkpoints:
+            for target in checkpoint.targets:
+                all_targets_by_id.setdefault(target.canonical_target_id, target)
+        all_targets = list(all_targets_by_id.values())
+
+        canonical_cache: dict[
+            str, tuple[str, list[CounterfactualOption], dict[str, Any], dict[str, Any]]
+        ] = {}
+        items: list[BenchmarkItem] = []
+
+        for checkpoint in checkpoints:
+            ordered_targets = sorted(
+                checkpoint.targets,
+                key=lambda target: target.canonical_target_id,
+            )
+            for target in ordered_targets:
+                payload = canonical_cache.get(target.canonical_target_id)
+                if payload is None:
+                    payload = self._build_canonical_stage2_payload(
+                        target,
+                        initial_memory_by_traj,
+                        all_targets,
+                    )
+                    canonical_cache[target.canonical_target_id] = payload
+
+                question, canonical_options, gold, metadata = payload
+                safe_target_id = re.sub(
+                    r"[^A-Za-z0-9_.-]+", "_", target.canonical_target_id
+                )
+                item_id = (
+                    f"{checkpoint.trajectory_id}_s{checkpoint.checkpoint_session_count:03d}_"
+                    f"s2_{safe_target_id}"
+                )
+                items.append(
+                    BenchmarkItem(
+                        item_id=item_id,
+                        stage="stage2_memory_mcq",
+                        trajectory_id=checkpoint.trajectory_id,
+                        prefix_id=checkpoint.prefix_id,
+                        visible_sessions=list(checkpoint.visible_session_ids),
+                        question=question,
+                        options=[
+                            option.model_copy(deep=True) for option in canonical_options
+                        ],
+                        gold=copy.deepcopy(gold),
+                        metadata={
+                            **copy.deepcopy(metadata),
+                            "checkpoint_session_count": checkpoint.checkpoint_session_count,
+                            "n_visible_sessions": len(checkpoint.visible_session_ids),
+                        },
                     )
                 )
-                break
-
-        # De-duplicate while preserving correctness.
-        deduped: list[tuple[str, str | None, bool]] = []
-        seen: set[str] = set()
-        for text, error, correct in option_specs:
-            if text in seen:
-                continue
-            seen.add(text)
-            deduped.append((text, error, correct))
-        if len(deduped) < 3:
-            return None
-
-        rng.shuffle(deduped)
-        letters = "ABCDE"
-        options = [
-            CounterfactualOption(option_id=letters[i], text=text, error_type=error, correct=correct)
-            for i, (text, error, correct) in enumerate(deduped[:5])
-        ]
-        if not any(o.correct for o in options):
-            options[-1] = CounterfactualOption(
-                option_id=options[-1].option_id,
-                text=self._memory_option_text(path, correct_value, correct_status, correct_pending),
-                correct=True,
-            )
-        correct_id = next(o.option_id for o in options if o.correct)
-        return options, correct_id
-
-    def _stage2_single_hop_item(
-        self,
-        prefix: dict[str, Any],
-        new_updates: list[dict[str, Any]],
-        initial_memory: dict[str, Any],
-    ) -> BenchmarkItem | None:
-        if not new_updates:
-            return None
-        rng = random.Random(f"{prefix['prefix_id']}:stage2_single:{self.seed}")
-        update = rng.choice(new_updates)
-        built = self._stage2_options_for_path(prefix, update, rng)
-        if built is None:
-            return None
-        options, correct_id = built
-        path = update["path"]
-        question = (
-            "지금까지의 상담 세션 이력과 초기 금융 메모리를 함께 고려할 때, "
-            f"현재 금융 메모리의 '{self._memory_label(path)}' 항목으로 가장 적절한 것은 무엇인가?"
-        )
-        return BenchmarkItem(
-            item_id=f"{prefix['prefix_id']}_{path.replace('.', '_')}_s2_single_mcq",
-            stage="stage2_memory_mcq",
-            trajectory_id=prefix["trajectory_id"],
-            prefix_id=prefix["prefix_id"],
-            visible_sessions=prefix["visible_sessions"],
-            question=question,
-            options=options,
-            gold={
-                "correct_option": correct_id,
-                "memory_path": path,
-                "current_cell": (prefix.get("gold_full_memory_state") or {}).get(path),
-            },
-            metadata={
-                "hop_type": "single",
-                "source_update_operation": update.get("operation"),
-                "n_visible_sessions": len(prefix["visible_sessions"]),
-                "initial_memory": self._initial_memory_subset(initial_memory, [path]),
-            },
-        )
-
-    def _stage2_multi_hop_item(
-        self,
-        prefix: dict[str, Any],
-        updates: list[dict[str, Any]],
-        initial_memory: dict[str, Any],
-    ) -> BenchmarkItem | None:
-        memory = prefix.get("gold_full_memory_state") or {}
-        paths = []
-        for update in reversed(updates):
-            path = update["path"]
-            if path in memory and path not in paths:
-                paths.append(path)
-            if len(paths) == 2:
-                break
-        if len(paths) < 2:
-            return None
-        paths = list(reversed(paths))
-        rng = random.Random(f"{prefix['prefix_id']}:stage2_multi:{self.seed}")
-
-        def statement(
-            path_a: str,
-            value_a: Any,
-            status_a: str,
-            path_b: str,
-            value_b: Any,
-            status_b: str,
-            pending_a: dict[str, Any] | None = None,
-            pending_b: dict[str, Any] | None = None,
-        ) -> str:
-            return (
-                f"{self._memory_option_text(path_a, value_a, status_a, pending_a)} / "
-                f"{self._memory_option_text(path_b, value_b, status_b, pending_b)}"
-            )
-
-        a, b = paths
-        cell_a = memory.get(a) or {}
-        cell_b = memory.get(b) or {}
-        value_a, status_a = cell_a.get("value"), cell_a.get("status", "current")
-        value_b, status_b = cell_b.get("value"), cell_b.get("status", "current")
-        pending_a = cell_a.get("pending_proposal")
-        pending_b = cell_b.get("pending_proposal")
-        hist_a = list(cell_a.get("historical_values") or [])
-        hist_b = list(cell_b.get("historical_values") or [])
-
-        option_specs: list[tuple[str, str | None, bool]] = [
-            (statement(a, value_a, status_a, b, value_b, status_b, pending_a, pending_b), None, True)
-        ]
-        if hist_a:
-            option_specs.append((statement(a, hist_a[-1], "current", b, value_b, status_b, pending_a, pending_b), "stale_memory_carryover", False))
-        if hist_b:
-            option_specs.append((statement(a, value_a, status_a, b, hist_b[-1], "current", pending_a, pending_b), "stale_memory_carryover", False))
-        option_specs.append((statement(a, value_b, status_b, b, value_a, status_a), "historical_state_contamination", False))
-        option_specs.append((f"{self._memory_label(a)}와 {self._memory_label(b)} 모두 기존 정보에서 바뀐 점이 없다.", "missed_update", False))
-
-        deduped: list[tuple[str, str | None, bool]] = []
-        seen: set[str] = set()
-        for text, error, correct in option_specs:
-            if text in seen:
-                continue
-            seen.add(text)
-            deduped.append((text, error, correct))
-        if len(deduped) < 3:
-            return None
-
-        rng.shuffle(deduped)
-        letters = "ABCDE"
-        options = [
-            CounterfactualOption(option_id=letters[i], text=text, error_type=error, correct=correct)
-            for i, (text, error, correct) in enumerate(deduped[:5])
-        ]
-        if not any(o.correct for o in options):
-            options[-1] = CounterfactualOption(
-                option_id=options[-1].option_id,
-                text=statement(a, value_a, status_a, b, value_b, status_b, pending_a, pending_b),
-                correct=True,
-            )
-        correct_id = next(o.option_id for o in options if o.correct)
-        question = (
-            "지금까지의 상담 세션 이력 전체를 종합할 때, 다음 두 금융 메모리 항목의 "
-            "현재 상태를 가장 정확하게 요약한 보기는 무엇인가?"
-        )
-        return BenchmarkItem(
-            item_id=f"{prefix['prefix_id']}_{a.replace('.', '_')}__{b.replace('.', '_')}_s2_multi_mcq",
-            stage="stage2_memory_mcq",
-            trajectory_id=prefix["trajectory_id"],
-            prefix_id=prefix["prefix_id"],
-            visible_sessions=prefix["visible_sessions"],
-            question=question,
-            options=options,
-            gold={
-                "correct_option": correct_id,
-                "memory_paths": [a, b],
-                "current_cells": {a: cell_a, b: cell_b},
-            },
-            metadata={
-                "hop_type": "multi",
-                "n_visible_sessions": len(prefix["visible_sessions"]),
-                "initial_memory": self._initial_memory_subset(initial_memory, [a, b]),
-            },
-        )
+        return items

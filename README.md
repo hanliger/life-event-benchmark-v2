@@ -189,6 +189,42 @@ make plan-dialogues     RUN_ID=$RUN_ID SEED=42
 - **특정 모델 고정**: `scripts/generate_dialogue_sessions.py`에 `--model-profile sonnet5`(정의: `configs/generation/dialogue_models.yaml`)를 넘기면 `.env`와 무관하게 그 모델로 생성합니다. canonical corpus는 `claude-sonnet-5` 기준이며, 검증이 엄격해 저사양 모델은 통과율이 낮을 수 있습니다.
 - 전체를 한 번에: `make pipeline-smoke LIMIT=2 NUM_TRAJ=2 EXECUTE=0` 은 1~7을 offline으로 이어서 돌립니다.
 
+### C. Abstention 실험 (lifecycle masking)
+
+**동기.** 사건은 `weak_signal → upcoming → occurred`(또는 `cancelled`)로 진행하고, 모델은 아직 확정되지 않은 단계에서는 **확정 상태 갱신을 하지 않아야(abstain)** 합니다(→ §2.3). 그런데 단순히 prefix를 잘라 단계별로 평가하면, 단계가 깊어질수록 **prefix 길이·위치·최신성**이 함께 변해 "증거 강도의 효과"와 "길이/위치의 효과"가 섞입니다.
+
+**방법.** 평가 지점을 **한 곳에 고정**한 채, 대상 사건의 근거 세션을 **역순으로**(occurred → upcoming → weak) 벗겨 냅니다. 벗긴 자리는 같은 trajectory의 **사건과 무관한 routine 세션으로 치환**해 길이·위치를 동일하게 유지합니다(routine 세션은 memory에 아무것도 쓰지 않아 gold에 부작용이 없습니다). 각 masking 레벨마다 prefix gold를 다시 계산하면, 정답이 어떻게 달라져야 하는지를 보여주는 **counterfactual "abstention 사다리"**가 나옵니다.
+
+```bash
+export RUN_ID=exp1
+make restore-frozen-run RUN_ID=$RUN_ID          # trajectory(git) + 세션(HF) 복원
+
+# 1) trajectory의 교육단계 전이 기록 보정
+#    (freeze된 fixture는 education-stage 수정 이전 버전이라 전이 기록만 forward로 정정)
+python scripts/fix_education_stage_trajectory.py \
+    --in-dir  data/runs/$RUN_ID/trajectories \
+    --out-dir data/runs/$RUN_ID/trajectories_fixed
+
+# 2) lifecycle masking → 레벨별 counterfactual gold 사다리
+python scripts/mask_lifecycle_experiment.py \
+    --trajectories-dir data/runs/$RUN_ID/trajectories_fixed \
+    --sessions-dir     data/runs/$RUN_ID/dialogues/sessions \
+    --out data/runs/$RUN_ID/masking_ladder.json --max-events 12
+```
+
+masking 레벨과 기대되는 정답(사건 상태):
+
+| 레벨 | 남는 근거 | 기대 gold 상태 | 정답 행동 |
+| --- | --- | --- | --- |
+| `full` | 전부 | `occurred` (또는 `cancelled`) | occurred만 갱신 허용 |
+| `mask_terminal` | weak+upcoming | `upcoming` | abstain |
+| `mask_upcoming` | weak | `weak_signal` | abstain |
+| `mask_all` | 없음 | `no_event` | abstain |
+
+`update_allowed`(상태 갱신 허용)는 **`full`+`occurred`에서만 참**이고 마스킹된 모든 레벨에서는 거짓이어야 합니다. `cancelled` 사건은 `full`에서도 갱신 불가라 commit↔revert 경계를 검증합니다. 산출물 `masking_ladder.json`은 사건별로 이 사다리를 담습니다.
+
+> gold 재계산은 "가시적 세션"만 보고 결정론적으로 이뤄지므로(`export_prefix_gold`), 세션의 `linked_event_instance_id`만 끊으면 상태가 자동으로 강등됩니다. **새 세션 생성은 필요 없습니다.** 다음 단계로 각 masked prefix에 대해 문항을 만들고 `evaluate`를 돌리면, 모델의 행동 곡선을 이 gold 사다리와 대조하는 **abstention 민감도**를 얻습니다.
+
 ---
 
 ## 6. 데이터 정책
@@ -216,6 +252,7 @@ make plan-dialogues     RUN_ID=$RUN_ID SEED=42
 | `data/runs/<RUN_ID>/benchmark_items/*.jsonl` | Stage 1/2 문항 |
 | `data/runs/<RUN_ID>/quality_reports/*` | 검증·audit 리포트 |
 | `data/runs/<RUN_ID>/eval/report.json` | 모델 평가 결과 |
+| `data/runs/<RUN_ID>/masking_ladder.json` | lifecycle masking abstention 사다리 (§5-C) |
 
 ---
 

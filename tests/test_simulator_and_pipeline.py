@@ -428,10 +428,13 @@ def test_end_to_end_mock_pipeline_in_memory():
     sessions = [generator.generate_session(p, trajectory.persona).model_dump(mode="json") for p in plans]
 
     validator = DialogueValidator(templates)
-    # The mock generator emits templated turns that do not surface planned slot
-    # values or the event cue verbatim; both codes below are mock-generation
-    # limitations, not defects the validator should hold real dialogue to here.
-    mock_allowed = {"near_direct_event_disclosure", "provided_slot_not_grounded_in_dialogue"}
+    # The mock generator emits templated turns that do not surface the event cue
+    # verbatim, a mock-generation limitation the validator should not hold real
+    # dialogue to here. (provided_slot_not_grounded_in_dialogue used to be listed
+    # too, but generation now reconciles grounded slots against the realized
+    # turns, so ungrounded provided_slots no longer occur -- see
+    # DialogueGenerator._reconcile_with_dialogue.)
+    mock_allowed = {"near_direct_event_disclosure"}
     violations = [
         violation
         for session in sessions

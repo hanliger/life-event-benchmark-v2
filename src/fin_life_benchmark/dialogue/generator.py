@@ -23,8 +23,13 @@ from ..io import load_yaml
 from ..llm.client import LLMClient
 from ..persona.models import NormalizedPersona
 from ..fsm.registry import load_life_event_templates
-from ..validation.dialogue_validator import DialogueValidator, grounded_concrete_values
+from ..validation.dialogue_validator import (
+    DialogueValidator,
+    grounded_concrete_values,
+    reconcile_provided_slots,
+)
 from .models import (
+    ActionExecutionContract,
     ActionResolution,
     CueAnnotation,
     DialogueGenerationPlan,
@@ -524,6 +529,12 @@ class DialogueGenerator:
             financial_task_clear=bool(safe_task),
             turn_count_ok=turns_min <= len(turns) <= turns_max,
         )
+        resolution = ActionResolution(
+            mode=plan.action_execution_contract.action_mode,
+            provided_slots=dict(plan.action_execution_contract.grounded_slots),
+            missing_slots=list(plan.action_execution_contract.missing_slots),
+        )
+        session_plan, resolution = self._reconcile_with_dialogue(plan, resolution, turns)
         return Session(
             session_id=plan.session_id,
             trajectory_id=plan.trajectory_id,
@@ -541,13 +552,9 @@ class DialogueGenerator:
             turns=turns,
             cue_annotations=cues,
             quality_self_check=check,
-            action_resolution=ActionResolution(
-                mode=plan.action_execution_contract.action_mode,
-                provided_slots=dict(plan.action_execution_contract.grounded_slots),
-                missing_slots=list(plan.action_execution_contract.missing_slots),
-            ),
+            action_resolution=resolution,
             generator="mock",
-            plan=plan,
+            plan=session_plan,
         )
 
     # ------------------------------------------------------------------- llm
@@ -958,6 +965,36 @@ class DialogueGenerator:
 
         return repaired
 
+    @staticmethod
+    def _reconcile_with_dialogue(
+        plan: DialogueGenerationPlan,
+        resolution: ActionResolution,
+        turns: list[Turn],
+    ) -> tuple[DialogueGenerationPlan, ActionResolution]:
+        """Drop grounded/provided slots not surfaced in the realized dialogue.
+
+        The planner grounds slots from the persona's structured context before
+        any dialogue exists; this reconciles the frozen contract against the
+        turns actually produced (rule-based, deterministic) so a slot survives
+        only when its value appears in the user's dialogue. Returns a plan copy
+        with the reconciled contract plus the reconciled resolution.
+        """
+        new_contract, new_resolution, dropped = reconcile_provided_slots(
+            plan.action_execution_contract.model_dump(mode="json"),
+            resolution.model_dump(mode="json"),
+            [turn.model_dump(mode="json") for turn in turns],
+        )
+        if not dropped:
+            return plan, resolution
+        reconciled_plan = plan.model_copy(
+            update={
+                "action_execution_contract": ActionExecutionContract.model_validate(
+                    new_contract
+                )
+            }
+        )
+        return reconciled_plan, ActionResolution.model_validate(new_resolution)
+
     def _payload_to_parts(
         self,
         payload: dict[str, Any],
@@ -1204,6 +1241,15 @@ class DialogueGenerator:
                     persona,
                     enforce_turn_limits=enforce_turn_limits,
                 )
+                # Reconcile the planner's pre-dialogue grounding against the turns
+                # actually generated: a grounded slot survives only if its value
+                # is surfaced in the user's dialogue, else it becomes missing and
+                # the action downgrades to pending. Deterministic; keeps the
+                # frozen contract honest instead of rejecting valid pending
+                # dialogues where the user simply hasn't stated every slot yet.
+                session_plan, resolution = self._reconcile_with_dialogue(
+                    plan, resolution, turns
+                )
                 candidate = Session(
                     session_id=plan.session_id,
                     trajectory_id=plan.trajectory_id,
@@ -1224,7 +1270,7 @@ class DialogueGenerator:
                     action_resolution=resolution,
                     generator=self.client.provider,
                     generation_metadata={},
-                    plan=plan,
+                    plan=session_plan,
                 )
                 violations = self.validator.validate_session(candidate.model_dump(mode="json"))
                 blocking_violations = [

@@ -293,6 +293,84 @@ def ungrounded_concrete_values(
     return ungrounded
 
 
+def reconcile_provided_slots(
+    contract: dict[str, Any],
+    resolution: dict[str, Any],
+    turns: list[dict[str, Any]],
+) -> tuple[dict[str, Any], dict[str, Any], list[str]]:
+    """Drop grounded/provided slot values not surfaced in the user dialogue.
+
+    Rule-based, deterministic reconciliation of an execution contract against the
+    dialogue that was actually generated for it. A slot value is kept only when
+    :func:`_slot_value_visible` finds it in the user turns -- the same predicate
+    the ``provided_slot_not_grounded_in_dialogue`` validator uses -- so the
+    reconciled session passes that check by construction.
+
+    The planner grounds slots (e.g. ``amount``) from the persona's structured
+    context before the dialogue exists, so a value like a standing transfer's
+    amount can be stamped onto a session whose dialogue is about something else
+    entirely. This moves any such slot to ``missing_slots`` and, when a required
+    execution slot is no longer grounded, downgrades the action to
+    ``pending_required_information`` (``completion_allowed=False``) and clears the
+    completion/confirmation turn indices.
+
+    Returns new ``(contract, resolution, dropped_slots)``; the inputs are not
+    mutated. A no-op (empty ``dropped_slots``) for ``information_only`` contracts,
+    contracts without grounded slots, and sessions already fully grounded.
+    """
+    contract = dict(contract or {})
+    resolution = dict(resolution or {})
+    grounded = dict(contract.get("grounded_slots") or {})
+    if not grounded:
+        return contract, resolution, []
+
+    user_text = " ".join(
+        str(turn.get("text", ""))
+        for turn in turns
+        if turn.get("speaker") == "user"
+    )
+    dropped = [
+        slot
+        for slot, value in grounded.items()
+        if not _slot_value_visible(slot, value, user_text)
+    ]
+    if not dropped:
+        return contract, resolution, []
+
+    for slot in dropped:
+        grounded.pop(slot, None)
+    required = list(contract.get("required_slots") or [])
+    # Mirror the planner's own missing/readiness definition
+    # (EvidencePlanner._action_execution_contract): explicit_confirmation is a
+    # confirmation act, never a grounded value, so it never counts as missing.
+    missing = [
+        slot
+        for slot in required
+        if slot != "explicit_confirmation" and slot not in grounded
+    ]
+    ready = not missing
+
+    contract["grounded_slots"] = grounded
+    contract["missing_slots"] = missing
+    contract["completion_allowed"] = ready
+    if contract.get("action_mode") not in (None, "information_only"):
+        contract["action_mode"] = (
+            "ready_for_confirmation" if ready else "pending_required_information"
+        )
+
+    provided = dict(resolution.get("provided_slots") or {})
+    for slot in dropped:
+        provided.pop(slot, None)
+    resolution["provided_slots"] = provided
+    resolution["missing_slots"] = missing
+    if not ready:
+        resolution["mode"] = "pending_required_information"
+        resolution["completion_turn_index"] = None
+        resolution["explicit_confirmation_turn_index"] = None
+
+    return contract, resolution, dropped
+
+
 class DialogueValidator:
     def __init__(
         self,

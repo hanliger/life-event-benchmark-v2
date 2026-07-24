@@ -22,6 +22,7 @@ from fin_life_benchmark.validation.dialogue_generation_audit import (
 from fin_life_benchmark.validation.dialogue_validator import (
     DialogueValidator,
     contains_contextual_event_label,
+    reconcile_provided_slots,
 )
 from scripts.sample_dialogue_regression_canary import select_regression_plans
 from scripts.score_dialogue_review_packet import score_records
@@ -421,3 +422,103 @@ def test_plan_serialization_round_trip_preserves_contracts():
         next(open("tests/fixtures/plans/plans_traj_001.jsonl", encoding="utf-8"))
     )
     assert DialogueGenerationPlan.model_validate(plan.model_dump(mode="json")) == plan
+
+
+def _pending_transfer_contract(amount: int = 200000) -> tuple[dict, dict]:
+    contract = {
+        "action_mode": "pending_required_information",
+        "required_slots": ["source_account", "amount", "recurrence_day", "explicit_confirmation"],
+        "grounded_slots": {"source_account": "main_checking", "amount": amount},
+        "missing_slots": ["recurrence_day"],
+        "completion_allowed": False,
+        "confirmation_required": True,
+    }
+    resolution = {
+        "mode": "pending_required_information",
+        "provided_slots": dict(contract["grounded_slots"]),
+        "missing_slots": ["recurrence_day"],
+        "explicit_confirmation_turn_index": None,
+        "completion_turn_index": None,
+    }
+    return contract, resolution
+
+
+def test_reconcile_drops_amount_not_surfaced_in_dialogue():
+    # Persona-constant amount (200,000) stamped onto a dialogue that only talks
+    # about a 3,000,000 funeral transfer -> amount must move to missing_slots.
+    contract, resolution = _pending_transfer_contract(200000)
+    turns = [{"speaker": "user", "text": "장례비 300만원을 주거래계좌에서 보내야 해요"}]
+    new_contract, new_resolution, dropped = reconcile_provided_slots(contract, resolution, turns)
+    assert dropped == ["amount"]
+    assert "amount" not in new_contract["grounded_slots"]
+    assert "amount" not in new_resolution["provided_slots"]
+    assert "amount" in new_contract["missing_slots"]
+    # source_account is surfaced ("주거래계좌") and must be preserved.
+    assert new_contract["grounded_slots"]["source_account"] == "main_checking"
+    assert new_contract["action_mode"] == "pending_required_information"
+
+
+def test_reconcile_keeps_amount_actually_stated_in_dialogue():
+    contract, resolution = _pending_transfer_contract(200000)
+    turns = [{"speaker": "user", "text": "주거래계좌에서 매달 20만원씩 넣고 싶어요"}]
+    new_contract, new_resolution, dropped = reconcile_provided_slots(contract, resolution, turns)
+    assert dropped == []
+    assert new_contract["grounded_slots"]["amount"] == 200000
+    assert new_resolution["provided_slots"]["amount"] == 200000
+
+
+def test_reconcile_downgrades_ready_session_that_loses_a_required_slot():
+    contract = {
+        "action_mode": "ready_for_confirmation",
+        "required_slots": ["source_account", "amount", "recurrence_day", "explicit_confirmation"],
+        "grounded_slots": {"source_account": "main_checking", "amount": 500000, "recurrence_day": 10},
+        "missing_slots": [],
+        "completion_allowed": True,
+        "confirmation_required": True,
+    }
+    resolution = {
+        "mode": "executed_after_confirmation",
+        "provided_slots": dict(contract["grounded_slots"]),
+        "missing_slots": [],
+        "explicit_confirmation_turn_index": 0,
+        "completion_turn_index": 1,
+    }
+    # Dialogue surfaces the account and day but never the 500,000 amount.
+    turns = [{"speaker": "user", "text": "주거래계좌에서 매달 10일에 넣어주세요"}]
+    new_contract, new_resolution, dropped = reconcile_provided_slots(contract, resolution, turns)
+    assert dropped == ["amount"]
+    assert new_contract["action_mode"] == "pending_required_information"
+    assert new_contract["completion_allowed"] is False
+    assert new_resolution["mode"] == "pending_required_information"
+    assert new_resolution["completion_turn_index"] is None
+    assert new_resolution["explicit_confirmation_turn_index"] is None
+
+
+def test_reconcile_is_noop_for_information_only():
+    contract = {"action_mode": "information_only", "grounded_slots": {}, "missing_slots": []}
+    resolution = {"mode": "information_only", "provided_slots": {}, "missing_slots": []}
+    new_contract, new_resolution, dropped = reconcile_provided_slots(contract, resolution, [])
+    assert dropped == []
+    assert new_contract == contract
+    assert new_resolution == resolution
+
+
+def test_reconciled_session_passes_provided_slot_grounding_check():
+    contract, resolution = _pending_transfer_contract(200000)
+    session = _session(
+        mapped_action="FA-09",
+        status="no_event",
+        user="장례비 300만원을 주거래계좌에서 보내야 해요",
+        contract=contract,
+        resolution=resolution,
+    )
+    codes = {item["code"] for item in _validator().validate_session(session)}
+    assert "provided_slot_not_grounded_in_dialogue" in codes  # before reconcile
+
+    new_contract, new_resolution, _ = reconcile_provided_slots(
+        contract, resolution, session["turns"]
+    )
+    session["plan"]["action_execution_contract"] = new_contract
+    session["action_resolution"] = new_resolution
+    codes = {item["code"] for item in _validator().validate_session(session)}
+    assert "provided_slot_not_grounded_in_dialogue" not in codes  # after reconcile

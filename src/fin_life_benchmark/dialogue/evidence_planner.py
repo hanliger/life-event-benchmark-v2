@@ -202,21 +202,33 @@ class EvidencePlanner:
         registry = self.high_risk_contract_registry.get(plan.mapped_action or "")
         if not registry:
             return ActionExecutionContract(action_mode="information_only")
-        # A lookup/check remains information-only even if its FA family can
-        # execute funds movement in other task subtypes.
-        information_only_suffixes = ("조회", "확인", "점검", "비교")
-        explicitly_executable = any(
-            term in plan.financial_task for term in ("실행", "송금", "변경", "해지")
+        # The act comes from the task template when it declares one. Reading it
+        # off the task string cannot work in general: "주담대 실행과 상환계좌 확인"
+        # ends in 확인 yet executes, and "주거 변경 비용 이체 한도 확인" is a pure
+        # lookup whose noun "주거 변경" trips any substring test for 변경.
+        declared = (self.high_risk_contract_registry.get("task_subtypes") or {}).get(
+            plan.task_template_id or ""
         )
-        if (
-            plan.financial_task.endswith(information_only_suffixes)
-            or "내역" in plan.financial_task
-        ) and not explicitly_executable:
+        subtype = declared or registry.get("default_subtype")
+        spec = (registry.get("subtypes") or {}).get(subtype) or {}
+        if spec.get("information_only"):
             return ActionExecutionContract(
                 action_mode="information_only", confirmation_required=False
             )
-        subtype = registry.get("default_subtype")
-        spec = (registry.get("subtypes") or {}).get(subtype) or {}
+        if not declared:
+            # Fallback for templates that declare nothing: a lookup/check stays
+            # information-only even though its FA family can move funds.
+            information_only_suffixes = ("조회", "확인", "점검", "비교")
+            explicitly_executable = any(
+                term in plan.financial_task for term in ("실행", "송금", "변경", "해지")
+            )
+            if (
+                plan.financial_task.endswith(information_only_suffixes)
+                or "내역" in plan.financial_task
+            ) and not explicitly_executable:
+                return ActionExecutionContract(
+                    action_mode="information_only", confirmation_required=False
+                )
         required = list(spec.get("required_for_execution") or [])
         if len(plan.target_action_ids) > 1 and "target_action_ids" not in required:
             required.append("target_action_ids")

@@ -711,3 +711,66 @@ def test_standing_action_amounts_reads_only_numeric_amounts():
         }
     }
     assert standing_action_amounts(plan) == frozenset({"650000"})
+
+
+def _contract_for(task_template_id: str, mapped_action: str, financial_task: str):
+    paths = RepoPaths.default()
+    planner = EvidencePlanner(
+        load_life_event_templates(paths), load_locale("ko_KR", paths), paths
+    )
+    plan = DialogueGenerationPlan(
+        session_id="S001",
+        trajectory_id="traj_test",
+        month_index=0,
+        age=30,
+        transition_order=0,
+        window_index=1,
+        position_in_window=1,
+        window_event_instance_id="ev",
+        session_type="occurred_evidence",
+        event_status_after_session="occurred",
+        mapped_action=mapped_action,
+        financial_task=financial_task,
+        task_template_id=task_template_id,
+    )
+    return planner._action_execution_contract(plan)
+
+
+def test_cancelling_an_existing_arrangement_needs_only_its_identity():
+    # Stopping a transfer must not demand a payee and an amount the customer has
+    # no reason to restate -- only which arrangement, plus confirmation.
+    contract = _contract_for(
+        "dependent_end_transfer_stop", "FA-08", "기존 지원 정기이체 변경"
+    )
+    assert set(contract.required_slots) == {"target_action_ids", "explicit_confirmation"}
+    assert "amount" not in contract.required_slots
+    assert "destination_account" not in contract.required_slots
+
+
+def test_cancelling_a_reservation_needs_nothing_but_confirmation():
+    # The scheduled change was never created, so there is no arrangement to name.
+    contract = _contract_for(
+        "housing_move_jeonse_payment_cancel", "FA-08", "주거비 납부 변경 예약 취소"
+    )
+    assert contract.required_slots == ["explicit_confirmation"]
+    assert contract.action_mode == "ready_for_confirmation"
+
+
+def test_declared_lookup_stays_information_only_despite_the_noun_변경():
+    # "주거 변경 비용 이체 한도 확인" is a pure lookup, but the noun "주거 변경"
+    # trips any substring test for the verb 변경.
+    contract = _contract_for(
+        "housing_move_other_transfer_limit", "FA-07", "주거 변경 비용 이체 한도 확인"
+    )
+    assert contract.action_mode == "information_only"
+    assert contract.required_slots == []
+
+
+def test_undeclared_template_still_falls_back_to_the_task_string():
+    # Templates that declare no subtype keep the old heuristic: this one really
+    # does execute even though it ends in 확인.
+    contract = _contract_for(
+        "home_purchase_mortgage_execute", "FA-10", "주담대 실행과 상환계좌 확인"
+    )
+    assert contract.action_mode != "information_only"
+    assert "amount_or_schedule" in contract.required_slots

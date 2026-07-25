@@ -1,20 +1,49 @@
+# Each FA family covers more than one act. Setting up a recurring transfer needs
+# a payee and an amount; cancelling one needs neither -- only which arrangement,
+# and the customer's confirmation. Checking a limit executes nothing at all.
+# Without these subtypes every act inherits the setup contract, so cancellation
+# and lookup sessions get marked pending_required_information for slots the
+# conversation never needed. `task_subtypes` below assigns them.
 FA-07:
   default_subtype: transfer
   subtypes:
     transfer:
       required_for_execution: [source_account, destination_name, destination_account, amount, currency, execution_date, explicit_confirmation]
       optional: [fee_acknowledgement, exchange_rate_acknowledgement]
+    inquiry:
+      information_only: true
+      required_for_execution: []
+      optional: []
 FA-08:
   default_subtype: recurring_transfer
   subtypes:
     recurring_transfer:
       required_for_execution: [source_account, destination_name, destination_account, amount, recurrence_day, explicit_confirmation]
       optional: [target_action_ids]
+    cancel:
+      required_for_execution: [target_action_ids, explicit_confirmation]
+      optional: [source_account]
+    # Cancelling a *reservation* -- a change that was scheduled but never
+    # created -- has no arrangement to identify, so confirmation is all there is.
+    cancel_reservation:
+      required_for_execution: [explicit_confirmation]
+      optional: []
+    inquiry:
+      information_only: true
+      required_for_execution: []
+      optional: []
 FA-09:
   default_subtype: recurring_savings
   subtypes:
     recurring_savings:
       required_for_execution: [source_account, product_or_goal, amount, recurrence_day, explicit_confirmation]
+      optional: []
+    cancel:
+      required_for_execution: [target_action_ids, explicit_confirmation]
+      optional: [source_account]
+    inquiry:
+      information_only: true
+      required_for_execution: []
       optional: []
 FA-10:
   default_subtype: repayment
@@ -22,6 +51,26 @@ FA-10:
     repayment:
       required_for_execution: [loan_reference, source_account, amount_or_schedule, execution_date_or_recurrence, explicit_confirmation]
       optional: []
+    inquiry:
+      information_only: true
+      required_for_execution: []
+      optional: []
+
+# Declared per task template, because the act cannot be read off the task string.
+# "주담대 실행과 상환계좌 확인" ends in 확인 yet really executes, while "주거 변경
+# 비용 이체 한도 확인" is a pure lookup whose noun "주거 변경" makes any substring
+# test for 변경 fire. Templates absent here fall back to the default subtype.
+task_subtypes:
+  # "예정했던 …만 취소하고 기존 설정을 유지한다" -- the change was scheduled but
+  # never created, so there is no arrangement to point at.
+  housing_move_jeonse_payment_cancel: cancel_reservation
+  housing_move_other_payment_cancel: cancel_reservation
+  housing_move_family_contribution_cancel: cancel_reservation
+  # "기존 지원 이체를 … 해지한다" -- stopping an arrangement that already exists,
+  # so which one must be identified.
+  dependent_end_transfer_stop: cancel
+  # "이체 한도만 확인한다" -- executes nothing.
+  housing_move_other_transfer_limit: inquiry
 
 slot_aliases:
   source_account: [source_account, withdrawal_account, from_account, salary_account]

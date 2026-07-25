@@ -952,3 +952,40 @@ def test_grounded_amount_the_customer_never_states_is_blocking():
 def test_a_stated_amount_clears_the_rule(text):
     codes = {item["code"] for item in _validator().validate_session(_grounded_amount_session(text))}
     assert "grounded_amount_not_stated" not in codes
+
+
+def test_generator_checks_grounded_amounts_before_reconciling():
+    # The order matters: reconcile prunes an unstated grounded slot, so a check
+    # that runs after it has nothing left to see. This is why the validator rule
+    # alone let 24 sessions through with the amount silently dropped.
+    from fin_life_benchmark.dialogue.generator import DialogueGenerator
+    from fin_life_benchmark.dialogue.models import ActionExecutionContract, Turn
+
+    plan = DialogueGenerationPlan(
+        session_id="S001",
+        trajectory_id="traj_test",
+        month_index=0,
+        age=30,
+        transition_order=0,
+        window_index=1,
+        position_in_window=1,
+        window_event_instance_id="ev",
+        session_type="occurred_evidence",
+        event_status_after_session="occurred",
+        mapped_action="FA-08",
+        financial_task="월세 정기이체 설정",
+        action_execution_contract=ActionExecutionContract(
+            action_mode="pending_required_information",
+            required_slots=["amount", "explicit_confirmation"],
+            grounded_slots={"amount": 400000},
+            missing_slots=[],
+        ),
+    )
+    vague = [Turn(speaker="user", text="네 그 금액 맞아요, 그 정도로 해주세요")]
+    assert DialogueGenerator._unstated_grounded_amounts(plan, vague) == [
+        ("amount", 400000)
+    ]
+    stated = [Turn(speaker="user", text="매달 40만원으로 해주세요")]
+    assert DialogueGenerator._unstated_grounded_amounts(plan, stated) == []
+    hangul = [Turn(speaker="user", text="매달 사십만원으로 해주세요")]
+    assert DialogueGenerator._unstated_grounded_amounts(plan, hangul) == []

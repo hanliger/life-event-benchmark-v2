@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
+import random
 import re
+from datetime import date
 from typing import Any
 
 from .mcq_input import McqWindow, Stage2Checkpoint, Stage2Target
@@ -12,8 +15,9 @@ from .models import BenchmarkItem, CounterfactualOption
 
 
 class ItemBuilder:
-    def __init__(self, seed: int = 0):
+    def __init__(self, seed: int = 0, shuffle_options: bool = False):
         self.seed = seed
+        self.shuffle_options = shuffle_options
 
     # ------------------------------------------------------------- stage 1
     def build_stage1_event_identification(
@@ -30,6 +34,14 @@ class ItemBuilder:
         items: list[BenchmarkItem] = []
         for window in windows:
             prefix_id = f"{window.trajectory_id}_w{window.window_index:02d}"
+            session_range = (
+                f"{window.target_session_start}~{window.target_session_end}"
+            )
+            date_range = self._format_date_range(
+                window.target_date_start,
+                window.target_date_end,
+                session_range,
+            )
             items.append(
                 BenchmarkItem(
                     item_id=f"{prefix_id}_s1_event",
@@ -38,9 +50,9 @@ class ItemBuilder:
                     prefix_id=prefix_id,
                     visible_sessions=list(window.visible_session_ids),
                     question=(
-                        "전체 상담 이력을 참고하되, "
-                        f"{window.target_session_start}~{window.target_session_end}에서 "
-                        "occurred한 Life Event는 무엇인가? 가능한 목록에서 하나를 선택하시오."
+                        "전체 상담 이력을 참고하여, "
+                        f"{date_range} 기간에 마지막으로 실제 발생한 Life Event는 "
+                        "무엇인가? 가능한 목록에서 하나를 선택하시오."
                     ),
                     gold={
                         "event_id": window.target_event_id,
@@ -52,6 +64,8 @@ class ItemBuilder:
                         "window_size": window.window_size,
                         "target_session_start": window.target_session_start,
                         "target_session_end": window.target_session_end,
+                        "target_date_start": window.target_date_start,
+                        "target_date_end": window.target_date_end,
                         "target_event_status": window.target_event_status,
                         "candidate_events": candidate_events,
                     },
@@ -66,6 +80,29 @@ class ItemBuilder:
         paths: list[str],
     ) -> dict[str, Any]:
         return {path: copy.deepcopy(initial_memory.get(path)) for path in paths}
+
+    @staticmethod
+    def _format_date(value: str | None) -> str | None:
+        if not value:
+            return None
+        try:
+            parsed = date.fromisoformat(str(value))
+        except ValueError:
+            return str(value)
+        return f"{parsed.year}년 {parsed.month}월 {parsed.day}일"
+
+    @classmethod
+    def _format_date_range(
+        cls,
+        start: str | None,
+        end: str | None,
+        fallback: str,
+    ) -> str:
+        start_text = cls._format_date(start)
+        end_text = cls._format_date(end)
+        if start_text and end_text:
+            return f"{start_text}~{end_text}"
+        return fallback
 
     @staticmethod
     def _memory_label(path: str) -> str:
@@ -362,6 +399,40 @@ class ItemBuilder:
             selected.sort(key=lambda value: self._option_sort_key(target, value))
         return selected
 
+    def _shuffle_stage2_options(
+        self,
+        target: Stage2Target,
+        options: list[CounterfactualOption],
+        checkpoint_session_count: int,
+    ) -> tuple[list[CounterfactualOption], str]:
+        """Optionally shuffle one target for one checkpoint.
+
+        The option values remain canonical for the target, while the
+        checkpoint participates in the shuffle seed so later evaluations may
+        use a different A-D assignment.
+        """
+
+        if not self.shuffle_options:
+            correct = next(option.option_id for option in options if option.correct)
+            return options, correct
+
+        payload = (
+            f"{self.seed}:{target.canonical_target_id}:"
+            f"{checkpoint_session_count}"
+        ).encode("utf-8")
+        shuffle_seed = int.from_bytes(
+            hashlib.sha256(payload).digest()[:8], byteorder="big", signed=False
+        )
+        shuffled = [option.model_copy(deep=True) for option in options]
+        random.Random(shuffle_seed).shuffle(shuffled)
+        relabeled: list[CounterfactualOption] = []
+        for index, option in enumerate(shuffled):
+            relabeled.append(
+                option.model_copy(update={"option_id": "ABCD"[index]})
+            )
+        correct = next(option.option_id for option in relabeled if option.correct)
+        return relabeled, correct
+
     def _stage2_options_for_target(
         self,
         target: Stage2Target,
@@ -418,6 +489,8 @@ class ItemBuilder:
         initial_memory_by_traj: dict[str, dict[str, Any]],
         all_targets: list[Stage2Target],
         window_size: int,
+        target_date_start: str | None = None,
+        target_date_end: str | None = None,
     ) -> tuple[str, list[CounterfactualOption], dict[str, Any], dict[str, Any]]:
         question_label = target.question_label
         if question_label in {"memory", target.memory_path}:
@@ -427,23 +500,36 @@ class ItemBuilder:
         particle = self._topic_particle(question_label)
         window_end = target.first_visible_checkpoint
         window_start = max(1, window_end - window_size + 1)
-        window_range = f"S{window_start:03d}~S{window_end:03d}"
+        session_window_range = f"S{window_start:03d}~S{window_end:03d}"
+        window_range = self._format_date_range(
+            target_date_start,
+            target_date_end,
+            session_window_range,
+        )
+        window_start_label = self._format_date(target_date_start) or f"S{window_start:03d}"
+        window_end_label = self._format_date(target_date_end) or f"S{window_end:03d}"
         if target.question_scope == "latest_window":
             question_prefix = (
-                f"제공된 전체 상담 이력을 참고하여, {window_range}에서 "
-                f"가장 최근에 기록된 {question_label}{particle}"
+                f"제공된 전체 상담 이력을 참고하여, {window_range} 기간에 "
+                f"새로 반영된 {question_label}{particle}"
             )
         else:
             question_prefix = (
-                f"제공된 전체 상담 이력 기준, 현재 {question_label}{particle}"
+                f"제공된 전체 상담 이력을 참고하여, {window_range} 기간 종료 시점의 "
+                f"현재 {question_label}{particle}"
             )
         if target.question_template:
             question = (
                 target.question_template
-                .replace("{window_start}", f"S{window_start:03d}")
-                .replace("{window_end}", f"S{window_end:03d}")
+                .replace("{window_start}", window_start_label)
+                .replace("{window_end}", window_end_label)
                 .replace("{window_range}", window_range)
             )
+            if "{window_range}" not in target.question_template:
+                question = (
+                    f"제공된 전체 상담 이력을 참고하여, {window_range} 기간 기준으로 "
+                    f"{question}"
+                )
         elif target.option_pool_type == "count":
             question = f"{question_prefix} 몇 명인가?"
         elif target.option_pool_type == "numeric" and target.value_selector == "amount_krw":
@@ -479,6 +565,9 @@ class ItemBuilder:
             "option_pool_type": target.option_pool_type,
             "operation": target.operation,
             "first_visible_checkpoint": target.first_visible_checkpoint,
+            "target_date_start": target_date_start,
+            "target_date_end": target_date_end,
+            "options_shuffled": self.shuffle_options,
             "evidence_sessions": list(target.evidence_sessions),
             "initial_memory": self._initial_memory_subset(
                 initial_memory_by_traj.get(target.trajectory_id, {}),
@@ -493,10 +582,11 @@ class ItemBuilder:
         initial_memory_by_traj: dict[str, dict[str, Any]] | None = None,
         window_size: int = 15,
     ) -> list[BenchmarkItem]:
-        """Build one question for the event in each checkpoint's latest window.
+        """Build one item for every eligible event at every checkpoint.
 
-        The visible context remains cumulative, but previously occurred events
-        are not re-asked at later checkpoints.
+        The visible context is cumulative. A target's question, options, and
+        gold remain canonical across checkpoints; only the visible prefix gets
+        longer as the checkpoint advances.
         """
         if window_size <= 0:
             raise ValueError("window_size must be positive")
@@ -513,19 +603,8 @@ class ItemBuilder:
         items: list[BenchmarkItem] = []
 
         for checkpoint in checkpoints:
-            current_targets = [
-                target
-                for target in checkpoint.targets
-                if target.first_visible_checkpoint
-                == checkpoint.checkpoint_session_count
-            ]
-            if len(current_targets) > 1:
-                raise ValueError(
-                    "Stage 2 expects one newly occurred event target per checkpoint: "
-                    f"{checkpoint.trajectory_id}/S{checkpoint.checkpoint_session_count:03d}"
-                )
             ordered_targets = sorted(
-                current_targets,
+                checkpoint.targets,
                 key=lambda target: target.canonical_target_id,
             )
             for target in ordered_targets:
@@ -536,10 +615,22 @@ class ItemBuilder:
                         initial_memory_by_traj,
                         all_targets,
                         window_size,
+                        checkpoint.target_date_start,
+                        checkpoint.target_date_end,
                     )
                     canonical_cache[target.canonical_target_id] = payload
 
-                question, canonical_options, gold, metadata = payload
+                question, canonical_options, canonical_gold, metadata = payload
+                options = [
+                    option.model_copy(deep=True) for option in canonical_options
+                ]
+                options, correct_id = self._shuffle_stage2_options(
+                    target,
+                    options,
+                    checkpoint.checkpoint_session_count,
+                )
+                gold = copy.deepcopy(canonical_gold)
+                gold["correct_option"] = correct_id
                 safe_target_id = re.sub(
                     r"[^A-Za-z0-9_.-]+", "_", target.canonical_target_id
                 )
@@ -555,9 +646,7 @@ class ItemBuilder:
                         prefix_id=checkpoint.prefix_id,
                         visible_sessions=list(checkpoint.visible_session_ids),
                         question=question,
-                        options=[
-                            option.model_copy(deep=True) for option in canonical_options
-                        ],
+                        options=options,
                         gold=copy.deepcopy(gold),
                         metadata={
                             **copy.deepcopy(metadata),

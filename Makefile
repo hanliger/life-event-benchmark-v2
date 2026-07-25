@@ -1,6 +1,8 @@
 PYTHON ?= python
 LIMIT ?= 20
 SEED ?= 42
+SHUFFLE_OPTIONS ?= 0
+SHUFFLE_OPTIONS_FLAG := $(if $(filter 1,$(SHUFFLE_OPTIONS)),--shuffle-options,)
 HORIZON ?= 10
 NUM_TRAJ ?= 5
 MAX_SESSIONS ?=
@@ -51,7 +53,7 @@ REVIEW_DECISION ?= $(DIALOGUE_JUDGE_ROOT)/judge_review_decision.json
 	audit-dialogue-canary-v2 review-dialogue-canary-v2 score-dialogue-canary-v2 dialogue-judge-gate \
 	coverage-trajectories fetch-dialogues fetch-counterfactual-fillers restore-frozen-run counterfactual-ablation \
 	dialogue-smoke-dry dialogue-smoke validate-dialogues \
-	export-gold build-items evaluate history-filter audit pipeline-smoke test clean-generated \
+	export-gold build-stage1-items build-items evaluate history-filter audit pipeline-smoke test clean-generated \
 	export-gold-controlled build-items-controlled audit-controlled export-public
 
 setup:
@@ -287,16 +289,21 @@ export-gold-controlled:
 		--trajectories-dir $(TRAJ_DIR) --sessions-dir $(SESS_DIR) \
 		--output $(GOLD_CHECKPOINTS) --checkpoint-stride 15
 
-build-items:
+build-stage1-items:
+	$(PYTHON) scripts/build_stage1_event_items.py \
+		--sessions-dir $(SESS_DIR) --trajectories-dir $(TRAJ_DIR) \
+		--output $(ITEMS_DIR)/stage1_event_status.jsonl
+
+build-items: build-stage1-items
 	$(PYTHON) scripts/build_benchmark_items.py \
 		--prefix-gold $(GOLD) --sessions-dir $(SESS_DIR) --trajectories-dir $(TRAJ_DIR) \
-		--output-dir $(ITEMS_DIR) --seed $(SEED)
+		--output-dir $(ITEMS_DIR) --seed $(SEED) $(SHUFFLE_OPTIONS_FLAG)
 
-build-items-controlled:
+build-items-controlled: build-stage1-items
 	$(PYTHON) scripts/build_benchmark_items.py \
 		--prefix-gold $(GOLD_CHECKPOINTS) --sessions-dir $(SESS_DIR) \
 		--trajectories-dir $(TRAJ_DIR) \
-		--output-dir $(ITEMS_DIR) --seed $(SEED)
+		--output-dir $(ITEMS_DIR) --seed $(SEED) $(SHUFFLE_OPTIONS_FLAG)
 
 export-public:
 	$(PYTHON) scripts/export_public_benchmark.py \

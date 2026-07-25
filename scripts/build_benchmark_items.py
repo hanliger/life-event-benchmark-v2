@@ -2,12 +2,12 @@
 """Build Stage 2 memory-transition benchmark items from prefix gold.
 
 Example:
+  export RUN_ID=exp1
   python scripts/build_benchmark_items.py \
-    --prefix-gold data/runs/v4/gold/prefix_gold_checkpoints_15.jsonl \
-    --sessions-dir data/runs/v4/mcq_work/dialogues \
-    --gold-dir data/runs/v4/mcq_work/gold \
-    --trajectories-dir data/runs/v4/trajectories \
-    --output-dir data/runs/v4/mcq_work/benchmark_items
+    --prefix-gold data/runs/$RUN_ID/gold/prefix_gold_checkpoints_15.jsonl \
+    --sessions-dir data/runs/$RUN_ID/dialogues/sessions \
+    --trajectories-dir data/runs/$RUN_ID/trajectories \
+    --output-dir data/runs/$RUN_ID/benchmark_items
 """
 
 from __future__ import annotations
@@ -31,10 +31,12 @@ from fin_life_benchmark.trajectory.models import Trajectory
 
 
 def _jsonl_files(directory: Path) -> list[Path]:
-    trajectory_files = sorted(directory.glob("traj_*.jsonl"))
-    if trajectory_files:
-        return trajectory_files
-    return sorted(directory.glob("sessions_*.jsonl"))
+    # Prefer the joined files when a directory contains both a raw HF export
+    # and the local canonical sessions produced from it.
+    session_files = sorted(directory.glob("sessions_*.jsonl"))
+    if session_files:
+        return session_files
+    return sorted(directory.glob("traj_*.jsonl"))
 
 
 def _load_session_records(directory: Path) -> dict[str, list[dict]]:
@@ -74,17 +76,28 @@ def main() -> int:
     parser.add_argument(
         "--sessions-dir",
         default=None,
-        help="legacy input directory used to infer the sibling gold directory",
+        help=(
+            "canonical run directory with sessions_traj_*.jsonl; "
+            "when omitted, provide --gold-dir for split dialogue/gold input"
+        ),
     )
     parser.add_argument(
         "--gold-dir",
         default=None,
-        help="session-level gold directory; defaults to the sibling gold directory",
+        help=(
+            "optional split session-level gold directory; "
+            "defaults to --sessions-dir for merged run sessions"
+        ),
     )
     parser.add_argument("--trajectories-dir", required=True)
     parser.add_argument("--output-dir", required=True)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--window-size", type=int, default=15)
+    parser.add_argument(
+        "--shuffle-options",
+        action="store_true",
+        help="deterministically shuffle Stage 2 A-D options per canonical target",
+    )
     parser.add_argument(
         "--allow-missing-event-targets",
         action="store_true",
@@ -116,9 +129,11 @@ def main() -> int:
     if args.gold_dir:
         gold_dir = Path(args.gold_dir)
     elif sessions_dir:
-        gold_dir = sessions_dir.parent / "gold"
+        # ensure_dialogue_sessions materializes the HF dialogue+gold join in
+        # this directory, so it is also the canonical session-level gold input.
+        gold_dir = sessions_dir
     else:
-        raise SystemExit("provide --gold-dir (or legacy --sessions-dir)")
+        raise SystemExit("provide --gold-dir (or --sessions-dir)")
     sessions_by_traj = _load_session_records(gold_dir)
     if not sessions_by_traj:
         raise SystemExit(f"no session-level gold JSONL files under {gold_dir}")
@@ -184,7 +199,10 @@ def main() -> int:
         strict_event_targets=not args.allow_missing_event_targets,
         window_size=args.window_size,
     )
-    builder = ItemBuilder(seed=args.seed)
+    builder = ItemBuilder(
+        seed=args.seed,
+        shuffle_options=args.shuffle_options,
+    )
     items = builder.build_stage2(
         checkpoints,
         initial_memory_by_traj=initial_memory_by_traj,

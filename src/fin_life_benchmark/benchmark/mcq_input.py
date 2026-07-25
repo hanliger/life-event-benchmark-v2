@@ -36,6 +36,8 @@ class McqWindow:
     target_event_id: str
     target_event_label: str
     target_event_status: str
+    target_date_start: str | None = None
+    target_date_end: str | None = None
 
 
 @dataclass(frozen=True)
@@ -77,6 +79,8 @@ class Stage2Checkpoint:
     checkpoint_session_count: int
     visible_session_ids: tuple[str, ...]
     targets: tuple[Stage2Target, ...]
+    target_date_start: str | None = None
+    target_date_end: str | None = None
 
 
 def _session_number(session_id: str) -> int:
@@ -88,6 +92,29 @@ def _session_number(session_id: str) -> int:
 
 def _session_sort_key(record: dict[str, Any]) -> int:
     return _session_number(str(record["session_id"]))
+
+
+def _session_date(record: dict[str, Any]) -> str:
+    """Return the exported session date used in model-facing prompts."""
+
+    value = record.get("session_date")
+    if value is None or not str(value).strip():
+        raise ValueError(
+            f"missing session_date for {record.get('trajectory_id')}/"
+            f"{record.get('session_id')}"
+        )
+    return str(value)
+
+
+def _date_range(
+    records: list[tuple[dict[str, Any], dict[str, Any]]],
+) -> tuple[str | None, str | None]:
+    """Return the first and last session dates in an ordered block."""
+
+    if not records:
+        return None, None
+    dates = [_session_date(dialogue) for dialogue, _ in records]
+    return dates[0], dates[-1]
 
 
 def _window_index(record: dict[str, Any]) -> int:
@@ -181,18 +208,36 @@ def load_stage2_question_policy(path: Path | str) -> dict[str, dict[str, Any]]:
 
 def _join_records(
     dialogues_dir: Path,
-    gold_dir: Path,
+    gold_dir: Path | None,
     trajectory_id: str,
 ) -> list[tuple[dict[str, Any], dict[str, Any]]]:
-    dialogue_path = dialogues_dir / f"{trajectory_id}.jsonl"
-    gold_path = gold_dir / f"{trajectory_id}.jsonl"
-    if not dialogue_path.exists():
-        raise FileNotFoundError(f"missing dialogue file: {dialogue_path}")
-    if not gold_path.exists():
-        raise FileNotFoundError(f"missing gold file: {gold_path}")
+    """Join raw HF files or read the pipeline's merged session file.
 
-    dialogues = list(read_jsonl(dialogue_path))
-    gold = list(read_jsonl(gold_path))
+    ``ensure_dialogue_sessions`` materializes ``sessions_traj_XXX.jsonl``
+    files by joining the HF dialogue and gold configs. Prefer that canonical
+    representation when it is present; otherwise read the split HF layout.
+    """
+
+    merged_path = dialogues_dir / f"sessions_{trajectory_id}.jsonl"
+    if merged_path.exists():
+        dialogues = list(read_jsonl(merged_path))
+        gold = dialogues
+        dialogue_path = merged_path
+        gold_path = merged_path
+    else:
+        if gold_dir is None:
+            raise FileNotFoundError(
+                f"missing merged session file: {merged_path}; "
+                "provide a separate gold directory for split HF files"
+            )
+        dialogue_path = dialogues_dir / f"{trajectory_id}.jsonl"
+        gold_path = gold_dir / f"{trajectory_id}.jsonl"
+        if not dialogue_path.exists():
+            raise FileNotFoundError(f"missing dialogue file: {dialogue_path}")
+        if not gold_path.exists():
+            raise FileNotFoundError(f"missing gold file: {gold_path}")
+        dialogues = list(read_jsonl(dialogue_path))
+        gold = list(read_jsonl(gold_path))
     dialogue_by_id = {row.get("session_id"): row for row in dialogues}
     gold_by_id = {row.get("session_id"): row for row in gold}
     if len(dialogue_by_id) != len(dialogues):
@@ -239,13 +284,23 @@ def load_mcq_windows(
     if window_size <= 0:
         raise ValueError("window_size must be positive")
     dialogues_dir = Path(dialogues_dir)
-    gold_dir = Path(gold_dir)
+    gold_dir = Path(gold_dir) if gold_dir is not None else None
     trajectories_dir = Path(trajectories_dir)
-    trajectory_ids = [trajectory_id] if trajectory_id else sorted(
-        path.stem for path in dialogues_dir.glob("traj_*.jsonl")
-    )
+    if trajectory_id:
+        trajectory_ids = [trajectory_id]
+    else:
+        raw_paths = sorted(dialogues_dir.glob("traj_*.jsonl"))
+        merged_paths = sorted(dialogues_dir.glob("sessions_traj_*.jsonl"))
+        if merged_paths:
+            trajectory_ids = [
+                path.stem.removeprefix("sessions_") for path in merged_paths
+            ]
+        else:
+            trajectory_ids = [path.stem for path in raw_paths]
     if not trajectory_ids:
-        raise ValueError(f"no trajectory dialogue files under {dialogues_dir}")
+        raise ValueError(
+            f"no trajectory dialogue or merged session files under {dialogues_dir}"
+        )
 
     windows: list[McqWindow] = []
     for current_trajectory_id in trajectory_ids:
@@ -314,6 +369,7 @@ def load_mcq_windows(
                     f"non-contiguous sessions before {target_dialogue['session_id']}: "
                     f"found {len(visible_session_ids)} sessions"
                 )
+            target_date_start, target_date_end = _date_range(block)
             windows.append(
                 McqWindow(
                     trajectory_id=current_trajectory_id,
@@ -326,6 +382,8 @@ def load_mcq_windows(
                     target_event_id=instance.event_id,
                     target_event_label=instance.label_ko,
                     target_event_status=target_status,
+                    target_date_start=target_date_start,
+                    target_date_end=target_date_end,
                 )
             )
     return windows
@@ -635,13 +693,31 @@ def build_stage2_checkpoints(
                 for target in targets.values()
                 if target.first_visible_checkpoint <= checkpoint_count
             )
+            visible_session_ids = tuple(prefix.get("visible_sessions") or [])
+            target_window_ids = visible_session_ids[-window_size:]
+            target_window_records = [
+                session_records[session_id]
+                for session_id in target_window_ids
+                if session_id in session_records
+            ]
+            if (
+                len(target_window_records) == window_size
+                and all(record.get("session_date") for record in target_window_records)
+            ):
+                target_date_start = _session_date(target_window_records[0])
+                target_date_end = _session_date(target_window_records[-1])
+            else:
+                target_date_start = None
+                target_date_end = None
             checkpoints.append(
                 Stage2Checkpoint(
                     trajectory_id=trajectory_id,
                     prefix_id=str(prefix["prefix_id"]),
                     checkpoint_session_count=checkpoint_count,
-                    visible_session_ids=tuple(prefix.get("visible_sessions") or []),
+                    visible_session_ids=visible_session_ids,
                     targets=eligible,
+                    target_date_start=target_date_start,
+                    target_date_end=target_date_end,
                 )
             )
             previous_state = copy.deepcopy(current_state)

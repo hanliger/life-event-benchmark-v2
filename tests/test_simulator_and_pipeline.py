@@ -714,14 +714,17 @@ def test_stage2_latest_window_template_uses_exact_session_range():
         checkpoint_session_count=150,
         visible_session_ids=tuple(f"S{i:03d}" for i in range(1, 151)),
         targets=(target,),
+        target_date_start="2020-01-01",
+        target_date_end="2020-01-15",
     )
 
     item = ItemBuilder(seed=0).build_stage2([checkpoint], window_size=15)[0]
 
     assert item.question == (
-        "제공된 전체 상담 이력을 참고하여, S136~S150에서 "
+        "제공된 전체 상담 이력을 참고하여, 2020년 1월 1일~2020년 1월 15일에서 "
         "새로 반영된 현재 직장은 무엇인가?"
     )
+    assert item.metadata["target_date_start"] == "2020-01-01"
 
 
 def test_stage2_home_purchase_uses_the_event_property_loan_type():

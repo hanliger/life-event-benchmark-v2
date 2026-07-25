@@ -20,6 +20,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+from datetime import date
 from collections import Counter
 from pathlib import Path
 from typing import Any
@@ -33,15 +34,50 @@ from fin_life_benchmark.io import RepoPaths, ensure_dialogue_sessions, read_json
 from fin_life_benchmark.llm.client import LLMClient
 
 
+def _display_date(value: str | None) -> str | None:
+    if not value:
+        return None
+    try:
+        parsed = date.fromisoformat(str(value))
+    except ValueError:
+        return str(value)
+    return f"{parsed.year}년 {parsed.month}월 {parsed.day}일"
+
+
 def _format_sessions(sessions: list[dict[str, Any]]) -> str:
     blocks: list[str] = []
     for session in sessions:
-        lines = [f"[세션 {session['session_id']}]"]
+        session_date = session.get("session_date")
+        if session_date is None or not str(session_date).strip():
+            raise ValueError(
+                f"session_date is required for evaluation prompt: "
+                f"{session.get('trajectory_id')}/{session.get('session_id')}"
+            )
+        lines = [f"[상담일: {_display_date(str(session_date))}]"]
         for turn in session.get("turns", []):
             speaker = "고객" if turn.get("speaker") == "user" else "상담원"
             lines.append(f"{speaker}: {turn.get('text', '')}")
         blocks.append("\n".join(lines))
     return "\n\n".join(blocks)
+
+
+def _item_date_range(
+    item: dict[str, Any], sessions: list[dict[str, Any]]
+) -> tuple[str, str]:
+    metadata = item.get("metadata") or {}
+    start = metadata.get("target_date_start")
+    end = metadata.get("target_date_end")
+    if not start or not end:
+        dates = [str(session.get("session_date") or "") for session in sessions]
+        if not dates or not all(dates):
+            raise ValueError("date-aware evaluation requires session_date values")
+        start, end = dates[-15], dates[-1]
+    return str(start), str(end)
+
+
+def _display_date_range(item: dict[str, Any], sessions: list[dict[str, Any]]) -> str:
+    start, end = _item_date_range(item, sessions)
+    return f"{_display_date(start)}~{_display_date(end)}"
 
 
 def _format_initial_memory(memory: dict[str, Any]) -> str:
@@ -102,9 +138,12 @@ def _visible_sessions(
 
 
 def _build_stage2_prompt(item: dict[str, Any], sessions: list[dict[str, Any]]) -> str:
+    date_range = _display_date_range(item, sessions)
     lines = [
         "다음은 한 고객의 은행 상담 세션 이력입니다.",
-        "제공된 전체 상담 이력과 질문에 지정된 시간 범위를 기준으로 memory 상태를 판단하세요.",
+        "제공된 전체 상담 이력과 질문에 지정된 날짜 범위를 기준으로 memory 상태를 판단하세요.",
+        f"평가 대상 기간: {date_range}",
+        "이 기간의 마지막으로 반영된 변화 또는 기간 종료 시점의 현재 상태를 판단하세요.",
         "초기 금융 메모리는 전체 이력의 시작 상태를 확인하는 참고 정보로 사용하세요. 추측하지 말고, 보기 중 하나만 고르세요.",
         "",
         _format_sessions(sessions),
@@ -132,15 +171,16 @@ def _build_stage1_event_identification_prompt(
     candidate_lines = [
         f"- {event['event_id']}: {event['label_ko']}" for event in candidates
     ]
+    date_range = _display_date_range(item, sessions)
     lines = [
         "다음은 한 고객의 전체 은행 상담 세션 이력입니다.",
-        "전체 이력을 참고하되, 질문에 지정된 최근 15개 세션 범위만 대상으로 판단하세요.",
-        "해당 범위에서 실제로 발생한(occurred) Life Event 하나를 가능한 목록에서 고르세요.",
+        "전체 이력을 참고하되, 질문에 지정된 날짜 범위만 대상으로 판단하세요.",
+        "해당 기간에 마지막으로 실제 발생한(occurred) Life Event 하나를 가능한 목록에서 고르세요.",
         "Event 상태나 설명은 답하지 말고 event_id 하나만 답하세요.",
         "",
         _format_sessions(sessions),
         "",
-        f"대상 범위: {metadata.get('target_session_start')}~{metadata.get('target_session_end')}",
+        f"평가 대상 기간: {date_range}",
         item["question"],
         "",
         "가능한 Life Event 목록:",

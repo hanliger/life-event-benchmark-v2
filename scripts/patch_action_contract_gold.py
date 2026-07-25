@@ -46,6 +46,11 @@ from fin_life_benchmark.dialogue.models import DialogueGenerationPlan
 from fin_life_benchmark.fsm.registry import load_life_event_templates
 from fin_life_benchmark.io import RepoPaths
 from fin_life_benchmark.locale import load_locale
+from fin_life_benchmark.validation.dialogue_validator import (
+    event_slot_candidates,
+    reconcile_provided_slots,
+    standing_action_amounts,
+)
 
 # Fields the sibling task legitimately changes. Anything else differing means the
 # replan drifted for an unrelated reason and must not be spliced in.
@@ -77,6 +82,7 @@ def main() -> int:
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
     parser.add_argument("--gold-dir", required=True)
+    parser.add_argument("--dialogues-dir", default=None)
     parser.add_argument("--replanned-dir", required=True)
     parser.add_argument("--output-dir", required=True)
     parser.add_argument("--targets-out", default=None)
@@ -88,6 +94,15 @@ def main() -> int:
         metavar="FROM=TO",
         help="accept this task-template swap from the replan (repeatable). Any "
         "other difference is pre-existing planner drift and is ignored.",
+    )
+    parser.add_argument(
+        "--sync-resolution",
+        action="store_true",
+        help="also reconcile action_resolution against the recomputed contract. "
+        "Required for sessions that are NOT regenerated afterwards: a resolution "
+        "still listing a now-grounded slot as missing is exactly what "
+        "high_risk_action_resolution_mismatch reports. Harmless for regenerated "
+        "sessions, whose resolution the merge replaces.",
     )
     parser.add_argument(
         "--targets",
@@ -112,11 +127,22 @@ def main() -> int:
         load_life_event_templates(paths), load_locale(args.locale, paths), paths
     )
     subtypes = planner.high_risk_contract_registry.get("task_subtypes") or {}
+    slot_aliases = planner.high_risk_contract_registry.get("slot_aliases") or {}
 
     replanned: dict[tuple[str, str], dict[str, Any]] = {}
     for path in sorted(Path(args.replanned_dir).glob("plans_traj_*.jsonl")):
         for row in _read_jsonl(path):
             replanned[(row["trajectory_id"], row["session_id"])] = row
+
+    dialogue_turns: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    if args.sync_resolution:
+        if not args.dialogues_dir:
+            raise SystemExit("--sync-resolution needs --dialogues-dir")
+        for path in sorted(Path(args.dialogues_dir).glob("traj_*.jsonl")):
+            for row in _read_jsonl(path):
+                dialogue_turns[(row["trajectory_id"], row["session_id"])] = (
+                    row.get("turns") or []
+                )
 
     gold_dir = Path(args.gold_dir)
     output_dir = Path(args.output_dir)
@@ -175,6 +201,23 @@ def main() -> int:
                 patched_plan = {**plan, "action_execution_contract": contract}
                 changed["contract_only"] += 1
 
+            if args.sync_resolution:
+                turns = dialogue_turns.get(key) or []
+                contract, resolution, synced = reconcile_provided_slots(
+                    patched_plan["action_execution_contract"],
+                    row.get("action_resolution") or {},
+                    turns,
+                    slot_candidates=event_slot_candidates(patched_plan, slot_aliases),
+                    reference_values=standing_action_amounts(patched_plan),
+                )
+                if synced:
+                    patched_plan = {
+                        **patched_plan,
+                        "action_execution_contract": contract,
+                    }
+                    row = {**row, "action_resolution": resolution}
+                    changed["resolution_synced"] += 1
+
             out_rows.append({**row, "plan": patched_plan})
             targets.append([row["trajectory_id"], row["session_id"], "contract_subtype"])
 
@@ -185,7 +228,7 @@ def main() -> int:
             json.dumps(targets, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
         )
 
-    print(f"patched {sum(changed.values())} sessions")
+    print(f"patched {len(targets)} sessions")
     for kind, count in changed.most_common():
         print(f"  {count:5d}  {kind}")
     print(f"output -> {output_dir}")

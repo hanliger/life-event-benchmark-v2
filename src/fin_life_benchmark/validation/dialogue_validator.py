@@ -128,6 +128,10 @@ _HANGUL_AMOUNT_RE = re.compile(
     r"(?<![0-9가-힣])(?P<head>[일이삼사오육칠팔구십백천]{1,8})\s*"
     r"(?P<scale>억|만)\s*(?:(?P<tail>[일이삼사오육칠팔구십백천]{1,8})\s*)?원"
 )
+# "몇 천만원 수준은 아니고" is a vague magnitude, not a stated amount. The
+# lookbehind above cannot catch it because the qualifier may be separated by a
+# space, and Python has no variable-length lookbehind.
+_INDEFINITE_QUANTIFIER_RE = re.compile(r"(?:몇|수|여러)\s*$")
 
 
 def _hangul_int(text: str) -> int | None:
@@ -387,6 +391,8 @@ def _numbers_in_text(text: str) -> list[str]:
             value *= _KOREAN_NUMBER_MULTIPLIERS[unit]
         values.append(_canonical_decimal(value))
     for match in _HANGUL_AMOUNT_RE.finditer(text):
+        if _INDEFINITE_QUANTIFIER_RE.search(text[: match.start()]):
+            continue
         head = _hangul_int(match.group("head"))
         if head is None:
             continue
@@ -562,6 +568,18 @@ def reconcile_provided_slots(
         else:
             dropped.append(slot)
 
+    # A grounded slot the customer states IS provided. The frozen resolution can
+    # disagree when the contract was corrected without regenerating the dialogue,
+    # and a resolution that contradicts its own contract is what
+    # high_risk_action_resolution_mismatch reports.
+    stated: list[str] = []
+    frozen_provided = dict(resolution.get("provided_slots") or {})
+    for slot, value in grounded.items():
+        if slot in dropped or slot in regrounded or slot in frozen_provided:
+            continue
+        if _slot_value_visible(slot, value, user_text, reference_values):
+            stated.append(slot)
+
     required = list(contract.get("required_slots") or [])
     for slot in required:
         if slot == "explicit_confirmation" or slot in grounded:
@@ -577,7 +595,7 @@ def reconcile_provided_slots(
         if value is not None:
             regrounded[slot] = value
 
-    changed = sorted(dropped + list(regrounded))
+    changed = sorted(dropped + list(regrounded) + stated)
     if not changed:
         return contract, resolution, []
 
@@ -610,12 +628,18 @@ def reconcile_provided_slots(
     # found in a user turn, so the customer did supply it -- including slots the
     # frozen resolution had listed as missing.
     provided.update(regrounded)
+    provided.update({slot: grounded[slot] for slot in stated})
     resolution["provided_slots"] = provided
     resolution["missing_slots"] = missing
     if not ready:
         resolution["mode"] = "pending_required_information"
         resolution["completion_turn_index"] = None
         resolution["explicit_confirmation_turn_index"] = None
+    elif resolution.get("mode") == "pending_required_information":
+        # The slot that blocked it is grounded now, so the session is no longer
+        # waiting on information. It is waiting on confirmation -- not executed,
+        # so the completion indices stay exactly as the dialogue left them.
+        resolution["mode"] = "ready_for_confirmation"
 
     return contract, resolution, changed
 

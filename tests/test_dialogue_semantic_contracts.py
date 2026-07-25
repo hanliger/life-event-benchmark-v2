@@ -989,3 +989,32 @@ def test_generator_checks_grounded_amounts_before_reconciling():
     assert DialogueGenerator._unstated_grounded_amounts(plan, stated) == []
     hangul = [Turn(speaker="user", text="매달 사십만원으로 해주세요")]
     assert DialogueGenerator._unstated_grounded_amounts(plan, hangul) == []
+
+
+def test_reconcile_promotes_a_session_whose_last_missing_slot_is_grounded():
+    # Grounding the amount can complete the contract; leaving the resolution on
+    # pending is what high_risk_action_resolution_mismatch reports. It is not
+    # promoted to executed -- the completion indices stay as the dialogue left them.
+    contract = {
+        "action_mode": "pending_required_information",
+        "required_slots": ["amount", "explicit_confirmation"],
+        "grounded_slots": {},
+        "missing_slots": ["amount"],
+        "completion_allowed": False,
+        "confirmation_required": True,
+    }
+    resolution = {
+        "mode": "pending_required_information",
+        "provided_slots": {},
+        "missing_slots": ["amount"],
+        "explicit_confirmation_turn_index": None,
+        "completion_turn_index": None,
+    }
+    turns = [{"speaker": "user", "text": "매달 이십만 원으로 해주세요"}]
+    new_contract, new_resolution, changed = reconcile_provided_slots(
+        contract, resolution, turns, slot_candidates={"amount": [200000]}
+    )
+    assert changed == ["amount"]
+    assert new_contract["action_mode"] == "ready_for_confirmation"
+    assert new_resolution["mode"] == "ready_for_confirmation"
+    assert new_resolution["completion_turn_index"] is None

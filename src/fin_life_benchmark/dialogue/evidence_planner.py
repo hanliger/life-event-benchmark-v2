@@ -38,6 +38,39 @@ def _unique(values: list[str]) -> list[str]:
     return list(dict.fromkeys(value for value in values if value))
 
 
+_MONEY_SLOTS = frozenset({"amount", "amount_or_schedule"})
+
+
+def _is_zero_money(slot: str, value: Any) -> bool:
+    return (
+        slot in _MONEY_SLOTS
+        and isinstance(value, (int, float))
+        and not isinstance(value, bool)
+        and value == 0
+    )
+
+
+def _event_declares_no_money(
+    slot: str, event_available: dict[str, Any], aliases: list[str]
+) -> bool:
+    """True when the event itself puts this money slot at zero.
+
+    ``housing_move`` sets ``new_rent_amount: 0`` when the customer moves in with
+    family; 46 events across the corpus carry a zero money param. That is the
+    event saying there is nothing to pay, so the slot stays empty. It must not
+    fall through to the persona's standing-action amount either -- borrowing an
+    old rent autopay figure for a household that now pays no rent is exactly the
+    contamination that put one persona-constant on every flagged session.
+    """
+    if slot not in _MONEY_SLOTS:
+        return False
+    return any(
+        _is_zero_money(slot, event_available[alias])
+        for alias in aliases
+        if alias in event_available
+    )
+
+
 class EvidencePlanner:
     def __init__(
         self,
@@ -254,12 +287,16 @@ class EvidencePlanner:
                 if plan.target_action_ids:
                     grounded[slot] = list(plan.target_action_ids)
                 continue
+            slot_aliases = aliases.get(slot) or [slot]
+            if _event_declares_no_money(slot, event_available, slot_aliases):
+                continue
             for source in (event_available, prior_available):
                 value = next(
                     (
                         source[alias]
-                        for alias in (aliases.get(slot) or [slot])
+                        for alias in slot_aliases
                         if source.get(alias) not in (None, "", [], {})
+                        and not _is_zero_money(slot, source.get(alias))
                     ),
                     None,
                 )

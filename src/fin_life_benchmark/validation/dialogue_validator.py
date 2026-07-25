@@ -117,6 +117,32 @@ _KOREAN_NUMBER_MULTIPLIERS = {
     "백": Decimal("100"),
 }
 
+# Customers write amounts in Hangul numerals as readily as in digits ("장례비로
+# 오백만원 나갔어요"). Digits-only parsing reads those sessions as stating no
+# amount at all, so a correctly grounded slot looks ungrounded and gets dropped.
+_HANGUL_DIGITS = {"일": 1, "이": 2, "삼": 3, "사": 4, "오": 5, "육": 6, "칠": 7, "팔": 8, "구": 9}
+_HANGUL_PLACES = {"십": 10, "백": 100, "천": 1000}
+_HANGUL_AMOUNT_RE = re.compile(
+    r"(?<![0-9가-힣])(?P<head>[일이삼사오육칠팔구십백천]{1,8})\s*"
+    r"(?P<scale>억|만)\s*(?:(?P<tail>[일이삼사오육칠팔구십백천]{1,8})\s*)?원"
+)
+
+
+def _hangul_int(text: str) -> int | None:
+    """Read a sino-Korean numeral below 10,000: 오백 -> 500, 삼천이백 -> 3200."""
+    total = 0
+    pending = 0
+    for char in text:
+        if char in _HANGUL_DIGITS:
+            pending = _HANGUL_DIGITS[char]
+        elif char in _HANGUL_PLACES:
+            # A bare place name means one of it: 백만원 is 1,000,000.
+            total += (pending or 1) * _HANGUL_PLACES[char]
+            pending = 0
+        else:
+            return None
+    return total + pending or None
+
 _GENERIC_SLOT_VALUES = {
     "해당 금액",
     "정해둔 금액",
@@ -358,6 +384,18 @@ def _numbers_in_text(text: str) -> list[str]:
         if unit:
             value *= _KOREAN_NUMBER_MULTIPLIERS[unit]
         values.append(_canonical_decimal(value))
+    for match in _HANGUL_AMOUNT_RE.finditer(text):
+        head = _hangul_int(match.group("head"))
+        if head is None:
+            continue
+        total = Decimal(head) * _KOREAN_NUMBER_MULTIPLIERS[match.group("scale")]
+        tail = match.group("tail")
+        if tail:
+            remainder = _hangul_int(tail)
+            if remainder is None:
+                continue
+            total += Decimal(remainder)
+        values.append(_canonical_decimal(total))
     return values
 
 

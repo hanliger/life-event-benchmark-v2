@@ -25,6 +25,7 @@ from fin_life_benchmark.validation.dialogue_validator import (
     DialogueValidator,
     contains_contextual_event_label,
     event_slot_candidates,
+    _numbers_in_text,
     reconcile_provided_slots,
     standing_action_amounts,
 )
@@ -834,3 +835,78 @@ def test_review_task_executes_nothing():
     )
     assert contract.action_mode == "information_only"
     assert contract.required_slots == []
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("장례비로 오백만원 나갔어요", "5000000"),
+        ("매달 이백만원 정도 상환돼요", "2000000"),
+        ("오십만 원씩 보내고 있어요", "500000"),
+        ("백만원 정도예요", "1000000"),
+        ("천만원 들어왔어요", "10000000"),
+        ("삼천오백만원이요", "35000000"),
+        ("일억원 대출이요", "100000000"),
+    ],
+)
+def test_hangul_numeral_amounts_are_read(text, expected):
+    # Digits-only parsing read these sessions as stating no amount, so a
+    # correctly grounded slot looked ungrounded and was dropped.
+    assert expected in _numbers_in_text(text)
+
+
+@pytest.mark.parametrize("text", ["십일 정도 걸려요", "이번 달에요", "삼일 뒤에", "백화점에서요"])
+def test_hangul_words_that_are_not_amounts_stay_unread(text):
+    assert _numbers_in_text(text) == []
+
+
+def test_amount_stated_in_hangul_keeps_the_slot_grounded():
+    contract, resolution = _pending_transfer_contract(5000000)
+    turns = [{"speaker": "user", "text": "주거래계좌에서 장례비 오백만원 보냈어요"}]
+    _, new_resolution, changed = reconcile_provided_slots(contract, resolution, turns)
+    assert changed == []
+    assert new_resolution["provided_slots"]["amount"] == 5000000
+
+
+def test_a_zero_amount_is_not_grounded():
+    # housing_move sets new_rent_amount: 0 when moving in with family; grounding
+    # it would oblige the dialogue to have the customer say "0원".
+    contract = _contract_for(
+        "housing_move_family_contribution_prepare", "FA-08", "생활비 분담 정기이체 준비"
+    )
+    assert "amount" not in (contract.grounded_slots or {})
+    assert "amount" in contract.missing_slots
+
+
+def test_a_zero_event_amount_does_not_fall_through_to_the_persona():
+    # Skipping the zero and continuing the search re-grounded the persona's old
+    # rent autopay figure for a household that now pays no rent -- the exact
+    # contamination that put one constant on every flagged session.
+    paths = RepoPaths.default()
+    planner = EvidencePlanner(
+        load_life_event_templates(paths), load_locale("ko_KR", paths), paths
+    )
+    plan = DialogueGenerationPlan(
+        session_id="S001",
+        trajectory_id="traj_test",
+        month_index=0,
+        age=30,
+        transition_order=0,
+        window_index=1,
+        position_in_window=1,
+        window_event_instance_id="ev",
+        session_type="occurred_evidence",
+        event_status_after_session="occurred",
+        mapped_action="FA-08",
+        financial_task="생활비 분담 정기이체 준비",
+        task_template_id="housing_move_family_contribution_prepare",
+        structured_context={
+            "event": {"params": {"new_rent_amount": 0}},
+            "current_standing_actions": [
+                {"action_id": "SO_rent", "type": "rent_autopay", "amount": 650000}
+            ],
+        },
+    )
+    contract = planner._action_execution_contract(plan)
+    assert "amount" not in (contract.grounded_slots or {})
+    assert "amount" in contract.missing_slots

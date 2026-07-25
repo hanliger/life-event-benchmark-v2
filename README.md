@@ -444,6 +444,32 @@ python scripts/publish_counterfactual_fillers_to_hf.py \
 - **frozen trajectory는 git에**: 확정된 20개 trajectory는 `tests/fixtures/trajectories/`에 byte 단위로 고정 추적됩니다.
 - **참고 샘플**: `data/samples/`에 한 persona의 dialogues-only 예시 1건.
 
+### 6.1 session_date (달력 날짜)
+
+`dialogues`와 `gold`의 모든 세션 row는 `session_date`(`YYYY-MM-DD`)를 갖습니다. temporal reasoning 문항(선후 관계, 경과 기간, 연도)을 만들기 위한 필드입니다.
+
+배치는 **종료일 정렬**입니다. 모든 trajectory의 마지막 세션이 `2026-06`에 놓이므로 시작 월이 trajectory마다 다릅니다(`1999-07` ~ `2019-02`) — 대신 모든 trajectory의 "현재"가 같고 미래 날짜가 없습니다. `age == 최초age + month_index // 12`가 이 코퍼스에서 정확히 성립하므로, 시작 월이 곧 페르소나의 생일 월이 됩니다. 종료일 정렬은 그것도 trajectory마다 다르게 만듭니다.
+
+불변 조건:
+
+- 달력 월 = `trajectory 시작월 + month_index` → 날짜로 계산한 개월 차가 `month_index`와 항상 일치
+- 날짜는 세션 순서대로 **비감소**. 일자는 1~28일에 결정적으로 분산되며, 슬롯이 부족할 때만 같은 날을 공유합니다(6000건 중 20건)
+- 대화가 같은 달의 특정 일자를 과거로 지목하면(예: "이번 달 10일에 처음 급여 들어왔어요") 그 날짜 이후로 배정 — 해당 28건 모두 충족
+
+```bash
+# 부여 (결정적, 같은 입력 → 같은 날짜)
+python scripts/assign_session_dates.py \
+    --dialogues-dir data/runs/$RUN_ID/dialogues --gold-dir data/runs/$RUN_ID/gold \
+    --output-root data/runs/$RUN_ID/dated --manifest data/runs/$RUN_ID/session_dates.manifest.json
+
+# 검증 (순서·month_index·age·발화 제약·gold 일치·기존 필드 무변경)
+python scripts/audit_session_dates.py \
+    --dialogues-dir data/runs/$RUN_ID/dated/dialogues --gold-dir data/runs/$RUN_ID/dated/gold \
+    --baseline-dialogues-dir data/runs/$RUN_ID/dialogues --baseline-gold-dir data/runs/$RUN_ID/gold
+```
+
+`session_date`는 순수 추가 필드이고 기존 필드는 바뀌지 않았습니다. 날짜 없는 이전 상태가 필요하면 `HF_DIALOGUE_REVISION=f45f9603a8e6da31d244ca81e99f0c94c797475c`로 고정하세요.
+
 > **freeze 유지 주의**: `simulate-*` / `plan-dialogues` / `dialogue-*` 는 명시적으로 실행할 때만 새 데이터를 만듭니다. 자동으로 재생성되는 경로는 없습니다. frozen 결과를 유지하려면 이 생성 타깃을 frozen `RUN_ID`에 대해 실행하지 마세요 — gold·문항 같은 downstream은 frozen에서 언제든 다시 계산할 수 있습니다.
 
 ---

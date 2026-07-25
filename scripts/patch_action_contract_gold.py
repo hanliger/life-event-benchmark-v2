@@ -89,8 +89,23 @@ def main() -> int:
         help="accept this task-template swap from the replan (repeatable). Any "
         "other difference is pre-existing planner drift and is ignored.",
     )
+    parser.add_argument(
+        "--targets",
+        default=None,
+        help="JSON list of [trajectory_id, session_id, ...] to recompute, instead "
+        "of every session whose task declares a contract subtype. Required when "
+        "the sessions will be regenerated: recomputing a contract re-grounds "
+        "slots the reconcile pass pruned for not appearing in the dialogue, so it "
+        "is only safe where a fresh dialogue follows.",
+    )
     args = parser.parse_args()
     retask_pairs = dict(item.split("=", 1) for item in args.retask)
+    explicit: set[tuple[str, str]] | None = None
+    if args.targets:
+        explicit = {
+            (row[0], row[1])
+            for row in json.loads(Path(args.targets).read_text(encoding="utf-8"))
+        }
 
     paths = RepoPaths.default()
     planner = EvidencePlanner(
@@ -126,7 +141,8 @@ def main() -> int:
                 and retask_pairs.get(frozen_task) == replanned_task
             )
 
-            if not retasked and frozen_task not in subtypes:
+            selected = key in explicit if explicit is not None else frozen_task in subtypes
+            if not retasked and not selected:
                 out_rows.append(row)
                 continue
 

@@ -120,6 +120,8 @@ _KOREAN_NUMBER_MULTIPLIERS = {
 # Customers write amounts in Hangul numerals as readily as in digits ("장례비로
 # 오백만원 나갔어요"). Digits-only parsing reads those sessions as stating no
 # amount at all, so a correctly grounded slot looks ungrounded and gets dropped.
+_MONEY_SLOTS = frozenset({"amount", "amount_or_schedule"})
+
 _HANGUL_DIGITS = {"일": 1, "이": 2, "삼": 3, "사": 4, "오": 5, "육": 6, "칠": 7, "팔": 8, "구": 9}
 _HANGUL_PLACES = {"십": 10, "백": 100, "천": 1000}
 _HANGUL_AMOUNT_RE = re.compile(
@@ -995,6 +997,22 @@ class DialogueValidator:
                     slot, grounded.get(slot), user_text, reference_values
                 )
             ]
+            # The check above walks provided_slots, so a money slot the planner
+            # grounded from the event but the resolution reports as missing slips
+            # through and the amount is silently lost. Grounding it means the
+            # event fixes that amount for this session, so the customer has to
+            # say it -- "그 금액 맞아요" or "네 그 정도로" does not.
+            unstated_amounts = [
+                slot
+                for slot, value in grounded.items()
+                if slot in _MONEY_SLOTS
+                and not _slot_value_visible(slot, value, user_text, reference_values)
+            ]
+            for slot in unstated_amounts:
+                flag(
+                    "grounded_amount_not_stated",
+                    f"{slot}={grounded.get(slot)!r} never stated by the customer",
+                )
             if ungrounded_provided:
                 flag(
                     "provided_slot_not_grounded_in_dialogue",

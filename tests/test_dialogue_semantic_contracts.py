@@ -910,3 +910,45 @@ def test_a_zero_event_amount_does_not_fall_through_to_the_persona():
     contract = planner._action_execution_contract(plan)
     assert "amount" not in (contract.grounded_slots or {})
     assert "amount" in contract.missing_slots
+
+
+def _grounded_amount_session(user_text: str, amount: int = 400000) -> dict:
+    contract = {
+        "action_mode": "pending_required_information",
+        "required_slots": ["source_account", "amount", "recurrence_day", "explicit_confirmation"],
+        "grounded_slots": {"amount": amount},
+        "missing_slots": ["source_account", "recurrence_day"],
+        "completion_allowed": False,
+        "confirmation_required": True,
+    }
+    resolution = {
+        "mode": "pending_required_information",
+        "provided_slots": {},
+        "missing_slots": ["source_account", "recurrence_day"],
+        "explicit_confirmation_turn_index": None,
+        "completion_turn_index": None,
+    }
+    return _session(
+        mapped_action="FA-08",
+        status="no_event",
+        user=user_text,
+        contract=contract,
+        resolution=resolution,
+    )
+
+
+def test_grounded_amount_the_customer_never_states_is_blocking():
+    # provided_slots is empty, so the ungrounded-provided check cannot see this;
+    # without its own rule the amount is silently lost at reconcile.
+    session = _grounded_amount_session("네 그 금액 맞아요, 그 정도로 해주세요")
+    codes = {item["code"] for item in _validator().validate_session(session)}
+    assert "grounded_amount_not_stated" in codes
+    from fin_life_benchmark.dialogue.generator import _REVIEW_ONLY_VALIDATION_CODES
+
+    assert "grounded_amount_not_stated" not in _REVIEW_ONLY_VALIDATION_CODES
+
+
+@pytest.mark.parametrize("text", ["매달 40만원씩 넣고 싶어요", "매달 사십만원씩 넣고 싶어요"])
+def test_a_stated_amount_clears_the_rule(text):
+    codes = {item["code"] for item in _validator().validate_session(_grounded_amount_session(text))}
+    assert "grounded_amount_not_stated" not in codes

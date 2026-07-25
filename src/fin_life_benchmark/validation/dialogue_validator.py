@@ -139,6 +139,20 @@ _VISIBLE_SLOT_ALIASES = {
 
 _LABEL_SUFFIX_RE = r"(?:하|해|했|할|한|하는|하려|를|을|가|이|는|은|로|으로|와|과|에|도|부터|까지|계획|예정)"
 
+# A user can ground an amount by pointing at an arrangement that already exists
+# ("금액은 지금 나가는 정도로", "그동안 넣던 금액 그대로") instead of saying the
+# number. That is a real dialogue reference, so the value is grounded -- but only
+# when the phrase is explicitly about the amount. A bare "그대로" is not enough:
+# cancellation sessions say things like "주소는 원래 그대로예요", which refers to
+# something else entirely.
+_AMOUNT_REFERENCE_RE = re.compile(
+    r"(?:금액|액수|얼마)[은는를이]?\s*(?:지금|현재|기존|원래|그동안|예전)?\s*"
+    r"(?:나가는|내는|넣던|넣는|하던)?\s*(?:거|것|정도|만큼|대로|그대로)"
+    r"|(?:지금|현재|기존|원래|그동안)\s*(?:나가는|내는|넣던|넣는)\s*(?:금액|액수|만큼|정도|거|것)"
+    r"|(?:같은|그|해당|기존|원래|동일한)\s*금액"
+    r"|나가던\s*만큼|넣던\s*(?:금액|만큼|대로)|금액\s*그대로"
+)
+
 
 def contains_contextual_event_label(text: str, label: str) -> bool:
     """Match a Korean event label as a token/stem, never inside another word."""
@@ -196,7 +210,63 @@ def completion_turn_indices(turns: list[dict[str, Any]]) -> list[int]:
     return indices
 
 
-def _slot_value_visible(slot: str, value: Any, user_text: str) -> bool:
+def standing_action_amounts(plan: dict[str, Any]) -> frozenset[str]:
+    """Canonical amounts of the persona's already-existing standing actions.
+
+    These are the only values an amount reference like "지금 나가는 금액 그대로"
+    can legitimately resolve to, so :func:`_slot_value_visible` accepts them
+    without the number appearing literally in the dialogue.
+    """
+    actions = ((plan or {}).get("structured_context") or {}).get(
+        "current_standing_actions"
+    ) or []
+    amounts: set[str] = set()
+    for action in actions:
+        if not isinstance(action, dict):
+            continue
+        amount = action.get("amount")
+        if isinstance(amount, bool) or not isinstance(amount, (int, float, Decimal)):
+            continue
+        try:
+            amounts.add(_canonical_decimal(Decimal(str(amount))))
+        except InvalidOperation:
+            continue
+    return frozenset(amounts)
+
+
+def event_slot_candidates(
+    plan: dict[str, Any], slot_aliases: dict[str, list[str]]
+) -> dict[str, list[Any]]:
+    """Per-slot replacement values taken from the triggering event's params.
+
+    The event that drives a session is authoritative for the action it triggers,
+    so its params are the right source when the frozen contract grounded a slot
+    from the persona's prior state instead. Keyed by execution slot via the same
+    ``slot_aliases`` table the planner uses.
+    """
+    params = (
+        ((plan or {}).get("structured_context") or {}).get("event") or {}
+    ).get("params") or {}
+    if not isinstance(params, dict):
+        return {}
+    candidates: dict[str, list[Any]] = {}
+    for slot, aliases in (slot_aliases or {}).items():
+        values = [
+            params[alias]
+            for alias in aliases
+            if alias in params and params[alias] is not None
+        ]
+        if values:
+            candidates[slot] = values
+    return candidates
+
+
+def _slot_value_visible(
+    slot: str,
+    value: Any,
+    user_text: str,
+    reference_values: frozenset[str] | set[str] = frozenset(),
+) -> bool:
     if value is None:
         return False
     if isinstance(value, bool):
@@ -206,7 +276,11 @@ def _slot_value_visible(slot: str, value: Any, user_text: str) -> bool:
             canonical = _canonical_decimal(Decimal(str(value)))
         except InvalidOperation:
             return False
-        return canonical in _numbers_in_text(user_text)
+        if canonical in _numbers_in_text(user_text):
+            return True
+        return bool(
+            canonical in reference_values and _AMOUNT_REFERENCE_RE.search(user_text)
+        )
     if isinstance(value, str):
         if value in user_text:
             return True
@@ -366,11 +440,12 @@ def reconcile_provided_slots(
     contract: dict[str, Any],
     resolution: dict[str, Any],
     turns: list[dict[str, Any]],
+    slot_candidates: dict[str, list[Any]] | None = None,
+    reference_values: frozenset[str] | set[str] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any], list[str]]:
-    """Drop grounded/provided slot values not surfaced in the user dialogue.
+    """Reconcile an execution contract against the dialogue actually generated.
 
-    Rule-based, deterministic reconciliation of an execution contract against the
-    dialogue that was actually generated for it. A slot value is kept only when
+    Rule-based and deterministic. A grounded slot value survives only when
     :func:`_slot_value_visible` finds it in the user turns -- the same predicate
     the ``provided_slot_not_grounded_in_dialogue`` validator uses -- so the
     reconciled session passes that check by construction.
@@ -378,37 +453,97 @@ def reconcile_provided_slots(
     The planner grounds slots (e.g. ``amount``) from the persona's structured
     context before the dialogue exists, so a value like a standing transfer's
     amount can be stamped onto a session whose dialogue is about something else
-    entirely. This moves any such slot to ``missing_slots`` and, when a required
-    execution slot is no longer grounded, downgrades the action to
-    ``pending_required_information`` (``completion_allowed=False``) and clears the
-    completion/confirmation turn indices.
+    entirely. For each such slot, in order:
 
-    Returns new ``(contract, resolution, dropped_slots)``; the inputs are not
-    mutated. A no-op (empty ``dropped_slots``) for ``information_only`` contracts,
-    contracts without grounded slots, and sessions already fully grounded.
+    1. **Re-ground.** If ``slot_candidates[slot]`` holds a value the dialogue
+       *does* surface -- typically the triggering event's own parameter -- adopt
+       it. The event is authoritative for the action it triggers, so this wins
+       even when the grounded value is spoken too: customers narrate both sides
+       of a change and the stale half is just as visible as the new one.
+    2. **Keep.** The grounded value is spoken as a number, or the user pointed at
+       it without saying the number ("금액은 지금 나가는 정도로") and it is one of
+       ``reference_values`` -- the persona's existing standing-action amounts.
+    3. **Drop.** Move the slot to ``missing_slots`` and, when a required
+       execution slot is lost, downgrade the action to
+       ``pending_required_information`` (``completion_allowed=False``) and clear
+       the completion/confirmation turn indices.
+
+    A required slot the planner never grounded at all is also revisited: when a
+    candidate for it *is* spoken, it becomes grounded. The same alias gap that
+    made the planner reach for the persona's amount left this slot empty on
+    personas that had no standing amount to borrow, so the value is often sitting
+    in the transcript unclaimed.
+
+    Returns new ``(contract, resolution, changed_slots)``; the inputs are not
+    mutated. ``changed_slots`` lists every slot whose grounding changed, dropped
+    or re-grounded -- compare ``grounded_slots`` before and after to tell which.
+    A no-op (empty ``changed_slots``) for ``information_only`` contracts and
+    sessions already consistent with their dialogue.
     """
     contract = dict(contract or {})
     resolution = dict(resolution or {})
     grounded = dict(contract.get("grounded_slots") or {})
-    if not grounded:
+    slot_candidates = slot_candidates or {}
+    if not grounded and not slot_candidates:
         return contract, resolution, []
 
+    reference_values = frozenset(reference_values or ())
     user_text = " ".join(
         str(turn.get("text", ""))
         for turn in turns
         if turn.get("speaker") == "user"
     )
-    dropped = [
-        slot
-        for slot, value in grounded.items()
-        if not _slot_value_visible(slot, value, user_text)
-    ]
-    if not dropped:
+    regrounded: dict[str, Any] = {}
+    dropped: list[str] = []
+    for slot, value in grounded.items():
+        # Source priority, mirroring EvidencePlanner._action_execution_contract:
+        # the triggering event is authoritative for the action it triggers, so a
+        # spoken event param wins even when the currently grounded value is also
+        # spoken. Customers narrate both sides of a change ("예전엔 65만원 냈었고
+        # 지금은 40만원이에요"), and the stale half is just as visible as the new.
+        replacement = next(
+            (
+                candidate
+                for candidate in slot_candidates.get(slot) or ()
+                if candidate != value
+                and _slot_value_visible(slot, candidate, user_text)
+            ),
+            None,
+        )
+        if replacement is not None:
+            regrounded[slot] = replacement
+        # Then a literally spoken value, and only then one the user merely
+        # pointed at -- otherwise a session stating the event's own amount would
+        # keep the persona-constant it alluded to with "금액은 지금 나가는 정도로".
+        elif _slot_value_visible(slot, value, user_text):
+            continue
+        elif _slot_value_visible(slot, value, user_text, reference_values):
+            continue
+        else:
+            dropped.append(slot)
+
+    required = list(contract.get("required_slots") or [])
+    for slot in required:
+        if slot == "explicit_confirmation" or slot in grounded:
+            continue
+        value = next(
+            (
+                candidate
+                for candidate in slot_candidates.get(slot) or ()
+                if _slot_value_visible(slot, candidate, user_text)
+            ),
+            None,
+        )
+        if value is not None:
+            regrounded[slot] = value
+
+    changed = sorted(dropped + list(regrounded))
+    if not changed:
         return contract, resolution, []
 
+    grounded.update(regrounded)
     for slot in dropped:
         grounded.pop(slot, None)
-    required = list(contract.get("required_slots") or [])
     # Mirror the planner's own missing/readiness definition
     # (EvidencePlanner._action_execution_contract): explicit_confirmation is a
     # confirmation act, never a grounded value, so it never counts as missing.
@@ -430,6 +565,11 @@ def reconcile_provided_slots(
     provided = dict(resolution.get("provided_slots") or {})
     for slot in dropped:
         provided.pop(slot, None)
+    # Keep provided_slots consistent with grounded_slots: a mismatch is what the
+    # high_risk_unplanned_slot_value check flags. Every re-grounded value was
+    # found in a user turn, so the customer did supply it -- including slots the
+    # frozen resolution had listed as missing.
+    provided.update(regrounded)
     resolution["provided_slots"] = provided
     resolution["missing_slots"] = missing
     if not ready:
@@ -437,7 +577,7 @@ def reconcile_provided_slots(
         resolution["completion_turn_index"] = None
         resolution["explicit_confirmation_turn_index"] = None
 
-    return contract, resolution, dropped
+    return contract, resolution, changed
 
 
 class DialogueValidator:
@@ -780,6 +920,10 @@ class DialogueValidator:
             )
             provided = resolution.get("provided_slots") or {}
             grounded = contract.get("grounded_slots") or {}
+            # An amount the user pointed at rather than spelled out ("금액은 지금
+            # 나가는 정도로") is grounded in the dialogue too, but only against the
+            # standing actions that already exist for this persona.
+            reference_values = standing_action_amounts(plan)
             for slot, value in provided.items():
                 if (
                     (isinstance(value, str) and value in _GENERIC_SLOT_VALUES)
@@ -796,7 +940,9 @@ class DialogueValidator:
                     slot not in grounded
                     or slot not in provided
                     or provided.get(slot) != grounded.get(slot)
-                    or not _slot_value_visible(slot, grounded.get(slot), user_text)
+                    or not _slot_value_visible(
+                        slot, grounded.get(slot), user_text, reference_values
+                    )
                 )
             ]
             # NEW: catch ungrounded provided_slots even when the session never
@@ -807,7 +953,9 @@ class DialogueValidator:
                 slot
                 for slot in provided
                 if slot in grounded
-                and not _slot_value_visible(slot, grounded.get(slot), user_text)
+                and not _slot_value_visible(
+                    slot, grounded.get(slot), user_text, reference_values
+                )
             ]
             if ungrounded_provided:
                 flag(

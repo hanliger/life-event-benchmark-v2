@@ -30,11 +30,24 @@ from pathlib import Path
 
 import _bootstrap  # noqa: F401
 
-from fin_life_benchmark.validation.dialogue_validator import reconcile_provided_slots
+from fin_life_benchmark.io import load_yaml
+from fin_life_benchmark.io.paths import RepoPaths
+from fin_life_benchmark.validation.dialogue_validator import (
+    event_slot_candidates,
+    reconcile_provided_slots,
+    standing_action_amounts,
+)
 
 
 def _read_jsonl(path: Path) -> list[dict]:
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line]
+
+
+def _slot_aliases() -> dict[str, list[str]]:
+    registry = load_yaml(
+        RepoPaths.default().registries / "high_risk_action_contracts.yaml"
+    )
+    return registry.get("slot_aliases") or {}
 
 
 def main() -> int:
@@ -55,9 +68,11 @@ def main() -> int:
     if not gold_files:
         raise SystemExit(f"no *.jsonl under {gold_dir}")
 
+    slot_aliases = _slot_aliases()
     total = 0
     changed = 0
     dropped_by_slot: Counter = Counter()
+    regrounded_by_slot: Counter = Counter()
     for gfile in gold_files:
         traj = gfile.stem
         turns_by_sid = {
@@ -71,13 +86,21 @@ def main() -> int:
             contract = plan.get("action_execution_contract") or {}
             resolution = row.get("action_resolution") or {}
             turns = turns_by_sid.get(row["session_id"], [])
-            new_contract, new_resolution, dropped = reconcile_provided_slots(
-                contract, resolution, turns
+            new_contract, new_resolution, slots = reconcile_provided_slots(
+                contract,
+                resolution,
+                turns,
+                slot_candidates=event_slot_candidates(plan, slot_aliases),
+                reference_values=standing_action_amounts(plan),
             )
-            if dropped:
+            if slots:
                 changed += 1
-                for slot in dropped:
-                    dropped_by_slot[slot] += 1
+                after = new_contract.get("grounded_slots") or {}
+                for slot in slots:
+                    if slot in after:
+                        regrounded_by_slot[slot] += 1
+                    else:
+                        dropped_by_slot[slot] += 1
                 # Preserve every other gold field and key order; only the two
                 # reconciled fields change.
                 row = {
@@ -92,6 +115,10 @@ def main() -> int:
                 handle.write(json.dumps(row, ensure_ascii=False) + "\n")
 
     print(f"reconciled {changed}/{total} gold rows across {len(gold_files)} file(s)")
+    print("re-grounded slots (value corrected from event params):")
+    for slot, n in regrounded_by_slot.most_common():
+        print(f"  {n:5d}  {slot}")
+    print("dropped slots (moved to missing_slots):")
     for slot, n in dropped_by_slot.most_common():
         print(f"  {n:5d}  {slot}")
     print(f"output -> {output_dir}")

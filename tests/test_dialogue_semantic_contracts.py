@@ -22,7 +22,9 @@ from fin_life_benchmark.validation.dialogue_generation_audit import (
 from fin_life_benchmark.validation.dialogue_validator import (
     DialogueValidator,
     contains_contextual_event_label,
+    event_slot_candidates,
     reconcile_provided_slots,
+    standing_action_amounts,
 )
 from scripts.sample_dialogue_regression_canary import select_regression_plans
 from scripts.score_dialogue_review_packet import score_records
@@ -610,3 +612,102 @@ def test_reconciled_session_passes_provided_slot_grounding_check():
     session["action_resolution"] = new_resolution
     codes = {item["code"] for item in _validator().validate_session(session)}
     assert "provided_slot_not_grounded_in_dialogue" not in codes  # after reconcile
+
+
+def test_reconcile_regrounds_amount_from_event_params():
+    # The persona-constant 200,000 is not in the dialogue, but the event's own
+    # rent (400,000) is -- so re-ground rather than drop to missing_slots.
+    contract, resolution = _pending_transfer_contract(200000)
+    turns = [{"speaker": "user", "text": "주거래계좌에서 월세 40만원 내고 있어요"}]
+    new_contract, new_resolution, changed = reconcile_provided_slots(
+        contract, resolution, turns, slot_candidates={"amount": [400000]}
+    )
+    assert changed == ["amount"]
+    assert new_contract["grounded_slots"]["amount"] == 400000
+    assert new_resolution["provided_slots"]["amount"] == 400000
+    assert "amount" not in new_contract["missing_slots"]
+
+
+def test_reconcile_prefers_event_param_over_a_stale_amount_also_spoken():
+    # Customers narrate both sides of a change; the stale half is just as
+    # visible, so literal visibility alone must not keep it.
+    contract, resolution = _pending_transfer_contract(650000)
+    turns = [
+        {
+            "speaker": "user",
+            "text": "주거래계좌요. 예전엔 65만원 냈었고 지금은 40만원이에요",
+        }
+    ]
+    new_contract, _, changed = reconcile_provided_slots(
+        contract, resolution, turns, slot_candidates={"amount": [400000]}
+    )
+    assert changed == ["amount"]
+    assert new_contract["grounded_slots"]["amount"] == 400000
+
+
+def test_reconcile_keeps_amount_the_user_referred_to_without_saying_it():
+    # "금액은 지금 나가는 정도로" points at an existing standing action; that is a
+    # real dialogue reference, so the amount stays grounded.
+    contract, resolution = _pending_transfer_contract(650000)
+    turns = [
+        {"speaker": "user", "text": "주거래계좌에서요. 금액은 지금 나가는 정도로 해주세요"}
+    ]
+    new_contract, new_resolution, changed = reconcile_provided_slots(
+        contract, resolution, turns, reference_values={"650000"}
+    )
+    assert changed == []
+    assert new_contract["grounded_slots"]["amount"] == 650000
+    assert new_resolution["provided_slots"]["amount"] == 650000
+
+
+def test_reconcile_ignores_a_bare_reference_unrelated_to_the_amount():
+    # A cancellation session saying "주소는 원래 그대로예요" refers to something
+    # else entirely and must not ground the persona-constant amount.
+    contract, resolution = _pending_transfer_contract(650000)
+    turns = [{"speaker": "user", "text": "주거래계좌요. 주소는 원래 그대로예요"}]
+    _, new_resolution, changed = reconcile_provided_slots(
+        contract, resolution, turns, reference_values={"650000"}
+    )
+    assert changed == ["amount"]
+    assert "amount" not in new_resolution["provided_slots"]
+
+
+def test_reconcile_grounds_a_required_slot_the_planner_never_filled():
+    # The alias gap left `amount` in neither provided nor missing on personas
+    # with no standing amount to borrow, while the value sat in the transcript.
+    contract, resolution = _pending_transfer_contract(200000)
+    contract["grounded_slots"] = {"source_account": "main_checking"}
+    resolution["provided_slots"] = {"source_account": "main_checking"}
+    turns = [{"speaker": "user", "text": "주거래계좌에서 월세 40만원 나가고 있어요"}]
+    new_contract, new_resolution, changed = reconcile_provided_slots(
+        contract, resolution, turns, slot_candidates={"amount": [400000]}
+    )
+    assert changed == ["amount"]
+    assert new_contract["grounded_slots"]["amount"] == 400000
+    assert new_resolution["provided_slots"]["amount"] == 400000
+
+
+def test_event_slot_candidates_covers_every_money_carrying_event_param():
+    # Each of these lives on a different life event; none may fall through to the
+    # persona's standing-action amount (the root cause of the 201-session defect).
+    aliases = {"amount": ["amount", "new_rent_amount", "monthly_edu_cost", "one_off_cost"]}
+    for param, value in [
+        ("new_rent_amount", 400000),
+        ("monthly_edu_cost", 300000),
+        ("one_off_cost", 5000000),
+    ]:
+        plan = {"structured_context": {"event": {"params": {param: value}}}}
+        assert event_slot_candidates(plan, aliases) == {"amount": [value]}
+
+
+def test_standing_action_amounts_reads_only_numeric_amounts():
+    plan = {
+        "structured_context": {
+            "current_standing_actions": [
+                {"action_id": "SO_rent", "amount": 650000},
+                {"action_id": "SO_none", "amount": None},
+                {"action_id": "SO_flag", "amount": True},
+            ]
+        }
+    }
+    assert standing_action_amounts(plan) == frozenset({"650000"})

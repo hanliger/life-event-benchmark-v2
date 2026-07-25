@@ -30,25 +30,47 @@ from pathlib import Path
 
 import _bootstrap  # noqa: F401
 
-from fin_life_benchmark.validation.dialogue_validator import reconcile_provided_slots
+from fin_life_benchmark.io import load_yaml
+from fin_life_benchmark.io.paths import RepoPaths
+from fin_life_benchmark.validation.dialogue_validator import (
+    event_slot_candidates,
+    reconcile_provided_slots,
+    standing_action_amounts,
+)
 
 
-def _reconcile_session(session: dict) -> tuple[dict, list[str]]:
+def _slot_aliases() -> dict[str, list[str]]:
+    registry = load_yaml(
+        RepoPaths.default().registries / "high_risk_action_contracts.yaml"
+    )
+    return registry.get("slot_aliases") or {}
+
+
+def _reconcile_session(
+    session: dict, slot_aliases: dict[str, list[str]]
+) -> tuple[dict, list[str], dict]:
     plan = session.get("plan") or {}
     contract = plan.get("action_execution_contract") or {}
     resolution = session.get("action_resolution") or {}
     turns = session.get("turns") or []
-    new_contract, new_resolution, dropped = reconcile_provided_slots(
-        contract, resolution, turns
+    new_contract, new_resolution, changed = reconcile_provided_slots(
+        contract,
+        resolution,
+        turns,
+        slot_candidates=event_slot_candidates(plan, slot_aliases),
+        reference_values=standing_action_amounts(plan),
     )
-    if not dropped:
-        return session, []
+    if not changed:
+        return session, [], {}
+    after = new_contract.get("grounded_slots") or {}
+    regrounded = {slot: after[slot] for slot in changed if slot in after}
+    dropped = [slot for slot in changed if slot not in after]
     # Write the reconciled contract/resolution back, leaving everything else
     # (turns, cues, persona, gold labels) untouched.
     if "plan" in session:
         session = {**session, "plan": {**plan, "action_execution_contract": new_contract}}
     session["action_resolution"] = new_resolution
-    return session, dropped
+    return session, dropped, regrounded
 
 
 def main() -> int:
@@ -79,22 +101,26 @@ def main() -> int:
         output_dir = Path(args.output_dir or f"{sessions_dir}_reconciled")
         output_dir.mkdir(parents=True, exist_ok=True)
 
+    slot_aliases = _slot_aliases()
     total = 0
     changed = 0
     dropped_by_slot: Counter = Counter()
-    dropped_by_mode: Counter = Counter()
+    regrounded_by_slot: Counter = Counter()
+    changed_by_mode: Counter = Counter()
     for path in files:
         rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line]
         out_rows = []
         for session in rows:
             total += 1
             prior_mode = ((session.get("plan") or {}).get("action_execution_contract") or {}).get("action_mode")
-            new_session, dropped = _reconcile_session(session)
-            if dropped:
+            new_session, dropped, regrounded = _reconcile_session(session, slot_aliases)
+            if dropped or regrounded:
                 changed += 1
                 for slot in dropped:
                     dropped_by_slot[slot] += 1
-                dropped_by_mode[prior_mode] += 1
+                for slot in regrounded:
+                    regrounded_by_slot[slot] += 1
+                changed_by_mode[prior_mode] += 1
             out_rows.append(new_session)
         dest = output_dir / path.name
         with dest.open("w", encoding="utf-8") as handle:
@@ -102,11 +128,14 @@ def main() -> int:
                 handle.write(json.dumps(row, ensure_ascii=False) + "\n")
 
     print(f"reconciled {changed}/{total} sessions across {len(files)} file(s)")
-    print("dropped slots by name:")
+    print("re-grounded slots by name (value corrected from event params):")
+    for slot, n in regrounded_by_slot.most_common():
+        print(f"  {n:5d}  {slot}")
+    print("dropped slots by name (moved to missing_slots):")
     for slot, n in dropped_by_slot.most_common():
         print(f"  {n:5d}  {slot}")
     print("changed sessions by prior action_mode:")
-    for mode, n in dropped_by_mode.most_common():
+    for mode, n in changed_by_mode.most_common():
         print(f"  {n:5d}  {mode}")
     print(f"output -> {output_dir}")
     return 0

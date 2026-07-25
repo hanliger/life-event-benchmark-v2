@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import random
+from types import SimpleNamespace
 
 import pytest
 
@@ -774,3 +776,61 @@ def test_undeclared_template_still_falls_back_to_the_task_string():
     )
     assert contract.action_mode != "information_only"
     assert "amount_or_schedule" in contract.required_slots
+
+
+def _dependent_end_task(active_action_types: list[str]) -> str:
+    """Which occurred task the planner picks for a persona holding these actions."""
+    paths = RepoPaths.default()
+    templates = load_life_event_templates(paths)
+    planner = EvidencePlanner(templates, load_locale("ko_KR", paths), paths)
+    actions = [SimpleNamespace(type=name) for name in active_action_types]
+    task, _score, _reasons, _grounding = planner.select_task_template(
+        templates["relationship_dependent_end"],
+        "occurred",
+        {},
+        SimpleNamespace(),
+        SimpleNamespace(latest=lambda path: None),
+        [],
+        [],
+        [],
+        actions,
+        [],
+        random.Random(0),
+    )
+    return task["task_template_id"]
+
+
+def test_stop_task_requires_a_transfer_that_actually_exists():
+    # Either support transfer alone is enough -- required_action_types could not
+    # express this, being an AND gate.
+    assert _dependent_end_task(["parent_support_transfer"]) == "dependent_end_transfer_stop"
+    assert (
+        _dependent_end_task(["spouse_living_expense_transfer"])
+        == "dependent_end_transfer_stop"
+    )
+
+
+def test_persona_with_nothing_to_stop_gets_the_review_task_instead():
+    # Previously the stop task was assigned anyway, so the dialogue asserted a
+    # support transfer the trajectory never created.
+    assert (
+        _dependent_end_task(["rent_autopay", "pension_contribution"])
+        == "dependent_end_registration_review"
+    )
+    assert _dependent_end_task([]) == "dependent_end_registration_review"
+
+
+def test_the_two_dependent_end_tasks_are_mutually_exclusive():
+    # Exactly one is valid per persona, so selection never falls to the rng
+    # tie-break and existing assignments cannot drift.
+    for actions in (["parent_support_transfer"], ["rent_autopay"], []):
+        picked = {_dependent_end_task(actions) for _ in range(5)}
+        assert len(picked) == 1
+
+
+def test_review_task_executes_nothing():
+    contract = _contract_for(
+        "dependent_end_registration_review", "FA-08", "부양가족 등록 정보 확인"
+    )
+    assert contract.action_mode == "information_only"
+    assert contract.required_slots == []

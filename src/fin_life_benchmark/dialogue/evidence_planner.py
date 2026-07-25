@@ -386,6 +386,16 @@ class EvidencePlanner:
         required_actions = set(when.get("action_type_exists") or [])
         if required_actions and not required_actions.issubset(action_types):
             return False
+        # `action_type_exists` and `required_action_types` are both AND gates, so
+        # neither can say "any one of these" or "none of these". A pair of tasks
+        # that split on whether an arrangement exists needs exactly that: one
+        # cancels the transfer the persona has, the other only reviews the
+        # registration when there is no transfer to cancel.
+        any_of = set(when.get("action_type_any_of") or [])
+        if any_of and not any_of.intersection(action_types):
+            return False
+        if set(when.get("action_type_absent") or []).intersection(action_types):
+            return False
         return True
 
     def select_task_template(

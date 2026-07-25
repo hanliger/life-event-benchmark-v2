@@ -71,6 +71,9 @@ task_subtypes:
   dependent_end_transfer_stop: cancel
   # "이체 한도만 확인한다" -- executes nothing.
   housing_move_other_transfer_limit: inquiry
+  # The no-transfer sibling of dependent_end_transfer_stop: the event happened,
+  # but with no arrangement to stop the session can only review the registration.
+  dependent_end_registration_review: inquiry
 
 slot_aliases:
   source_account: [source_account, withdrawal_account, from_account, salary_account]

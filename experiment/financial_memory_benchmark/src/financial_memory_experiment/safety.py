@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import json
 import os
-from dataclasses import dataclass
+import tempfile
+from contextlib import contextmanager
+from fcntl import LOCK_EX, LOCK_UN, flock
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
 
-from .config import load_paid_safety_config
+from .config import load_paid_cost_ledger, load_paid_safety_config
 from .paths import ExperimentPaths
 from .util import sha256_file, sha256_json, write_json
 
@@ -68,6 +70,98 @@ def _execution_provenance(paths: ExperimentPaths) -> dict[str, Any]:
     }
 
 
+def _ledger_path(paths: ExperimentPaths) -> Path:
+    return paths.configs / "paid_cost_ledger.json"
+
+
+def _validate_ledger(ledger: dict[str, Any]) -> tuple[float, float]:
+    if ledger.get("schema_version") != "paid-smoke-ledger-v1":
+        raise PaidExecutionBlocked("unsupported paid smoke cost ledger")
+    spent = float(ledger["conservative_spent_usd"])
+    limit = float(ledger["standing_limit_usd"])
+    if spent < 0 or limit <= 0 or spent >= limit:
+        raise PaidExecutionBlocked("paid smoke cost ledger has no executable allowance")
+    return spent, limit
+
+
+def _assert_cumulative_allowance(
+    ledger: dict[str, Any], estimated_usd: float
+) -> tuple[float, float, float]:
+    spent, limit = _validate_ledger(ledger)
+    after = round(spent + estimated_usd, 6)
+    if after >= limit:
+        raise PaidExecutionBlocked(
+            "planned smoke reservation would reach or exceed the cumulative "
+            f"${limit:.2f} standing limit (reserved=${spent:.2f}, "
+            f"plan=${estimated_usd:.2f})"
+        )
+    return spent, limit, after
+
+
+@contextmanager
+def _exclusive_ledger_lock(paths: ExperimentPaths) -> Iterator[None]:
+    lock_path = paths.runs / "paid_cost_ledger.lock"
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    with lock_path.open("a", encoding="utf-8") as handle:
+        flock(handle.fileno(), LOCK_EX)
+        try:
+            yield
+        finally:
+            flock(handle.fileno(), LOCK_UN)
+
+
+def reserve_smoke_budget(
+    paths: ExperimentPaths, plan: dict[str, Any]
+) -> dict[str, Any]:
+    """Atomically reserve the full plan estimate before any paid client is enabled."""
+
+    path = _ledger_path(paths)
+    with _exclusive_ledger_lock(paths):
+        ledger = load_paid_cost_ledger(paths)
+        if sha256_file(path) != plan.get("cost_ledger_sha256"):
+            raise PaidExecutionBlocked(
+                "paid cost ledger changed after planning; create a new smoke plan"
+            )
+        plan_sha = str(plan["plan_sha256"])
+        if any(
+            entry.get("kind") == "plan_reservation"
+            and entry.get("plan_sha256") == plan_sha
+            for entry in ledger.get("entries") or []
+        ):
+            raise PaidExecutionBlocked("this smoke plan has already been reserved")
+        _spent, _limit, after = _assert_cumulative_allowance(
+            ledger, float(plan["estimated_usd"])
+        )
+        updated = dict(ledger)
+        updated["conservative_spent_usd"] = after
+        updated["entries"] = list(ledger.get("entries") or []) + [
+            {
+                "kind": "plan_reservation",
+                "plan_sha256": plan_sha,
+                "amount_usd": float(plan["estimated_usd"]),
+                "status": "reserved",
+                "note": (
+                    "Conservative reservation made before provider construction; "
+                    "manual billing reconciliation is required to reduce it."
+                ),
+            }
+        ]
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            dir=path.parent,
+            prefix=f".{path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as handle:
+            json.dump(updated, handle, ensure_ascii=False, indent=2, sort_keys=True)
+            handle.write("\n")
+            temporary = Path(handle.name)
+        os.replace(temporary, path)
+    return updated
+
+
 def build_smoke_plan(
     paths: ExperimentPaths,
     *,
@@ -81,13 +175,22 @@ def build_smoke_plan(
     cap = float(config["smoke"]["usd_cap"])
     if estimated_usd <= 0 or estimated_usd > cap:
         raise ValueError(f"estimated_usd must be in (0, {cap}]")
+    ledger_path = _ledger_path(paths)
+    ledger = load_paid_cost_ledger(paths)
+    spent, standing_limit, after = _assert_cumulative_allowance(
+        ledger, float(estimated_usd)
+    )
     body = {
-        "schema_version": "paid-smoke-plan-v1",
+        "schema_version": "paid-smoke-plan-v2",
         "kind": "smoke",
         "method_ids": sorted(set(method_ids)),
         "item_ids": sorted(set(item_ids)),
         "estimated_usd": round(float(estimated_usd), 6),
         "usd_cap": cap,
+        "standing_limit_usd": standing_limit,
+        "conservative_spent_before_usd": spent,
+        "conservative_spent_after_reservation_usd": after,
+        "cost_ledger_sha256": sha256_file(ledger_path),
         "concurrency": 1,
         "automatic_retries": 0,
         "stop_on_first_error": True,
@@ -124,6 +227,12 @@ def load_verified_smoke_plan(
     plan["plan_sha256"] = claimed
     if float(plan["estimated_usd"]) > float(plan["usd_cap"]):
         raise PaidExecutionBlocked("planned estimate exceeds the smoke cap")
+    ledger = load_paid_cost_ledger(paths)
+    _assert_cumulative_allowance(ledger, float(plan["estimated_usd"]))
+    if sha256_file(_ledger_path(paths)) != plan.get("cost_ledger_sha256"):
+        raise PaidExecutionBlocked(
+            "paid cost ledger changed after planning; create a new smoke plan"
+        )
     if plan.get("execution_provenance") != _execution_provenance(paths):
         raise PaidExecutionBlocked(
             "code/config/data provenance changed after planning; create a new plan"
@@ -189,34 +298,3 @@ def load_verified_full_plan(
         )
     plan["plan_sha256"] = claimed
     return plan
-
-
-@dataclass
-class CostGuard:
-    cap_usd: float
-    reserved_usd: float = 0.0
-    observed_usd: float = 0.0
-    unknown_billing_state: bool = False
-
-    def reserve(self, maximum_usd: float) -> None:
-        if self.unknown_billing_state:
-            raise PaidExecutionBlocked("billing state is unknown; automatic resume is forbidden")
-        if maximum_usd < 0:
-            raise ValueError("maximum_usd must be non-negative")
-        if self.reserved_usd + maximum_usd > self.cap_usd:
-            raise PaidExecutionBlocked("next request could exceed the smoke USD cap")
-        self.reserved_usd += maximum_usd
-
-    def settle(self, *, reserved_usd: float, observed_usd: float | None) -> None:
-        self.reserved_usd -= reserved_usd
-        if observed_usd is None:
-            self.unknown_billing_state = True
-            raise PaidExecutionBlocked(
-                "provider did not return attributable cost; billing state is unknown"
-            )
-        self.observed_usd += observed_usd
-        if self.observed_usd > self.cap_usd:
-            raise PaidExecutionBlocked("observed spend exceeds the smoke cap")
-
-    def mark_timeout(self) -> None:
-        self.unknown_billing_state = True

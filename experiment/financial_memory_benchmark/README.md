@@ -88,16 +88,13 @@ data/raw/hf/hangyeul-lee--life-event-benchmark-v2-dialogues/<revision>/
 ```
 
 `active_manifest.json`에는 HF commit SHA 또는 local content hash가 기록된다.
+기본 설정은 dataset commit
+`d97e1acfa9bb7267599212fe26fd4fad3cca016f`와 검증된 content tree를 고정한다.
+다른 snapshot은 raw validation을 통과하지 않는다.
 
 ## 3. 평가 입력과 문항 생성
 
-전체 과정을 순서대로 실행한다.
-
-```bash
-./scripts/pipeline.sh prepare-all
-```
-
-이미 raw data가 있거나 오류 단계를 분리해야 한다면 다음 명령을 사용한다.
+앞 절에서 raw data를 받은 뒤 다음 명령을 순서대로 실행한다.
 
 ```bash
 ./scripts/pipeline.sh prepare-data
@@ -105,6 +102,13 @@ data/raw/hf/hangyeul-lee--life-event-benchmark-v2-dialogues/<revision>/
 ./scripts/pipeline.sh build-canonical-items
 ./scripts/pipeline.sh build-masking-items
 ./scripts/pipeline.sh validate-prepared-data
+```
+
+완전히 빈 실험 폴더에서 HF 다운로드부터 한 번에 실행하려면 2~3절 대신 다음
+명령 하나를 사용할 수 있다.
+
+```bash
+./scripts/pipeline.sh prepare-all
 ```
 
 기대 개수:
@@ -256,6 +260,9 @@ sed -n '1,20p' data/prepared/*/masking_items/masking_questions.jsonl
 현재 standing approval은 보수적 누적 smoke 비용이 엄격히 `$5` 미만일 때만
 유효하다. 단일 smoke plan 상한은 `$3`, concurrency 1, automatic retry 0,
 first-error stop이다. timeout 또는 비용 귀속 불명 상태에서는 자동 재실행하지 않는다.
+누적 금액은 `configs/paid_cost_ledger.json`에 기록되며, 실행 직전에 plan estimate
+전액을 원자적으로 예약한다. 따라서 실패나 timeout 뒤 같은 plan은 자동 재실행되지
+않으며 실제 청구 내역을 확인한 뒤에만 원장을 수동 조정한다.
 
 통과 조건:
 
@@ -342,6 +349,8 @@ report/
 
 `metrics.json`의 `completeness.reporting_ready`가 `true`인지 확인한다. `false`이면
 논문 표를 작성하지 않는다.
+`stage3_by_derivation.csv`는 유형별 trajectory-macro accuracy를 주 지표로,
+question-micro accuracy를 보조 지표로 함께 기록한다.
 
 ## 10. 결과 문서 작성
 

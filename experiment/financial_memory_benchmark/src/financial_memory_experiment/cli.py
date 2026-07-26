@@ -41,6 +41,7 @@ from .safety import (
     build_smoke_plan,
     load_verified_full_plan,
     load_verified_smoke_plan,
+    reserve_smoke_budget,
 )
 from .util import read_jsonl, sha256_file, sha256_json, write_json
 
@@ -464,6 +465,7 @@ def main() -> int:
         _write_environment_snapshot(
             paths, paths.runs / "paid_smoke" / plan["plan_sha256"]
         )
+        reserve_smoke_budget(paths, plan)
         os.environ["FIN_MEMORY_DISABLE_PAID_APIS"] = "0"
         canonical = [
             item

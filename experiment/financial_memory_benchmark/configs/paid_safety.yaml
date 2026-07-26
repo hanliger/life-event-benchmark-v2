@@ -1,11 +1,7 @@
 schema_version: paid-safety-v1
-implementation_phase:
-  paid_apis_enabled: false
 smoke:
-  # Standing user approval on 2026-07-26: cumulative experiment spend must
-  # remain below $5.00. The conservative ledger is now $1.98 after reserving
-  # the full $1.00 Mem0 plan estimate; keep the executable per-plan ceiling
-  # below the remaining $3.02 allowance.
+  # Per-plan ceiling. The stricter cumulative standing limit is enforced by
+  # configs/paid_cost_ledger.json and must remain strictly below $5.00.
   usd_cap: 3.0
   concurrency: 1
   automatic_retries: 0

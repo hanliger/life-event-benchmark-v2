@@ -24,4 +24,3 @@ def test_stage2_uses_trajectory_target_checkpoint_hierarchy():
     score, trajectories = hierarchical_stage2(rows)
     assert trajectories == pytest.approx({"t1": 0.75, "t2": 0.0})
     assert score == pytest.approx(0.375)
-

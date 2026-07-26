@@ -75,6 +75,10 @@ def test_stage3_derivation_table_is_written(tmp_path):
                         "expense_aggregation": 1.0,
                         "state_sequence": 0.0,
                     },
+                    "question_micro_accuracy_by_derivation_type": {
+                        "expense_aggregation": 1.0,
+                        "state_sequence": 0.0,
+                    },
                     "accuracy_by_retention_lag_windows": {},
                 }
             }
@@ -89,4 +93,8 @@ def test_stage3_derivation_table_is_written(tmp_path):
     assert {row["derivation_type"] for row in rows} == {
         "expense_aggregation",
         "state_sequence",
+    }
+    assert set(rows[0]) >= {
+        "trajectory_macro_accuracy",
+        "question_micro_accuracy",
     }

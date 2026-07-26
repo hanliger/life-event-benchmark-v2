@@ -1,0 +1,13 @@
+{
+  "conservative_spent_usd": 1.98,
+  "entries": [
+    {
+      "amount_usd": 1.98,
+      "kind": "historical_reserve",
+      "note": "Conservative cumulative reserve for approved paid smoke work before the versioned ledger was introduced.",
+      "recorded_at": "2026-07-26"
+    }
+  ],
+  "schema_version": "paid-smoke-ledger-v1",
+  "standing_limit_usd": 5.0
+}

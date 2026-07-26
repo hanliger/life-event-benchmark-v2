@@ -67,6 +67,8 @@ Family별로 표를 분리하고 Stage 1, Stage 2, Stage 3를 별도 열로 보�
 ## 4. Stage 3 by derivation
 
 `report/stage3_by_derivation.csv`를 사용한다.
+본문 표에는 `trajectory_macro_accuracy`를 사용하고
+`question_micro_accuracy`는 보조 분석으로만 보고한다.
 
 | Method | State sequence | Count sequence | Amount comparison | Expense aggregation |
 |---|---:|---:|---:|---:|

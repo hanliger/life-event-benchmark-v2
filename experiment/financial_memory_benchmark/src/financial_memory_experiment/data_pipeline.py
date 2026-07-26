@@ -48,11 +48,16 @@ def _slug(repo_id: str) -> str:
     return repo_id.replace("/", "--")
 
 
-def _hash_tree(root: Path) -> dict[str, str]:
+def _hash_tree(
+    root: Path, *, exclude_relative_paths: set[str] | None = None
+) -> dict[str, str]:
+    excluded = exclude_relative_paths or set()
     return {
         str(path.relative_to(root)): sha256_file(path)
         for path in sorted(root.rglob("*"))
-        if path.is_file() and ".git" not in path.parts
+        if path.is_file()
+        and ".git" not in path.parts
+        and str(path.relative_to(root)) not in excluded
     }
 
 
@@ -127,7 +132,9 @@ def download_data(
                 ],
             )
 
-    file_hashes = _hash_tree(destination)
+    file_hashes = _hash_tree(
+        destination, exclude_relative_paths={"manifest.json"}
+    )
     manifest = {
         "schema_version": "raw-data-manifest-v1",
         "repo_id": repo_id,
@@ -173,6 +180,23 @@ def validate_raw_data(paths: ExperimentPaths) -> dict[str, Any]:
     dialogues = _load_by_key(root / "dialogues")
     gold = _load_by_key(root / "gold")
     errors: list[str] = []
+    pinned_revision = cfg["dataset"].get("revision")
+    pinned_tree_hash = cfg["dataset"].get("tree_hash")
+    revision_matches = str(manifest.get("resolved_revision")) == str(
+        pinned_revision
+    )
+    tree_matches = str(manifest.get("tree_hash")) == str(pinned_tree_hash)
+    if pinned_revision and pinned_tree_hash and not (
+        revision_matches or tree_matches
+    ):
+        errors.append(
+            "active raw snapshot does not match the pinned dataset revision "
+            "or content tree: "
+            f"expected_revision={pinned_revision}, "
+            f"actual_revision={manifest.get('resolved_revision')}, "
+            f"expected_tree={pinned_tree_hash}, "
+            f"actual_tree={manifest.get('tree_hash')}"
+        )
     if set(dialogues) != set(gold):
         errors.append(
             f"dialogue/gold key mismatch: dialogue_only={len(set(dialogues)-set(gold))}, "
@@ -364,4 +388,3 @@ def assert_answer_free_record(record: dict[str, Any]) -> None:
     leaked = GOLD_ONLY_FIELD_NAMES & set(record)
     if leaked:
         raise ValueError(f"answer-free record contains gold-only fields: {sorted(leaked)}")
-

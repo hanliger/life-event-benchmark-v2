@@ -83,7 +83,7 @@ Lifecycle 질문과 memory 질문은 별도 stage로 보고한다.
 |---|---|
 | Stage 1 | trajectory-macro accuracy |
 | Stage 2 | checkpoint → target → trajectory 계층 macro accuracy |
-| Stage 3 | trajectory-macro accuracy, derivation type별 accuracy |
+| Stage 3 | trajectory-macro accuracy, derivation type별 trajectory-macro accuracy |
 | Masking | stage × arm accuracy |
 | Retrieval | latest-state recall@k, complete-evidence recall@k |
 | Stage 3 retrieval | both-hops recall@k |

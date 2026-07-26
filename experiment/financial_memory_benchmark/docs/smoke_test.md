@@ -58,6 +58,9 @@ smoke이기 때문이다.
 실제 invoice는 credit, 세금, pricing tier에 따라 다를 수 있다. Mem0 내부 extraction
 usage가 request별로 완전히 귀속되지 않으므로 실제값 대신 plan reserve 전액을 누계에
 포함했다.
+실행 가능한 원장은 `configs/paid_cost_ledger.json`이다. 새 paid smoke는 provider
+client를 활성화하기 직전에 estimate 전액을 보수적으로 예약하고, 원장이 바뀌면 기존
+plan SHA의 실행을 거부한다.
 
 ## 앞으로의 smoke 안전 규칙
 

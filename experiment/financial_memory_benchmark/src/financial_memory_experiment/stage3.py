@@ -134,6 +134,11 @@ def build_stage3_items(paths: ExperimentPaths) -> dict[str, Any]:
     report_path = output_dir / "stage3_multi_hop_build_report.json"
     audit_path = output_dir / "stage3_multi_hop_audit.json"
     write_jsonl(items_path, rows)
+    audit = {
+        **audit,
+        "normalized_items_sha256": sha256_file(items_path),
+        "normalization_contract": "financial-memory-stage3-s000-v1",
+    }
     write_json(
         report_path,
         {
@@ -179,6 +184,8 @@ def validate_stage3_items(paths: ExperimentPaths) -> dict[str, Any]:
         audit = json.loads(audit_path.read_text(encoding="utf-8"))
         if not audit.get("passed") or int(audit.get("items", -1)) != len(rows):
             errors.append("Stage 3 upstream audit did not pass for the frozen item set")
+        if audit.get("normalized_items_sha256") != sha256_file(path):
+            errors.append("Stage 3 audit is not bound to the frozen item JSONL")
 
     for row in rows:
         item_id = str(row.get("item_id") or "")

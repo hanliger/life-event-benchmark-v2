@@ -54,4 +54,3 @@ def session_number(session_id: str) -> int:
     if not session_id.startswith("S") or not session_id[1:].isdigit():
         raise ValueError(f"invalid session_id: {session_id!r}")
     return int(session_id[1:])
-

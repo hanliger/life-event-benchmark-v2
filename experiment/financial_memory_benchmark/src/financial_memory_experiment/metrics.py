@@ -267,6 +267,14 @@ def summarize_predictions(
                         str((row.get("item_metadata") or {}).get("derivation_type"))
                     ].append(row)
                 stages[stage]["accuracy_by_derivation_type"] = {
+                    derivation: (
+                        mean(_trajectory_scores(stage, group).values())
+                        if group
+                        else None
+                    )
+                    for derivation, group in sorted(derivation_groups.items())
+                }
+                stages[stage]["question_micro_accuracy_by_derivation_type"] = {
                     derivation: _accuracy(group)
                     for derivation, group in sorted(derivation_groups.items())
                 }
@@ -347,7 +355,13 @@ def write_tables(report: dict[str, Any], output_dir: Path) -> None:
                         "method_family": family,
                         "method_id": method_id,
                         "derivation_type": derivation,
-                        "accuracy": accuracy,
+                        "trajectory_macro_accuracy": accuracy,
+                        "question_micro_accuracy": (
+                            values.get(
+                                "question_micro_accuracy_by_derivation_type"
+                            )
+                            or {}
+                        ).get(derivation),
                     }
                 )
             for lag, accuracy in (

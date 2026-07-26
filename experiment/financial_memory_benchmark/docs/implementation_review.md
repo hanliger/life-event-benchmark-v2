@@ -4,10 +4,10 @@
 
 ## 완료된 검증
 
-- [x] HF dialogues, gold, fillers, plans snapshot과 hash 보존
+- [x] HF dialogues, gold, fillers, plans commit SHA와 content-tree hash 고정
 - [x] 20 trajectories × 300 sessions 검증
 - [x] Stage 1 400개, Stage 2 4,200개 생성
-- [x] Stage 3 multi-hop 123개 생성 및 upstream audit 123/123
+- [x] Stage 3 multi-hop 123개 생성, upstream audit 123/123, normalized JSONL hash 결합
 - [x] Stage 3 123문항 × 7방법 offline end-to-end, 총 861 predictions
 - [x] 5-arm masking 4,510문항 생성
 - [x] answer-free input과 future-leakage fail-closed 검사
@@ -18,6 +18,7 @@
 - [x] Letta archival insert/search/final answer와 evidence attribution
 - [x] immutable plan SHA, code/config/data provenance 검사
 - [x] retry 0, concurrency 1, first-error stop
+- [x] 누적 `$5` 미만 standing smoke ledger와 실행 전 보수적 plan 예약
 - [x] strict completeness와 output hash 집계
 
 ## Full run 전 남은 gate

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any
 
@@ -29,3 +30,12 @@ def load_paid_safety_config(paths: ExperimentPaths | None = None) -> dict[str, A
     paths = paths or ExperimentPaths.discover()
     return load_yaml(paths.configs / "paid_safety.yaml")
 
+
+def load_paid_cost_ledger(paths: ExperimentPaths | None = None) -> dict[str, Any]:
+    paths = paths or ExperimentPaths.discover()
+    payload = json.loads(
+        (paths.configs / "paid_cost_ledger.json").read_text(encoding="utf-8")
+    )
+    if not isinstance(payload, dict):
+        raise ValueError("expected paid cost ledger JSON mapping")
+    return payload

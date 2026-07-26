@@ -38,4 +38,3 @@ class ExperimentPaths:
     @property
     def prompts(self) -> Path:
         return self.root / "prompts"
-

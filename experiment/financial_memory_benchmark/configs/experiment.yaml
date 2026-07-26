@@ -1,7 +1,8 @@
 schema_version: financial-memory-experiment-v1
 dataset:
   repo_id: hangyeul-lee/life-event-benchmark-v2-dialogues
-  revision: null
+  revision: d97e1acfa9bb7267599212fe26fd4fad3cca016f
+  tree_hash: 0b83a195a4200596b064011c65b7feac11483343fe4b6adab9d750070cc75b4a
   configs:
     - dialogues
     - gold

@@ -9,8 +9,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
-from scripts.evaluate_benchmark_items import _build_stage3_prompt
-from fin_life_benchmark.benchmark.item_builder import ItemBuilder
+from scripts.evaluate_stage3_multihop_items import _build_stage3_prompt
+from fin_life_benchmark.benchmark.stage3_item_builder import Stage3ItemBuilder as ItemBuilder
 from fin_life_benchmark.benchmark.multihop import (
     MultiHopFact,
     Stage3MultiHopTarget,
@@ -168,7 +168,7 @@ def test_multihop_sequence_item_uses_two_dates_without_session_ids():
     )[0]
 
     assert item.stage == "stage3_multi_hop_mcq"
-    assert item.reasoning_type == "multi_hop"
+    assert item.metadata["reasoning_type"] == "multi_hop"
     assert item.gold["answer_value"] == ["employed", "on_leave"]
     assert item.gold["hop_count"] == 2
     assert "2020년 1월 15일" in item.question
@@ -483,7 +483,6 @@ def test_multihop_candidate_builder_rejects_wrong_dependent_direction():
             "option_pool": (0, 1, 2, 3, 4),
             "allow_same_value": True,
             "allow_null": False,
-            "max_candidates": 1,
         }
     }
 
@@ -649,7 +648,6 @@ def test_multihop_candidate_builder_rejects_initial_memory_shortcut():
             "excluded_values": (),
             "allow_same_value": False,
             "allow_null": False,
-            "max_candidates": 1,
         }
     }
 
@@ -799,7 +797,6 @@ def test_multihop_candidate_builder_rejects_equivalent_no_rent_values():
             "excluded_values": (),
             "allow_same_value": False,
             "allow_null": True,
-            "max_candidates": 1,
         }
     }
 

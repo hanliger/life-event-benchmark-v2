@@ -817,7 +817,7 @@ def test_forced_event_is_guarded_and_impacts_actions():
 
 
 
-def test_stage2_memory_mcq_repeats_all_eligible_targets_per_checkpoint():
+def test_stage2_memory_mcq_targets_only_latest_event_per_checkpoint():
     from fin_life_benchmark.benchmark.mcq_input import Stage2Checkpoint, Stage2Target
 
     target_1 = Stage2Target(
@@ -889,19 +889,15 @@ def test_stage2_memory_mcq_repeats_all_eligible_targets_per_checkpoint():
         },
     )
 
-    assert len(items) == 3
+    assert len(items) == 2
     assert items[0].item_id.startswith("traj_mem_s015_")
     assert items[1].item_id.startswith("traj_mem_s030_")
-    assert items[2].item_id.startswith("traj_mem_s030_")
     assert items[0].gold["canonical_target_id"] == target_1.canonical_target_id
-    assert items[1].gold["canonical_target_id"] == target_1.canonical_target_id
-    assert items[2].gold["canonical_target_id"] == target_2.canonical_target_id
+    assert items[1].gold["canonical_target_id"] == target_2.canonical_target_id
     assert items[0].visible_sessions == [f"S{i:03d}" for i in range(1, 16)]
     assert items[1].visible_sessions == [f"S{i:03d}" for i in range(1, 31)]
-    assert items[2].visible_sessions == [f"S{i:03d}" for i in range(1, 31)]
-    assert all("제공된 전체 상담 이력을 참고하여" in item.question for item in items)
-    assert items[0].question == items[1].question
-    assert items[1].question != items[2].question
+    assert all("제공된 전체 상담 이력 기준, 현재" in item.question for item in items)
+    assert items[0].question != items[1].question
 
     for item in items:
         correct = [option for option in item.options if option.correct]
@@ -1000,9 +996,7 @@ def test_stage2_memory_mcq_keeps_noop_final_value_and_property_ownership():
     move_item, sale_item = items
     assert move_item.gold["answer_value"] == "wolse"
     assert any(option.text == "월세" and option.correct for option in move_item.options)
-    assert sale_item.question.endswith(
-        "담보대출 상환과 관련된 부동산의 현재 소유 상태는 무엇인가?"
-    )
+    assert sale_item.question == "담보대출 상환과 관련된 부동산의 현재 소유 상태는 무엇인가?"
     assert sale_item.gold["answer_value"] == "sold"
     assert [option.text for option in sale_item.options] == [
         "현재 보유 중",

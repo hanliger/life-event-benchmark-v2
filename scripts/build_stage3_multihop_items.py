@@ -9,7 +9,7 @@ from pathlib import Path
 
 import _bootstrap  # noqa: F401
 
-from fin_life_benchmark.benchmark.item_builder import ItemBuilder
+from fin_life_benchmark.benchmark.stage3_item_builder import Stage3ItemBuilder
 from fin_life_benchmark.benchmark.multihop import (
     build_stage3_multihop_targets,
     load_multihop_session_records,
@@ -34,15 +34,6 @@ def main() -> int:
         default="configs/registries/stage3_multihop_policy.yaml",
     )
     parser.add_argument("--window-size", type=int, default=15)
-    parser.add_argument(
-        "--selection-mode",
-        choices=("representative", "all_candidates"),
-        default="representative",
-        help=(
-            "build one representative per trajectory/question axis (default), "
-            "or retain the quality-filtered candidate pool"
-        ),
-    )
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--shuffle-options", action="store_true")
     parser.add_argument("--max-items", type=int, default=None)
@@ -79,10 +70,8 @@ def main() -> int:
             trajectory.initial_financial_memory_state
         )
 
-    representative_policy = (
-        load_stage3_multihop_representative_policy(args.policy)
-        if args.selection_mode == "representative"
-        else None
+    representative_policy = load_stage3_multihop_representative_policy(
+        args.policy
     )
 
     result = build_stage3_multihop_targets(
@@ -92,10 +81,8 @@ def main() -> int:
         initial_memory_by_traj=initial_memory_by_traj,
         representative_policy=representative_policy,
         window_size=args.window_size,
-        seed=args.seed,
     )
-    items = ItemBuilder(
-        seed=args.seed,
+    items = Stage3ItemBuilder(
         shuffle_options=args.shuffle_options,
     ).build_stage3_multihop(
         result.targets,

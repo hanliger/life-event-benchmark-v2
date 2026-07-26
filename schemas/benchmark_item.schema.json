@@ -43,25 +43,7 @@
     },
     "stage": {
       "title": "Stage",
-      "type": "string",
-      "description": "Benchmark stage identifier.",
-      "enum": [
-        "stage1_event_identification",
-        "stage2_memory_mcq",
-        "stage3_multi_hop_mcq"
-      ]
-    },
-    "reasoning_type": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "title": "Reasoning Type"
+      "type": "string"
     },
     "trajectory_id": {
       "title": "Trajectory Id",

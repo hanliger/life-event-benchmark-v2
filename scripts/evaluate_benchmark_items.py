@@ -3,7 +3,7 @@
 
 Examples:
   python scripts/evaluate_benchmark_items.py \
-    --items data/generated/benchmark_items/stage2_single_hop_mcq.jsonl \
+    --items data/generated/benchmark_items/stage2_memory_mcq.jsonl \
     --sessions-dir data/generated/sessions \
     --provider anthropic \
     --model claude-sonnet-5 \
@@ -11,7 +11,7 @@ Examples:
     --output data/generated/eval/stage2_claude_sonnet_5_predictions.jsonl \
     --report data/generated/eval/stage2_claude_sonnet_5_report.json
 
-Stage 2 and Stage 3 MCQ items are scored by exact option match. Stage 1 event-identification
+Stage 2 MCQ is scored by exact option match. Stage 1 event-identification
 items are scored by exact event_id match.
 """
 
@@ -19,7 +19,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import re
 from datetime import date
 from collections import Counter
@@ -138,38 +137,7 @@ def _visible_sessions(
     return [sessions_by_id[(trajectory_id, session_id)] for session_id in session_ids]
 
 
-def _build_stage3_prompt(
-    item: dict[str, Any], sessions: list[dict[str, Any]]
-) -> str:
-    lines = [
-        "다음은 한 고객의 은행 상담 세션 이력입니다.",
-        "질문에 지정된 두 상담일의 정보를 각각 찾아 연결하거나 계산하세요.",
-        "한 시점의 정보만으로 판단하지 말고, 두 시점의 근거를 모두 사용하세요.",
-        "초기 금융 메모리는 전체 이력의 시작 상태를 확인하는 참고 정보로만 사용하세요.",
-        "추측하지 말고 보기 중 하나만 고르세요.",
-        "",
-        _format_sessions(sessions),
-        "",
-    ]
-    initial_memory = (item.get("metadata") or {}).get("initial_memory") or {}
-    memory_text = _format_initial_memory(initial_memory)
-    if memory_text:
-        lines.extend([memory_text, ""])
-    lines.extend([item["question"], ""])
-    for option in item.get("options", []):
-        lines.append(f"{option['option_id']}. {option['text']}")
-    lines.extend(
-        [
-            "",
-            '정답 선택지 하나만 JSON으로 답하세요. 예: {"answer": "A"}',
-        ]
-    )
-    return "\n".join(lines)
-
-
-def _build_stage2_prompt(
-    item: dict[str, Any], sessions: list[dict[str, Any]]
-) -> str:
+def _build_stage2_prompt(item: dict[str, Any], sessions: list[dict[str, Any]]) -> str:
     date_range = _display_date_range(item, sessions)
     lines = [
         "다음은 한 고객의 은행 상담 세션 이력입니다.",
@@ -188,12 +156,10 @@ def _build_stage2_prompt(
     lines.extend([item["question"], ""])
     for option in item.get("options", []):
         lines.append(f"{option['option_id']}. {option['text']}")
-    lines.extend(
-        [
-            "",
-            '정답 선택지 하나만 JSON으로 답하세요. 예: {"answer": "A"}',
-        ]
-    )
+    lines.extend([
+        "",
+        '정답 선택지 하나만 JSON으로 답하세요. 예: {"answer": "A"}',
+    ])
     return "\n".join(lines)
 
 
@@ -256,7 +222,7 @@ def _parse_stage1_event_identification_answer(raw: str) -> str:
     return str(payload.get("event_id", "")).strip()
 def _score_item(item: dict[str, Any], raw: str) -> tuple[Any, Any, bool, str | None]:
     stage = item.get("stage")
-    if stage in {"stage2_memory_mcq", "stage3_multi_hop_mcq"}:
+    if stage == "stage2_memory_mcq":
         pred = _parse_mcq_answer(raw)
         gold = (item.get("gold") or {}).get("correct_option")
         return pred, gold, pred == gold, None if pred else "parse_error"
@@ -270,15 +236,13 @@ def _score_item(item: dict[str, Any], raw: str) -> tuple[Any, Any, bool, str | N
 def _build_prompt(item: dict[str, Any], sessions: list[dict[str, Any]]) -> str:
     if item.get("stage") == "stage2_memory_mcq":
         return _build_stage2_prompt(item, sessions)
-    if item.get("stage") == "stage3_multi_hop_mcq":
-        return _build_stage3_prompt(item, sessions)
     if item.get("stage") == "stage1_event_identification":
         return _build_stage1_event_identification_prompt(item, sessions)
     raise ValueError(f"unsupported stage: {item.get('stage')}")
 
 
 def _mock_answer(item: dict[str, Any]) -> str:
-    if item.get("stage") in {"stage2_memory_mcq", "stage3_multi_hop_mcq"}:
+    if item.get("stage") == "stage2_memory_mcq":
         options = item.get("options") or []
         return json.dumps({"answer": options[0]["option_id"] if options else "A"})
     if item.get("stage") == "stage1_event_identification":
@@ -297,30 +261,6 @@ def _summarize(records: list[dict[str, Any]], provider: str, model: str) -> dict
             "accuracy": round(correct / len(subset), 4) if subset else None,
             "parse_errors": sum(1 for r in subset if r.get("error") == "parse_error"),
         }
-
-    def grouped_stats(field: str, subset: list[dict[str, Any]]) -> dict[str, Any]:
-        result: dict[str, Any] = {}
-        values = sorted(
-            {str(row.get(field)) for row in subset if row.get(field) is not None}
-        )
-        for value in values:
-            group = [row for row in subset if str(row.get(field)) == value]
-            correct = sum(1 for row in group if row["correct"])
-            result[value] = {
-                "items": len(group),
-                "correct": correct,
-                "accuracy": round(correct / len(group), 4) if group else None,
-                "parse_errors": sum(
-                    1 for row in group if row.get("error") == "parse_error"
-                ),
-            }
-        return result
-
-    memory_mcq_records = [
-        row
-        for row in records
-        if row.get("stage") in {"stage2_memory_mcq", "stage3_multi_hop_mcq"}
-    ]
     total = len(records)
     total_correct = sum(1 for r in records if r["correct"])
     return {
@@ -331,12 +271,6 @@ def _summarize(records: list[dict[str, Any]], provider: str, model: str) -> dict
         "accuracy": round(total_correct / total, 4) if total else None,
         "accuracy_percent": round(100 * total_correct / total, 2) if total else None,
         "by_stage": by_stage,
-        "by_reasoning_type": grouped_stats(
-            "reasoning_type", memory_mcq_records
-        ),
-        "by_derivation_type": grouped_stats(
-            "derivation_type", memory_mcq_records
-        ),
         "errors": dict(Counter(r.get("error") for r in records if r.get("error"))),
     }
 
@@ -358,19 +292,10 @@ def main() -> int:
     ensure_dialogue_sessions(args.sessions_dir)
 
     load_dotenv()
-    if args.execute:
-        provider = args.provider or os.environ.get("DEFAULT_LLM_PROVIDER")
-        model = args.model or os.environ.get("DEFAULT_GENERATION_MODEL")
-    else:
-        provider = args.provider or "mock"
-        model = args.model or "mock"
-    if args.execute and (
-        not provider or not model or provider == "mock" or model == "mock"
-    ):
-        raise SystemExit(
-            "--execute requires --provider/--model or non-mock "
-            "DEFAULT_LLM_PROVIDER/DEFAULT_GENERATION_MODEL values"
-        )
+    provider = args.provider or ("mock" if not args.execute else None)
+    model = args.model or ("mock" if not args.execute else None)
+    if args.execute and (not provider or not model):
+        raise SystemExit("--execute requires --provider and --model")
 
     items: list[dict[str, Any]] = []
     for item_path in args.items:
@@ -382,19 +307,12 @@ def main() -> int:
 
     has_stage1 = any(item.get("stage") == "stage1_event_identification" for item in items)
     has_stage2 = any(item.get("stage") == "stage2_memory_mcq" for item in items)
-    has_stage3 = any(
-        item.get("stage") == "stage3_multi_hop_mcq" for item in items
-    )
     dialogue_input_dir = Path(args.dialogues_dir or args.sessions_dir)
-    sessions_by_id = (
-        _load_sessions_by_id(dialogue_input_dir)
-        if has_stage2 or has_stage3
-        else {}
-    )
+    sessions_by_id = _load_sessions_by_id(dialogue_input_dir) if has_stage2 else {}
     dialogues_by_id = _load_dialogues_by_id(dialogue_input_dir) if has_stage1 else {}
     if has_stage1 and not dialogues_by_id:
         raise SystemExit(f"no dialogue records under {dialogue_input_dir}")
-    if (has_stage2 or has_stage3) and not sessions_by_id:
+    if has_stage2 and not sessions_by_id:
         raise SystemExit(f"no dialogue records under {dialogue_input_dir}")
     client = None
     if args.execute:
@@ -427,17 +345,6 @@ def main() -> int:
         record = {
             "item_id": item.get("item_id"),
             "stage": item.get("stage"),
-            "reasoning_type": (
-                item.get("reasoning_type")
-                or (
-                    "single_hop"
-                    if item.get("stage") == "stage2_memory_mcq"
-                    else "multi_hop"
-                    if item.get("stage") == "stage3_multi_hop_mcq"
-                    else None
-                )
-            ),
-            "derivation_type": (item.get("metadata") or {}).get("derivation_type"),
             "trajectory_id": item.get("trajectory_id"),
             "prefix_id": item.get("prefix_id"),
             "n_visible_sessions": len(item.get("visible_sessions", [])),

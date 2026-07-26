@@ -151,11 +151,6 @@ def load_stage3_multihop_policy(path: Path | str) -> dict[str, dict[str, Any]]:
             raise ValueError(
                 f"unsupported Multi-hop derivation for {memory_path!r}: {derivation!r}"
             )
-        limit = int(config.get("max_candidates") or 0)
-        if limit <= 0:
-            raise ValueError(
-                f"Multi-hop policy for {memory_path!r} requires max_candidates > 0"
-            )
         option_pool = config.get("option_pool") or []
         if not isinstance(option_pool, list):
             raise ValueError(
@@ -178,7 +173,6 @@ def load_stage3_multihop_policy(path: Path | str) -> dict[str, dict[str, Any]]:
             "excluded_values": tuple(excluded_values),
             "allow_same_value": bool(config.get("allow_same_value", False)),
             "allow_null": bool(config.get("allow_null", False)),
-            "max_candidates": limit,
         }
     return result
 
@@ -845,10 +839,6 @@ def _target_id(
     return f"{trajectory_id}:mh:{safe_path}:{digest}"
 
 
-def _selection_rank(target: Stage3MultiHopTarget, seed: int) -> str:
-    payload = f"{seed}:{target.canonical_target_id}".encode("utf-8")
-    return hashlib.sha256(payload).hexdigest()
-
 
 def _is_meaningful_representative(target: Stage3MultiHopTarget) -> bool:
     """Return whether the pair captures a change rather than a repeated value."""
@@ -900,7 +890,6 @@ def build_stage3_multihop_targets(
     initial_memory_by_traj: dict[str, dict[str, Any]] | None = None,
     representative_policy: dict[str, Any] | None = None,
     window_size: int = 15,
-    seed: int = 42,
 ) -> MultiHopBuildResult:
     """Create a deterministic, quality-filtered Multi-hop target set."""
 
@@ -912,7 +901,7 @@ def build_stage3_multihop_targets(
     for row in rows:
         grouped[str(row["trajectory_id"])].append(row)
 
-    all_candidates: list[Stage3MultiHopTarget] = []
+    candidate_pool: list[Stage3MultiHopTarget] = []
     updates_by_group: dict[tuple[str, str], set[tuple[int, str]]] = defaultdict(set)
     exclusion_counts: Counter[str] = Counter()
     fact_counts: Counter[str] = Counter()
@@ -1102,7 +1091,7 @@ def build_stage3_multihop_targets(
                         exclusion_counts["prefix_missing_hop"] += 1
                         continue
                     derivation = str(config["derivation_type"])
-                    all_candidates.append(
+                    candidate_pool.append(
                         Stage3MultiHopTarget(
                             canonical_target_id=_target_id(
                                 trajectory_id,
@@ -1135,7 +1124,7 @@ def build_stage3_multihop_targets(
     candidates_by_group: dict[
         tuple[str, str], list[Stage3MultiHopTarget]
     ] = defaultdict(list)
-    for target in all_candidates:
+    for target in candidate_pool:
         candidates_by_path[target.memory_path].append(target)
         candidates_by_group[(target.trajectory_id, target.memory_path)].append(target)
     pool_counts = {path: len(candidates_by_path.get(path, [])) for path in policy}
@@ -1143,6 +1132,12 @@ def build_stage3_multihop_targets(
     representative_intermediate_updates: dict[str, dict[str, int]] = (
         defaultdict(dict)
     )
+
+    if representative_policy is None:
+        representative_policy = {
+            "omit_unchanged_sequences": True,
+            "redundant_paths": {},
+        }
 
     if representative_policy is not None:
         omit_unchanged = bool(
@@ -1193,19 +1188,9 @@ def build_stage3_multihop_targets(
                 ] = intermediate_count
 
         exclusion_counts["representative_not_selected"] += (
-            len(all_candidates) - len(selected)
+            len(candidate_pool) - len(selected)
         )
         selection_mode = "representative"
-    else:
-        for memory_path, config in policy.items():
-            candidates = sorted(
-                candidates_by_path.get(memory_path, []),
-                key=lambda target: _selection_rank(target, seed),
-            )
-            limit = int(config["max_candidates"])
-            selected.extend(candidates[: min(limit, len(candidates))])
-            exclusion_counts["policy_limit"] += max(0, len(candidates) - limit)
-        selection_mode = "all_candidates"
 
     selected.sort(
         key=lambda target: (
@@ -1219,7 +1204,7 @@ def build_stage3_multihop_targets(
     selected_by_type = Counter(target.derivation_type for target in selected)
     selected_by_trajectory = Counter(target.trajectory_id for target in selected)
     report = {
-        "candidate_pool_count": len(all_candidates),
+        "candidate_pairs_considered": len(candidate_pool),
         "selected_target_count": len(selected),
         "selection_mode": selection_mode,
         "representative_selection": {
@@ -1236,12 +1221,11 @@ def build_stage3_multihop_targets(
             )
         },
         "fact_counts_by_path": dict(sorted(fact_counts.items())),
-        "candidate_pool_by_path": dict(sorted(pool_counts.items())),
+        "candidate_pairs_by_path": dict(sorted(pool_counts.items())),
         "selected_by_path": dict(sorted(selected_by_path.items())),
         "selected_by_derivation_type": dict(sorted(selected_by_type.items())),
         "selected_by_trajectory": dict(sorted(selected_by_trajectory.items())),
         "exclusion_counts": dict(sorted(exclusion_counts.items())),
-        "selection_seed": seed,
         "window_size": window_size,
     }
     return MultiHopBuildResult(targets=tuple(selected), report=report)
@@ -1311,7 +1295,7 @@ def audit_stage3_multihop_items(
         seen_item_ids.add(item_id)
         if item.get("stage") != "stage3_multi_hop_mcq":
             errors.append("invalid_stage")
-        if item.get("reasoning_type") != "multi_hop":
+        if (item.get("metadata") or {}).get("reasoning_type") != "multi_hop":
             errors.append("invalid_reasoning_type")
         if gold.get("hop_count") != 2 or len(hops) != 2:
             errors.append("invalid_hop_count")

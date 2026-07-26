@@ -2,8 +2,6 @@
 #
 # Candidate facts must be occurred, dialogue-grounded PrefixGold updates.
 # Two facts on the same canonical memory path are paired chronologically.
-# max_candidates is an upper cap after semantic validation; selection remains
-# deterministic for a fixed seed.
 #
 # Representative mode keeps one meaningful pair for each trajectory and
 # question axis. It prefers adjacent updates with a real value change.
@@ -23,7 +21,6 @@ paths:
     option_pool: [employed, on_leave, self_employed, unemployed, retired]
     allow_same_value: false
     allow_null: false
-    max_candidates: 165
 
   employment.employer:
     derivation_type: state_sequence
@@ -32,7 +29,6 @@ paths:
     option_pool_type: entity
     allow_same_value: false
     allow_null: false
-    max_candidates: 49
 
   employment.income_stability:
     derivation_type: state_sequence
@@ -43,7 +39,6 @@ paths:
     excluded_values: [retired]
     allow_same_value: true
     allow_null: false
-    max_candidates: 177
 
   employment.salary_day:
     derivation_type: state_sequence
@@ -53,7 +48,6 @@ paths:
     option_pool: [10, 15, 21, 25]
     allow_same_value: false
     allow_null: false
-    max_candidates: 55
 
   housing.address:
     derivation_type: state_sequence
@@ -62,7 +56,6 @@ paths:
     option_pool_type: entity
     allow_same_value: false
     allow_null: false
-    max_candidates: 92
 
   housing.contract_type:
     derivation_type: state_sequence
@@ -72,7 +65,6 @@ paths:
     option_pool: [owner, jeonse, wolse, family_home, other]
     allow_same_value: false
     allow_null: false
-    max_candidates: 74
 
   housing.rent_amount:
     derivation_type: amount_comparison
@@ -82,7 +74,6 @@ paths:
     option_pool: [0, 400000, 500000, 650000, 800000, 1000000]
     allow_same_value: false
     allow_null: true
-    max_candidates: 32
 
   household.dependents:
     derivation_type: count_sequence
@@ -92,7 +83,6 @@ paths:
     option_pool: [0, 1, 2, 3, 4]
     allow_same_value: true
     allow_null: false
-    max_candidates: 75
 
   household.children:
     derivation_type: count_sequence
@@ -102,7 +92,6 @@ paths:
     option_pool: [0, 1, 2, 3, 4]
     allow_same_value: false
     allow_null: false
-    max_candidates: 14
 
   household.marital_status:
     derivation_type: state_sequence
@@ -112,7 +101,6 @@ paths:
     option_pool: [single, married, separated, divorced, widowed]
     allow_same_value: true
     allow_null: false
-    max_candidates: 5
 
   cashflow.recent_one_off_expense:
     derivation_type: expense_aggregation
@@ -121,7 +109,6 @@ paths:
     option_pool_type: numeric
     allow_same_value: true
     allow_null: false
-    max_candidates: 109
 
 excluded_paths:
   # Child identity and stage progression are not reliable enough in the

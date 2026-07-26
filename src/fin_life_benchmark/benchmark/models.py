@@ -16,19 +16,6 @@ ERROR_TYPES = (
     "no_event_false_positive",
     "cancelled_ignored",
     "value_distractor",
-    "first_hop_only",
-    "second_hop_only",
-    "difference_instead_of_sum",
-    "arithmetic_distractor",
-    "average_instead_of_sum",
-    "underestimated_sum",
-    "overestimated_sum",
-    "wrong_first_hop",
-    "wrong_second_hop",
-    "wrong_both_hops",
-    "reversed_hop_order",
-    "first_state_carryover",
-    "second_state_overgeneralization",
 )
 
 
@@ -41,9 +28,7 @@ class CounterfactualOption(BaseModel):
 
 class BenchmarkItem(BaseModel):
     item_id: str
-    # stage1_event_identification|stage2_memory_mcq|stage3_multi_hop_mcq
-    stage: str
-    reasoning_type: str | None = None  # single_hop|multi_hop
+    stage: str  # stage1_event_identification|stage2_memory_mcq
     trajectory_id: str
     prefix_id: str
     visible_sessions: list[str]

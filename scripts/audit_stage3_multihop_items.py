@@ -33,11 +33,6 @@ def main() -> int:
         "--policy",
         default="configs/registries/stage3_multihop_policy.yaml",
     )
-    parser.add_argument(
-        "--selection-mode",
-        choices=("representative", "all_candidates"),
-        default="representative",
-    )
     args = parser.parse_args()
 
     ensure_dialogue_sessions(args.sessions_dir)
@@ -74,18 +69,16 @@ def main() -> int:
         )
 
     policy = load_stage3_multihop_policy(args.policy)
-    expected_representatives = None
-    if args.selection_mode == "representative":
-        expected = build_stage3_multihop_targets(
-            prefixes,
-            sessions,
-            policy,
-            initial_memory_by_traj=initial_memory_by_traj,
-            representative_policy=load_stage3_multihop_representative_policy(
-                args.policy
-            ),
-        )
-        expected_representatives = expected.report["representative_selection"]
+    expected = build_stage3_multihop_targets(
+        prefixes,
+        sessions,
+        policy,
+        initial_memory_by_traj=initial_memory_by_traj,
+        representative_policy=load_stage3_multihop_representative_policy(
+            args.policy
+        ),
+    )
+    expected_representatives = expected.report["representative_selection"]
 
     report = audit_stage3_multihop_items(
         items,

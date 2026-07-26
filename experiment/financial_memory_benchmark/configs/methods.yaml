@@ -1,0 +1,24 @@
+bm25:
+  k1: 1.5
+  b: 0.75
+  tokenizer: kiwipiepy
+  preserve_dates_amounts_alnum: true
+dense:
+  similarity: cosine
+  l2_normalize: true
+  document_unit: session
+mem0:
+  infer: true
+  graph_memory: false
+  reranker: false
+  vector_store: qdrant_local
+  query_read_only: true
+letta:
+  server: self_hosted_docker
+  agent_per_trajectory: 1
+  ingestion: archival_passage_insert
+  max_steps: 4
+  archival_search_calls_per_query: 1
+  persistent_query_writes: false
+  fresh_conversation_per_query: true
+  masking_branch_strategy: frozen_variant_replay

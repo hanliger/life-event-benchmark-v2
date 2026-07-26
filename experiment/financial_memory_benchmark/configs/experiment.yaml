@@ -1,0 +1,53 @@
+schema_version: financial-memory-experiment-v1
+dataset:
+  repo_id: hangyeul-lee/life-event-benchmark-v2-dialogues
+  revision: null
+  configs:
+    - dialogues
+    - gold
+    - counterfactual_fillers
+    - counterfactual_filler_plans
+  expected:
+    trajectories: 20
+    sessions_per_trajectory: 300
+    sessions: 6000
+    fillers: 400
+    terminal_events: 451
+    stage1_items: 400
+    stage2_items: 4200
+    masking_arms: 5
+    masking_cases: 2255
+    masking_questions: 4510
+benchmark:
+  checkpoint_stride: 15
+  option_seed: 20260725
+  output_contract: answer_tag
+  evidence_token_budget: 8192
+  top_k_main: 10
+  top_k_sensitivity: 5
+  masking_arms:
+    - full
+    - mask_terminal
+    - mask_upcoming
+    - mask_all
+    - placebo_all
+models:
+  gemini_reader: gemini-3.6-flash
+  gemini_embedding: gemini-embedding-2
+  embedding_dimensions: 1536
+  claude_full_context: claude-opus-5
+  openai_full_context: gpt-5.6-sol
+  reasoning_policy: vendor_default
+  final_answer_max_tokens: 4096
+  request_timeout_seconds: 120
+methods:
+  - fc_claude_opus_5
+  - fc_gemini_3_6_flash
+  - fc_gpt_5_6_sol
+  - bm25_gemini_3_6
+  - dense_ge2_gemini_3_6
+  - mem0_gemini_3_6
+  - letta_gemini_3_6
+statistics:
+  bootstrap_samples: 10000
+  seed: 20260725

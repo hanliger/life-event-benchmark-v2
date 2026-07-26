@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 EXP_ROOT="$(cd -- "$SCRIPT_DIR/../.." && pwd)"
-REPO_ROOT="$(cd -- "$EXP_ROOT/../.." && pwd)"
+REPO_ROOT="$(cd -- "$EXP_ROOT/.." && pwd)"
 
 if [[ "${1:-}" != "--approval" || "${2:-}" != "I_APPROVE_LETTA_DOCKER" ]]; then
   echo "Refusing to start Letta. Required: --approval I_APPROVE_LETTA_DOCKER" >&2

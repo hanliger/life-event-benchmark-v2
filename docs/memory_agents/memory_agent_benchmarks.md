@@ -1,7 +1,7 @@
 # Memory-agent Baseline Decision
 
 이 문서는 후보 조사 결과가 아니라 최종 비교군 선택 근거만 보존한다. 실제 설정과
-실행은 `experiment/financial_memory_benchmark/`가 source of truth다.
+실행은 `experiment/`가 source of truth다.
 
 ## 확정된 7개 방법
 
@@ -35,5 +35,5 @@ reader를 사용한다. Letta는 자체 agent search-and-answer 능력을 평가
 - Letta를 retriever-only 비교로 해석하지 않고 method family로 분리
 
 세부 계약은
-[Evaluation Protocol](../../experiment/financial_memory_benchmark/docs/protocol.md)에
+[Evaluation Protocol](../../experiment/docs/protocol.md)에
 정의한다.

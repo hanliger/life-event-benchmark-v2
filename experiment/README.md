@@ -39,7 +39,7 @@ multi-hop 추론, 5-arm masking ablation을 7개 방법으로 평가하는 실�
 ```bash
 git switch qa-on-main
 git pull --ff-only origin qa-on-main
-cd experiment/financial_memory_benchmark
+cd experiment
 ```
 
 로컬 변경이 있으면 먼저 `git status`로 확인하고 pull 전에 보존한다.

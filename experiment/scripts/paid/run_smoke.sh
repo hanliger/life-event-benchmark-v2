@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 EXP_ROOT="$(cd -- "$SCRIPT_DIR/../.." && pwd)"
-REPO_ROOT="$(cd -- "$EXP_ROOT/../.." && pwd)"
+REPO_ROOT="$(cd -- "$EXP_ROOT/.." && pwd)"
 
 if [[ -x "$EXP_ROOT/.venv/bin/python" ]]; then
   PYTHON_BIN="$EXP_ROOT/.venv/bin/python"

@@ -12,7 +12,7 @@ class ExperimentPaths:
     @classmethod
     def discover(cls) -> "ExperimentPaths":
         root = Path(__file__).resolve().parents[2]
-        repo_root = root.parents[1]
+        repo_root = root.parent
         return cls(root=root, repo_root=repo_root)
 
     @property

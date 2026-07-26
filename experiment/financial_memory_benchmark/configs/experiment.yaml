@@ -15,6 +15,7 @@ dataset:
     terminal_events: 451
     stage1_items: 400
     stage2_items: 4200
+    stage3_items: 123
     masking_arms: 5
     masking_cases: 2255
     masking_questions: 4510

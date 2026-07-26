@@ -24,6 +24,7 @@ from fin_life_benchmark.trajectory.models import Trajectory
 from .config import load_experiment_config
 from .data_pipeline import active_prepared_manifest
 from .paths import ExperimentPaths
+from .stage3 import build_stage3_items, validate_stage3_items
 from .util import read_jsonl, session_number, sha256_file, write_json, write_jsonl
 
 
@@ -177,21 +178,31 @@ def build_canonical_items(paths: ExperimentPaths) -> dict[str, Path]:
     stage2_path = output_dir / "stage2_historical_memory_mcq.jsonl"
     write_jsonl(stage1_path, stage1_rows)
     write_jsonl(stage2_path, stage2_rows)
+    stage3 = build_stage3_items(paths)
     manifest = {
-        "schema_version": "canonical-items-manifest-v1",
+        "schema_version": "canonical-items-manifest-v2",
         "stage1_items": len(stage1_rows),
         "stage2_items": len(stage2_rows),
+        "stage3_items": stage3["count"],
         "stage1_sha256": sha256_file(stage1_path),
         "stage2_sha256": sha256_file(stage2_path),
+        "stage3_sha256": stage3["sha256"],
+        "stage3_audit_sha256": stage3["audit_sha256"],
+        "stage3_by_derivation_type": stage3["by_derivation_type"],
         "option_seed": seed,
         "initial_state_protocol": "S000_ingest_once",
         "stage2_semantics": "historical_state_as_of_target_window",
+        "stage3_semantics": "two_checkpoint_multi_hop",
         "stage2_lag_distribution": dict(
             sorted(Counter(row["metadata"]["retention_lag_windows"] for row in stage2_rows).items())
         ),
     }
     write_json(output_dir / "manifest.json", manifest)
-    return {"stage1": stage1_path, "stage2": stage2_path}
+    return {
+        "stage1": stage1_path,
+        "stage2": stage2_path,
+        "stage3": stage3["path"],
+    }
 
 
 def validate_canonical_items(paths: ExperimentPaths) -> dict[str, Any]:
@@ -200,12 +211,14 @@ def validate_canonical_items(paths: ExperimentPaths) -> dict[str, Any]:
     root = _prepared_root(paths)
     stage1 = list(read_jsonl(root / "canonical_items" / "stage1_event_identification.jsonl"))
     stage2 = list(read_jsonl(root / "canonical_items" / "stage2_historical_memory_mcq.jsonl"))
+    stage3_report = validate_stage3_items(paths)
+    stage3 = list(read_jsonl(root / "canonical_items" / "stage3_multi_hop_mcq.jsonl"))
     errors: list[str] = []
     if len(stage1) != int(expected["stage1_items"]):
         errors.append(f"Stage 1 count {len(stage1)}")
     if len(stage2) != int(expected["stage2_items"]):
         errors.append(f"Stage 2 count {len(stage2)}")
-    item_ids = [row["item_id"] for row in stage1 + stage2]
+    item_ids = [row["item_id"] for row in stage1 + stage2 + stage3]
     if len(item_ids) != len(set(item_ids)):
         errors.append("duplicate canonical item_id")
     for row in stage1:
@@ -230,6 +243,8 @@ def validate_canonical_items(paths: ExperimentPaths) -> dict[str, Any]:
         "decision": "PASS" if not errors else "FAIL",
         "stage1_items": len(stage1),
         "stage2_items": len(stage2),
+        "stage3_items": len(stage3),
+        "stage3_by_derivation_type": stage3_report["by_derivation_type"],
         "errors": errors,
     }
     if errors:

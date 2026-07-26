@@ -51,6 +51,14 @@ def build_query(item: dict[str, Any], evidence: list[dict[str, Any]]) -> str:
     lines = [
         "아래 제공된 상담 이력 또는 검색 근거와 질문만 사용하세요.",
         "질문의 대상 기간과 현재 질의 checkpoint를 혼동하지 마세요.",
+        *(
+            [
+                "이 질문은 서로 다른 두 상담일의 근거를 모두 사용해야 합니다.",
+                "한 시점만 보고 답하지 말고, 질문에 따라 두 값을 순서대로 연결하거나 합산하세요.",
+            ]
+            if item["stage"] == "stage3_multi_hop_mcq"
+            else []
+        ),
         "",
         "[제공된 이력/근거]",
         *(format_session(row) for row in evidence),

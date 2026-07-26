@@ -24,10 +24,11 @@
 | Check | Expected | Observed |
 |---|---:|---:|
 | Configured methods | 7 | `TBD` |
-| Items per method | 9,110 | `TBD` |
-| Total predictions | 63,770 | `TBD` |
+| Items per method | 9,233 | `TBD` |
+| Total predictions | 64,631 | `TBD` |
 | Stage 1 per method | 400 | `TBD` |
 | Stage 2 per method | 4,200 | `TBD` |
+| Stage 3 per method | 123 | `TBD` |
 | Masking per method | 4,510 | `TBD` |
 | COMPLETE manifests | 14 | `TBD` |
 | Parse errors | report | `TBD` |
@@ -38,43 +39,51 @@
 
 ## 3. Main results
 
-Family별로 표를 분리하고 Stage 1과 Stage 2를 별도 열로 보고한다. 값은
+Family별로 표를 분리하고 Stage 1, Stage 2, Stage 3를 별도 열로 보고한다. 값은
 `report/main_results.csv`에서 가져온다.
 
 ### Full Context
 
-| Method | Stage 1 accuracy [95% CI] | Stage 2 hierarchical accuracy [95% CI] |
-|---|---:|---:|
-| Claude Opus 5 | `TBD` | `TBD` |
-| Gemini 3.6 Flash | `TBD` | `TBD` |
-| GPT-5.6 Sol | `TBD` | `TBD` |
+| Method | Stage 1 [95% CI] | Stage 2 hierarchical [95% CI] | Stage 3 [95% CI] |
+|---|---:|---:|---:|
+| Claude Opus 5 | `TBD` | `TBD` | `TBD` |
+| Gemini 3.6 Flash | `TBD` | `TBD` | `TBD` |
+| GPT-5.6 Sol | `TBD` | `TBD` | `TBD` |
 
 ### Retrieval
 
-| Method | Stage 1 accuracy [95% CI] | Stage 2 hierarchical accuracy [95% CI] |
-|---|---:|---:|
-| BM25 + Gemini | `TBD` | `TBD` |
-| Dense GE2 + Gemini | `TBD` | `TBD` |
+| Method | Stage 1 [95% CI] | Stage 2 hierarchical [95% CI] | Stage 3 [95% CI] |
+|---|---:|---:|---:|
+| BM25 + Gemini | `TBD` | `TBD` | `TBD` |
+| Dense GE2 + Gemini | `TBD` | `TBD` | `TBD` |
 
 ### Memory
 
-| Method | Stage 1 accuracy [95% CI] | Stage 2 hierarchical accuracy [95% CI] |
-|---|---:|---:|
-| Mem0 + Gemini | `TBD` | `TBD` |
-| Letta + Gemini | `TBD` | `TBD` |
+| Method | Stage 1 [95% CI] | Stage 2 hierarchical [95% CI] | Stage 3 [95% CI] |
+|---|---:|---:|---:|
+| Mem0 + Gemini | `TBD` | `TBD` | `TBD` |
+| Letta + Gemini | `TBD` | `TBD` | `TBD` |
 
-## 4. Retrieval quality
+## 4. Stage 3 by derivation
 
-| Method | Latest-state recall@10 | Complete-evidence recall@10 |
-|---|---:|---:|
-| BM25 | `TBD` | `TBD` |
-| Dense | `TBD` | `TBD` |
-| Mem0 | `TBD` | `TBD` |
-| Letta | `TBD` | `TBD` |
+`report/stage3_by_derivation.csv`를 사용한다.
+
+| Method | State sequence | Count sequence | Amount comparison | Expense aggregation |
+|---|---:|---:|---:|---:|
+| `TBD` | `TBD` | `TBD` | `TBD` | `TBD` |
+
+## 5. Retrieval quality
+
+| Method | Stage 2 latest | Stage 2 complete | Stage 3 both hops |
+|---|---:|---:|---:|
+| BM25 | `TBD` | `TBD` | `TBD` |
+| Dense | `TBD` | `TBD` | `TBD` |
+| Mem0 | `TBD` | `TBD` | `TBD` |
+| Letta | `TBD` | `TBD` | `TBD` |
 
 근거: `report/metrics.json`. Full Context에는 retrieval recall을 부여하지 않는다.
 
-## 5. Retention lag
+## 6. Retention lag
 
 `report/retention_lag.csv`를 사용한다.
 
@@ -88,7 +97,7 @@ Family별로 표를 분리하고 Stage 1과 Stage 2를 별도 열로 보고한�
 - 방법 family별 차이: `TBD`
 - bootstrap 불확실성: `TBD`
 
-## 6. Masking ablation
+## 7. Masking ablation
 
 `report/masking_by_arm.csv`를 사용한다. Lifecycle과 memory stage를 분리한다.
 
@@ -106,7 +115,7 @@ Family별로 표를 분리하고 Stage 1과 Stage 2를 별도 열로 보고한�
 
 Placebo 대비 evidence mask delta와 해석: `TBD`
 
-## 7. Paired comparisons
+## 8. Paired comparisons
 
 `report/paired_method_deltas.csv`에서 사전에 정의한 핵심 비교를 옮긴다. 21개 전체
 pair는 appendix/CSV에 두고 본문에는 연구 질문과 직접 관련된 비교만 쓴다.
@@ -115,12 +124,13 @@ pair는 appendix/CSV에 두고 본문에는 연구 질문과 직접 관련된 �
 |---|---|---:|---|
 | Stage 1 | `TBD` | `TBD` | `TBD` |
 | Stage 2 | `TBD` | `TBD` | `TBD` |
+| Stage 3 | `TBD` | `TBD` | `TBD` |
 | Masking lifecycle | `TBD` | `TBD` | `TBD` |
 | Masking memory | `TBD` | `TBD` | `TBD` |
 
 CI가 0을 포함하는 비교를 우열로 단정하지 않는다.
 
-## 8. Sensitivity at k=5
+## 9. Sensitivity at k=5
 
 Main k=10과 별도 frozen run을 사용한다.
 
@@ -130,7 +140,7 @@ Main k=10과 별도 frozen run을 사용한다.
 
 실행하지 않았다면 `N/A — not run`으로 기록한다.
 
-## 9. Efficiency and reliability
+## 10. Efficiency and reliability
 
 | Method | Build tokens/cost | Query tokens/cost | Latency | Failed requests | Parse errors |
 |---|---:|---:|---:|---:|---:|
@@ -145,15 +155,16 @@ Main k=10과 별도 frozen run을 사용한다.
 
 비용은 무료 credit과 세금을 포함한 invoice 값과 list-price 추정을 구분한다.
 
-## 10. Findings
+## 11. Findings
 
 1. Stage 1: `TBD`
 2. Stage 2 and long-term recall: `TBD`
-3. Retrieval versus persistent memory: `TBD`
-4. Masking causal pattern: `TBD`
-5. Cost/performance trade-off: `TBD`
+3. Stage 3 multi-hop reasoning: `TBD`
+4. Retrieval versus persistent memory: `TBD`
+5. Masking causal pattern: `TBD`
+6. Cost/performance trade-off: `TBD`
 
-## 11. Limitations
+## 12. Limitations
 
 - Letta는 end-to-end agent이며 BM25/Dense/Mem0의 공통 reader 비교와 동일한
   retriever-only 실험이 아니다.
@@ -162,11 +173,12 @@ Main k=10과 별도 frozen run을 사용한다.
 - Provider execution date와 exact model IDs: `TBD`
 - 실패·누락·재실행 여부: `TBD`
 
-## 12. Artifact checklist
+## 13. Artifact checklist
 
 - [ ] `metrics.json`
 - [ ] `main_results.csv`와 `main_results.md`
 - [ ] `masking_by_arm.csv`
+- [ ] `stage3_by_derivation.csv`
 - [ ] `retention_lag.csv`
 - [ ] `paired_method_deltas.csv`
 - [ ] 14 prediction JSONL/manifest pairs

@@ -8,7 +8,7 @@ HF dialogues + gold + fillers
         ▼
 raw snapshot manifest
         │
-        ├─ joined sessions ──> PrefixGold ──> Stage 1 / Stage 2 items
+        ├─ joined sessions ──> PrefixGold ──> Stage 1 / Stage 2 / Stage 3 items
         ├─ answer-free sessions ────────────> method inputs
         └─ filler variants ─────────────────> five-arm masking items
                                                 │
@@ -25,6 +25,7 @@ strict aggregate ──> JSON + CSV + Markdown tables
 |---|---|
 | `data_pipeline.py` | HF snapshot, dialogue/gold join, answer-free input, S000 |
 | `items.py` | PrefixGold, Stage 1, Stage 2 |
+| `stage3.py` | upstream multi-hop build/audit, S000/evidence 계약 adapter |
 | `masking.py` | 4개 mask와 placebo arm, masking 질문 |
 | `evaluator.py` | chronological streaming, 방법 실행, fail-closed manifest |
 | `methods/` | FullCtx, BM25, Dense, Mem0, Letta adapter |

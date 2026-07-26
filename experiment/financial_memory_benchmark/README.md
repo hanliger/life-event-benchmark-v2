@@ -1,8 +1,9 @@
 # Financial Memory Benchmark Experiment
 
-Stage 1 life-event 탐지, Stage 2 과거 상태 회상, 5-arm masking ablation을 7개
-방법으로 평가하는 실험 전용 패키지다. 데이터 생성 코드와 분리되어 있으며 모든
-일반 작업은 Bash 진입점 `scripts/pipeline.sh`를 사용한다.
+Stage 1 life-event 탐지, Stage 2 과거 상태 회상, Stage 3 two-checkpoint
+multi-hop 추론, 5-arm masking ablation을 7개 방법으로 평가하는 실험 전용
+패키지다. 데이터 생성 코드와 분리되어 있으며 모든 일반 작업은 Bash 진입점
+`scripts/pipeline.sh`를 사용한다.
 
 ## 현재 상태
 
@@ -10,8 +11,10 @@ Stage 1 life-event 탐지, Stage 2 과거 상태 회상, 5-arm masking ablation�
 |---|---|
 | HF 데이터 다운로드·전처리 | 완료 및 재실행 가능 |
 | canonical/masking 문항 검증 | 완료 |
-| 7방법 offline smoke | 통과 |
-| 7방법 canonical paid smoke | 통과, 방법별 2문항 |
+| Stage 3 upstream audit | 123/123 통과 |
+| 7방법 offline smoke | Stage 1/2/Stage 3/masking 통과 |
+| 7방법 canonical paid smoke | Stage 1/2 각 1문항 통과 |
+| Stage 3 paid smoke | 본실험 전 실행 필요 |
 | masking paid smoke | 본실험 전 실행 필요 |
 | 논문용 full run | 미실행 |
 
@@ -112,6 +115,7 @@ data/raw/hf/hangyeul-lee--life-event-benchmark-v2-dialogues/<revision>/
 | session | 6,000 |
 | Stage 1 | 400 |
 | Stage 2 | 4,200 |
+| Stage 3 | 123 |
 | masking event | 451 |
 | masking arm | 5 |
 | masking case | 2,255 |
@@ -150,6 +154,7 @@ provider 호출을 만들 수 없다.
 - 데이터 기대 개수 일치
 - future leakage와 gold-field leakage 없음
 - canonical/masking mock 경로 완료
+- Stage 3 upstream provenance audit 통과
 - `runs/offline_dry_run.json` 생성
 
 Mock 정확도는 논문 결과로 사용하지 않는다.
@@ -175,7 +180,46 @@ Letta가 포함된 실행에서만 self-hosted Docker 서버가 필요하다.
 
 health check가 실패하면 유료 plan을 실행하지 않는다.
 
-## 6. 최소 masking paid smoke
+## 6. 최소 Stage 3 paid smoke
+
+`stage3_multi_hop_mcq.jsonl`에서 `state_sequence` 1개와
+`expense_aggregation` 1개의 정확한 `item_id`를 선택한다. 모든 방법에 같은 두
+문항을 사용한다.
+
+```bash
+rg -n '"derivation_type": "(state_sequence|expense_aggregation)"' \
+  data/prepared/*/canonical_items/stage3_multi_hop_mcq.jsonl
+```
+
+계획 생성은 API를 호출하지 않는다.
+
+```bash
+./scripts/pipeline.sh plan-paid-smoke \
+  --method fc_claude_opus_5 \
+  --method fc_gemini_3_6_flash \
+  --method fc_gpt_5_6_sol \
+  --method bm25_gemini_3_6 \
+  --method dense_ge2_gemini_3_6 \
+  --method mem0_gemini_3_6 \
+  --method letta_gemini_3_6 \
+  --item-id '<STATE_SEQUENCE_ITEM_ID>' \
+  --item-id '<EXPENSE_AGGREGATION_ITEM_ID>' \
+  --estimated-usd '<REVIEWED_ESTIMATE>'
+```
+
+통과 조건은 방법별 2/2 `COMPLETE`, parse error 0, 동일 item set, 두 hop
+evidence의 checkpoint 이하 여부다.
+
+출력된 `plan_sha256`과 누적 비용을 검토한 뒤 실행한다.
+
+```bash
+./scripts/paid/run_smoke.sh \
+  --plan-sha '<PLAN_SHA>' \
+  --approval I_APPROVE_PAID_SMOKE \
+  --execute-paid
+```
+
+## 7. 최소 masking paid smoke
 
 먼저 `masking_questions.jsonl`에서 같은 event family의 lifecycle 문항 1개와 memory
 문항 1개의 정확한 `item_id`를 선택한다. 모든 방법에 같은 두 문항을 사용한다.
@@ -221,10 +265,10 @@ first-error stop이다. timeout 또는 비용 귀속 불명 상태에서는 자�
 - Mem0 clone equivalence 통과
 - Letta frozen-variant replay, search 1회, `top_k=10` 통과
 
-## 7. 논문용 full plan과 실행
+## 8. 논문용 full plan과 실행
 
-Masking smoke와 readiness checklist가 통과한 후 exact 전체 범위 plan을 만든다.
-계획에는 방법당 9,110문항, 전체 63,770 predictions가 고정된다.
+Stage 3와 masking smoke, readiness checklist가 통과한 후 exact 전체 범위 plan을 만든다.
+계획에는 방법당 9,233문항, 전체 64,631 predictions가 고정된다.
 
 ```bash
 ./scripts/pipeline.sh plan-paid-full \
@@ -241,7 +285,7 @@ Masking smoke와 readiness checklist가 통과한 후 exact 전체 범위 plan�
 
 Plan JSON에서 다음을 검토한다.
 
-- `item_ids`: 9,110
+- `item_ids`: 9,233
 - `method_ids`: 7
 - `input_items_sha256`
 - `execution_provenance`
@@ -272,7 +316,7 @@ runs/paid_full/<PLAN_SHA>/
 어느 한 호출이라도 실패하면 해당 manifest를 `FAILED`로 보존하고 전체 실행을
 중단한다. 실패 원인을 확인하기 전에는 같은 plan을 자동 재실행하지 않는다.
 
-## 8. Strict 집계
+## 9. Strict 집계
 
 7개 방법의 canonical과 masking output이 모두 `COMPLETE`일 때 실행한다.
 
@@ -291,6 +335,7 @@ report/
 ├── main_results.csv
 ├── main_results.md
 ├── masking_by_arm.csv
+├── stage3_by_derivation.csv
 ├── retention_lag.csv
 └── paired_method_deltas.csv
 ```
@@ -298,7 +343,7 @@ report/
 `metrics.json`의 `completeness.reporting_ready`가 `true`인지 확인한다. `false`이면
 논문 표를 작성하지 않는다.
 
-## 9. 결과 문서 작성
+## 10. 결과 문서 작성
 
 [docs/results_template.md](docs/results_template.md)를 복사해 full plan SHA가 포함된
 결과 문서를 만든다.
@@ -308,10 +353,10 @@ cp docs/results_template.md runs/paid_full/<PLAN_SHA>/RESULTS.md
 ```
 
 자동 생성된 CSV/JSON 값을 옮기고, 비용과 실패율은 provider usage 및 run manifest와
-대조한다. Stage 1과 Stage 2, method family, masking lifecycle/memory를 분리해
-보고한다.
+대조한다. Stage 1, Stage 2, Stage 3, method family, masking lifecycle/memory를
+분리해 보고한다.
 
-## 10. 종료
+## 11. 종료
 
 Letta를 사용했다면 서버를 내린다.
 

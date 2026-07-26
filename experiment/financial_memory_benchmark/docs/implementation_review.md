@@ -7,10 +7,13 @@
 - [x] HF dialogues, gold, fillers, plans snapshot과 hash 보존
 - [x] 20 trajectories × 300 sessions 검증
 - [x] Stage 1 400개, Stage 2 4,200개 생성
+- [x] Stage 3 multi-hop 123개 생성 및 upstream audit 123/123
+- [x] Stage 3 123문항 × 7방법 offline end-to-end, 총 861 predictions
 - [x] 5-arm masking 4,510문항 생성
 - [x] answer-free input과 future-leakage fail-closed 검사
 - [x] 7개 방법 offline end-to-end smoke
 - [x] 7개 방법 canonical paid smoke
+- [ ] 7개 방법 Stage 3 paid smoke
 - [x] Mem0 실제 ingest/search/final reader 경로
 - [x] Letta archival insert/search/final answer와 evidence attribution
 - [x] immutable plan SHA, code/config/data provenance 검사
@@ -22,12 +25,13 @@
 - [ ] Dense/Mem0/Letta embedding 차원 확정
 - [ ] 확정된 차원으로 offline test 재실행
 - [ ] lifecycle 1개 + memory 1개 × 7방법 masking paid smoke
+- [ ] state sequence 1개 + expense aggregation 1개 × 7방법 Stage 3 paid smoke
 - [ ] masking smoke의 Mem0 clone equivalence 확인
 - [ ] masking smoke의 Letta frozen-variant replay와 search contract 확인
 - [ ] provider별 full cost estimate 검토
 - [ ] Letta health check
 - [ ] exact `--scope all` full plan 생성
-- [ ] plan의 9,110 item IDs, 7 methods, operation limits 검토
+- [ ] plan의 9,233 item IDs, 7 methods, operation limits 검토
 - [ ] full-run 별도 승인
 
 ## 권고 결정

@@ -2,7 +2,7 @@
 
 | 파일 | 내용 |
 |---|---|
-| `experiment.yaml` | dataset 기대값, 7개 방법, 모델 ID, embedding, k, 통계 seed |
+| `experiment.yaml` | Stage 1/2/3와 masking 기대값, 7개 방법, 모델, k, 통계 seed |
 | `methods.yaml` | BM25, Dense, Mem0, Letta adapter 설정 |
 | `paid_safety.yaml` | paid smoke/full 실행 gate |
 

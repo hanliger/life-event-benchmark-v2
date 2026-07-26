@@ -16,7 +16,7 @@
 | Python / pip-freeze SHA | `TBD` |
 | Letta image ID/digest | `TBD` |
 | Main top-k | `10` |
-| Embedding model/dimension | `TBD` |
+| Embedding model/dimension | `gemini-embedding-2` / 768 |
 | Final status | `TBD` |
 
 ## 2. Completeness
@@ -171,7 +171,8 @@ Main k=10과 별도 frozen run을 사용한다.
 - Letta는 end-to-end agent이며 BM25/Dense/Mem0의 공통 reader 비교와 동일한
   retriever-only 실험이 아니다.
 - Full Context 행은 서로 다른 frontier model ceiling이다.
-- Embedding dimension/framework 차이: `TBD`
+- Embedding model/dimension은 공통이지만 framework-native memory 표현과 검색
+  제어 방식은 다르다.
 - Provider execution date와 exact model IDs: `TBD`
 - 실패·누락·재실행 여부: `TBD`
 

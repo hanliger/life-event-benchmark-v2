@@ -13,7 +13,32 @@ from .readers import MockReader, ProviderReader, Reader
 from .retrieval import BM25Method, DenseMethod, GeminiEmbedder, kiwi_tokenize, regex_tokenize
 
 
+def comparison_contract(paths: ExperimentPaths | None = None) -> dict[str, Any]:
+    cfg = load_experiment_config(paths)
+    models = cfg["models"]
+    contract = {
+        "embedding_model": str(models["gemini_embedding"]),
+        "embedding_dimensions": int(models["embedding_dimensions"]),
+        "top_k": int(cfg["benchmark"]["top_k_main"]),
+        "methods": [
+            "dense_ge2_gemini_3_6",
+            "mem0_gemini_3_6",
+            "letta_gemini_3_6",
+        ],
+    }
+    if contract["embedding_model"] != "gemini-embedding-2":
+        raise ValueError("comparison contract requires gemini-embedding-2")
+    if contract["embedding_dimensions"] != 768:
+        raise ValueError(
+            "Dense/Mem0/Letta comparison contract requires 768-dimensional embeddings"
+        )
+    if contract["top_k"] != 10:
+        raise ValueError("Dense/Mem0/Letta comparison contract requires top_k=10")
+    return contract
+
+
 def method_ids(paths: ExperimentPaths | None = None) -> list[str]:
+    comparison_contract(paths)
     return list(load_experiment_config(paths)["methods"])
 
 
@@ -50,6 +75,7 @@ def create_method(
 ) -> MemoryMethod:
     paths = paths or ExperimentPaths.discover()
     cfg = load_experiment_config(paths)
+    comparison_contract(paths)
     method_cfg = load_method_config(paths)
     models = cfg["models"]
     k = int(top_k or cfg["benchmark"]["top_k_main"])

@@ -168,13 +168,14 @@ Mock 정확도는 논문 결과로 사용하지 않는다.
 full plan을 만들기 전에 다음을 확정한다.
 
 - `configs/experiment.yaml`의 모델 ID, embedding 차원, main `k=10`
-- Dense/Mem0/Letta embedding 차원 정책
+- Dense/Mem0/Letta의 고정된 공통 embedding 계약
 - prepared data hash와 prompt/config/code 상태
 - provider별 예상비용
 - `.env`의 `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GOOGLE_API_KEY`
 
-현재 공정성 권고는 Dense/Mem0/Letta를 768차원으로 통일하는 것이다. 이 설정을
-바꾸면 새 immutable plan과 최소 smoke가 필요하다.
+Dense/Mem0/Letta는 `gemini-embedding-2`, 768차원, `top_k=10`으로 통일되어 있다.
+이 계약은 코드가 fail-closed로 검사하며, 변경하면 새 immutable plan과 최소 smoke가
+필요하다.
 
 Letta가 포함된 실행에서만 self-hosted Docker 서버가 필요하다.
 

@@ -51,8 +51,8 @@ Main `top_k=10`, sensitivity `top_k=5`, reranker 없음이다. Sensitivity는 fr
   않고 Memory family로 분리한다.
 - Invalid format은 오답이며 의미를 복구하는 repair call은 없다.
 - concurrency 1, automatic retry 0, first-error stop이다.
-- 동일한 embedding 차원을 사용하는 비교를 원칙으로 한다. Framework-native 차이를
-  유지하면 해당 차원과 한계를 결과 문서에 명시한다.
+- Dense/Mem0/Letta는 모두 `gemini-embedding-2`, 768차원, `top_k=10`을 사용한다.
+  Framework-native memory 표현과 검색 제어 방식의 차이는 결과 해석에 명시한다.
 
 ## Masking arms
 

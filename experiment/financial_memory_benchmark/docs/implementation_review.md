@@ -23,8 +23,8 @@
 
 ## Full run 전 남은 gate
 
-- [ ] Dense/Mem0/Letta embedding 차원 확정
-- [ ] 확정된 차원으로 offline test 재실행
+- [x] Dense/Mem0/Letta를 `gemini-embedding-2` 768차원, `top_k=10`으로 확정
+- [x] 확정된 차원으로 offline test 재실행
 - [ ] lifecycle 1개 + memory 1개 × 7방법 masking paid smoke
 - [ ] state sequence 1개 + expense aggregation 1개 × 7방법 Stage 3 paid smoke
 - [ ] masking smoke의 Mem0 clone equivalence 확인
@@ -35,12 +35,11 @@
 - [ ] plan의 9,233 item IDs, 7 methods, operation limits 검토
 - [ ] full-run 별도 승인
 
-## 권고 결정
+## 확정된 비교 결정
 
-Dense와 Mem0는 현재 1,536차원이고 Letta 0.16.8의 native Google embedding 등록은
-768차원이다. Memory family를 동일 조건에 가깝게 비교하려면 세 방법을 768차원으로
-통일하는 것을 권고한다. Framework-native 설정을 유지한다면 Letta를 retriever-controlled
-비교로 해석하지 않고 차원 차이를 명시해야 한다.
+Dense, Mem0, Letta는 모두 `gemini-embedding-2`, 768차원, `top_k=10`을 사용한다.
+Letta는 계속 end-to-end agent로 분류하므로 동일 embedding 계약이 framework 내부의
+memory 표현과 agent-driven 검색 차이까지 제거한다는 뜻은 아니다.
 
 ## 해석 한계
 

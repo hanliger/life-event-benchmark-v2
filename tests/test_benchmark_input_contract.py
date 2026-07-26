@@ -73,6 +73,7 @@ def test_public_exports_strip_private_annotations_and_gold():
     session = {
         "session_id": "S001",
         "trajectory_id": "traj_001",
+        "session_date": "2020-01-15",
         "turns": [{"speaker": "user", "text": "안녕하세요"}],
         "plan": {"structured_context": {"answer": 25}},
         "cue_annotations": [{"linked_memory_value": 25}],
@@ -92,7 +93,13 @@ def test_public_exports_strip_private_annotations_and_gold():
     safe_session = public_session(session)
     safe_item = public_item(item)
 
-    assert set(safe_session) == {"session_id", "trajectory_id", "turns"}
+    assert set(safe_session) == {
+        "session_id",
+        "trajectory_id",
+        "session_date",
+        "turns",
+    }
+    assert safe_session["session_date"] == "2020-01-15"
     assert "gold" not in safe_item
     assert set(safe_item["options"][0]) == {"option_id", "text"}
 

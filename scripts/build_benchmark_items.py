@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Build Stage 2 memory-transition benchmark items from prefix gold.
+"""Build Stage 2 Single-hop memory-transition items from PrefixGold.
 
 Example:
   export RUN_ID=exp1
@@ -214,7 +214,7 @@ def main() -> int:
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     count = write_jsonl(
-        output_dir / "stage2_memory_mcq.jsonl",
+        output_dir / "stage2_single_hop_mcq.jsonl",
         (item.model_dump(mode="json") for item in items),
     )
     n_checkpoints = len(checkpoints)
@@ -225,11 +225,11 @@ def main() -> int:
         for target in checkpoint.targets
     })
     print(
-        f"stage2_memory_mcq.jsonl: {count} items from "
+        f"stage2_single_hop_mcq.jsonl: {count} items from "
         f"{n_with_targets}/{n_checkpoints} checkpoints; "
         f"{n_targets} canonical event targets"
     )
-    print(f"output -> {output_dir / 'stage2_memory_mcq.jsonl'}")
+    print(f"output -> {output_dir / 'stage2_single_hop_mcq.jsonl'}")
     return 0
 
 

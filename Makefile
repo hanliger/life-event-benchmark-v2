@@ -53,7 +53,7 @@ REVIEW_DECISION ?= $(DIALOGUE_JUDGE_ROOT)/judge_review_decision.json
 	audit-dialogue-canary-v2 review-dialogue-canary-v2 score-dialogue-canary-v2 dialogue-judge-gate \
 	coverage-trajectories fetch-dialogues fetch-counterfactual-fillers restore-frozen-run counterfactual-ablation \
 	dialogue-smoke-dry dialogue-smoke validate-dialogues \
-	export-gold build-stage1-items build-items evaluate history-filter audit pipeline-smoke test clean-generated \
+	export-gold build-stage1-items build-stage2-single-hop build-stage3-multi-hop build-items evaluate history-filter audit audit-stage3-multi-hop pipeline-smoke test clean-generated \
 	export-gold-controlled build-items-controlled audit-controlled export-public
 
 setup:
@@ -294,16 +294,31 @@ build-stage1-items:
 		--sessions-dir $(SESS_DIR) --trajectories-dir $(TRAJ_DIR) \
 		--output $(ITEMS_DIR)/stage1_event_status.jsonl
 
-build-items: build-stage1-items
+build-stage2-single-hop:
 	$(PYTHON) scripts/build_benchmark_items.py \
-		--prefix-gold $(GOLD) --sessions-dir $(SESS_DIR) --trajectories-dir $(TRAJ_DIR) \
-		--output-dir $(ITEMS_DIR) --seed $(SEED) $(SHUFFLE_OPTIONS_FLAG)
+		--prefix-gold $(GOLD) --sessions-dir $(SESS_DIR) \
+		--trajectories-dir $(TRAJ_DIR) --output-dir $(ITEMS_DIR) \
+		--seed $(SEED) $(SHUFFLE_OPTIONS_FLAG)
+
+build-stage3-multi-hop:
+	$(PYTHON) scripts/build_stage3_multihop_items.py \
+		--prefix-gold $(GOLD) --sessions-dir $(SESS_DIR) \
+		--trajectories-dir $(TRAJ_DIR) --output-dir $(ITEMS_DIR) \
+		--selection-mode representative \
+		--seed $(SEED) $(SHUFFLE_OPTIONS_FLAG)
+
+build-items: build-stage1-items build-stage2-single-hop build-stage3-multi-hop
 
 build-items-controlled: build-stage1-items
 	$(PYTHON) scripts/build_benchmark_items.py \
 		--prefix-gold $(GOLD_CHECKPOINTS) --sessions-dir $(SESS_DIR) \
-		--trajectories-dir $(TRAJ_DIR) \
-		--output-dir $(ITEMS_DIR) --seed $(SEED) $(SHUFFLE_OPTIONS_FLAG)
+		--trajectories-dir $(TRAJ_DIR) --output-dir $(ITEMS_DIR) \
+		--seed $(SEED) $(SHUFFLE_OPTIONS_FLAG)
+	$(PYTHON) scripts/build_stage3_multihop_items.py \
+		--prefix-gold $(GOLD_CHECKPOINTS) --sessions-dir $(SESS_DIR) \
+		--trajectories-dir $(TRAJ_DIR) --output-dir $(ITEMS_DIR) \
+		--selection-mode representative \
+		--seed $(SEED) $(SHUFFLE_OPTIONS_FLAG)
 
 export-public:
 	$(PYTHON) scripts/export_public_benchmark.py \
@@ -314,7 +329,9 @@ export-public:
 # EXECUTE=1 calls the real LLM (provider/model from .env); default is mock.
 evaluate:
 	$(PYTHON) scripts/evaluate_benchmark_items.py \
-		--items $(ITEMS_DIR)/stage1_event_status.jsonl $(ITEMS_DIR)/stage2_memory_mcq.jsonl \
+		--items $(ITEMS_DIR)/stage1_event_status.jsonl \
+			$(ITEMS_DIR)/stage2_single_hop_mcq.jsonl \
+			$(ITEMS_DIR)/stage3_multi_hop_mcq.jsonl \
 		--sessions-dir $(SESS_DIR) \
 		--output $(EVAL_DIR)/predictions.jsonl --report $(EVAL_DIR)/report.json \
 		$(if $(filter 1,$(EXECUTE)),--execute,)
@@ -322,29 +339,38 @@ evaluate:
 history-filter:
 ifeq ($(EXECUTE),1)
 	$(PYTHON) scripts/run_history_filter.py \
-		--items $(ITEMS_DIR)/stage2_memory_mcq.jsonl --sessions-dir $(SESS_DIR) \
+		--items $(ITEMS_DIR)/stage2_single_hop_mcq.jsonl --sessions-dir $(SESS_DIR) \
 		--mode single_session --execute
 else
 	$(PYTHON) scripts/run_history_filter.py \
-		--items $(ITEMS_DIR)/stage2_memory_mcq.jsonl --sessions-dir $(SESS_DIR) \
+		--items $(ITEMS_DIR)/stage2_single_hop_mcq.jsonl --sessions-dir $(SESS_DIR) \
 		--mode single_session
 endif
 
 audit:
 	$(PYTHON) scripts/audit_single_session_recoverability.py --sessions-dir $(SESS_DIR) --output-dir $(QUALITY)
 	$(PYTHON) scripts/audit_full_prefix_recoverability.py --prefix-gold $(GOLD) --sessions-dir $(SESS_DIR) --output-dir $(QUALITY)
-	$(PYTHON) scripts/audit_stale_distractors.py --items $(ITEMS_DIR)/stage2_memory_mcq.jsonl --prefix-gold $(GOLD) --output-dir $(QUALITY)
+	$(PYTHON) scripts/audit_stale_distractors.py --items $(ITEMS_DIR)/stage2_single_hop_mcq.jsonl --prefix-gold $(GOLD) --output-dir $(QUALITY)
+	$(MAKE) audit-stage3-multi-hop
 	$(PYTHON) scripts/audit_life_stage_constraints.py --trajectories-dir $(TRAJ_DIR) --output-dir $(QUALITY)
 	$(PYTHON) scripts/audit_generation_consistency.py --trajectories-dir $(TRAJ_DIR) --sessions-dir $(SESS_DIR) --output-dir $(QUALITY)
 	$(PYTHON) scripts/build_quality_summary.py \
 		--trajectories-dir $(TRAJ_DIR) --sessions-dir $(SESS_DIR) \
 		--prefix-gold $(GOLD) --items-dir $(ITEMS_DIR) --output-dir $(QUALITY)
 
+audit-stage3-multi-hop:
+	$(PYTHON) scripts/audit_stage3_multihop_items.py \
+		--items $(ITEMS_DIR)/stage3_multi_hop_mcq.jsonl \
+		--prefix-gold $(GOLD) --sessions-dir $(SESS_DIR) \
+		--trajectories-dir $(TRAJ_DIR) \
+		--selection-mode representative \
+		--output $(QUALITY)/stage3_multi_hop_audit.json
+
 audit-controlled:
 	$(PYTHON) scripts/audit_v3_controlled.py \
 		--trajectories-dir $(TRAJ_DIR) --sessions-dir $(SESS_DIR) \
 		--checkpoints $(GOLD_CHECKPOINTS) \
-		--stage2-items $(ITEMS_DIR)/stage2_memory_mcq.jsonl --output-dir $(QUALITY)
+		--stage2-items $(ITEMS_DIR)/stage2_single_hop_mcq.jsonl --output-dir $(QUALITY)
 
 pipeline-smoke: inventory normalize-personas initial-states simulate-smoke dialogue-smoke validate-dialogues export-gold build-items history-filter audit
 	@echo "pipeline-smoke complete. Reports in $(QUALITY)/"

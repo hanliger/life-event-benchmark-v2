@@ -284,7 +284,34 @@ def main() -> int:
             for path in session_files
             for row in read_jsonl(path)
         )
-        stage2_path = run_dir / "benchmark_items" / "stage2_memory_mcq.jsonl"
+        benchmark_paths = {
+            "stage2_items": {
+                "single_hop": (
+                    run_dir
+                    / "benchmark_items"
+                    / "stage2_single_hop_mcq.jsonl"
+                ),
+            },
+            "stage3_items": {
+                "multi_hop": (
+                    run_dir
+                    / "benchmark_items"
+                    / "stage3_multi_hop_mcq.jsonl"
+                ),
+            },
+        }
+        benchmark_outputs = {
+            stage_key: {
+                reasoning_type: {
+                    "path": str(item_path.relative_to(run_dir)),
+                    "count": _line_count(item_path),
+                    "sha256": _sha256(item_path),
+                }
+                for reasoning_type, item_path in stage_paths.items()
+                if item_path.exists()
+            }
+            for stage_key, stage_paths in benchmark_paths.items()
+        }
         manifest["controlled_outputs"] = {
             "window_size_sessions": 15,
             "sessions": {
@@ -302,28 +329,42 @@ def main() -> int:
                 "count": _line_count(checkpoints_path),
                 "sha256": _sha256(checkpoints_path),
             },
-            "stage2_items": {
-                "path": "benchmark_items/stage2_memory_mcq.jsonl",
-                "count": _line_count(stage2_path),
-                "sha256": _sha256(stage2_path),
-            },
+            **benchmark_outputs,
             "audit": {"path": f"reports/{args.run_version}_controlled_audit.json"},
         }
         public_sessions_dir = run_dir / "public" / "dialogues" / "sessions"
-        public_stage2_path = run_dir / "public" / "benchmark_items" / "stage2_memory_mcq.jsonl"
-        if public_sessions_dir.exists() and public_stage2_path.exists():
-            public_session_files = sorted(public_sessions_dir.glob("sessions_traj_*.jsonl"))
+        public_benchmark_outputs = {
+            stage_key: {
+                reasoning_type: {
+                    "path": str(public_path.relative_to(run_dir)),
+                    "count": _line_count(public_path),
+                    "sha256": _sha256(public_path),
+                }
+                for reasoning_type, item_path in stage_paths.items()
+                if (
+                    public_path := (
+                        run_dir / "public" / "benchmark_items" / item_path.name
+                    )
+                ).exists()
+            }
+            for stage_key, stage_paths in benchmark_paths.items()
+        }
+        if public_sessions_dir.exists() and any(
+            public_benchmark_outputs.values()
+        ):
+            public_session_files = sorted(
+                public_sessions_dir.glob("sessions_traj_*.jsonl")
+            )
             manifest["controlled_outputs"]["public_release"] = {
                 "sessions": {
                     "path": "public/dialogues/sessions",
-                    "count": sum(_line_count(path) for path in public_session_files),
+                    "count": sum(
+                        _line_count(path) for path in public_session_files
+                    ),
                 },
-                "stage2_items": {
-                    "path": "public/benchmark_items/stage2_memory_mcq.jsonl",
-                    "count": _line_count(public_stage2_path),
-                    "sha256": _sha256(public_stage2_path),
-                },
+                **public_benchmark_outputs,
             }
+
     (run_dir / "manifest.json").write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )

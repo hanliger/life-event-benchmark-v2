@@ -3,7 +3,7 @@
 
 Example:
   python scripts/run_history_filter.py \
-    --items data/generated/benchmark_items/stage2_memory_mcq.jsonl \
+    --items data/generated/benchmark_items/stage2_single_hop_mcq.jsonl \
     --sessions-dir data/generated/sessions \
     --mode single_session \
     --validators openai:gpt-4o-mini,anthropic:claude-haiku-4-5 \

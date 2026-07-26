@@ -115,6 +115,8 @@ def main() -> int:
     canonical_target_counts: Counter = Counter()
     mcq_answer_pos: Counter = Counter()
     option_counts: Counter = Counter()
+    reasoning_counts: Counter = Counter()
+    derivation_counts: Counter = Counter()
 
     for path in sorted(Path(args.items_dir).glob("stage*.jsonl")):
         items = list(read_jsonl(path))
@@ -123,11 +125,16 @@ def main() -> int:
             continue
         for item in items:
             metadata = item.get("metadata") or {}
-            target_event_counts[
-                metadata.get("target_event_id")
-                or metadata.get("target_event_label")
-                or "?"
-            ] += 1
+            reasoning_type = item.get("reasoning_type") or "single_hop"
+            reasoning_counts[reasoning_type] += 1
+            if metadata.get("derivation_type"):
+                derivation_counts[metadata["derivation_type"]] += 1
+            if reasoning_type == "single_hop":
+                target_event_counts[
+                    metadata.get("target_event_id")
+                    or metadata.get("target_event_label")
+                    or "?"
+                ] += 1
             target_path_counts[metadata.get("memory_path") or "?"] += 1
             canonical_target_counts[metadata.get("canonical_target_id") or "?"] += 1
             options = item.get("options") or []
@@ -160,23 +167,29 @@ def main() -> int:
         "## Items per stage file",
         *(f"- {key}: {value}" for key, value in stage_counts.items()),
         "",
-        "## Stage 2 target event distribution",
+        "## Stage 2/3 reasoning distribution",
+        *(f"- {key}: {value}" for key, value in reasoning_counts.most_common()),
+        "",
+        "## Stage 3 Multi-hop derivation distribution",
+        *(f"- {key}: {value}" for key, value in derivation_counts.most_common()),
+        "",
+        "## Stage 2 Single-hop target event distribution",
         *(f"- {key}: {value}" for key, value in target_event_counts.most_common()),
         "",
-        "## Stage 2 memory path distribution",
+        "## Stage 2/3 memory path distribution",
         *(f"- {key}: {value}" for key, value in target_path_counts.most_common()),
         "",
-        "## Stage 2 canonical target reuse",
+        "## Stage 2/3 canonical target reuse",
         f"- distinct canonical targets: {distinct_targets}",
         f"- reused canonical target occurrences: {reused_targets}",
         "",
-        "## Stage 2 option count",
+        "## Stage 2/3 option count",
         *(f"- {key}: {value}" for key, value in sorted(option_counts.items())),
         "",
-        "## Stage 2 correct-option position (should be spread across A-D)",
+        "## Stage 2/3 correct-option position (should be spread across A-D)",
         *(f"- {key}: {value}" for key, value in sorted(mcq_answer_pos.items())),
         "",
-        "## Stage 2 distractor error types",
+        "## Stage 2/3 distractor error types",
         *(f"- {key}: {value}" for key, value in mcq_error_types.most_common()),
         "",
         f"- Items with stale-memory distractor: {mcq_with_stale}",

@@ -20,9 +20,17 @@ persona ─▶ 초기 금융 상태 ─▶ 생애사건 trajectory ─▶ 상담
 | Stage | 문항 | 입력 | 정답 |
 | --- | --- | --- | --- |
 | **Stage 1** `stage1_event_status` | 지금까지 감지되는 생애 사건과 그 진행 단계는? | 보이는 세션 발화들 | life event label + status(`weak_signal`/`upcoming`/`occurred`/`cancelled`/`no_event`) |
-| **Stage 2** `stage2_memory_mcq` | 특정 금융 상태 값은? (객관식) | 보이는 세션 발화 + 초기 금융 메모리 | 정답 선택지 |
+| **Stage 2** `stage2_memory_value` | 특정 날짜의 금융 메모리 최종값은? | 날짜가 표시된 세션 발화 + 초기 금융 메모리 | 닫힌 값 집합은 객관식, 그 외는 단답형 |
 
 핵심 난이도는 **간접성**입니다. 대화는 상태를 직접 말해 주지 않습니다. 사용자는 업무를 요청하며 단서만 흘리고, 모델은 여러 세션에 흩어진 단서를 모아 상태를 역추론해야 합니다. 평가 대상 모델에게는 정답 계획(plan)·주석(cue)·구조화 문맥은 주지 않고, **보이는 발화와 초기 메모리만** 줍니다.
+
+Stage 2는 다음 원칙으로 만듭니다.
+
+- 15세션 checkpoint마다 `occurred` event가 실제로 갱신한 memory path/selector를 활성화하고, 이후 checkpoint에서도 같은 논리 문항을 재사용
+- 질문에는 event 이름이나 ID를 노출하지 않고 `session_date` 기반의 기준일만 제시
+- `update/create`와 의미 있는 동일값 재확인(no-op)은 포함하되, `archive`·`mark_stale`·`set_not_applicable` 같은 상태 전용 operation은 최종값 문항에서 제외
+- 고용 상태·주거 유형처럼 사전에 닫힌 값 집합은 객관식, 회사명·주소·금액·인원 수·목록은 단답형
+- 경로별 질문/selector/선지 정책은 `configs/registries/stage2_memory_questions.yaml`에서 관리
 
 ---
 
@@ -483,7 +491,7 @@ python scripts/audit_session_dates.py \
 | `data/runs/<RUN_ID>/trajectories/traj_*.json` | 생애사건 trajectory |
 | `data/runs/<RUN_ID>/dialogues/sessions/sessions_traj_*.jsonl` | 대화 세션 (분석·평가 입력) |
 | `data/runs/<RUN_ID>/gold/prefix_gold_*.jsonl` | prefix별 정답 상태 |
-| `data/runs/<RUN_ID>/benchmark_items/*.jsonl` | Stage 1/2 문항 |
+| `data/runs/<RUN_ID>/benchmark_items/*.jsonl` | Stage 1 및 `stage2_memory_value` 문항 |
 | `data/runs/<RUN_ID>/quality_reports/*` | 검증·audit 리포트 |
 | `data/runs/<RUN_ID>/eval/report.json` | 모델 평가 결과 |
 | `data/runs/<RUN_ID>/masking_ladder.json` | lifecycle masking abstention 사다리 (§5-C) |

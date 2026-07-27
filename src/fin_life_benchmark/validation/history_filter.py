@@ -45,7 +45,11 @@ def _format_initial_memory(memory: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def _visible_for_mode(item: dict[str, Any], sessions_by_id: dict[str, dict], mode: str) -> list[dict[str, Any]]:
+def _visible_for_mode(
+    item: dict[str, Any],
+    sessions_by_id: dict[tuple[str, str], dict[str, Any]],
+    mode: str,
+) -> list[dict[str, Any]]:
     ids = item["visible_sessions"]
     if mode == "no_history_option":
         return []
@@ -56,7 +60,12 @@ def _visible_for_mode(item: dict[str, Any], sessions_by_id: dict[str, dict], mod
         # only the last third of the prefix
         cut = max(1, len(ids) // 3)
         ids = ids[-cut:]
-    return [sessions_by_id[i] for i in ids if i in sessions_by_id]
+    trajectory_id = item["trajectory_id"]
+    return [
+        sessions_by_id[(trajectory_id, session_id)]
+        for session_id in ids
+        if (trajectory_id, session_id) in sessions_by_id
+    ]
 
 
 def build_validator_prompt(item: dict[str, Any], visible: list[dict[str, Any]]) -> str:
@@ -130,7 +139,7 @@ def parse_validators(spec: str) -> list[Any]:
 
 def run_filter(
     items: list[dict[str, Any]],
-    sessions_by_id: dict[str, dict],
+    sessions_by_id: dict[tuple[str, str], dict[str, Any]],
     validators: list[Any],
     mode: str,
 ) -> list[dict[str, Any]]:

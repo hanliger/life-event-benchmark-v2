@@ -6,17 +6,6 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-ERROR_TYPES = (
-    "stale_memory_carryover",
-    "missed_update",
-    "wrong_sibling_event",
-    "premature_update",
-    "false_commit",
-    "historical_state_contamination",
-    "no_event_false_positive",
-    "cancelled_ignored",
-)
-
 
 class CounterfactualOption(BaseModel):
     option_id: str  # A/B/C/...
@@ -27,7 +16,7 @@ class CounterfactualOption(BaseModel):
 
 class BenchmarkItem(BaseModel):
     item_id: str
-    stage: str  # stage1_event_status|stage2_memory_mcq
+    stage: str  # stage1_event_status|stage2_memory_value
     trajectory_id: str
     prefix_id: str
     visible_sessions: list[str]

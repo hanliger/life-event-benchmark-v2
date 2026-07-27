@@ -87,27 +87,28 @@ def main() -> int:
     (out / "trajectory_quality_report.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
     # ---------------- benchmark item report ----------------
-    stage_counts = {}
-    mcq_error_types: Counter = Counter()
-    mcq_with_stale = 0
-    mcq_hop_type: Counter = Counter()
+    stage_counts: dict[str, int] = {}
+    answer_types: Counter = Counter()
+    memory_paths: Counter = Counter()
+    checkpoint_changes: Counter = Counter()
     mcq_answer_pos: Counter = Counter()
     for path in sorted(Path(args.items_dir).glob("stage*.jsonl")):
         items = list(read_jsonl(path))
         stage_counts[path.name] = len(items)
-        if "mcq" in path.name and not path.name.endswith(".filtered.jsonl"):
-            for item in items:
-                meta = item.get("metadata") or {}
-                if meta.get("has_stale_distractor"):
-                    mcq_with_stale += 1
-                mcq_hop_type[meta.get("hop_type") or meta.get("context", "?")] += 1
-                gold = item.get("gold") or {}
-                mcq_answer_pos[gold.get("correct_option", "?")] += 1
-                for opt in item.get("options", []):
-                    if opt.get("error_type"):
-                        mcq_error_types[opt["error_type"]] += 1
-                        if opt["error_type"] == "stale_memory_carryover":
-                            mcq_with_stale += 1
+        if path.name.endswith(".filtered.jsonl"):
+            continue
+        for item in items:
+            metadata = item.get("metadata") or {}
+            gold = item.get("gold") or {}
+            answer_type = metadata.get("answer_type") or gold.get("answer_type")
+            if answer_type:
+                answer_types[answer_type] += 1
+            if gold.get("memory_path"):
+                memory_paths[gold["memory_path"]] += 1
+            if gold.get("checkpoint_change_type"):
+                checkpoint_changes[gold["checkpoint_change_type"]] += 1
+            if gold.get("correct_option"):
+                mcq_answer_pos[gold["correct_option"]] += 1
 
     prefixes = list(read_jsonl(Path(args.prefix_gold)))
     lines = [
@@ -118,16 +119,17 @@ def main() -> int:
         "## Items per stage file",
         *(f"- {k}: {v}" for k, v in stage_counts.items()),
         "",
-        "## MCQ hop/context distribution",
-        *(f"- {k}: {v}" for k, v in mcq_hop_type.most_common()),
+        "## Stage 2 answer types",
+        *(f"- {k}: {v}" for k, v in answer_types.most_common()),
         "",
-        "## MCQ correct-option position (should be spread across A–E)",
+        "## Stage 2 checkpoint change types",
+        *(f"- {k}: {v}" for k, v in checkpoint_changes.most_common()),
+        "",
+        "## Stage 2 memory paths",
+        *(f"- {k}: {v}" for k, v in memory_paths.most_common()),
+        "",
+        "## MCQ correct-option position",
         *(f"- {k}: {v}" for k, v in sorted(mcq_answer_pos.items())),
-        "",
-        "## MCQ distractor error types",
-        *(f"- {k}: {v}" for k, v in mcq_error_types.most_common()),
-        "",
-        f"- MCQ stale-memory distractor occurrences: {mcq_with_stale}",
         "",
         "Constraint check: high-risk decisions without confirmation in gold "
         f"= {high_risk_wo_confirmation} (must be 0)",

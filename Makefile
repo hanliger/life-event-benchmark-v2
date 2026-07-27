@@ -307,7 +307,7 @@ export-public:
 # EXECUTE=1 calls the real LLM (provider/model from .env); default is mock.
 evaluate:
 	$(PYTHON) scripts/evaluate_benchmark_items.py \
-		--items $(ITEMS_DIR)/stage1_event_status.jsonl $(ITEMS_DIR)/stage2_memory_mcq.jsonl \
+		--items $(ITEMS_DIR)/stage1_event_status.jsonl $(ITEMS_DIR)/stage2_memory_value.jsonl \
 		--sessions-dir $(SESS_DIR) \
 		--output $(EVAL_DIR)/predictions.jsonl --report $(EVAL_DIR)/report.json \
 		$(if $(filter 1,$(EXECUTE)),--execute,)
@@ -315,18 +315,18 @@ evaluate:
 history-filter:
 ifeq ($(EXECUTE),1)
 	$(PYTHON) scripts/run_history_filter.py \
-		--items $(ITEMS_DIR)/stage2_memory_mcq.jsonl --sessions-dir $(SESS_DIR) \
+		--items $(ITEMS_DIR)/stage2_memory_value.jsonl --sessions-dir $(SESS_DIR) \
 		--mode single_session --execute
 else
 	$(PYTHON) scripts/run_history_filter.py \
-		--items $(ITEMS_DIR)/stage2_memory_mcq.jsonl --sessions-dir $(SESS_DIR) \
+		--items $(ITEMS_DIR)/stage2_memory_value.jsonl --sessions-dir $(SESS_DIR) \
 		--mode single_session
 endif
 
 audit:
 	$(PYTHON) scripts/audit_single_session_recoverability.py --sessions-dir $(SESS_DIR) --output-dir $(QUALITY)
 	$(PYTHON) scripts/audit_full_prefix_recoverability.py --prefix-gold $(GOLD) --sessions-dir $(SESS_DIR) --output-dir $(QUALITY)
-	$(PYTHON) scripts/audit_stale_distractors.py --items $(ITEMS_DIR)/stage2_memory_mcq.jsonl --prefix-gold $(GOLD) --output-dir $(QUALITY)
+	$(PYTHON) scripts/audit_stage2_memory_values.py --items $(ITEMS_DIR)/stage2_memory_value.jsonl --output $(QUALITY)/stage2_memory_value_audit.json
 	$(PYTHON) scripts/audit_life_stage_constraints.py --trajectories-dir $(TRAJ_DIR) --output-dir $(QUALITY)
 	$(PYTHON) scripts/audit_generation_consistency.py --trajectories-dir $(TRAJ_DIR) --sessions-dir $(SESS_DIR) --output-dir $(QUALITY)
 	$(PYTHON) scripts/build_quality_summary.py \
@@ -337,7 +337,7 @@ audit-controlled:
 	$(PYTHON) scripts/audit_v3_controlled.py \
 		--trajectories-dir $(TRAJ_DIR) --sessions-dir $(SESS_DIR) \
 		--checkpoints $(GOLD_CHECKPOINTS) \
-		--stage2-items $(ITEMS_DIR)/stage2_memory_mcq.jsonl --output-dir $(QUALITY)
+		--stage2-items $(ITEMS_DIR)/stage2_memory_value.jsonl --output-dir $(QUALITY)
 
 pipeline-smoke: inventory normalize-personas initial-states simulate-smoke dialogue-smoke validate-dialogues export-gold build-items history-filter audit
 	@echo "pipeline-smoke complete. Reports in $(QUALITY)/"

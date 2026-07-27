@@ -186,7 +186,9 @@ def audit_v3(
             true_initial_mismatches += 1
             continue
         expected = serialize_memory_state(trajectory["initial_financial_memory_state"])
-        for path, cell in ((item.get("metadata") or {}).get("initial_memory") or {}).items():
+        metadata = item.get("metadata") or {}
+        source_memory = metadata.get("initial_memory_source") or metadata.get("initial_memory") or {}
+        for path, cell in source_memory.items():
             if cell != expected.get(path):
                 true_initial_mismatches += 1
 

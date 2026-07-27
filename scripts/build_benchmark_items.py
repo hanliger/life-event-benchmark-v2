@@ -18,7 +18,6 @@ import _bootstrap  # noqa: F401
 
 from fin_life_benchmark.benchmark.item_builder import ItemBuilder
 from fin_life_benchmark.gold.loader import read_prefix_gold
-from fin_life_benchmark.gold.prefix_gold_exporter import serialize_memory_state
 from fin_life_benchmark.io import ensure_dialogue_sessions, read_jsonl, write_jsonl
 from fin_life_benchmark.trajectory.models import Trajectory
 
@@ -43,18 +42,18 @@ def main() -> int:
         for session in read_jsonl(path):
             sessions_by_traj.setdefault(session["trajectory_id"], []).append(session)
 
-    initial_memory_by_traj: dict[str, dict] = {}
+    trajectories_by_traj: dict[str, Trajectory] = {}
     for path in sorted(Path(args.trajectories_dir).glob("traj_*.json")):
-        trajectory = Trajectory.model_validate(json.loads(path.read_text(encoding="utf-8")))
-        initial_memory_by_traj[trajectory.trajectory_id] = serialize_memory_state(
-            trajectory.initial_financial_memory_state
+        trajectory = Trajectory.model_validate(
+            json.loads(path.read_text(encoding="utf-8"))
         )
+        trajectories_by_traj[trajectory.trajectory_id] = trajectory
 
     builder = ItemBuilder(seed=args.seed)
     outputs = {
         "stage1_event_status.jsonl": builder.build_stage1(prefixes, sessions_by_traj),
-        "stage2_memory_mcq.jsonl": builder.build_stage2(
-            prefixes, sessions_by_traj, initial_memory_by_traj
+        "stage2_memory_value.jsonl": builder.build_stage2(
+            prefixes, sessions_by_traj, trajectories_by_traj
         ),
     }
 

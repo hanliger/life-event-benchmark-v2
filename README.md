@@ -617,6 +617,7 @@ python scripts/audit_session_dates.py \
 | `docs/history_filter.md` | history-필요성 필터 |
 | `docs/failure_modes.md` | 주요 실패 유형 |
 | `docs/coverage_generation.md` | 희귀 사건 커버리지 생성 |
+| `docs/rq1_pilot_report.md` | RQ1 파일럿 결과(traj_001 dev)와 지표 개선 과제 |
 | `docs/locale_extension_guide.md` | 로케일 추가 가이드 |
 
 ---

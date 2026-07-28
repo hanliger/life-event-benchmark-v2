@@ -681,6 +681,50 @@ def test_mock_evaluation_completes_offline(tmp_path, monkeypatch):
     assert payload["final_checkpoint"] == 30
 
 
+def test_checkpoint_filter_selects_one_item(tmp_path, monkeypatch):
+    sessions_dir, items_path, taxonomy_path = _write_run(tmp_path)
+    out = tmp_path / "cp15.jsonl"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "evaluate_rq1_pairs.py",
+            "--items", str(items_path),
+            "--sessions-dir", str(sessions_dir),
+            "--taxonomy", str(taxonomy_path),
+            "--checkpoint", "15",
+            "--output", str(out),
+            "--report", str(tmp_path / "cp15_report.json"),
+        ],
+    )
+    from scripts import evaluate_rq1_pairs
+
+    evaluate_rq1_pairs.main()
+    rows = [json.loads(line) for line in out.read_text(encoding="utf-8").splitlines()]
+    assert [row["checkpoint_session_count"] for row in rows] == [15]
+
+
+def test_checkpoint_filter_rejects_a_missing_checkpoint(tmp_path, monkeypatch):
+    sessions_dir, items_path, taxonomy_path = _write_run(tmp_path)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "evaluate_rq1_pairs.py",
+            "--items", str(items_path),
+            "--sessions-dir", str(sessions_dir),
+            "--taxonomy", str(taxonomy_path),
+            "--checkpoint", "300",
+            "--output", str(tmp_path / "none.jsonl"),
+            "--report", str(tmp_path / "none.json"),
+        ],
+    )
+    from scripts import evaluate_rq1_pairs
+
+    with pytest.raises(SystemExit, match="no items for checkpoints"):
+        evaluate_rq1_pairs.main()
+
+
 def test_protocol_audit_passes_on_the_fixture_corpus(tmp_path, monkeypatch):
     sessions_dir, items_path, taxonomy_path = _write_run(tmp_path)
     audit_dir = tmp_path / "rq1_pair_temp" / "audit"

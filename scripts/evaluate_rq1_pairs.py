@@ -74,21 +74,24 @@ def _provider_usage(metadata: dict[str, Any]) -> dict[str, Any]:
     """Normalize the fields providers report under different names."""
 
     usage = metadata.get("usage") or {}
+
+    def first(*keys: str) -> Any:
+        for key in keys:
+            for source in (metadata, usage):
+                value = source.get(key)
+                if value is not None:
+                    return value
+        return None
+
     return {
-        "input_tokens": (
-            metadata.get("input_tokens")
-            or metadata.get("prompt_tokens")
-            or usage.get("input_tokens")
-            or usage.get("prompt_tokens")
+        # anthropic: input/output_tokens; openai: prompt/completion_tokens;
+        # gemini: prompt_token_count/candidates_token_count (+ thoughts)
+        "input_tokens": first("input_tokens", "prompt_tokens", "prompt_token_count"),
+        "output_tokens": first(
+            "output_tokens", "completion_tokens", "candidates_token_count"
         ),
-        "output_tokens": (
-            metadata.get("output_tokens")
-            or metadata.get("completion_tokens")
-            or usage.get("output_tokens")
-            or usage.get("candidates_token_count")
-            or usage.get("completion_tokens")
-        ),
-        "finish_reason": metadata.get("finish_reason") or metadata.get("stop_reason"),
+        "reasoning_tokens": first("thoughts_token_count", "reasoning_tokens"),
+        "finish_reason": first("finish_reason", "stop_reason"),
         "request_duration_ms": metadata.get("request_duration_ms"),
     }
 
@@ -114,6 +117,13 @@ def main() -> None:
     parser.add_argument("--reasoning-effort", default=None)
     parser.add_argument("--max-items", type=int, default=None)
     parser.add_argument("--trajectory-id", action="append", default=[])
+    parser.add_argument(
+        "--checkpoint",
+        action="append",
+        type=int,
+        default=[],
+        help="evaluate only these checkpoints (repeatable); default all",
+    )
     parser.add_argument(
         "--split",
         choices=("dev", "test", "all"),
@@ -159,6 +169,14 @@ def main() -> None:
         wanted_traj = wanted_traj & split_ids if wanted_traj else split_ids
     if wanted_traj:
         records = [r for r in records if r.get("trajectory_id") in wanted_traj]
+    if args.checkpoint:
+        wanted_cp = set(args.checkpoint)
+        records = [
+            r for r in records if int(r["checkpoint_session_count"]) in wanted_cp
+        ]
+        missing = wanted_cp - {int(r["checkpoint_session_count"]) for r in records}
+        if missing:
+            raise SystemExit(f"no items for checkpoints: {sorted(missing)}")
     if args.max_items:
         records = records[: args.max_items]
     if not records:
@@ -308,6 +326,7 @@ def main() -> None:
                         "requested_temperature": args.temperature,
                         "provider_input_tokens": usage["input_tokens"],
                         "provider_output_tokens": usage["output_tokens"],
+                        "provider_reasoning_tokens": usage["reasoning_tokens"],
                         "finish_reason": usage["finish_reason"],
                         "request_duration_ms": usage["request_duration_ms"],
                         "raw_response": raw,

@@ -554,6 +554,50 @@ make evaluate-rq1-pairs-dev EXECUTE=1 RQ1_PROVIDER=anthropic RQ1_MODEL=claude-op
 산출물은 기존 파일럿을 덮지 않도록 `data/runs/<RUN_ID>/rq1_pair_temp/`
 (`protocol_manifest.json`, `predictions/`, `reports/`, `audit/`)에 씁니다.
 
+##### (임시) cp300 terminal-evidence-only 진단
+
+`--condition terminal_only`은 cp300 prefix에서 **종결 근거 세션만** 남기고
+(`occurred_evidence`, `cancellation_evidence`) 나머지를 전부 제거한 뒤 같은
+질문을 한 번 묻는 단일 item 진단입니다. weak/upcoming 근거 없이도 발생 사건을
+복원할 수 있는지를 봅니다. filler로 대체하지 않고 그냥 빼며, 남은 세션은 원래
+`D###` 공개 id와 시간 순서를 그대로 유지합니다. traj_001 cp300에서는 300개 중
+26개(occurred 20 + cancellation 6)가 남습니다.
+
+gold는 **full prefix 투영 그대로**입니다. 즉 조건이 바꾸는 것은 모델이 보는
+입력뿐이고 정답 20짝은 변하지 않으므로, 같은 item의 기존 full-prefix 점수와
+직접 비교할 수 있습니다. cancellation 세션은 보이지만 gold 짝을 만들지 않는
+음성 예시로 남습니다.
+
+```bash
+python scripts/audit_rq1_pair_terminal_only.py \
+    --items data/runs/$RUN_ID/rq1/natural/progressive_items.jsonl \
+    --sessions-dir data/runs/hf_full/dialogues/sessions \
+    --taxonomy data/runs/$RUN_ID/rq1/taxonomy.json \
+    --trajectory-id traj_001 --checkpoint 300 \
+    --output-dir data/runs/$RUN_ID/rq1_pair_temp/terminal_only/audit
+
+python scripts/evaluate_rq1_pairs.py \
+    --items data/runs/$RUN_ID/rq1/natural/progressive_items.jsonl \
+    --sessions-dir data/runs/hf_full/dialogues/sessions \
+    --taxonomy data/runs/$RUN_ID/rq1/taxonomy.json \
+    --trajectory-id traj_001 --checkpoint 300 --condition terminal_only \
+    --baseline-predictions <기존 full cp300 predictions.jsonl> \
+    --output  data/runs/$RUN_ID/rq1_pair_temp/terminal_only/predictions/<tag>.jsonl \
+    --report  data/runs/$RUN_ID/rq1_pair_temp/terminal_only/reports/<tag>.json
+```
+
+`--baseline-predictions`는 저장된 full-prefix 예측을 그대로 읽어 delta P/R/F1,
+유지된 짝, full에서 맞았는데 잃은 짝, 새 TP/FP, cancellation 세션 FP를
+계산합니다. baseline 모델을 다시 호출하지 않습니다.
+
+Anthropic adaptive thinking을 쓰려면 `--thinking-mode adaptive
+--reasoning-effort xhigh`를 주고, 실제로 적용됐는지 강제하려면
+`--require-thinking-tokens`를 켭니다. 이 게이트는 thinking token이 양수인지,
+adaptive/effort/streaming이 실제로 적용됐는지, 응답이 잘리거나 파싱 실패하지
+않았는지를 확인하고, 실패하면 그 item을 채점에서 제외하고 exit 1 합니다.
+thinking token이 없으면 0이 아니라 `null` + `thinking_tokens_source:
+"unavailable"`로 기록합니다.
+
 ---
 
 ## 6. 데이터 정책

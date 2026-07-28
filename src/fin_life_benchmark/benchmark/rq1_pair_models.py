@@ -40,9 +40,10 @@ RQ1_PAIR_METRICS_VERSION = "rq1-exact-occurred-pair-metrics-v1"
 RQ1_PAIR_PROMPT_CONTRACT = "rq1_occurred_event_pairs_ko"
 RQ1_PAIR_PROMPT_FILE = "prompts/benchmark/rq1_occurred_event_pairs_ko.md"
 
-# Only full_prefix is implemented. The tuple keeps the evaluator interface open
-# for later conditions without implementing any of them now.
-RQ1_PAIR_CONDITIONS = ("full_prefix",)
+# full_prefix is the protocol condition. terminal_only is a temporary cp300
+# diagnostic that removes every non-terminal session from the model-visible
+# context and reuses this gold unchanged (see rq1_pair_terminal_only).
+RQ1_PAIR_CONDITIONS = ("full_prefix", "terminal_only")
 
 PAIR_CHECKPOINT_STRIDE = 15
 PAIR_CHECKPOINT_GRID = tuple(range(15, 301, 15))

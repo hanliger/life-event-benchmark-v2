@@ -400,6 +400,15 @@ def main() -> int:
                 "checkpoint_session_count"
             ),
             "checkpoint_date": item_metadata.get("checkpoint_date"),
+            "evaluation_checkpoint_date": item_metadata.get(
+                "evaluation_checkpoint_date"
+            ),
+            "target_checkpoint_session_count": item_metadata.get(
+                "target_checkpoint_session_count"
+            ),
+            "evaluation_checkpoint_session_count": item_metadata.get(
+                "evaluation_checkpoint_session_count"
+            ),
             "checkpoint_change_type": item_gold.get("checkpoint_change_type"),
             "prediction": pred,
             "gold": gold,

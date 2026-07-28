@@ -16,7 +16,9 @@ from fin_life_benchmark.benchmark.stage2_memory import normalize_stage2_answer
 from fin_life_benchmark.io import read_jsonl
 
 _ALLOWED_SOURCE_OPERATIONS = {"create", "update", "no_change"}
-_ALLOWED_CHECKPOINT_CHANGES = {"update", "no_change", "carry_forward"}
+# A longer evaluation prefix reuses the original item; it is not a new
+# carry-forward memory change.
+_ALLOWED_CHECKPOINT_CHANGES = {"update", "no_change"}
 
 
 def _question_date(value: str) -> str:
@@ -67,6 +69,26 @@ def audit(items: list[dict[str, Any]]) -> dict[str, Any]:
         count = int(metadata.get("checkpoint_session_count") or 0)
         if count <= 0 or count % 15:
             fail(item, "invalid_checkpoint_stride", str(count))
+        target_count = int(
+            metadata.get("target_checkpoint_session_count") or count
+        )
+        evaluation_count = int(
+            metadata.get("evaluation_checkpoint_session_count") or count
+        )
+        if target_count <= 0 or target_count % 15:
+            fail(item, "invalid_target_checkpoint_stride", str(target_count))
+        if evaluation_count <= 0 or evaluation_count % 15:
+            fail(
+                item,
+                "invalid_evaluation_checkpoint_stride",
+                str(evaluation_count),
+            )
+        if evaluation_count < target_count:
+            fail(
+                item,
+                "evaluation_prefix_before_target",
+                f"{evaluation_count} < {target_count}",
+            )
         checkpoint_counts[str(item.get("trajectory_id"))].add(count)
 
         source_operation = gold.get("source_operation")

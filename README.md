@@ -26,7 +26,8 @@ persona ─▶ 초기 금융 상태 ─▶ 생애사건 trajectory ─▶ 상담
 
 Stage 2는 다음 원칙으로 만듭니다.
 
-- 15세션 checkpoint마다 `occurred` event가 실제로 갱신한 memory path/selector를 활성화하고, 이후 checkpoint에서도 같은 논리 문항을 재사용
+- 15세션 checkpoint에서 `occurred` event가 갱신한 memory path/selector로 문항을 만들고, 이후 더 긴 prefix에서도 event 시점의 기준일·정답을 고정한 채 같은 문항을 재사용
+- 문항의 `checkpoint_date`는 정답 기준일이며, `evaluation_checkpoint_date`는 모델에게 제공한 prefix의 마지막 날짜
 - 질문에는 event 이름이나 ID를 노출하지 않고 `session_date` 기반의 기준일만 제시
 - `update/create`와 의미 있는 동일값 재확인(no-op)은 포함하되, `archive`·`mark_stale`·`set_not_applicable` 같은 상태 전용 operation은 최종값 문항에서 제외
 - 고용 상태·주거 유형처럼 사전에 닫힌 값 집합은 객관식, 회사명·주소·금액·인원 수·목록은 단답형

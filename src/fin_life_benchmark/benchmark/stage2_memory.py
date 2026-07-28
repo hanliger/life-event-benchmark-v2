@@ -62,7 +62,16 @@ class MemoryTarget:
 
     @property
     def key(self) -> str:
-        return "::".join((self.path, self.selector, self.entity_id or ""))
+        # A later event may update the same path. Keep each event's question
+        # anchored to its own dated memory snapshot instead of overwriting it.
+        return "::".join(
+            (
+                self.introduced_by_event_instance_id,
+                self.path,
+                self.selector,
+                self.entity_id or "",
+            )
+        )
 
 
 @dataclass
@@ -419,6 +428,10 @@ def _target_item_slug(target: MemoryTarget) -> str:
     parts = [_safe_slug(target.path)]
     if target.selector != "value":
         parts.append(_safe_slug(target.selector))
+    event_digest = hashlib.sha256(
+        target.introduced_by_event_instance_id.encode("utf-8")
+    ).hexdigest()[:8]
+    parts.append(f"event_{event_digest}")
     if target.entity_id:
         digest = hashlib.sha256(target.entity_id.encode("utf-8")).hexdigest()[:8]
         parts.append(f"entity_{digest}")
@@ -426,7 +439,7 @@ def _target_item_slug(target: MemoryTarget) -> str:
 
 
 class Stage2MemoryValueBuilder:
-    """Build cumulative, dated Stage 2 memory-value items."""
+    """Build dated memory questions and evaluate them at longer prefixes."""
 
     def __init__(self, seed: int = 0, paths: RepoPaths | None = None):
         self.seed = seed
@@ -605,18 +618,20 @@ class Stage2MemoryValueBuilder:
         self,
         prefix: dict[str, Any],
         target: MemoryTarget,
-        current_memory: FinancialMemoryState,
+        target_memory: FinancialMemoryState,
         latest_touch: TargetTouch,
         checkpoint_change_type: str,
         trajectory: Trajectory,
-        checkpoint_date: str,
+        evaluation_checkpoint_date: str,
+        evaluation_checkpoint_session_count: int,
+        target_checkpoint_session_count: int,
     ) -> BenchmarkItem:
-        answer_value = extract_target_value(current_memory, target)
+        answer_value = extract_target_value(target_memory, target)
         answer_type = str(target.selector_spec["answer_type"])
         normalizer = target.selector_spec.get("normalizer")
         answer_aliases = dict(target.selector_spec.get("answer_aliases") or {})
-        context = self._question_context(target, current_memory)
-        context["date"] = _format_date(checkpoint_date)
+        context = self._question_context(target, target_memory)
+        context["date"] = _format_date(target.anchor_date)
         question = str(target.selector_spec["question_ko"]).format(**context)
         options: list[CounterfactualOption] = []
         correct_option: str | None = None
@@ -641,7 +656,10 @@ class Stage2MemoryValueBuilder:
             "memory_path": target.path,
             "value_selector": target.selector,
             "entity_id": target.entity_id,
-            "checkpoint_date": checkpoint_date,
+            "checkpoint_date": target.anchor_date,
+            "evaluation_checkpoint_date": evaluation_checkpoint_date,
+            "target_checkpoint_session_count": target_checkpoint_session_count,
+            "evaluation_checkpoint_session_count": evaluation_checkpoint_session_count,
             "target_event_instance_id": latest_touch.event_instance_id,
             "target_event_id": latest_touch.event_id,
             "source_operation": latest_touch.source_operation,
@@ -665,11 +683,10 @@ class Stage2MemoryValueBuilder:
                 "answer_type": answer_type,
                 "normalizer": normalizer,
                 "answer_aliases": answer_aliases,
-                "checkpoint_date": checkpoint_date,
-                "checkpoint_session_count": int(
-                    prefix.get("checkpoint_session_count")
-                    or len(prefix["visible_sessions"])
-                ),
+                "checkpoint_date": target.anchor_date,
+                "evaluation_checkpoint_date": evaluation_checkpoint_date,
+                "checkpoint_session_count": evaluation_checkpoint_session_count,
+                "target_checkpoint_session_count": target_checkpoint_session_count,
                 "memory_path": target.path,
                 "value_selector": target.selector,
                 "question_policy_version": self.policy.version,
@@ -708,6 +725,8 @@ class Stage2MemoryValueBuilder:
             active: set[str] = set()
             targets: dict[str, MemoryTarget] = {}
             touches: dict[str, TargetTouch] = {}
+            target_memories: dict[str, FinancialMemoryState] = {}
+            target_checkpoint_counts: dict[str, int] = {}
             previous_occurred: set[str] = set()
 
             ordered_prefixes = sorted(
@@ -749,7 +768,6 @@ class Stage2MemoryValueBuilder:
                 window_event_id = self._window_event_instance_id(
                     prefix, visible, previous_occurred
                 )
-                touched_this_checkpoint: set[str] = set()
 
                 if window_event_id is not None:
                     instance = instances.get(window_event_id)
@@ -767,21 +785,18 @@ class Stage2MemoryValueBuilder:
                         trajectory, month, order, strictly_before=True
                     )
                     after = _snapshot_at(trajectory, month, order)
-                    value_updates, status_updates = self._resolved_value_updates(
+                    value_updates, _ = self._resolved_value_updates(
                         trajectory, instance, before
                     )
-
-                    for update in status_updates:
-                        active.difference_update(
-                            key for key, target in targets.items()
-                            if target.path == update.path
-                        )
 
                     for update in value_updates:
                         for proposed in self._targets_for_update(
                             instance, update, str(checkpoint_date)
                         ):
                             target = targets.setdefault(proposed.key, proposed)
+                            if proposed.key not in target_memories:
+                                target_memories[proposed.key] = current_memory
+                                target_checkpoint_counts[proposed.key] = count
                             before_value = extract_target_value(before, target)
                             after_value = extract_target_value(after, target)
                             touches[target.key] = TargetTouch(
@@ -796,7 +811,6 @@ class Stage2MemoryValueBuilder:
                                 after_value=after_value,
                             )
                             active.add(target.key)
-                            touched_this_checkpoint.add(target.key)
 
                 for key in sorted(active):
                     target = targets[key]
@@ -805,15 +819,13 @@ class Stage2MemoryValueBuilder:
                         self._build_item(
                             prefix=prefix,
                             target=target,
-                            current_memory=current_memory,
+                            target_memory=target_memories[key],
                             latest_touch=touch,
-                            checkpoint_change_type=(
-                                touch.change_type
-                                if key in touched_this_checkpoint
-                                else "carry_forward"
-                            ),
+                            checkpoint_change_type=touch.change_type,
                             trajectory=trajectory,
-                            checkpoint_date=str(checkpoint_date),
+                            evaluation_checkpoint_date=str(checkpoint_date),
+                            evaluation_checkpoint_session_count=count,
+                            target_checkpoint_session_count=target_checkpoint_counts[key],
                         )
                     )
 

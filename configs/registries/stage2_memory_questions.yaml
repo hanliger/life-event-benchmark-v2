@@ -97,6 +97,7 @@ paths:
         normalizer: integer
       ages:
         label_ko: 자녀 나이
+        enabled: false
         selector_type: list_values
         question_ko: "{date} 기준, 자녀들의 나이를 모두 답하시오."
         answer_type: free_response
@@ -163,6 +164,7 @@ paths:
 
   housing.contract_type:
     label_ko: 주거 계약 유형
+    enabled: false
     question_ko: "{date} 기준, 주거 계약 유형은 무엇인가?"
     answer_type: mcq
     choice_set: residence_status
@@ -209,11 +211,12 @@ paths:
         selector_type: property_field
         field: address
         scope: event_entity
-        question_ko: "{date} 기준, {anchor_date}까지의 상담에서 상태가 확인된 {entity_role_ko}의 주소는 어디인가?"
+        question_ko: "{date} 기준, {anchor_date} 상담에서 변동 대상으로 언급된 {entity_role_ko}의 주소는 어디인가?"
         answer_type: free_response
         normalizer: text
       role:
         label_ko: 주택 용도
+        enabled: false
         selector_type: property_field
         field: role
         scope: event_entity
@@ -244,7 +247,7 @@ paths:
       address:
         label_ko: 실거주 주택 주소
         selector_type: primary_residence_address
-        question_ko: "{date} 기준, 실거주 주택으로 연결된 주소는 어디인가?"
+        question_ko: "{date} 기준, 현재 보유 중인 주택 가운데 실거주 주택이 있다면 그 주소를, 없다면 '없음'을 답하시오."
         answer_type: free_response
         normalizer: text
 
@@ -267,6 +270,7 @@ paths:
     selectors:
       count:
         label_ko: 대출 수
+        enabled: false
         selector_type: list_count
         question_ko: "{date} 기준, 등록된 대출은 몇 건인가?"
         answer_type: free_response
@@ -285,6 +289,7 @@ paths:
 
   financial_products.pension_or_irp:
     label_ko: 연금·IRP 상태
+    enabled: false
     question_ko: "{date} 기준, 연금·IRP 상태는 무엇인가?"
     answer_type: mcq
     choice_set: pension_or_irp
@@ -301,6 +306,7 @@ paths:
     selectors:
       category:
         label_ko: 최근 일회성 지출 유형
+        enabled: false
         selector_type: dict_key
         key: category
         question_ko: "{date} 기준, 가장 최근 일회성 지출의 유형은 무엇인가?"

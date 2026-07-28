@@ -206,19 +206,15 @@ def test_stage2_policy_excludes_disabled_paths_and_selectors():
     instance = SimpleNamespace(params={"property_id": "property_001"})
 
     assert policy.selector_specs("employment.salary_account", instance) == []
-    assert [
-        selector
-        for selector, _, _ in policy.selector_specs(
-            "financial_products.loans", instance
-        )
-    ] == ["count"]
+    assert policy.selector_specs("financial_products.loans", instance) == []
     assert [
         selector
         for selector, _, _ in policy.selector_specs("housing.properties", instance)
-    ] == ["owned_count", "address", "role", "ownership_status"]
+    ] == ["owned_count", "address", "ownership_status"]
+    assert policy.selector_specs("financial_products.pension_or_irp", instance) == []
 
 
-def test_stage2_child_education_question_is_valid_for_carry_forward():
+def test_stage2_child_education_question_is_valid_for_dated_reuse():
     policy = Stage2QuestionPolicy()
 
     question = policy.path_policy("education.child_education_stage")["question_ko"]

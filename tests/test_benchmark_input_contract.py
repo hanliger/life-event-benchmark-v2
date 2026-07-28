@@ -12,7 +12,10 @@ from fin_life_benchmark.benchmark.stage2_memory import (
 )
 
 from scripts.evaluate_benchmark_items import (
+    _build_stage2_batch_prompt,
     _build_stage2_prompt,
+    _evaluation_units,
+    _parse_stage2_batch_answers,
     _score_item,
     _visible_sessions,
 )
@@ -56,6 +59,78 @@ def test_stage2_prompt_uses_dates_and_excludes_internal_session_metadata():
     assert "DO_NOT_LEAK" not in prompt
     assert "structured_context" not in prompt
     assert "cue_annotations" not in prompt
+
+
+def test_stage2_batch_prompt_shows_shared_sessions_once():
+    session = {
+        "trajectory_id": "traj_001",
+        "session_id": "S015",
+        "session_date": "2025-03-15",
+        "turns": [
+            {"speaker": "user", "text": "공통 상담 근거입니다."},
+            {"speaker": "assistant", "text": "확인했습니다."},
+        ],
+    }
+    items = [
+        {
+            "item_id": "item_001",
+            "stage": "stage2_memory_value",
+            "question": "첫 번째 질문",
+            "metadata": {"answer_type": "mcq", "initial_memory": {}},
+            "options": [
+                {"option_id": "A", "text": "첫 번째 보기"},
+                {"option_id": "B", "text": "두 번째 보기"},
+            ],
+        },
+        {
+            "item_id": "item_002",
+            "stage": "stage2_memory_value",
+            "question": "두 번째 질문",
+            "metadata": {"answer_type": "free_response", "initial_memory": {}},
+        },
+    ]
+
+    prompt = _build_stage2_batch_prompt(items, [session])
+
+    assert prompt.count("공통 상담 근거입니다.") == 1
+    assert "첫 번째 질문" in prompt
+    assert "두 번째 질문" in prompt
+    assert '"answers"' in prompt
+
+
+def test_stage2_batch_answers_preserve_explicit_null():
+    parsed = _parse_stage2_batch_answers(
+        '{"answers": [{"item_id": "item_001", "answer": "B"}, '
+        '{"item_id": "item_002", "answer": null}]}'
+    )
+
+    assert parsed["item_001"] == (True, "B")
+    assert parsed["item_002"] == (True, None)
+
+
+def test_stage2_items_are_grouped_by_visible_checkpoint():
+    items = [
+        {
+            "stage": "stage2_memory_value",
+            "trajectory_id": "traj_001",
+            "visible_sessions": ["S001", "S015"],
+        },
+        {
+            "stage": "stage2_memory_value",
+            "trajectory_id": "traj_001",
+            "visible_sessions": ["S001", "S015"],
+        },
+        {
+            "stage": "stage2_memory_value",
+            "trajectory_id": "traj_001",
+            "visible_sessions": ["S001", "S015", "S030"],
+        },
+    ]
+
+    units = _evaluation_units(items)
+
+    assert [kind for kind, _ in units] == ["stage2_batch", "stage2_batch"]
+    assert [len(batch) for _, batch in units] == [2, 1]
 
 
 def test_stage2_free_response_normalizes_krw_surface_forms():

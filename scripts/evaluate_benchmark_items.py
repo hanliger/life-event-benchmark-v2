@@ -2,6 +2,8 @@
 """Evaluate Stage 1 and Stage 2 benchmark items with an LLM.
 
 Stage 2 supports both closed-domain MCQ and normalized free-response items.
+Stage 2 items sharing a checkpoint are evaluated in one request so the
+checkpoint context is presented once per batch rather than once per item.
 """
 
 from __future__ import annotations
@@ -110,6 +112,64 @@ def _build_stage2_prompt(
     return "\n".join(lines)
 
 
+def _stage2_question_block(item: dict[str, Any], index: int) -> list[str]:
+    """Render one question without repeating the shared session context."""
+    metadata = item.get("metadata") or {}
+    answer_type = metadata.get("answer_type") or (item.get("gold") or {}).get(
+        "answer_type"
+    )
+    lines = [
+        f"[문항 {index}: {item.get('item_id', 'unknown')} ]",
+        f"답변 유형: {answer_type}",
+    ]
+    memory_text = _format_initial_memory(metadata.get("initial_memory") or {})
+    if memory_text:
+        lines.extend([memory_text])
+    lines.extend([item["question"]])
+
+    if answer_type == "mcq":
+        lines.extend(
+            f"{option['option_id']}. {option['text']}"
+            for option in item.get("options", [])
+        )
+        lines.append("정답은 선택지 ID 하나로 답하세요.")
+    else:
+        lines.append("정답 값만 답하세요.")
+    return lines
+
+
+def _build_stage2_batch_prompt(
+    items: list[dict[str, Any]],
+    sessions: list[dict[str, Any]],
+) -> str:
+    """Render one shared checkpoint context followed by all its questions."""
+    if not items:
+        raise ValueError("cannot build a Stage 2 batch prompt without items")
+    lines = [
+        "다음은 한 고객의 날짜순 은행 상담 이력입니다.",
+        "아래 상담 이력은 뒤의 모든 문항에 공통으로 사용하세요.",
+        "상담 발화와 각 문항에 제공된 초기 금융 메모리만 근거로 답하세요.",
+        "각 문항은 서로 독립적으로 판단하고, Life Event를 추측해 설명하지 마세요.",
+        "",
+        "[공통 상담 이력]",
+        _format_sessions(sessions, use_dates=True),
+        "",
+        "[문항 목록]",
+    ]
+    for index, item in enumerate(items, start=1):
+        lines.extend(_stage2_question_block(item, index))
+        lines.append("")
+    lines.extend(
+        [
+            "[응답 형식]",
+            "모든 문항에 대해 정확히 한 개의 답을 반환하세요.",
+            "item_id는 입력된 값 그대로 유지하세요.",
+            'JSON만 답하세요. 예: {"answers": [{"item_id": "item_001", "answer": "B"}]}',
+        ]
+    )
+    return "\n".join(lines)
+
+
 def _build_stage1_prompt(
     item: dict[str, Any],
     sessions: list[dict[str, Any]],
@@ -157,6 +217,29 @@ def _parse_mcq_answer(raw: str) -> str:
             return answer[:1]
     match = re.search(r"\b([A-Z])\b", raw.strip().upper())
     return match.group(1) if match else ""
+
+
+def _parse_stage2_batch_answers(raw: str) -> dict[str, tuple[bool, Any]]:
+    """Parse ``item_id``-keyed answers while preserving explicit null values."""
+    payload = _extract_json(raw)
+    if not payload:
+        return {}
+    answers = payload.get("answers")
+    if isinstance(answers, dict):
+        return {
+            str(item_id): (True, value)
+            for item_id, value in answers.items()
+        }
+    if not isinstance(answers, list):
+        return {}
+
+    parsed: dict[str, tuple[bool, Any]] = {}
+    for answer in answers:
+        if not isinstance(answer, dict) or "item_id" not in answer:
+            continue
+        item_id = str(answer["item_id"])
+        parsed[item_id] = ("answer" in answer, answer.get("answer"))
+    return parsed
 
 
 def _parse_free_response(raw: str) -> tuple[Any, bool]:
@@ -251,6 +334,78 @@ def _build_prompt(
     if item.get("stage") == "stage1_event_status":
         return _build_stage1_prompt(item, sessions)
     raise ValueError(f"unsupported stage: {item.get('stage')}")
+
+
+def _stage2_batch_key(item: dict[str, Any]) -> tuple[str, tuple[str, ...]]:
+    return (
+        str(item.get("trajectory_id", "")),
+        tuple(str(session_id) for session_id in item.get("visible_sessions", [])),
+    )
+
+
+def _evaluation_units(
+    items: list[dict[str, Any]],
+) -> list[tuple[str, list[dict[str, Any]]]]:
+    """Create single-item units and checkpoint-scoped Stage 2 batches."""
+    units: list[tuple[str, list[dict[str, Any]]]] = []
+    stage2_groups: dict[tuple[str, tuple[str, ...]], list[dict[str, Any]]] = {}
+    stage2_order: list[tuple[str, tuple[str, ...]]] = []
+    for item in items:
+        if item.get("stage") != "stage2_memory_value":
+            units.append(("single", [item]))
+            continue
+        key = _stage2_batch_key(item)
+        if key not in stage2_groups:
+            stage2_groups[key] = []
+            stage2_order.append(key)
+        stage2_groups[key].append(item)
+    units.extend(("stage2_batch", stage2_groups[key]) for key in stage2_order)
+    return units
+
+
+def _build_record(
+    item: dict[str, Any],
+    raw: str,
+    response_metadata: dict[str, Any],
+    *,
+    batch_id: str | None = None,
+    batch_size: int = 1,
+) -> dict[str, Any]:
+    pred, gold, correct, error = _score_item(item, raw)
+    item_metadata = item.get("metadata") or {}
+    item_gold = item.get("gold") or {}
+    return {
+        "item_id": item.get("item_id"),
+        "stage": item.get("stage"),
+        "trajectory_id": item.get("trajectory_id"),
+        "prefix_id": item.get("prefix_id"),
+        "n_visible_sessions": len(item.get("visible_sessions", [])),
+        "answer_type": item_metadata.get("answer_type"),
+        "memory_path": item_gold.get("memory_path"),
+        "value_selector": item_gold.get("value_selector"),
+        "checkpoint_session_count": item_metadata.get(
+            "checkpoint_session_count"
+        ),
+        "checkpoint_date": item_metadata.get("checkpoint_date"),
+        "evaluation_checkpoint_date": item_metadata.get(
+            "evaluation_checkpoint_date"
+        ),
+        "target_checkpoint_session_count": item_metadata.get(
+            "target_checkpoint_session_count"
+        ),
+        "evaluation_checkpoint_session_count": item_metadata.get(
+            "evaluation_checkpoint_session_count"
+        ),
+        "checkpoint_change_type": item_gold.get("checkpoint_change_type"),
+        "evaluation_batch_id": batch_id,
+        "evaluation_batch_size": batch_size,
+        "prediction": pred,
+        "gold": gold,
+        "correct": correct,
+        "error": error,
+        "raw_response": raw,
+        "response_metadata": response_metadata,
+    }
 
 
 def _mock_answer(item: dict[str, Any]) -> str:
@@ -374,8 +529,54 @@ def main() -> int:
     system = (
         RepoPaths.default().prompts / "system" / "benchmark_evaluator_ko.txt"
     ).read_text(encoding="utf-8").strip()
-    for item in tqdm(items, desc="evaluate"):
-        visible = _visible_sessions(item, sessions_by_id)
+    units = _evaluation_units(items)
+    for unit_index, (unit_type, unit_items) in enumerate(
+        tqdm(units, desc="evaluate"), start=1
+    ):
+        first_item = unit_items[0]
+        visible = _visible_sessions(first_item, sessions_by_id)
+        batch_id = f"batch_{unit_index:04d}" if unit_type == "stage2_batch" else None
+
+        if unit_type == "stage2_batch":
+            prompt = _build_stage2_batch_prompt(unit_items, visible)
+            if args.execute:
+                assert client is not None
+                raw = client.generate(system=system, user=prompt)
+                response_metadata = dict(client.last_response_metadata)
+            else:
+                answers = []
+                for item in unit_items:
+                    gold = item.get("gold") or {}
+                    if gold.get("answer_type") == "mcq":
+                        answer = gold.get("correct_option")
+                    else:
+                        answer = gold.get("answer_value")
+                    answers.append({"item_id": item.get("item_id"), "answer": answer})
+                raw = json.dumps({"answers": answers}, ensure_ascii=False)
+                response_metadata = {"provider": "mock", "model": "mock"}
+
+            parsed_answers = _parse_stage2_batch_answers(raw)
+            for item in unit_items:
+                item_id = str(item.get("item_id"))
+                has_answer, answer = parsed_answers.get(item_id, (False, None))
+                item_raw = (
+                    json.dumps({"answer": answer}, ensure_ascii=False)
+                    if has_answer
+                    else ""
+                )
+                record = _build_record(
+                    item,
+                    item_raw,
+                    response_metadata,
+                    batch_id=batch_id,
+                    batch_size=len(unit_items),
+                )
+                records.append(record)
+                with output.open("a", encoding="utf-8") as handle:
+                    handle.write(json.dumps(record, ensure_ascii=False) + "\n")
+            continue
+
+        item = first_item
         prompt = _build_prompt(item, visible)
         if args.execute:
             assert client is not None
@@ -384,39 +585,7 @@ def main() -> int:
         else:
             raw = _mock_answer(item)
             response_metadata = {"provider": "mock", "model": "mock"}
-        pred, gold, correct, error = _score_item(item, raw)
-        item_metadata = item.get("metadata") or {}
-        item_gold = item.get("gold") or {}
-        record = {
-            "item_id": item.get("item_id"),
-            "stage": item.get("stage"),
-            "trajectory_id": item.get("trajectory_id"),
-            "prefix_id": item.get("prefix_id"),
-            "n_visible_sessions": len(item.get("visible_sessions", [])),
-            "answer_type": item_metadata.get("answer_type"),
-            "memory_path": item_gold.get("memory_path"),
-            "value_selector": item_gold.get("value_selector"),
-            "checkpoint_session_count": item_metadata.get(
-                "checkpoint_session_count"
-            ),
-            "checkpoint_date": item_metadata.get("checkpoint_date"),
-            "evaluation_checkpoint_date": item_metadata.get(
-                "evaluation_checkpoint_date"
-            ),
-            "target_checkpoint_session_count": item_metadata.get(
-                "target_checkpoint_session_count"
-            ),
-            "evaluation_checkpoint_session_count": item_metadata.get(
-                "evaluation_checkpoint_session_count"
-            ),
-            "checkpoint_change_type": item_gold.get("checkpoint_change_type"),
-            "prediction": pred,
-            "gold": gold,
-            "correct": correct,
-            "error": error,
-            "raw_response": raw,
-            "response_metadata": response_metadata,
-        }
+        record = _build_record(item, raw, response_metadata)
         records.append(record)
         with output.open("a", encoding="utf-8") as handle:
             handle.write(json.dumps(record, ensure_ascii=False) + "\n")

@@ -45,6 +45,7 @@ DIALOGUE_JUDGE_ROOT := $(CANARY_V2_ROOT)/reports/dialogue_judge
 # packet score instead (same rubric).
 REVIEW_DECISION ?= $(DIALOGUE_JUDGE_ROOT)/judge_review_decision.json
 RQ1_ROOT := $(RUN_DIR)/rq1
+RQ1_PAIR_ROOT := $(RUN_DIR)/rq1_pair_temp
 RQ1_CONDITION ?= full_prefix
 RQ1_MODEL_TAG ?= $(if $(filter 1,$(EXECUTE)),live,mock__mock)
 
@@ -56,7 +57,8 @@ RQ1_MODEL_TAG ?= $(if $(filter 1,$(EXECUTE)),live,mock__mock)
 	dialogue-smoke-dry dialogue-smoke validate-dialogues \
 	export-gold build-items evaluate history-filter audit pipeline-smoke test clean-generated \
 	export-gold-controlled build-items-controlled audit-controlled export-public \
-	build-rq1 build-rq1-distractor audit-rq1 evaluate-rq1 rq1-controlled
+	build-rq1 build-rq1-distractor audit-rq1 evaluate-rq1 rq1-controlled \
+	audit-rq1-pairs evaluate-rq1-pairs-dev
 
 setup:
 	$(PYTHON) -m pip install -r requirements.txt
@@ -376,6 +378,29 @@ evaluate-rq1:
 		$(if $(RQ1_MODEL),--model $(RQ1_MODEL),) \
 		--output $(RQ1_ROOT)/predictions/$(RQ1_MODEL_TAG)/natural_$(RQ1_CONDITION).jsonl \
 		--report $(RQ1_ROOT)/reports/$(RQ1_MODEL_TAG)/natural_$(RQ1_CONDITION).json \
+		$(if $(filter 1,$(EXECUTE)),--execute,)
+
+# --- RQ1 temporary pilot: stage1_occurred_event_evidence_pairs -------------
+# Reuses the items built by build-rq1; writes to a separate artifact root so
+# the stage1_event_trajectory pilot stays reproducible.
+audit-rq1-pairs:
+	$(PYTHON) scripts/audit_rq1_pair_protocol.py \
+		--items $(RQ1_ROOT)/natural/progressive_items.jsonl \
+		--sessions-dir $(SESS_DIR) --taxonomy $(RQ1_ROOT)/taxonomy.json \
+		$(if $(RQ1_PAIR_TRAJ),--trajectory-id $(RQ1_PAIR_TRAJ),) \
+		--output-dir $(RQ1_PAIR_ROOT)/audit
+
+# EXECUTE=1 calls the real LLM (provider/model from .env unless RQ1_PROVIDER/
+# RQ1_MODEL are given); default is an offline mock plumbing check.
+evaluate-rq1-pairs-dev:
+	$(PYTHON) scripts/evaluate_rq1_pairs.py \
+		--items $(RQ1_ROOT)/natural/progressive_items.jsonl \
+		--sessions-dir $(SESS_DIR) --taxonomy $(RQ1_ROOT)/taxonomy.json \
+		--split dev \
+		$(if $(RQ1_PROVIDER),--provider $(RQ1_PROVIDER),) \
+		$(if $(RQ1_MODEL),--model $(RQ1_MODEL),) \
+		--output $(RQ1_PAIR_ROOT)/predictions/$(RQ1_MODEL_TAG).jsonl \
+		--report $(RQ1_PAIR_ROOT)/reports/$(RQ1_MODEL_TAG).json \
 		$(if $(filter 1,$(EXECUTE)),--execute,)
 
 # Full controlled RQ1 build from frozen artifacts: restore trajectories +

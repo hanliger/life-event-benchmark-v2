@@ -523,6 +523,37 @@ data/runs/<RUN_ID>/rq1/
 
 프롬프트는 `prompts/benchmark/rq1_event_trajectory_ko.md`에 버전 관리되며 내용 SHA-256이 run metadata와 모든 report에 기록됩니다. item/prediction 파일은 `data/runs/` 아래 생성물이므로 git에 커밋하지 않습니다.
 
+#### D.4 (임시) occurred-event 근거 짝 파일럿
+
+RQ1 재설계 판단 전에 돌리는 **최소·임시** 프로토콜입니다
+(`stage1_occurred_event_evidence_pairs`, `rq1-occurred-event-pairs-temp-v1`).
+위 `stage1_event_trajectory`는 그대로 남아 있고, 이 파일럿은 같은
+`natural/progressive_items.jsonl`을 재사용하면서 딱 한 가지만 묻습니다:
+
+> 이 prefix에서 **실제로 일어난** 생애 사건과, 그 발생을 처음 확정하는 세션의
+> 짝을 모두 복원할 수 있는가?
+
+- gold: occurred 인스턴스 1개당 짝 1개. anchor는 그 인스턴스에 연결된 visible
+  세션 중 `session_type == occurred_evidence`이고
+  `event_status_after_session == occurred`인 **가장 이른** 세션. fallback 없음.
+  cancelled / weak_signal / upcoming 인스턴스는 gold를 만들지 않습니다.
+- 출력은 `{"pairs": [{"event_id", "evidence_session_id"}]}` 뿐입니다. status·
+  confidence·설명은 받지 않습니다.
+- headline은 `strict_occurred_event_evidence_f1` 하나. `collections.Counter`
+  기반 exact multiset P/R/F1이므로 sibling 라벨·잘못된 근거 세션·중복 예측·무효
+  레코드는 전부 precision을 깎고, 놓친 짝은 recall을 깎습니다. 부분점수 없음.
+- 15..300 checkpoint별로 trajectory macro 평균을 낸 뒤 20개 checkpoint를 동일
+  가중으로 평균(AUC)합니다. checkpoint를 가로질러 atom을 pooling하지 않습니다.
+
+```bash
+make audit-rq1-pairs                      # 프로토콜/프롬프트/gold 감사 (실패 시 exit 1)
+make evaluate-rq1-pairs-dev               # offline mock
+make evaluate-rq1-pairs-dev EXECUTE=1 RQ1_PROVIDER=anthropic RQ1_MODEL=claude-opus-4-8
+```
+
+산출물은 기존 파일럿을 덮지 않도록 `data/runs/<RUN_ID>/rq1_pair_temp/`
+(`protocol_manifest.json`, `predictions/`, `reports/`, `audit/`)에 씁니다.
+
 ---
 
 ## 6. 데이터 정책

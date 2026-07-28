@@ -44,6 +44,9 @@ DIALOGUE_JUDGE_ROOT := $(CANARY_V2_ROOT)/reports/dialogue_judge
 # with $(CANARY_V2_ROOT)/review/human_review_decision.json to gate on a human
 # packet score instead (same rubric).
 REVIEW_DECISION ?= $(DIALOGUE_JUDGE_ROOT)/judge_review_decision.json
+RQ1_ROOT := $(RUN_DIR)/rq1
+RQ1_CONDITION ?= full_prefix
+RQ1_MODEL_TAG ?= $(if $(filter 1,$(EXECUTE)),live,mock__mock)
 
 .PHONY: setup inventory normalize-personas initial-states simulate-smoke plan-dialogues audit-dialogue-plans \
 	dialogue-canary audit-dialogue-canary review-dialogue-canary dialogue-production-remaining \
@@ -52,7 +55,8 @@ REVIEW_DECISION ?= $(DIALOGUE_JUDGE_ROOT)/judge_review_decision.json
 	coverage-trajectories fetch-dialogues fetch-counterfactual-fillers restore-frozen-run counterfactual-ablation \
 	dialogue-smoke-dry dialogue-smoke validate-dialogues \
 	export-gold build-items evaluate history-filter audit pipeline-smoke test clean-generated \
-	export-gold-controlled build-items-controlled audit-controlled export-public
+	export-gold-controlled build-items-controlled audit-controlled export-public \
+	build-rq1 build-rq1-distractor audit-rq1 evaluate-rq1 rq1-controlled
 
 setup:
 	$(PYTHON) -m pip install -r requirements.txt
@@ -338,6 +342,47 @@ audit-controlled:
 		--trajectories-dir $(TRAJ_DIR) --sessions-dir $(SESS_DIR) \
 		--checkpoints $(GOLD_CHECKPOINTS) \
 		--stage2-items $(ITEMS_DIR)/stage2_memory_value.jsonl --output-dir $(QUALITY)
+
+# --- RQ1: stage1_event_trajectory (progressive ledger reconstruction) ------
+# Natural items for every 15-session checkpoint, from frozen data only.
+build-rq1:
+	$(PYTHON) scripts/build_rq1_items.py \
+		--prefix-gold $(GOLD_CHECKPOINTS) --sessions-dir $(SESS_DIR) \
+		--trajectories-dir $(TRAJ_DIR) --output-dir $(RQ1_ROOT) --seed $(SEED)
+
+# Paired full/mask_distractor/sham hard-negative cases (needs the frozen
+# counterfactual filler bank; fetch with `make fetch-counterfactual-fillers`).
+build-rq1-distractor:
+	$(PYTHON) scripts/build_rq1_distractor_cases.py \
+		--sessions-dir $(SESS_DIR) --trajectories-dir $(TRAJ_DIR) \
+		--fillers-dir $(CF_ROOT)/sessions \
+		--output $(RQ1_ROOT)/distractor/cases.jsonl \
+		--manifest $(RQ1_ROOT)/manifest.json
+
+audit-rq1:
+	$(PYTHON) scripts/audit_rq1_items.py \
+		--rq1-root $(RQ1_ROOT) --sessions-dir $(SESS_DIR) \
+		--fillers-dir $(CF_ROOT)/sessions --trajectories-dir $(TRAJ_DIR) \
+		--output-dir $(RQ1_ROOT)/audit
+
+# EXECUTE=1 calls the real LLM (provider/model from .env unless RQ1_PROVIDER/
+# RQ1_MODEL are given); default is an offline mock plumbing check.
+# RQ1_CONDITION: full_prefix | last_15 | oracle_evidence
+evaluate-rq1:
+	$(PYTHON) scripts/evaluate_rq1.py \
+		--items $(RQ1_ROOT)/natural/progressive_items.jsonl \
+		--sessions-dir $(SESS_DIR) --condition $(RQ1_CONDITION) \
+		$(if $(RQ1_PROVIDER),--provider $(RQ1_PROVIDER),) \
+		$(if $(RQ1_MODEL),--model $(RQ1_MODEL),) \
+		--output $(RQ1_ROOT)/predictions/$(RQ1_MODEL_TAG)/natural_$(RQ1_CONDITION).jsonl \
+		--report $(RQ1_ROOT)/reports/$(RQ1_MODEL_TAG)/natural_$(RQ1_CONDITION).json \
+		$(if $(filter 1,$(EXECUTE)),--execute,)
+
+# Full controlled RQ1 build from frozen artifacts: restore trajectories +
+# HF sessions, recompute checkpoint gold, build items + distractor cases,
+# then audit. Never regenerates dialogue data.
+rq1-controlled: restore-frozen-run fetch-counterfactual-fillers export-gold-controlled build-rq1 build-rq1-distractor audit-rq1
+	@echo "rq1-controlled complete. Artifacts in $(RQ1_ROOT)/"
 
 pipeline-smoke: inventory normalize-personas initial-states simulate-smoke dialogue-smoke validate-dialogues export-gold build-items history-filter audit
 	@echo "pipeline-smoke complete. Reports in $(QUALITY)/"

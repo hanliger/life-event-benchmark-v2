@@ -22,16 +22,16 @@ trajectory가 하나뿐이므로 bootstrap 신뢰구간도 통계적 추론에 �
 
 ## 2. 지표의 의미
 
-- **전체 최종 상태 정확도**: 34개 전체 상태 path 중 값과 상태가 모두 맞은 비율
-- **동적 path 최종 상태 정확도**: 전체 데이터에서 한 번이라도 실제로 바뀌는
+- **Final State Accuracy**: 34개 전체 상태 path 중 값과 상태가 모두 맞은 비율
+- **Dynamic-path Final State Accuracy**: 전체 데이터에서 한 번이라도 실제로 바뀌는
   25개 path만 대상으로 계산한 최종 상태 정확도
-- **정확한 변경 F1**: 변경 여부를 맞히는 것에 더해 변경된 새 값까지 정확히
+- **Correct-change F1**: 변경 여부를 맞히는 것에 더해 변경된 새 값까지 정확히
   예측해야 정답으로 인정하는 F1
-- **path 매크로 정확한 변경 F1**: 자주 바뀌는 path가 결과를 지배하지 않도록,
-  실제 변경이 있는 각 path의 정확한 변경 F1에 같은 가중치를 부여한 평균
-- **이벤트 매크로 갱신 정확도**: 각 Gold 갱신 이벤트가 이후 첫 평가 시점에
+- **Path-macro Correct-change F1**: 자주 바뀌는 path가 결과를 지배하지 않도록,
+  실제 변경이 있는 각 path의 Correct-change F1에 같은 가중치를 부여한 평균
+- **Event-macro Update Accuracy**: 각 Gold 갱신 이벤트가 이후 첫 평가 시점에
   얼마나 정확히 반영됐는지 계산하고 이벤트별로 같은 가중치를 부여한 평균
-- **갱신 후 유지 정확도**: 한 번 반영한 갱신을 이후 checkpoint에서도 계속
+- **Retention-after-update**: 한 번 반영한 갱신을 이후 checkpoint에서도 계속
   정확히 유지하는지를 관측 가능한 지연 구간에 걸쳐 평균한 값
 
 ## 3. 최종 집계 결과
@@ -40,54 +40,54 @@ trajectory가 하나뿐이므로 bootstrap 신뢰구간도 통계적 추론에 �
 확인 실행 결과로 교체했다. 12,000-token 상한에서 잘린 두 응답은 점수 표에서는
 제외했지만 실패 기록과 비용 원장에는 그대로 보존했다.
 
-| 모델 및 입력 조건 | 전체 최종 상태 | 동적 path 최종 상태 | 정확한 변경 F1 | path 매크로 F1 | 이벤트 갱신 | 갱신 후 유지 | 파싱 성공 |
+| Model / Input Condition | Final State Accuracy | Dynamic-path Final State Accuracy | Correct-change F1 | Path-macro Correct-change F1 | Event-macro Update Accuracy | Retention-after-update | Parse Success |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Claude Opus 5, 전체 대화 | **87.65** | **91.20** | **83.07** | **78.55** | **88.12** | **87.50** | 5/5 |
-| Gemini 3.1 Pro Preview, 전체 대화 | 79.41 | 81.60 | 69.07 | 59.33 | 74.69 | 75.97 | 5/5 |
-| GPT-5.6 Sol, 전체 대화 | 74.71 | 77.60 | 62.77 | 59.71 | 67.92 | 61.98 | 5/5 |
-| GPT-5.6 Sol, 정답 관련 대화만 제공 | 75.88 | 76.00 | 65.65 | 64.95 | 70.10 | 62.29 | 5/5 |
+| Claude Opus 5 / Full Context | **87.65** | **91.20** | **83.07** | **78.55** | **88.12** | **87.50** | 5/5 |
+| Gemini 3.1 Pro Preview / Full Context | 79.41 | 81.60 | 69.07 | 59.33 | 74.69 | 75.97 | 5/5 |
+| GPT-5.6 Sol / Full Context | 74.71 | 77.60 | 62.77 | 59.71 | 67.92 | 61.98 | 5/5 |
+| GPT-5.6 Sol / Oracle Relevant | 75.88 | 76.00 | 65.65 | 64.95 | 70.10 | 62.29 | 5/5 |
 
 ## 4. checkpoint별 결과
 
 ### 4.1 Claude Opus 5, 전체 대화
 
-| checkpoint | 파싱 | 전체 최종 상태 | 동적 path 최종 상태 | 정확한 변경 F1 | 변경 path 정확도 | 미변경 path 정확도 |
+| Checkpoint | Parse | Final State Accuracy | Dynamic-path Final State Accuracy | Correct-change F1 | Changed-state Accuracy | Unchanged-state Accuracy |
 |---:|---|---:|---:|---:|---:|---:|
-| 60 | 성공 | 85.3 | 88.0 | 78.6 | 78.6 | 90.0 |
-| 120 | 성공 | 97.1 | 100.0 | 95.7 | 100.0 | 95.7 |
-| 180 | 성공 | 91.2 | 96.0 | 88.9 | 100.0 | 86.4 |
-| 240 | 성공 | 79.4 | 84.0 | 72.2 | 76.5 | 82.4 |
-| 300 | 성공 | 85.3 | 88.0 | 80.0 | 80.0 | 89.5 |
+| 60 | OK | 85.3 | 88.0 | 78.6 | 78.6 | 90.0 |
+| 120 | OK | 97.1 | 100.0 | 95.7 | 100.0 | 95.7 |
+| 180 | OK | 91.2 | 96.0 | 88.9 | 100.0 | 86.4 |
+| 240 | OK | 79.4 | 84.0 | 72.2 | 76.5 | 82.4 |
+| 300 | OK | 85.3 | 88.0 | 80.0 | 80.0 | 89.5 |
 
 ### 4.2 Gemini 3.1 Pro Preview, 전체 대화
 
-| checkpoint | 파싱 | 전체 최종 상태 | 동적 path 최종 상태 | 정확한 변경 F1 | 변경 path 정확도 | 미변경 path 정확도 |
+| Checkpoint | Parse | Final State Accuracy | Dynamic-path Final State Accuracy | Correct-change F1 | Changed-state Accuracy | Unchanged-state Accuracy |
 |---:|---|---:|---:|---:|---:|---:|
-| 60 | 성공 | 79.4 | 84.0 | 73.3 | 78.6 | 80.0 |
-| 120 | 성공 | 91.2 | 96.0 | 87.0 | 90.9 | 91.3 |
-| 180 | 성공 | 82.4 | 84.0 | 71.4 | 83.3 | 81.8 |
-| 240 | 성공 | 70.6 | 68.0 | 55.6 | 58.8 | 82.4 |
-| 300 | 성공 | 73.5 | 76.0 | 58.1 | 60.0 | 84.2 |
+| 60 | OK | 79.4 | 84.0 | 73.3 | 78.6 | 80.0 |
+| 120 | OK | 91.2 | 96.0 | 87.0 | 90.9 | 91.3 |
+| 180 | OK | 82.4 | 84.0 | 71.4 | 83.3 | 81.8 |
+| 240 | OK | 70.6 | 68.0 | 55.6 | 58.8 | 82.4 |
+| 300 | OK | 73.5 | 76.0 | 58.1 | 60.0 | 84.2 |
 
 ### 4.3 GPT-5.6 Sol, 전체 대화
 
-| checkpoint | 파싱 | 전체 최종 상태 | 동적 path 최종 상태 | 정확한 변경 F1 | 변경 path 정확도 | 미변경 path 정확도 |
+| Checkpoint | Parse | Final State Accuracy | Dynamic-path Final State Accuracy | Correct-change F1 | Changed-state Accuracy | Unchanged-state Accuracy |
 |---:|---|---:|---:|---:|---:|---:|
-| 60 | 성공 | 79.4 | 80.0 | 69.0 | 71.4 | 85.0 |
-| 120 | 성공 | 88.2 | 96.0 | 84.6 | 100.0 | 82.6 |
-| 180 | 성공 | 79.4 | 84.0 | 69.0 | 83.3 | 77.3 |
-| 240 | 성공 | 58.8 | 60.0 | 46.2 | 52.9 | 64.7 |
-| 300 | 성공 | 67.6 | 68.0 | 45.2 | 46.7 | 84.2 |
+| 60 | OK | 79.4 | 80.0 | 69.0 | 71.4 | 85.0 |
+| 120 | OK | 88.2 | 96.0 | 84.6 | 100.0 | 82.6 |
+| 180 | OK | 79.4 | 84.0 | 69.0 | 83.3 | 77.3 |
+| 240 | OK | 58.8 | 60.0 | 46.2 | 52.9 | 64.7 |
+| 300 | OK | 67.6 | 68.0 | 45.2 | 46.7 | 84.2 |
 
-### 4.4 GPT-5.6 Sol, 정답 관련 대화만 제공
+### 4.4 GPT-5.6 Sol, Oracle Relevant
 
-| checkpoint | 파싱 | 전체 최종 상태 | 동적 path 최종 상태 | 정확한 변경 F1 | 변경 path 정확도 | 미변경 path 정확도 |
+| Checkpoint | Parse | Final State Accuracy | Dynamic-path Final State Accuracy | Correct-change F1 | Changed-state Accuracy | Unchanged-state Accuracy |
 |---:|---|---:|---:|---:|---:|---:|
-| 60 | 성공 | 79.4 | 80.0 | 73.3 | 78.6 | 80.0 |
-| 120 | 성공 | 88.2 | 92.0 | 84.6 | 100.0 | 82.6 |
-| 180 | 성공 | 88.2 | 88.0 | 76.9 | 83.3 | 90.9 |
-| 240 | 성공 | 58.8 | 56.0 | 37.8 | 41.2 | 76.5 |
-| 300 | 성공 | 64.7 | 64.0 | 55.6 | 66.7 | 63.2 |
+| 60 | OK | 79.4 | 80.0 | 73.3 | 78.6 | 80.0 |
+| 120 | OK | 88.2 | 92.0 | 84.6 | 100.0 | 82.6 |
+| 180 | OK | 88.2 | 88.0 | 76.9 | 83.3 | 90.9 |
+| 240 | OK | 58.8 | 56.0 | 37.8 | 41.2 | 76.5 |
+| 300 | OK | 64.7 | 64.0 | 55.6 | 66.7 | 63.2 |
 
 ## 5. Gemini 출력 상한 실패와 수정
 
@@ -110,21 +110,21 @@ thinking 12,669 tokens와 실제 답변 1,733 tokens를 사용하고 완전한 J
 12,000-token item을 잘못 재사용하지 않도록 했다. Gold와 평가 대상 path는
 변경하지 않았다.
 
-## 6. 정답 관련 대화만 제공한 조건과의 비교
+## 6. Oracle Relevant 비교
 
-GPT 정답 관련 대화 조건에서 전체 대화 조건을 뺀 차이는 다음과 같다.
+GPT Oracle Relevant 조건에서 Full Context 조건을 뺀 차이는 다음과 같다.
 
-| 지표 | 차이, %p |
+| Metric | Delta (%p) |
 |---|---:|
-| 전체 최종 상태 정확도 | +1.18 |
-| 동적 path 최종 상태 정확도 | -1.60 |
-| 정확한 변경 F1 | +2.88 |
-| path 매크로 정확한 변경 F1 | +5.24 |
-| 이벤트 매크로 갱신 정확도 | +2.19 |
-| 갱신 후 유지 정확도 | +0.31 |
+| Final State Accuracy | +1.18 |
+| Dynamic-path Final State Accuracy | -1.60 |
+| Correct-change F1 | +2.88 |
+| Path-macro Correct-change F1 | +5.24 |
+| Event-macro Update Accuracy | +2.19 |
+| Retention-after-update | +0.31 |
 
-이 한 trajectory에서는 정답 관련 대화만 제공했을 때 갱신 중심 지표가 소폭
-상승했지만 동적 path 최종 상태 정확도는 하락했다. 전체 대화의 방해 효과가
+이 한 trajectory에서는 Oracle Relevant 조건에서 update-sensitive metrics가 소폭
+상승했지만 Dynamic-path Final State Accuracy는 하락했다. 전체 대화의 방해 효과가
 일부 존재할 가능성과 일치하지만, 한 trajectory만으로 이를 통계적으로
 주장할 수는 없다.
 
@@ -151,7 +151,7 @@ token에는 thinking token을 포함했다.
   제출했다.
 - 12,000-token 상한은 Gemini의 adaptive thinking과 함께 사용할 때 장문
   checkpoint에서 구조적 파싱 실패를 일으킬 수 있으므로 사용하면 안 된다.
-- 갱신 중심 지표는 전체 최종 상태 정확도만 볼 때 가려지는 모델 차이를 실제로
+- update-sensitive metrics는 Final State Accuracy만 볼 때 가려지는 모델 차이를 실제로
   드러냈다.
 - 다만 이 결과는 `traj_010` 하나의 예비 결과이므로 논문의 모델 성능 결론으로
   사용하지 않는다.

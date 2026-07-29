@@ -397,8 +397,10 @@ Change confusion matrix, status confusion matrix, evidence 점수와 path/domain
 | Stage-specific output limit | 12,000 tokens |
 
 두 checkpoint를 사용하는 이유는 짧은 prefix에서의 기본 형식과 300-session
-장문 입력에서의 context/output 안정성을 모두 확인하기 위해서다. smoke의 목적은
-모델 성능을 판단하는 것이 아니라 다음 형식 계약만 검증하는 것이다.
+장문 입력에서의 context/output 안정성을 모두 확인하기 위해서다. smoke에서도
+Gold와 비교하여 이 문서에 정의된 모든 점수와 confusion matrix를 계산한다.
+다만 2개 checkpoint의 점수는 예비 결과로만 보고, 통계적·학술적 성능 결론에는
+사용하지 않는다. smoke에서는 다음 실행 계약도 함께 검증한다.
 
 - 요청이 provider context limit 안에서 완료되는가
 - 응답 JSON이 잘리지 않는가
@@ -409,19 +411,22 @@ Change confusion matrix, status confusion matrix, evidence 점수와 path/domain
 ### 11.1 `traj_001`의 최종 평가 포함 원칙
 
 `traj_001`은 최종 논문 평가에서도 제외하지 않는다. 대신 smoke를
-outcome-independent한 형식 검증으로 제한한다.
+성능 튜닝에 사용하지 않는다.
 
-- smoke 단계에서는 Gold accuracy, changed-state score, 모델 간 순위를 열람하거나
-  이에 따라 prompt를 수정하지 않는다.
-- 수정 가능한 것은 JSON 문법, 누락된 schema 설명, parser/API 호환 문제뿐이다.
+- smoke 단계에서도 Gold accuracy, changed-state score, confusion matrix,
+  path별 오류를 모두 산출하고 확인한다.
+- 해당 점수를 높이기 위해 prompt wording, few-shot example, value 후보,
+  comparator 또는 path 가중치를 변경하지 않는다.
+- 수정 가능한 것은 JSON 문법, 사전에 정의했지만 누락된 schema 설명,
+  parser/API 호환 문제와 점수에 무관하게 확인된 구현·Gold 버그뿐이다.
 - 특정 대화 내용, path 값 또는 정답 오류에 맞춘 prompt rule을 추가하지 않는다.
 - smoke response는 최종 결과에 재사용하지 않는다.
 - 형식 계약을 freeze한 뒤 `traj_001`을 포함한 전체 trajectory를 새 run으로
   다시 평가한다.
-- smoke에서 허용된 수정 내역과 freeze commit을 manifest에 기록한다.
+- smoke 점수, 허용된 수정 내역과 freeze commit을 manifest에 기록한다.
 
-이 원칙은 `traj_001`의 정답 성능을 보고 과제나 prompt를 최적화하는 것을 막으면서
-형식 호환성만 사전에 확인하기 위한 것이다.
+이 원칙은 smoke 점수를 투명하게 확인·보고하면서도 `traj_001`의 결과에 맞춰
+과제나 prompt를 최적화하는 것을 막기 위한 것이다.
 
 Provider별 constrained JSON/structured-output 기능은 사용하지 않는다. 공통
 prompt와 strict parser를 사용해 이후 다른 provider를 추가하더라도 output
@@ -495,7 +500,8 @@ Gold가 자동 replay로 생성됐다는 사실만으로 대화에서 실제 복
 
 ### 13.3 평가 freeze와 집계
 
-- smoke 형식 계약이 통과되면 prompt, schema, parser, normalizer를 freeze한다.
+- smoke 점수와 실행 계약을 기록한 뒤 prompt, schema, parser, normalizer를
+  freeze한다.
 - 최종 run은 20개 trajectory 모두를 처음부터 새로 실행한다.
 - checkpoint를 독립 표본으로 취급하지 않고 trajectory 내부에서 먼저 평균한다.
 - 전체 결과는 trajectory macro-average와 trajectory bootstrap 95% CI로 보고한다.

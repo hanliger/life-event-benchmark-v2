@@ -36,7 +36,7 @@ def _build_stage3_prompt(
         "초기 금융 메모리는 전체 이력의 시작 상태를 확인하는 참고 정보로만 사용하세요.",
         "추측하지 말고 보기 중 하나만 고르세요.",
         "",
-        _format_sessions(sessions),
+        _format_sessions(sessions, use_dates=True),
         "",
     ]
     initial_memory = (item.get("metadata") or {}).get("initial_memory") or {}

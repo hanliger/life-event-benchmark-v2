@@ -117,6 +117,38 @@ _KOREAN_NUMBER_MULTIPLIERS = {
     "백": Decimal("100"),
 }
 
+# Customers write amounts in Hangul numerals as readily as in digits ("장례비로
+# 오백만원 나갔어요"). Digits-only parsing reads those sessions as stating no
+# amount at all, so a correctly grounded slot looks ungrounded and gets dropped.
+_MONEY_SLOTS = frozenset({"amount", "amount_or_schedule"})
+
+_HANGUL_DIGITS = {"일": 1, "이": 2, "삼": 3, "사": 4, "오": 5, "육": 6, "칠": 7, "팔": 8, "구": 9}
+_HANGUL_PLACES = {"십": 10, "백": 100, "천": 1000}
+_HANGUL_AMOUNT_RE = re.compile(
+    r"(?<![0-9가-힣])(?P<head>[일이삼사오육칠팔구십백천]{1,8})\s*"
+    r"(?P<scale>억|만)\s*(?:(?P<tail>[일이삼사오육칠팔구십백천]{1,8})\s*)?원"
+)
+# "몇 천만원 수준은 아니고" is a vague magnitude, not a stated amount. The
+# lookbehind above cannot catch it because the qualifier may be separated by a
+# space, and Python has no variable-length lookbehind.
+_INDEFINITE_QUANTIFIER_RE = re.compile(r"(?:몇|수|여러)\s*$")
+
+
+def _hangul_int(text: str) -> int | None:
+    """Read a sino-Korean numeral below 10,000: 오백 -> 500, 삼천이백 -> 3200."""
+    total = 0
+    pending = 0
+    for char in text:
+        if char in _HANGUL_DIGITS:
+            pending = _HANGUL_DIGITS[char]
+        elif char in _HANGUL_PLACES:
+            # A bare place name means one of it: 백만원 is 1,000,000.
+            total += (pending or 1) * _HANGUL_PLACES[char]
+            pending = 0
+        else:
+            return None
+    return total + pending or None
+
 _GENERIC_SLOT_VALUES = {
     "해당 금액",
     "정해둔 금액",
@@ -358,6 +390,20 @@ def _numbers_in_text(text: str) -> list[str]:
         if unit:
             value *= _KOREAN_NUMBER_MULTIPLIERS[unit]
         values.append(_canonical_decimal(value))
+    for match in _HANGUL_AMOUNT_RE.finditer(text):
+        if _INDEFINITE_QUANTIFIER_RE.search(text[: match.start()]):
+            continue
+        head = _hangul_int(match.group("head"))
+        if head is None:
+            continue
+        total = Decimal(head) * _KOREAN_NUMBER_MULTIPLIERS[match.group("scale")]
+        tail = match.group("tail")
+        if tail:
+            remainder = _hangul_int(tail)
+            if remainder is None:
+                continue
+            total += Decimal(remainder)
+        values.append(_canonical_decimal(total))
     return values
 
 
@@ -522,6 +568,18 @@ def reconcile_provided_slots(
         else:
             dropped.append(slot)
 
+    # A grounded slot the customer states IS provided. The frozen resolution can
+    # disagree when the contract was corrected without regenerating the dialogue,
+    # and a resolution that contradicts its own contract is what
+    # high_risk_action_resolution_mismatch reports.
+    stated: list[str] = []
+    frozen_provided = dict(resolution.get("provided_slots") or {})
+    for slot, value in grounded.items():
+        if slot in dropped or slot in regrounded or slot in frozen_provided:
+            continue
+        if _slot_value_visible(slot, value, user_text, reference_values):
+            stated.append(slot)
+
     required = list(contract.get("required_slots") or [])
     for slot in required:
         if slot == "explicit_confirmation" or slot in grounded:
@@ -537,7 +595,7 @@ def reconcile_provided_slots(
         if value is not None:
             regrounded[slot] = value
 
-    changed = sorted(dropped + list(regrounded))
+    changed = sorted(dropped + list(regrounded) + stated)
     if not changed:
         return contract, resolution, []
 
@@ -570,12 +628,18 @@ def reconcile_provided_slots(
     # found in a user turn, so the customer did supply it -- including slots the
     # frozen resolution had listed as missing.
     provided.update(regrounded)
+    provided.update({slot: grounded[slot] for slot in stated})
     resolution["provided_slots"] = provided
     resolution["missing_slots"] = missing
     if not ready:
         resolution["mode"] = "pending_required_information"
         resolution["completion_turn_index"] = None
         resolution["explicit_confirmation_turn_index"] = None
+    elif resolution.get("mode") == "pending_required_information":
+        # The slot that blocked it is grounded now, so the session is no longer
+        # waiting on information. It is waiting on confirmation -- not executed,
+        # so the completion indices stay exactly as the dialogue left them.
+        resolution["mode"] = "ready_for_confirmation"
 
     return contract, resolution, changed
 
@@ -957,6 +1021,22 @@ class DialogueValidator:
                     slot, grounded.get(slot), user_text, reference_values
                 )
             ]
+            # The check above walks provided_slots, so a money slot the planner
+            # grounded from the event but the resolution reports as missing slips
+            # through and the amount is silently lost. Grounding it means the
+            # event fixes that amount for this session, so the customer has to
+            # say it -- "그 금액 맞아요" or "네 그 정도로" does not.
+            unstated_amounts = [
+                slot
+                for slot, value in grounded.items()
+                if slot in _MONEY_SLOTS
+                and not _slot_value_visible(slot, value, user_text, reference_values)
+            ]
+            for slot in unstated_amounts:
+                flag(
+                    "grounded_amount_not_stated",
+                    f"{slot}={grounded.get(slot)!r} never stated by the customer",
+                )
             if ungrounded_provided:
                 flag(
                     "provided_slot_not_grounded_in_dialogue",

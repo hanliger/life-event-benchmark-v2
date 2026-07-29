@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import random
+from types import SimpleNamespace
 
 import pytest
 
@@ -23,6 +25,7 @@ from fin_life_benchmark.validation.dialogue_validator import (
     DialogueValidator,
     contains_contextual_event_label,
     event_slot_candidates,
+    _numbers_in_text,
     reconcile_provided_slots,
     standing_action_amounts,
 )
@@ -774,3 +777,244 @@ def test_undeclared_template_still_falls_back_to_the_task_string():
     )
     assert contract.action_mode != "information_only"
     assert "amount_or_schedule" in contract.required_slots
+
+
+def _dependent_end_task(active_action_types: list[str]) -> str:
+    """Which occurred task the planner picks for a persona holding these actions."""
+    paths = RepoPaths.default()
+    templates = load_life_event_templates(paths)
+    planner = EvidencePlanner(templates, load_locale("ko_KR", paths), paths)
+    actions = [SimpleNamespace(type=name) for name in active_action_types]
+    task, _score, _reasons, _grounding = planner.select_task_template(
+        templates["relationship_dependent_end"],
+        "occurred",
+        {},
+        SimpleNamespace(),
+        SimpleNamespace(latest=lambda path: None),
+        [],
+        [],
+        [],
+        actions,
+        [],
+        random.Random(0),
+    )
+    return task["task_template_id"]
+
+
+def test_stop_task_requires_a_transfer_that_actually_exists():
+    # Either support transfer alone is enough -- required_action_types could not
+    # express this, being an AND gate.
+    assert _dependent_end_task(["parent_support_transfer"]) == "dependent_end_transfer_stop"
+    assert (
+        _dependent_end_task(["spouse_living_expense_transfer"])
+        == "dependent_end_transfer_stop"
+    )
+
+
+def test_persona_with_nothing_to_stop_gets_the_review_task_instead():
+    # Previously the stop task was assigned anyway, so the dialogue asserted a
+    # support transfer the trajectory never created.
+    assert (
+        _dependent_end_task(["rent_autopay", "pension_contribution"])
+        == "dependent_end_registration_review"
+    )
+    assert _dependent_end_task([]) == "dependent_end_registration_review"
+
+
+def test_the_two_dependent_end_tasks_are_mutually_exclusive():
+    # Exactly one is valid per persona, so selection never falls to the rng
+    # tie-break and existing assignments cannot drift.
+    for actions in (["parent_support_transfer"], ["rent_autopay"], []):
+        picked = {_dependent_end_task(actions) for _ in range(5)}
+        assert len(picked) == 1
+
+
+def test_review_task_executes_nothing():
+    contract = _contract_for(
+        "dependent_end_registration_review", "FA-08", "부양가족 등록 정보 확인"
+    )
+    assert contract.action_mode == "information_only"
+    assert contract.required_slots == []
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("장례비로 오백만원 나갔어요", "5000000"),
+        ("매달 이백만원 정도 상환돼요", "2000000"),
+        ("오십만 원씩 보내고 있어요", "500000"),
+        ("백만원 정도예요", "1000000"),
+        ("천만원 들어왔어요", "10000000"),
+        ("삼천오백만원이요", "35000000"),
+        ("일억원 대출이요", "100000000"),
+    ],
+)
+def test_hangul_numeral_amounts_are_read(text, expected):
+    # Digits-only parsing read these sessions as stating no amount, so a
+    # correctly grounded slot looked ungrounded and was dropped.
+    assert expected in _numbers_in_text(text)
+
+
+@pytest.mark.parametrize("text", ["십일 정도 걸려요", "이번 달에요", "삼일 뒤에", "백화점에서요"])
+def test_hangul_words_that_are_not_amounts_stay_unread(text):
+    assert _numbers_in_text(text) == []
+
+
+def test_amount_stated_in_hangul_keeps_the_slot_grounded():
+    contract, resolution = _pending_transfer_contract(5000000)
+    turns = [{"speaker": "user", "text": "주거래계좌에서 장례비 오백만원 보냈어요"}]
+    _, new_resolution, changed = reconcile_provided_slots(contract, resolution, turns)
+    assert changed == []
+    assert new_resolution["provided_slots"]["amount"] == 5000000
+
+
+def test_a_zero_amount_is_not_grounded():
+    # housing_move sets new_rent_amount: 0 when moving in with family; grounding
+    # it would oblige the dialogue to have the customer say "0원".
+    contract = _contract_for(
+        "housing_move_family_contribution_prepare", "FA-08", "생활비 분담 정기이체 준비"
+    )
+    assert "amount" not in (contract.grounded_slots or {})
+    assert "amount" in contract.missing_slots
+
+
+def test_a_zero_event_amount_does_not_fall_through_to_the_persona():
+    # Skipping the zero and continuing the search re-grounded the persona's old
+    # rent autopay figure for a household that now pays no rent -- the exact
+    # contamination that put one constant on every flagged session.
+    paths = RepoPaths.default()
+    planner = EvidencePlanner(
+        load_life_event_templates(paths), load_locale("ko_KR", paths), paths
+    )
+    plan = DialogueGenerationPlan(
+        session_id="S001",
+        trajectory_id="traj_test",
+        month_index=0,
+        age=30,
+        transition_order=0,
+        window_index=1,
+        position_in_window=1,
+        window_event_instance_id="ev",
+        session_type="occurred_evidence",
+        event_status_after_session="occurred",
+        mapped_action="FA-08",
+        financial_task="생활비 분담 정기이체 준비",
+        task_template_id="housing_move_family_contribution_prepare",
+        structured_context={
+            "event": {"params": {"new_rent_amount": 0}},
+            "current_standing_actions": [
+                {"action_id": "SO_rent", "type": "rent_autopay", "amount": 650000}
+            ],
+        },
+    )
+    contract = planner._action_execution_contract(plan)
+    assert "amount" not in (contract.grounded_slots or {})
+    assert "amount" in contract.missing_slots
+
+
+def _grounded_amount_session(user_text: str, amount: int = 400000) -> dict:
+    contract = {
+        "action_mode": "pending_required_information",
+        "required_slots": ["source_account", "amount", "recurrence_day", "explicit_confirmation"],
+        "grounded_slots": {"amount": amount},
+        "missing_slots": ["source_account", "recurrence_day"],
+        "completion_allowed": False,
+        "confirmation_required": True,
+    }
+    resolution = {
+        "mode": "pending_required_information",
+        "provided_slots": {},
+        "missing_slots": ["source_account", "recurrence_day"],
+        "explicit_confirmation_turn_index": None,
+        "completion_turn_index": None,
+    }
+    return _session(
+        mapped_action="FA-08",
+        status="no_event",
+        user=user_text,
+        contract=contract,
+        resolution=resolution,
+    )
+
+
+def test_grounded_amount_the_customer_never_states_is_blocking():
+    # provided_slots is empty, so the ungrounded-provided check cannot see this;
+    # without its own rule the amount is silently lost at reconcile.
+    session = _grounded_amount_session("네 그 금액 맞아요, 그 정도로 해주세요")
+    codes = {item["code"] for item in _validator().validate_session(session)}
+    assert "grounded_amount_not_stated" in codes
+    from fin_life_benchmark.dialogue.generator import _REVIEW_ONLY_VALIDATION_CODES
+
+    assert "grounded_amount_not_stated" not in _REVIEW_ONLY_VALIDATION_CODES
+
+
+@pytest.mark.parametrize("text", ["매달 40만원씩 넣고 싶어요", "매달 사십만원씩 넣고 싶어요"])
+def test_a_stated_amount_clears_the_rule(text):
+    codes = {item["code"] for item in _validator().validate_session(_grounded_amount_session(text))}
+    assert "grounded_amount_not_stated" not in codes
+
+
+def test_generator_checks_grounded_amounts_before_reconciling():
+    # The order matters: reconcile prunes an unstated grounded slot, so a check
+    # that runs after it has nothing left to see. This is why the validator rule
+    # alone let 24 sessions through with the amount silently dropped.
+    from fin_life_benchmark.dialogue.generator import DialogueGenerator
+    from fin_life_benchmark.dialogue.models import ActionExecutionContract, Turn
+
+    plan = DialogueGenerationPlan(
+        session_id="S001",
+        trajectory_id="traj_test",
+        month_index=0,
+        age=30,
+        transition_order=0,
+        window_index=1,
+        position_in_window=1,
+        window_event_instance_id="ev",
+        session_type="occurred_evidence",
+        event_status_after_session="occurred",
+        mapped_action="FA-08",
+        financial_task="월세 정기이체 설정",
+        action_execution_contract=ActionExecutionContract(
+            action_mode="pending_required_information",
+            required_slots=["amount", "explicit_confirmation"],
+            grounded_slots={"amount": 400000},
+            missing_slots=[],
+        ),
+    )
+    vague = [Turn(speaker="user", text="네 그 금액 맞아요, 그 정도로 해주세요")]
+    assert DialogueGenerator._unstated_grounded_amounts(plan, vague) == [
+        ("amount", 400000)
+    ]
+    stated = [Turn(speaker="user", text="매달 40만원으로 해주세요")]
+    assert DialogueGenerator._unstated_grounded_amounts(plan, stated) == []
+    hangul = [Turn(speaker="user", text="매달 사십만원으로 해주세요")]
+    assert DialogueGenerator._unstated_grounded_amounts(plan, hangul) == []
+
+
+def test_reconcile_promotes_a_session_whose_last_missing_slot_is_grounded():
+    # Grounding the amount can complete the contract; leaving the resolution on
+    # pending is what high_risk_action_resolution_mismatch reports. It is not
+    # promoted to executed -- the completion indices stay as the dialogue left them.
+    contract = {
+        "action_mode": "pending_required_information",
+        "required_slots": ["amount", "explicit_confirmation"],
+        "grounded_slots": {},
+        "missing_slots": ["amount"],
+        "completion_allowed": False,
+        "confirmation_required": True,
+    }
+    resolution = {
+        "mode": "pending_required_information",
+        "provided_slots": {},
+        "missing_slots": ["amount"],
+        "explicit_confirmation_turn_index": None,
+        "completion_turn_index": None,
+    }
+    turns = [{"speaker": "user", "text": "매달 이십만 원으로 해주세요"}]
+    new_contract, new_resolution, changed = reconcile_provided_slots(
+        contract, resolution, turns, slot_candidates={"amount": [200000]}
+    )
+    assert changed == ["amount"]
+    assert new_contract["action_mode"] == "ready_for_confirmation"
+    assert new_resolution["mode"] == "ready_for_confirmation"
+    assert new_resolution["completion_turn_index"] is None

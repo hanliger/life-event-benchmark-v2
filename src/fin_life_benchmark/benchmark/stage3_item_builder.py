@@ -6,7 +6,9 @@ import copy
 import hashlib
 import json
 import math
+import random
 import re
+from datetime import date
 from typing import Any
 
 from .item_builder import ItemBuilder
@@ -16,6 +18,59 @@ from .multihop import Stage3MultiHopTarget
 
 class Stage3ItemBuilder(ItemBuilder):
     """Build Stage 3 items using an isolated extension of ItemBuilder."""
+
+    def __init__(self, seed: int = 0, shuffle_options: bool = False):
+        super().__init__(seed=seed)
+        self.shuffle_options = shuffle_options
+
+    @staticmethod
+    def _initial_memory_subset(
+        initial_memory: dict[str, Any],
+        paths: list[str],
+    ) -> dict[str, Any]:
+        return {path: copy.deepcopy(initial_memory.get(path)) for path in paths}
+
+    @staticmethod
+    def _format_date(value: str | None) -> str | None:
+        if not value:
+            return None
+        try:
+            parsed = date.fromisoformat(str(value))
+        except ValueError:
+            return str(value)
+        return f"{parsed.year}년 {parsed.month}월 {parsed.day}일"
+
+    @staticmethod
+    def _value_key(value: Any) -> str:
+        return json.dumps(value, ensure_ascii=False, sort_keys=True, default=str)
+
+    def _shuffle_stage2_options(
+        self,
+        target: Stage3MultiHopTarget,
+        options: list[CounterfactualOption],
+        checkpoint_session_count: int,
+    ) -> tuple[list[CounterfactualOption], str]:
+        if not self.shuffle_options:
+            correct = next(option.option_id for option in options if option.correct)
+            return options, correct
+
+        payload = (
+            f"{self.seed}:{target.canonical_target_id}:"
+            f"{checkpoint_session_count}"
+        ).encode("utf-8")
+        shuffle_seed = int.from_bytes(
+            hashlib.sha256(payload).digest()[:8],
+            byteorder="big",
+            signed=False,
+        )
+        shuffled = [option.model_copy(deep=True) for option in options]
+        random.Random(shuffle_seed).shuffle(shuffled)
+        relabeled = [
+            option.model_copy(update={"option_id": "ABCD"[index]})
+            for index, option in enumerate(shuffled)
+        ]
+        correct = next(option.option_id for option in relabeled if option.correct)
+        return relabeled, correct
 
     @staticmethod
     def _object_particle(label: str) -> str:
@@ -118,8 +173,6 @@ class Stage3ItemBuilder(ItemBuilder):
         return translations.get(str(value), str(value))
 
     @staticmethod
-    # ------------------------------------------------------- stage 3 multi-hop
-    @staticmethod
     def _multihop_semantic_value_key(memory_path: str, value: Any) -> str:
         """Collapse schema aliases that produce the same displayed answer."""
 
@@ -131,8 +184,8 @@ class Stage3ItemBuilder(ItemBuilder):
                 and value == 0
             )
         ):
-            return ItemBuilder._value_key("__no_rent__")
-        return ItemBuilder._value_key(value)
+            return Stage3ItemBuilder._value_key("__no_rent__")
+        return Stage3ItemBuilder._value_key(value)
 
     def _multihop_alternate_value(
         self,
@@ -274,7 +327,7 @@ class Stage3ItemBuilder(ItemBuilder):
         for value, error_type in raw:
             if isinstance(value, float) and value.is_integer():
                 value = int(value)
-            key = ItemBuilder._value_key(value)
+            key = Stage3ItemBuilder._value_key(value)
             if key in seen:
                 continue
             seen.add(key)

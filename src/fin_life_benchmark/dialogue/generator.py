@@ -24,9 +24,12 @@ from ..llm.client import LLMClient
 from ..persona.models import NormalizedPersona
 from ..fsm.registry import load_life_event_templates
 from ..validation.dialogue_validator import (
+    _MONEY_SLOTS,
+    _slot_value_visible,
     DialogueValidator,
     grounded_concrete_values,
     reconcile_provided_slots,
+    standing_action_amounts,
 )
 from .models import (
     ActionExecutionContract,
@@ -991,6 +994,25 @@ class DialogueGenerator:
         return repaired
 
     @staticmethod
+    def _unstated_grounded_amounts(
+        plan: DialogueGenerationPlan, turns: list[Turn]
+    ) -> list[tuple[str, Any]]:
+        """Money slots the contract grounds that no user turn states."""
+        contract = plan.action_execution_contract.model_dump(mode="json")
+        grounded = contract.get("grounded_slots") or {}
+        plan_dict = plan.model_dump(mode="json")
+        user_text = " ".join(
+            turn.text for turn in turns if turn.speaker == "user"
+        )
+        reference_values = standing_action_amounts(plan_dict)
+        return [
+            (slot, value)
+            for slot, value in grounded.items()
+            if slot in _MONEY_SLOTS
+            and not _slot_value_visible(slot, value, user_text, reference_values)
+        ]
+
+    @staticmethod
     def _reconcile_with_dialogue(
         plan: DialogueGenerationPlan,
         resolution: ActionResolution,
@@ -1266,6 +1288,19 @@ class DialogueGenerator:
                     persona,
                     enforce_turn_limits=enforce_turn_limits,
                 )
+                # Money slots are checked BEFORE reconciling. Reconcile prunes a
+                # grounded slot the dialogue never surfaced, so by the time the
+                # validator runs there is nothing left to flag and an amount the
+                # event fixed for this session is silently lost. Everything else
+                # may legitimately stay unstated -- a pending dialogue is a valid
+                # outcome -- but a grounded amount is a fact the customer has to
+                # say, so an unstated one is a repairable defect.
+                unstated = self._unstated_grounded_amounts(plan, turns)
+                if unstated:
+                    raise LLMOutputValidationError(
+                        "dialogue never states the grounded amount: "
+                        + ", ".join(f"{slot}={value!r}" for slot, value in unstated)
+                    )
                 # Reconcile the planner's pre-dialogue grounding against the turns
                 # actually generated: a grounded slot survives only if its value
                 # is surfaced in the user's dialogue, else it becomes missing and

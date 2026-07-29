@@ -192,6 +192,32 @@ class DeltaEngine:
         """Apply the delta template hook for this transition. Returns applied
         updates (with old_value provenance filled in)."""
         rng = rng or random.Random(0)
+        candidates = self.resolve_transition_candidates(
+            memory, instance, to_status, month_index
+        )
+
+        applied: list[MemoryUpdate] = []
+        for update in candidates:
+            if update.optional and rng.random() < 0.5:
+                continue
+            if self._is_noop(memory, update):
+                continue
+            applied.append(memory.apply(update))
+        return applied
+
+    def resolve_transition_candidates(
+        self,
+        memory: FinancialMemoryState,
+        instance: EventInstance,
+        to_status: EventStatus,
+        month_index: int,
+    ) -> list[MemoryUpdate]:
+        """Resolve applicable template specs without mutating memory.
+
+        This shared declarative boundary is used by simulation and benchmark
+        construction. It intentionally returns semantic no-op and optional
+        candidates; :meth:`apply_transition` decides whether to skip them.
+        """
         hook = _HOOK_BY_STATUS.get(to_status)
         if hook is None:
             return []
@@ -200,7 +226,7 @@ class DeltaEngine:
         hook_spec = template.get(hook) or {}
         specs = list(hook_spec.get("memory_updates") or []) + list(hook_spec.get("pending_memory") or [])
 
-        applied: list[MemoryUpdate] = []
+        candidates: list[MemoryUpdate] = []
         allowed = _ALLOWED_OPS_BY_STATUS[to_status]
         for spec in specs:
             if not self._conditions_match(spec, instance):
@@ -213,23 +239,20 @@ class DeltaEngine:
                 raise ValueError(
                     f"{instance.event_id}.{hook}: operation '{op.value}' not allowed for status {to_status.value}"
                 )
-            if spec.get("optional") and rng.random() < 0.5:
-                continue
-            update = MemoryUpdate(
-                path=spec["path"],
-                operation=op,
-                new_value=self._resolve_value(spec, instance),
-                # An explicit old_value_from pins the prior value from event
-                # params instead of letting memory.apply() read it from a shared
-                # cell (e.g. education stage, where the cell may hold another
-                # child's stage). None leaves apply() to fill it as before.
-                old_value=self._resolve_value(spec, instance, key="old_value_from"),
-                month_index=month_index,
-                source_event_instance_id=instance.event_instance_id,
-                event_status=to_status.value,
-                optional=bool(spec.get("optional", False)),
+            candidates.append(
+                MemoryUpdate(
+                    path=spec["path"],
+                    operation=op,
+                    new_value=self._resolve_value(spec, instance),
+                    # An explicit old_value_from pins the prior value from event
+                    # params instead of reading a shared path's current value.
+                    old_value=self._resolve_value(
+                        spec, instance, key="old_value_from"
+                    ),
+                    month_index=month_index,
+                    source_event_instance_id=instance.event_instance_id,
+                    event_status=to_status.value,
+                    optional=bool(spec.get("optional", False)),
+                )
             )
-            if self._is_noop(memory, update):
-                continue
-            applied.append(memory.apply(update))
-        return applied
+        return candidates

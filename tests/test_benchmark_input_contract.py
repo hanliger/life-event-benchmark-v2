@@ -1,28 +1,32 @@
-"""The evaluated model only receives true initial memory and visible turns."""
+"""The evaluated model only receives answer-free dialogue and initial memory."""
 
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
-from scripts.evaluate_benchmark_items import (
-    _build_stage2_prompt,
-    _visible_sessions,
+from fin_life_benchmark.benchmark.stage2_memory import (
+    Stage2QuestionPolicy,
+    normalize_stage2_answer,
 )
-from fin_life_benchmark.benchmark.item_builder import ItemBuilder
-from fin_life_benchmark.benchmark.mcq_input import (
-    Stage2Checkpoint,
-    Stage2Target,
-    _join_records,
+
+from scripts.evaluate_benchmark_items import (
+    _build_stage2_batch_prompt,
+    _build_stage2_prompt,
+    _evaluation_units,
+    _parse_stage2_batch_answers,
+    _score_item,
+    _visible_sessions,
 )
 from scripts.export_public_benchmark import public_item, public_session
 
 
-def test_stage2_prompt_excludes_internal_session_metadata():
+def test_stage2_prompt_uses_dates_and_excludes_internal_session_metadata():
     session = {
         "trajectory_id": "traj_001",
         "session_id": "S001",
-        "session_date": "2020-01-15",
+        "session_date": "2025-03-15",
         "turns": [
             {"speaker": "user", "text": "급여일은 25일이에요."},
             {"speaker": "assistant", "text": "확인했습니다."},
@@ -32,193 +36,263 @@ def test_stage2_prompt_excludes_internal_session_metadata():
         "cue_annotations": [{"linked_memory_value": 25}],
     }
     item = {
-        "question": "현재 급여일은?",
+        "question": "2025년 3월 15일 기준, 등록된 급여일은 며칠인가?",
         "options": [{"option_id": "A", "text": "25일"}],
         "metadata": {
-            "target_date_start": "2020-01-01",
-            "target_date_end": "2020-01-15",
+            "answer_type": "mcq",
             "initial_memory": {
                 "employment.salary_day": {
                     "value": 10,
                     "status": "current",
                     "historical_values": [],
                 }
-            }
+            },
         },
     }
 
     prompt = _build_stage2_prompt(item, [session])
 
     assert "급여일은 25일이에요" in prompt
-    assert "[상담일: 2020년 1월 15일]" in prompt
-    assert "평가 대상 기간: 2020년 1월 1일~2020년 1월 15일" in prompt
-    assert "S001" not in prompt
+    assert "[상담일 2025-03-15]" in prompt
+    assert "[세션 S001]" not in prompt
     assert "employment.salary_day" in prompt
     assert "DO_NOT_LEAK" not in prompt
     assert "structured_context" not in prompt
     assert "cue_annotations" not in prompt
 
 
+def test_stage2_batch_prompt_shows_shared_sessions_once():
+    session = {
+        "trajectory_id": "traj_001",
+        "session_id": "S015",
+        "session_date": "2025-03-15",
+        "turns": [
+            {"speaker": "user", "text": "공통 상담 근거입니다."},
+            {"speaker": "assistant", "text": "확인했습니다."},
+        ],
+    }
+    items = [
+        {
+            "item_id": "item_001",
+            "stage": "stage2_memory_value",
+            "question": "첫 번째 질문",
+            "metadata": {"answer_type": "mcq", "initial_memory": {}},
+            "options": [
+                {"option_id": "A", "text": "첫 번째 보기"},
+                {"option_id": "B", "text": "두 번째 보기"},
+            ],
+        },
+        {
+            "item_id": "item_002",
+            "stage": "stage2_memory_value",
+            "question": "두 번째 질문",
+            "metadata": {"answer_type": "free_response", "initial_memory": {}},
+        },
+    ]
+
+    prompt = _build_stage2_batch_prompt(items, [session])
+
+    assert prompt.count("공통 상담 근거입니다.") == 1
+    assert "첫 번째 질문" in prompt
+    assert "두 번째 질문" in prompt
+    assert '"answers"' in prompt
+
+
+def test_stage2_batch_answers_preserve_explicit_null():
+    parsed = _parse_stage2_batch_answers(
+        '{"answers": [{"item_id": "item_001", "answer": "B"}, '
+        '{"item_id": "item_002", "answer": null}]}'
+    )
+
+    assert parsed["item_001"] == (True, "B")
+    assert parsed["item_002"] == (True, None)
+
+
+def test_stage2_items_are_grouped_by_visible_checkpoint():
+    items = [
+        {
+            "stage": "stage2_memory_value",
+            "trajectory_id": "traj_001",
+            "visible_sessions": ["S001", "S015"],
+        },
+        {
+            "stage": "stage2_memory_value",
+            "trajectory_id": "traj_001",
+            "visible_sessions": ["S001", "S015"],
+        },
+        {
+            "stage": "stage2_memory_value",
+            "trajectory_id": "traj_001",
+            "visible_sessions": ["S001", "S015", "S030"],
+        },
+    ]
+
+    units = _evaluation_units(items)
+
+    assert [kind for kind, _ in units] == ["stage2_batch", "stage2_batch"]
+    assert [len(batch) for _, batch in units] == [2, 1]
+
+
+def test_stage2_free_response_normalizes_krw_surface_forms():
+    item = {
+        "stage": "stage2_memory_value",
+        "metadata": {"answer_type": "free_response", "normalizer": "krw"},
+        "gold": {
+            "answer_type": "free_response",
+            "answer_value": 3_000_000,
+            "normalized_answer": "3000000",
+        },
+    }
+
+    prediction, gold, correct, error = _score_item(
+        item, '{"answer": "300만원"}'
+    )
+
+    assert prediction == "300만원"
+    assert gold == 3_000_000
+    assert correct is True
+    assert error is None
+
+
+def test_stage2_free_response_normalizes_composite_korean_krw_surfaces():
+    cases = {
+        "1억 2천만원": 120_000_000,
+        "1억2천만원": 120_000_000,
+        "3백만원": 3_000_000,
+        "삼백만원": 3_000_000,
+        "1.5억": 150_000_000,
+        "2,500,000원": 2_500_000,
+    }
+
+    for surface, expected in cases.items():
+        assert normalize_stage2_answer(surface, "krw") == str(expected)
+
+
+def test_stage2_free_response_accepts_explicit_null_as_absent_value():
+    item = {
+        "stage": "stage2_memory_value",
+        "metadata": {"answer_type": "free_response", "normalizer": "text"},
+        "gold": {
+            "answer_type": "free_response",
+            "answer_value": None,
+            "normalized_answer": "__none__",
+        },
+    }
+
+    prediction, gold, correct, error = _score_item(item, '{"answer": null}')
+
+    assert prediction is None
+    assert gold is None
+    assert correct is True
+    assert error is None
+
+
+def test_stage2_free_response_maps_korean_surface_to_internal_list_value():
+    item = {
+        "stage": "stage2_memory_value",
+        "metadata": {
+            "answer_type": "free_response",
+            "normalizer": "string_list",
+            "answer_aliases": {"주택담보대출": "mortgage"},
+        },
+        "gold": {
+            "answer_type": "free_response",
+            "answer_value": ["mortgage"],
+            "normalized_answer": '["mortgage"]',
+        },
+    }
+
+    prediction, gold, correct, error = _score_item(
+        item, '{"answer": "주택담보대출"}'
+    )
+
+    assert prediction == "주택담보대출"
+    assert gold == ["mortgage"]
+    assert correct is True
+    assert error is None
+
+
 def test_session_lookup_is_trajectory_scoped():
     sessions = {
-        ("traj_001", "S001"): {"trajectory_id": "traj_001", "session_id": "S001"},
-        ("traj_002", "S001"): {"trajectory_id": "traj_002", "session_id": "S001"},
+        ("traj_001", "S001"): {
+            "trajectory_id": "traj_001",
+            "session_id": "S001",
+        },
+        ("traj_002", "S001"): {
+            "trajectory_id": "traj_002",
+            "session_id": "S001",
+        },
     }
     item = {"trajectory_id": "traj_001", "visible_sessions": ["S001"]}
 
     assert _visible_sessions(item, sessions)[0]["trajectory_id"] == "traj_001"
 
 
-def test_public_exports_strip_private_annotations_and_gold():
+def test_public_exports_strip_private_annotations_and_gold_but_keep_date():
     session = {
         "session_id": "S001",
         "trajectory_id": "traj_001",
+        "session_date": "2025-03-15",
         "turns": [{"speaker": "user", "text": "안녕하세요"}],
         "plan": {"structured_context": {"answer": 25}},
         "cue_annotations": [{"linked_memory_value": 25}],
     }
     item = {
         "item_id": "item_1",
-        "stage": "stage2_memory_mcq",
+        "stage": "stage2_memory_value",
         "trajectory_id": "traj_001",
         "prefix_id": "pfx1",
         "visible_sessions": ["S001"],
         "question": "질문",
-        "options": [{"option_id": "A", "text": "보기", "correct": True, "error_type": None}],
+        "options": [
+            {
+                "option_id": "A",
+                "text": "보기",
+                "correct": True,
+                "error_type": None,
+            }
+        ],
         "gold": {"correct_option": "A"},
-        "metadata": {"initial_memory": {}},
+        "metadata": {
+            "answer_type": "mcq",
+            "checkpoint_date": "2025-03-15",
+            "initial_memory": {},
+            "initial_memory_source": {"secret": "DO_NOT_LEAK"},
+        },
     }
 
     safe_session = public_session(session)
     safe_item = public_item(item)
 
-    assert set(safe_session) == {"session_id", "trajectory_id", "turns"}
+    assert set(safe_session) == {
+        "session_id",
+        "trajectory_id",
+        "session_date",
+        "turns",
+    }
     assert "gold" not in safe_item
+    assert "initial_memory_source" not in safe_item["metadata"]
+    assert safe_item["metadata"]["answer_type"] == "mcq"
     assert set(safe_item["options"][0]) == {"option_id", "text"}
 
 
-def test_visible_sessions_rejects_incomplete_context():
-    item = {
-        "trajectory_id": "traj_001",
-        "visible_sessions": ["S001", "S002"],
-    }
-    sessions = {
-        ("traj_001", "S001"): {"trajectory_id": "traj_001", "session_id": "S001"},
-    }
-    try:
-        _visible_sessions(item, sessions)
-    except ValueError as exc:
-        assert "S002" in str(exc)
-    else:
-        raise AssertionError("missing visible sessions must fail loudly")
+def test_stage2_policy_excludes_disabled_paths_and_selectors():
+    policy = Stage2QuestionPolicy()
+    instance = SimpleNamespace(params={"property_id": "property_001"})
+
+    assert policy.selector_specs("employment.salary_account", instance) == []
+    assert policy.selector_specs("financial_products.loans", instance) == []
+    assert [
+        selector
+        for selector, _, _ in policy.selector_specs("housing.properties", instance)
+    ] == ["owned_count", "address", "ownership_status"]
+    assert policy.selector_specs("financial_products.pension_or_irp", instance) == []
 
 
-def test_stage1_prompt_uses_dates_without_session_ids():
-    from scripts.evaluate_benchmark_items import _build_stage1_event_identification_prompt
+def test_stage2_child_education_question_is_valid_for_dated_reuse():
+    policy = Stage2QuestionPolicy()
 
-    session = {
-        "trajectory_id": "traj_001",
-        "session_id": "S015",
-        "session_date": "2020-01-15",
-        "turns": [{"speaker": "user", "text": "상담 내용"}],
-    }
-    item = {
-        "question": "2020년 1월 1일~2020년 1월 15일 기간에 마지막으로 실제 발생한 Life Event는 무엇인가?",
-        "metadata": {
-            "target_date_start": "2020-01-01",
-            "target_date_end": "2020-01-15",
-            "candidate_events": [{"event_id": "career_employment", "label_ko": "취업"}],
-        },
-    }
+    question = policy.path_policy("education.child_education_stage")["question_ko"]
 
-    prompt = _build_stage1_event_identification_prompt(item, [session])
-
-    assert "[상담일: 2020년 1월 15일]" in prompt
-    assert "평가 대상 기간: 2020년 1월 1일~2020년 1월 15일" in prompt
-    assert "S015" not in prompt
-    assert "마지막으로 실제 발생한" in prompt
-
-
-def test_mcq_input_accepts_canonical_joined_sessions(tmp_path):
-    row = {
-        "trajectory_id": "traj_001",
-        "persona_id": "p_001",
-        "session_id": "S001",
-        "session_date": "2020-01-01",
-        "turns": [{"speaker": "user", "text": "상담"}],
-        "plan": {"session_id": "S001", "window_index": 1, "position_in_window": 1},
-    }
-    (tmp_path / "sessions_traj_001.jsonl").write_text(
-        __import__("json").dumps(row, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-    )
-
-    joined = _join_records(tmp_path, None, "traj_001")
-
-    assert joined[0][0]["turns"] == row["turns"]
-    assert joined[0][1]["session_date"] == "2020-01-01"
-
-
-def _make_stage2_target(target_id: str, event_id: str, checkpoint: int, after: str):
-    return Stage2Target(
-        canonical_target_id=target_id,
-        trajectory_id="traj_001",
-        target_event_instance_id=f"{target_id}_event",
-        target_event_id=event_id,
-        target_event_label=event_id,
-        memory_path="employment.employer",
-        operation="update",
-        first_visible_checkpoint=checkpoint,
-        evidence_sessions=(f"S{checkpoint:03d}",),
-        evidence_turns=(f"S{checkpoint:03d}:1",),
-        before_state={"value": "이전 값", "status": "current", "pending_proposal": None},
-        after_state={"value": after, "status": "current", "pending_proposal": None},
-        option_pool_type="entity",
-        option_pool=("가나", "나나", "다나", after),
-    )
-
-
-def test_stage2_repeats_all_eligible_targets_with_stable_shuffled_options():
-    first = _make_stage2_target("target_a", "career_employment", 15, "새 직장 A")
-    second = _make_stage2_target("target_b", "career_job_change", 30, "새 직장 B")
-    checkpoints = [
-        Stage2Checkpoint(
-            trajectory_id="traj_001",
-            prefix_id="traj_001_pfx015",
-            checkpoint_session_count=15,
-            visible_session_ids=tuple(f"S{i:03d}" for i in range(1, 16)),
-            targets=(first,),
-            target_date_start="2020-01-01",
-            target_date_end="2020-01-15",
-        ),
-        Stage2Checkpoint(
-            trajectory_id="traj_001",
-            prefix_id="traj_001_pfx030",
-            checkpoint_session_count=30,
-            visible_session_ids=tuple(f"S{i:03d}" for i in range(1, 31)),
-            targets=(first, second),
-            target_date_start="2020-02-01",
-            target_date_end="2020-02-15",
-        ),
-    ]
-
-    builder = ItemBuilder(seed=42, shuffle_options=True)
-    items = builder.build_stage2(checkpoints)
-    repeated = [
-        item for item in items
-        if item.gold["canonical_target_id"] == "target_a"
-    ]
-
-    assert len(items) == 3
-    assert len(repeated) == 2
-    assert repeated[0].question == repeated[1].question
-    assert {
-        option.text for option in repeated[0].options
-    } == {
-        option.text for option in repeated[1].options
-    }
-    assert repeated[0].gold["answer_value"] == repeated[1].gold["answer_value"]
-    assert repeated[0].metadata["options_shuffled"] is True
-    assert [option.option_id for option in repeated[0].options] == list("ABCD")
-    assert len(repeated[0].visible_sessions) == 15
-    assert len(repeated[1].visible_sessions) == 30
+    assert "새로 반영된" not in question
+    assert "기록된" in question

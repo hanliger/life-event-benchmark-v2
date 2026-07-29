@@ -37,13 +37,18 @@ def public_session(session: dict[str, Any]) -> dict[str, Any]:
     return {
         "session_id": session["session_id"],
         "trajectory_id": session["trajectory_id"],
+        "session_date": session.get("session_date"),
         "turns": session.get("turns") or [],
     }
 
 
 def public_item(item: dict[str, Any]) -> dict[str, Any]:
     metadata = item.get("metadata") or {}
-    public_metadata: dict[str, Any] = {}
+    public_metadata: dict[str, Any] = {
+        key: metadata[key]
+        for key in ("answer_type", "checkpoint_date", "normalizer")
+        if metadata.get(key) is not None
+    }
     if metadata.get("initial_memory"):
         public_metadata["initial_memory"] = _public_memory(metadata["initial_memory"])
     return {

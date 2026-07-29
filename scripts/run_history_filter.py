@@ -1,9 +1,9 @@
 #!/usr/bin/env python
-"""Run the history-necessity filter over MCQ benchmark items.
+"""Run the history-necessity filter over Stage 2 MCQ items.
 
 Example:
   python scripts/run_history_filter.py \
-    --items data/generated/benchmark_items/stage2_memory_mcq.jsonl \
+    --items data/generated/benchmark_items/stage2_memory_value.jsonl \
     --sessions-dir data/generated/sessions \
     --mode single_session \
     --validators openai:gpt-4o-mini,anthropic:claude-haiku-4-5 \
@@ -64,11 +64,15 @@ def main() -> int:
     validators = parse_validators(spec)
 
     items_path = Path(args.items)
-    items = list(read_jsonl(items_path)) if items_path.exists() else []
+    all_items = list(read_jsonl(items_path)) if items_path.exists() else []
     if args.max_items is not None:
-        items = items[: args.max_items]
-    if not items:
-        # small smoke runs can legitimately produce zero MCQ items
+        all_items = all_items[: args.max_items]
+    items = [
+        item for item in all_items
+        if (item.get("metadata") or {}).get("answer_type") == "mcq"
+    ]
+    if not all_items:
+        # Small smoke runs can legitimately produce zero Stage 2 items.
         output = Path(args.output) if args.output else items_path.with_suffix("").with_suffix(".filtered.jsonl")
         write_jsonl(output, [])
         report_path = Path(args.report)
@@ -77,12 +81,25 @@ def main() -> int:
         print("no items to filter (0 MCQ items) — wrote empty filtered file and report")
         return 0
 
-    sessions_by_id: dict[str, dict] = {}
+    sessions_by_id: dict[tuple[str, str], dict] = {}
     for path in sorted(Path(args.sessions_dir).glob("sessions_*.jsonl")):
         for session in read_jsonl(path):
-            sessions_by_id[session["session_id"]] = session
+            sessions_by_id[(session["trajectory_id"], session["session_id"])] = session
 
-    results = run_filter(items, sessions_by_id, validators, args.mode)
+    filtered_mcq = run_filter(items, sessions_by_id, validators, args.mode)
+    filtered_by_id = {item["item_id"]: item for item in filtered_mcq}
+    results = []
+    for item in all_items:
+        if item["item_id"] in filtered_by_id:
+            results.append(filtered_by_id[item["item_id"]])
+        else:
+            preserved = dict(item)
+            preserved["filter_status"] = "keep"
+            preserved["filter_meta"] = {
+                "mode": args.mode,
+                "reason": "history filter currently applies to MCQ only",
+            }
+            results.append(preserved)
 
     output = Path(args.output) if args.output else Path(args.items).with_suffix("").with_suffix(".filtered.jsonl")
     write_jsonl(output, results)
@@ -95,12 +112,14 @@ def main() -> int:
     # majority-answer baseline. Per-item leakage flags can over-report when a
     # prior happens to match one item; only aggregate-above-baseline indicates
     # the set is broadly solvable without the full conversation history.
-    n = len(results)
-    total_votes = sum(len(r.get("filter_votes", [])) for r in results)
-    correct_votes = sum(1 for r in results for v in r.get("filter_votes", []) if v.get("correct"))
+    n = len(items)
+    total_votes = sum(len(r.get("filter_votes", [])) for r in filtered_mcq)
+    correct_votes = sum(
+        1 for r in filtered_mcq for v in r.get("filter_votes", []) if v.get("correct")
+    )
     overall_acc = round(correct_votes / total_votes, 4) if total_votes else None
     answer_counts: dict[str, int] = {}
-    for r in results:
+    for r in filtered_mcq:
         answer = (r.get("gold") or {}).get("correct_option")
         if answer:
             answer_counts[answer] = answer_counts.get(answer, 0) + 1
@@ -110,7 +129,9 @@ def main() -> int:
     )
 
     report = {
-        "items": n,
+        "items": len(results),
+        "mcq_items_evaluated": len(items),
+        "free_response_items_skipped": len(all_items) - len(items),
         "mode": args.mode,
         "validators": [getattr(v, "name", "?") for v in validators],
         "mock_only": all(getattr(v, "provider", "") == "mock" for v in validators),
@@ -128,7 +149,10 @@ def main() -> int:
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    print(f"filtered {n} items: {by_status} -> {output}")
+    print(
+        f"filtered {len(items)} MCQ items; preserved "
+        f"{len(results) - len(items)} free-response items -> {output}"
+    )
     if overall_acc is not None:
         print(f"history-free accuracy {overall_acc:.1%} vs majority baseline {majority_baseline:.1%} -> {report['verdict']}")
     if report["mock_only"]:

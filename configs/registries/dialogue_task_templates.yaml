@@ -57,7 +57,13 @@ relationship_dependent_end:
   upcoming:
     - {task_template_id: dependent_end_transfer_change_prepare, fa_code: FA-04, visible_task_ko: "정기 지원 감액 조건 확인", user_goal_instruction: "향후 정기 지원을 줄이거나 멈출 조건을 확인한다.", compatible_memory_paths: [household.dependents], required_event_params: [], required_action_types: [], cue_template_ids: [relationship_dependent_end_upcoming], weight: 1.0}
   occurred:
-    - {task_template_id: dependent_end_transfer_stop, fa_code: FA-08, visible_task_ko: "기존 지원 정기이체 변경", user_goal_instruction: "기존 지원 이체를 현재 부양 상태에 맞춰 변경 또는 해지한다.", compatible_memory_paths: [household.dependents], required_event_params: [], required_action_types: [], cue_template_ids: [relationship_dependent_end_occurred], weight: 1.0}
+    # These two split on whether there is a support transfer to stop. Without the
+    # gate the stop task was assigned to personas holding no such arrangement,
+    # producing dialogues whose premise ("예전부터 보내던 지원 이체") the world
+    # state does not back. required_action_types cannot express it -- it is an
+    # AND gate, and either transfer type alone is enough.
+    - {task_template_id: dependent_end_transfer_stop, fa_code: FA-08, visible_task_ko: "기존 지원 정기이체 변경", user_goal_instruction: "기존 지원 이체를 현재 부양 상태에 맞춰 변경 또는 해지한다.", compatible_memory_paths: [household.dependents], required_event_params: [], required_action_types: [], cue_template_ids: [relationship_dependent_end_occurred], when: {action_type_any_of: [parent_support_transfer, spouse_living_expense_transfer]}, weight: 1.0}
+    - {task_template_id: dependent_end_registration_review, fa_code: FA-08, visible_task_ko: "부양가족 등록 정보 확인", user_goal_instruction: "부양 대상이 줄어든 현재 상태에서 등록된 부양가족 정보와 연결된 자동이체 유무만 확인한다.", compatible_memory_paths: [household.dependents], required_event_params: [], required_action_types: [], cue_template_ids: [relationship_dependent_end_occurred], when: {action_type_absent: [parent_support_transfer, spouse_living_expense_transfer]}, weight: 1.0}
   cancelled:
     - {task_template_id: dependent_end_change_cancel, fa_code: FA-02, visible_task_ko: "지원 이체 변경 알림 취소", user_goal_instruction: "지원 변경 계획을 취소하고 기존 지원 상태가 유지됨을 나타낸다.", compatible_memory_paths: [household.dependents], required_event_params: [], required_action_types: [], cue_template_ids: [relationship_dependent_end_cancelled], weight: 1.0}
 

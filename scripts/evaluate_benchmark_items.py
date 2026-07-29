@@ -1,18 +1,9 @@
 #!/usr/bin/env python
-"""Evaluate benchmark items with an LLM and report accuracy.
+"""Evaluate Stage 1 and Stage 2 benchmark items with an LLM.
 
-Examples:
-  python scripts/evaluate_benchmark_items.py \
-    --items data/generated/benchmark_items/stage2_memory_mcq.jsonl \
-    --sessions-dir data/generated/sessions \
-    --provider anthropic \
-    --model claude-sonnet-5 \
-    --execute \
-    --output data/generated/eval/stage2_claude_sonnet_5_predictions.jsonl \
-    --report data/generated/eval/stage2_claude_sonnet_5_report.json
-
-Stage 2 MCQ is scored by exact option match. Stage 1 event-identification
-items are scored by exact event_id match.
+Stage 2 supports both closed-domain MCQ and normalized free-response items.
+Stage 2 items sharing a checkpoint are evaluated in one request so the
+checkpoint context is presented once per batch rather than once per item.
 """
 
 from __future__ import annotations
@@ -20,7 +11,6 @@ from __future__ import annotations
 import argparse
 import json
 import re
-from datetime import date
 from collections import Counter
 from pathlib import Path
 from typing import Any
@@ -30,30 +20,23 @@ import _bootstrap  # noqa: F401
 from dotenv import load_dotenv
 from tqdm import tqdm
 
-from fin_life_benchmark.io import RepoPaths, ensure_dialogue_sessions, read_jsonl, write_jsonl
+from fin_life_benchmark.benchmark.stage2_memory import normalize_stage2_answer
+from fin_life_benchmark.io import RepoPaths, ensure_dialogue_sessions, read_jsonl
 from fin_life_benchmark.llm.client import LLMClient
 
 
-def _display_date(value: str | None) -> str | None:
-    if not value:
-        return None
-    try:
-        parsed = date.fromisoformat(str(value))
-    except ValueError:
-        return str(value)
-    return f"{parsed.year}년 {parsed.month}월 {parsed.day}일"
-
-
-def _format_sessions(sessions: list[dict[str, Any]]) -> str:
+def _format_sessions(
+    sessions: list[dict[str, Any]],
+    *,
+    use_dates: bool = False,
+) -> str:
     blocks: list[str] = []
     for session in sessions:
-        session_date = session.get("session_date")
-        if session_date is None or not str(session_date).strip():
-            raise ValueError(
-                f"session_date is required for evaluation prompt: "
-                f"{session.get('trajectory_id')}/{session.get('session_id')}"
-            )
-        lines = [f"[상담일: {_display_date(str(session_date))}]"]
+        if use_dates:
+            heading = f"[상담일 {session.get('session_date', '날짜 미상')}]"
+        else:
+            heading = f"[세션 {session['session_id']}]"
+        lines = [heading]
         for turn in session.get("turns", []):
             speaker = "고객" if turn.get("speaker") == "user" else "상담원"
             lines.append(f"{speaker}: {turn.get('text', '')}")
@@ -61,145 +44,166 @@ def _format_sessions(sessions: list[dict[str, Any]]) -> str:
     return "\n\n".join(blocks)
 
 
-def _item_date_range(
-    item: dict[str, Any], sessions: list[dict[str, Any]]
-) -> tuple[str, str]:
-    metadata = item.get("metadata") or {}
-    start = metadata.get("target_date_start")
-    end = metadata.get("target_date_end")
-    if not start or not end:
-        dates = [str(session.get("session_date") or "") for session in sessions]
-        if not dates or not all(dates):
-            raise ValueError("date-aware evaluation requires session_date values")
-        start, end = dates[-15], dates[-1]
-    return str(start), str(end)
-
-
-def _display_date_range(item: dict[str, Any], sessions: list[dict[str, Any]]) -> str:
-    start, end = _item_date_range(item, sessions)
-    return f"{_display_date(start)}~{_display_date(end)}"
-
-
 def _format_initial_memory(memory: dict[str, Any]) -> str:
     if not memory:
         return ""
     lines = ["[초기 금융 메모리]"]
-    for path, cell in sorted(memory.items()):
-        cell = cell or {}
-        line = f"- {path}: 상태={cell.get('status')}, 값={cell.get('value')}"
-        pending = cell.get("pending_proposal")
-        if isinstance(pending, dict):
-            line += f", 변경 예정={pending.get('value')}"
-        lines.append(line)
+    for path, raw_cell in sorted(memory.items()):
+        cell = raw_cell or {}
+        lines.append(
+            f"- {path}: 상태={cell.get('status')}, 값={cell.get('value')}"
+        )
     return "\n".join(lines)
 
 
-def _load_sessions_by_id(sessions_dir: Path) -> dict[tuple[str, str], dict[str, Any]]:
+def _load_sessions_by_id(
+    sessions_dir: Path,
+) -> dict[tuple[str, str], dict[str, Any]]:
     sessions: dict[tuple[str, str], dict[str, Any]] = {}
-    files = sorted(sessions_dir.glob("traj_*.jsonl"))
-    if not files:
-        files = sorted(sessions_dir.glob("sessions_*.jsonl"))
-    for path in files:
+    for path in sorted(sessions_dir.glob("sessions_*.jsonl")):
         for session in read_jsonl(path):
             sessions[(session["trajectory_id"], session["session_id"])] = session
     return sessions
 
 
-
-def _load_dialogues_by_id(dialogues_dir: Path) -> dict[tuple[str, str], dict[str, Any]]:
-    dialogues: dict[tuple[str, str], dict[str, Any]] = {}
-    paths = sorted(dialogues_dir.glob("traj_*.jsonl"))
-    if not paths:
-        paths = sorted(dialogues_dir.glob("sessions_*.jsonl"))
-    for path in paths:
-        for dialogue in read_jsonl(path):
-            key = (dialogue["trajectory_id"], dialogue["session_id"])
-            if key in dialogues:
-                raise ValueError(f"duplicate dialogue key: {key}")
-            dialogues[key] = dialogue
-    return dialogues
 def _visible_sessions(
     item: dict[str, Any],
     sessions_by_id: dict[tuple[str, str], dict[str, Any]],
 ) -> list[dict[str, Any]]:
     trajectory_id = item["trajectory_id"]
-    session_ids = list(item.get("visible_sessions", []))
-    missing = [
-        session_id
-        for session_id in session_ids
-        if (trajectory_id, session_id) not in sessions_by_id
+    return [
+        sessions_by_id[(trajectory_id, session_id)]
+        for session_id in item.get("visible_sessions", [])
+        if (trajectory_id, session_id) in sessions_by_id
     ]
-    if missing:
-        raise ValueError(
-            f"missing visible sessions for {trajectory_id}: {missing[:5]}"
-            + (" ..." if len(missing) > 5 else "")
-        )
-    return [sessions_by_id[(trajectory_id, session_id)] for session_id in session_ids]
 
 
-def _build_stage2_prompt(item: dict[str, Any], sessions: list[dict[str, Any]]) -> str:
-    date_range = _display_date_range(item, sessions)
+def _build_stage2_prompt(
+    item: dict[str, Any],
+    sessions: list[dict[str, Any]],
+) -> str:
+    metadata = item.get("metadata") or {}
+    answer_type = metadata.get("answer_type") or (item.get("gold") or {}).get(
+        "answer_type"
+    )
     lines = [
-        "다음은 한 고객의 은행 상담 세션 이력입니다.",
-        "제공된 전체 상담 이력과 질문에 지정된 날짜 범위를 기준으로 memory 상태를 판단하세요.",
-        f"평가 대상 기간: {date_range}",
-        "이 기간의 마지막으로 반영된 변화 또는 기간 종료 시점의 현재 상태를 판단하세요.",
-        "초기 금융 메모리는 전체 이력의 시작 상태를 확인하는 참고 정보로 사용하세요. 추측하지 말고, 보기 중 하나만 고르세요.",
+        "다음은 한 고객의 날짜순 은행 상담 이력입니다.",
+        "보이는 상담 발화와 초기 금융 메모리만 근거로 답하세요.",
+        "질문에 적힌 기준일 시점의 값을 답하고, Life Event를 추측해 설명하지 마세요.",
         "",
-        _format_sessions(sessions),
+        _format_sessions(sessions, use_dates=True),
         "",
     ]
-    initial_memory = (item.get("metadata") or {}).get("initial_memory") or {}
-    memory_text = _format_initial_memory(initial_memory)
+    memory_text = _format_initial_memory(metadata.get("initial_memory") or {})
     if memory_text:
         lines.extend([memory_text, ""])
     lines.extend([item["question"], ""])
-    for option in item.get("options", []):
-        lines.append(f"{option['option_id']}. {option['text']}")
-    lines.extend([
-        "",
-        '정답 선택지 하나만 JSON으로 답하세요. 예: {"answer": "A"}',
-    ])
+
+    if answer_type == "mcq":
+        for option in item.get("options", []):
+            lines.append(f"{option['option_id']}. {option['text']}")
+        lines.extend(
+            ["", '정답 선택지 하나만 JSON으로 답하세요. 예: {"answer": "A"}']
+        )
+    else:
+        lines.append(
+            '정답 값만 JSON으로 답하세요. 예: {"answer": "300만원"}'
+        )
     return "\n".join(lines)
 
 
-def _build_stage1_event_identification_prompt(
-    item: dict[str, Any], sessions: list[dict[str, Any]]
-) -> str:
+def _stage2_question_block(item: dict[str, Any], index: int) -> list[str]:
+    """Render one question without repeating the shared session context."""
     metadata = item.get("metadata") or {}
-    candidates = metadata.get("candidate_events") or []
-    candidate_lines = [
-        f"- {event['event_id']}: {event['label_ko']}" for event in candidates
-    ]
-    date_range = _display_date_range(item, sessions)
+    answer_type = metadata.get("answer_type") or (item.get("gold") or {}).get(
+        "answer_type"
+    )
     lines = [
-        "다음은 한 고객의 전체 은행 상담 세션 이력입니다.",
-        "전체 이력을 참고하되, 질문에 지정된 날짜 범위만 대상으로 판단하세요.",
-        "해당 기간에 마지막으로 실제 발생한(occurred) Life Event 하나를 가능한 목록에서 고르세요.",
-        "Event 상태나 설명은 답하지 말고 event_id 하나만 답하세요.",
+        f"[문항 {index}: {item.get('item_id', 'unknown')} ]",
+        f"답변 유형: {answer_type}",
+    ]
+    memory_text = _format_initial_memory(metadata.get("initial_memory") or {})
+    if memory_text:
+        lines.extend([memory_text])
+    lines.extend([item["question"]])
+
+    if answer_type == "mcq":
+        lines.extend(
+            f"{option['option_id']}. {option['text']}"
+            for option in item.get("options", [])
+        )
+        lines.append("정답은 선택지 ID 하나로 답하세요.")
+    else:
+        lines.append("정답 값만 답하세요.")
+    return lines
+
+
+def _build_stage2_batch_prompt(
+    items: list[dict[str, Any]],
+    sessions: list[dict[str, Any]],
+) -> str:
+    """Render one shared checkpoint context followed by all its questions."""
+    if not items:
+        raise ValueError("cannot build a Stage 2 batch prompt without items")
+    lines = [
+        "다음은 한 고객의 날짜순 은행 상담 이력입니다.",
+        "아래 상담 이력은 뒤의 모든 문항에 공통으로 사용하세요.",
+        "상담 발화와 각 문항에 제공된 초기 금융 메모리만 근거로 답하세요.",
+        "각 문항은 서로 독립적으로 판단하고, Life Event를 추측해 설명하지 마세요.",
+        "",
+        "[공통 상담 이력]",
+        _format_sessions(sessions, use_dates=True),
+        "",
+        "[문항 목록]",
+    ]
+    for index, item in enumerate(items, start=1):
+        lines.extend(_stage2_question_block(item, index))
+        lines.append("")
+    lines.extend(
+        [
+            "[응답 형식]",
+            "모든 문항에 대해 정확히 한 개의 답을 반환하세요.",
+            "item_id는 입력된 값 그대로 유지하세요.",
+            'JSON만 답하세요. 예: {"answers": [{"item_id": "item_001", "answer": "B"}]}',
+        ]
+    )
+    return "\n".join(lines)
+
+
+def _build_stage1_prompt(
+    item: dict[str, Any],
+    sessions: list[dict[str, Any]],
+) -> str:
+    lines = [
+        "다음은 한 고객의 은행 상담 세션 이력입니다.",
+        "현재 보이는 상담 이력만 근거로 감지되는 Life Event와 상태를 답하세요.",
+        "상태는 weak_signal, upcoming, occurred, cancelled 중 하나입니다.",
+        "확인되는 이벤트가 없으면 no_event로 답하세요.",
         "",
         _format_sessions(sessions),
         "",
-        f"평가 대상 기간: {date_range}",
         item["question"],
         "",
-        "가능한 Life Event 목록:",
-        *candidate_lines,
-        "",
-        'JSON만 답하세요. 예: {"event_id": "career_employment"}',
+        "JSON만 답하세요.",
+        '이벤트가 있으면: {"life_events": [{"life_event_label": "이사", "event_status": "weak_signal"}]}',
+        '이벤트가 없으면: {"life_events": [{"life_event_label": null, "event_status": "no_event"}]}',
     ]
     return "\n".join(lines)
+
+
 def _extract_json(raw: str) -> dict[str, Any] | None:
     raw = raw.strip()
     try:
-        return json.loads(raw)
+        payload = json.loads(raw)
+        return payload if isinstance(payload, dict) else None
     except Exception:
         pass
     start = raw.find("{")
     end = raw.rfind("}")
     if start >= 0 and end > start:
         try:
-            return json.loads(raw[start : end + 1])
+            payload = json.loads(raw[start : end + 1])
+            return payload if isinstance(payload, dict) else None
         except Exception:
             return None
     return None
@@ -211,78 +215,278 @@ def _parse_mcq_answer(raw: str) -> str:
         answer = str(payload.get("answer", "")).strip().upper()
         if answer:
             return answer[:1]
-    match = re.search(r"\b([A-E])\b", raw.strip().upper())
+    match = re.search(r"\b([A-Z])\b", raw.strip().upper())
     return match.group(1) if match else ""
 
 
-def _parse_stage1_event_identification_answer(raw: str) -> str:
+def _parse_stage2_batch_answers(raw: str) -> dict[str, tuple[bool, Any]]:
+    """Parse ``item_id``-keyed answers while preserving explicit null values."""
     payload = _extract_json(raw)
     if not payload:
-        return ""
-    return str(payload.get("event_id", "")).strip()
-def _score_item(item: dict[str, Any], raw: str) -> tuple[Any, Any, bool, str | None]:
+        return {}
+    answers = payload.get("answers")
+    if isinstance(answers, dict):
+        return {
+            str(item_id): (True, value)
+            for item_id, value in answers.items()
+        }
+    if not isinstance(answers, list):
+        return {}
+
+    parsed: dict[str, tuple[bool, Any]] = {}
+    for answer in answers:
+        if not isinstance(answer, dict) or "item_id" not in answer:
+            continue
+        item_id = str(answer["item_id"])
+        parsed[item_id] = ("answer" in answer, answer.get("answer"))
+    return parsed
+
+
+def _parse_free_response(raw: str) -> tuple[Any, bool]:
+    payload = _extract_json(raw)
+    if payload is not None and "answer" in payload:
+        # An explicit JSON null is a valid answer for a memory value that is absent.
+        return payload["answer"], True
+    text = raw.strip()
+    return (text, True) if text else (None, False)
+
+
+def _event_key(event: dict[str, Any]) -> tuple[str | None, str]:
+    label = event.get("life_event_label")
+    status = event.get("event_status")
+    if status == "no_event":
+        label = None
+    return label, str(status)
+
+
+def _parse_stage1_answer(raw: str) -> list[dict[str, Any]]:
+    payload = _extract_json(raw)
+    if not payload:
+        return []
+    events = payload.get("life_events")
+    if isinstance(events, dict):
+        events = [events]
+    if not isinstance(events, list):
+        return []
+    return [
+        {
+            "life_event_label": event.get("life_event_label"),
+            "event_status": event.get("event_status"),
+        }
+        for event in events
+        if isinstance(event, dict)
+    ]
+
+
+def _score_item(
+    item: dict[str, Any],
+    raw: str,
+) -> tuple[Any, Any, bool, str | None]:
     stage = item.get("stage")
-    if stage == "stage2_memory_mcq":
-        pred = _parse_mcq_answer(raw)
-        gold = (item.get("gold") or {}).get("correct_option")
-        return pred, gold, pred == gold, None if pred else "parse_error"
-    if stage == "stage1_event_identification":
-        pred = _parse_stage1_event_identification_answer(raw)
-        gold = (item.get("gold") or {}).get("event_id")
-        return pred, gold, pred == gold, None if pred else "parse_error"
+    if stage == "stage2_memory_value":
+        gold_payload = item.get("gold") or {}
+        metadata = item.get("metadata") or {}
+        answer_type = metadata.get("answer_type") or gold_payload.get("answer_type")
+        if answer_type == "mcq":
+            pred = _parse_mcq_answer(raw)
+            gold = gold_payload.get("correct_option")
+            return pred, gold, pred == gold, None if pred else "parse_error"
+        if answer_type == "free_response":
+            pred, parsed = _parse_free_response(raw)
+            normalizer = metadata.get("normalizer")
+            normalized_pred = (
+                normalize_stage2_answer(
+                    pred,
+                    normalizer,
+                    metadata.get("answer_aliases") or {},
+                )
+                if parsed
+                else None
+            )
+            normalized_gold = gold_payload.get("normalized_answer")
+            return (
+                pred,
+                gold_payload.get("answer_value"),
+                normalized_pred == normalized_gold,
+                None if parsed else "parse_error",
+            )
+        return None, None, False, f"unsupported_answer_type:{answer_type}"
+    if stage == "stage1_event_status":
+        pred_events = _parse_stage1_answer(raw)
+        gold_events = (item.get("gold") or {}).get("life_events") or []
+        pred = sorted({_event_key(event) for event in pred_events})
+        gold = sorted({_event_key(event) for event in gold_events})
+        return (
+            pred_events,
+            gold_events,
+            pred == gold,
+            None if pred_events else "parse_error",
+        )
     return None, None, False, f"unsupported_stage:{stage}"
 
 
-def _build_prompt(item: dict[str, Any], sessions: list[dict[str, Any]]) -> str:
-    if item.get("stage") == "stage2_memory_mcq":
+def _build_prompt(
+    item: dict[str, Any],
+    sessions: list[dict[str, Any]],
+) -> str:
+    if item.get("stage") == "stage2_memory_value":
         return _build_stage2_prompt(item, sessions)
-    if item.get("stage") == "stage1_event_identification":
-        return _build_stage1_event_identification_prompt(item, sessions)
+    if item.get("stage") == "stage1_event_status":
+        return _build_stage1_prompt(item, sessions)
     raise ValueError(f"unsupported stage: {item.get('stage')}")
+
+
+def _stage2_batch_key(item: dict[str, Any]) -> tuple[str, tuple[str, ...]]:
+    return (
+        str(item.get("trajectory_id", "")),
+        tuple(str(session_id) for session_id in item.get("visible_sessions", [])),
+    )
+
+
+def _evaluation_units(
+    items: list[dict[str, Any]],
+) -> list[tuple[str, list[dict[str, Any]]]]:
+    """Create single-item units and checkpoint-scoped Stage 2 batches."""
+    units: list[tuple[str, list[dict[str, Any]]]] = []
+    stage2_groups: dict[tuple[str, tuple[str, ...]], list[dict[str, Any]]] = {}
+    stage2_order: list[tuple[str, tuple[str, ...]]] = []
+    for item in items:
+        if item.get("stage") != "stage2_memory_value":
+            units.append(("single", [item]))
+            continue
+        key = _stage2_batch_key(item)
+        if key not in stage2_groups:
+            stage2_groups[key] = []
+            stage2_order.append(key)
+        stage2_groups[key].append(item)
+    units.extend(("stage2_batch", stage2_groups[key]) for key in stage2_order)
+    return units
+
+
+def _build_record(
+    item: dict[str, Any],
+    raw: str,
+    response_metadata: dict[str, Any],
+    *,
+    batch_id: str | None = None,
+    batch_size: int = 1,
+) -> dict[str, Any]:
+    pred, gold, correct, error = _score_item(item, raw)
+    item_metadata = item.get("metadata") or {}
+    item_gold = item.get("gold") or {}
+    return {
+        "item_id": item.get("item_id"),
+        "stage": item.get("stage"),
+        "trajectory_id": item.get("trajectory_id"),
+        "prefix_id": item.get("prefix_id"),
+        "n_visible_sessions": len(item.get("visible_sessions", [])),
+        "answer_type": item_metadata.get("answer_type"),
+        "memory_path": item_gold.get("memory_path"),
+        "value_selector": item_gold.get("value_selector"),
+        "checkpoint_session_count": item_metadata.get(
+            "checkpoint_session_count"
+        ),
+        "checkpoint_date": item_metadata.get("checkpoint_date"),
+        "evaluation_checkpoint_date": item_metadata.get(
+            "evaluation_checkpoint_date"
+        ),
+        "target_checkpoint_session_count": item_metadata.get(
+            "target_checkpoint_session_count"
+        ),
+        "evaluation_checkpoint_session_count": item_metadata.get(
+            "evaluation_checkpoint_session_count"
+        ),
+        "checkpoint_change_type": item_gold.get("checkpoint_change_type"),
+        "evaluation_batch_id": batch_id,
+        "evaluation_batch_size": batch_size,
+        "prediction": pred,
+        "gold": gold,
+        "correct": correct,
+        "error": error,
+        "raw_response": raw,
+        "response_metadata": response_metadata,
+    }
 
 
 def _mock_answer(item: dict[str, Any]) -> str:
-    if item.get("stage") == "stage2_memory_mcq":
-        options = item.get("options") or []
-        return json.dumps({"answer": options[0]["option_id"] if options else "A"})
-    if item.get("stage") == "stage1_event_identification":
-        return json.dumps({"event_id": (item.get("gold") or {}).get("event_id", "")})
-    raise ValueError(f"unsupported stage: {item.get('stage')}")
+    if item.get("stage") == "stage2_memory_value":
+        gold = item.get("gold") or {}
+        if gold.get("answer_type") == "mcq":
+            return json.dumps({"answer": gold.get("correct_option")})
+        return json.dumps(
+            {"answer": gold.get("answer_value")}, ensure_ascii=False
+        )
+    return json.dumps(
+        {
+            "life_events": [
+                {"life_event_label": None, "event_status": "no_event"}
+            ]
+        },
+        ensure_ascii=False,
+    )
 
 
-def _summarize(records: list[dict[str, Any]], provider: str, model: str) -> dict[str, Any]:
-    by_stage: dict[str, dict[str, Any]] = {}
-    for stage in sorted({r["stage"] for r in records}):
-        subset = [r for r in records if r["stage"] == stage]
-        correct = sum(1 for r in subset if r["correct"])
-        by_stage[stage] = {
+def _dimension_summary(
+    records: list[dict[str, Any]],
+    key: str,
+) -> dict[str, dict[str, Any]]:
+    output: dict[str, dict[str, Any]] = {}
+    values = sorted({str(record.get(key) or "unknown") for record in records})
+    for value in values:
+        subset = [record for record in records if str(record.get(key) or "unknown") == value]
+        correct = sum(1 for record in subset if record["correct"])
+        output[value] = {
             "items": len(subset),
             "correct": correct,
             "accuracy": round(correct / len(subset), 4) if subset else None,
-            "parse_errors": sum(1 for r in subset if r.get("error") == "parse_error"),
         }
+    return output
+
+
+def _summarize(
+    records: list[dict[str, Any]],
+    provider: str,
+    model: str,
+) -> dict[str, Any]:
     total = len(records)
-    total_correct = sum(1 for r in records if r["correct"])
+    total_correct = sum(1 for record in records if record["correct"])
     return {
         "provider": provider,
         "model": model,
         "items": total,
         "correct": total_correct,
         "accuracy": round(total_correct / total, 4) if total else None,
-        "accuracy_percent": round(100 * total_correct / total, 2) if total else None,
-        "by_stage": by_stage,
-        "errors": dict(Counter(r.get("error") for r in records if r.get("error"))),
+        "accuracy_percent": (
+            round(100 * total_correct / total, 2) if total else None
+        ),
+        "by_stage": _dimension_summary(records, "stage"),
+        "by_answer_type": _dimension_summary(records, "answer_type"),
+        "by_memory_path": _dimension_summary(records, "memory_path"),
+        "by_checkpoint_session_count": _dimension_summary(
+            records, "checkpoint_session_count"
+        ),
+        "by_checkpoint_change_type": _dimension_summary(
+            records, "checkpoint_change_type"
+        ),
+        "errors": dict(
+            Counter(record.get("error") for record in records if record.get("error"))
+        ),
     }
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--items", nargs="+", required=True, help="benchmark item jsonl file(s)")
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument(
+        "--items", nargs="+", required=True, help="benchmark item jsonl file(s)"
+    )
     parser.add_argument("--sessions-dir", default="data/generated/sessions")
-    parser.add_argument("--dialogues-dir", default=None)
     parser.add_argument("--provider", default=None)
     parser.add_argument("--model", default=None)
-    parser.add_argument("--execute", action="store_true", help="call real LLM API; otherwise use mock answers")
+    parser.add_argument(
+        "--execute", action="store_true", help="call real LLM API"
+    )
     parser.add_argument("--max-items", type=int, default=None)
     parser.add_argument("--output", default="data/generated/eval/predictions.jsonl")
     parser.add_argument("--report", default="data/generated/eval/report.json")
@@ -305,18 +509,15 @@ def main() -> int:
     if not items:
         raise SystemExit("no benchmark items loaded")
 
-    has_stage1 = any(item.get("stage") == "stage1_event_identification" for item in items)
-    has_stage2 = any(item.get("stage") == "stage2_memory_mcq" for item in items)
-    dialogue_input_dir = Path(args.dialogues_dir or args.sessions_dir)
-    sessions_by_id = _load_sessions_by_id(dialogue_input_dir) if has_stage2 else {}
-    dialogues_by_id = _load_dialogues_by_id(dialogue_input_dir) if has_stage1 else {}
-    if has_stage1 and not dialogues_by_id:
-        raise SystemExit(f"no dialogue records under {dialogue_input_dir}")
-    if has_stage2 and not sessions_by_id:
-        raise SystemExit(f"no dialogue records under {dialogue_input_dir}")
+    sessions_by_id = _load_sessions_by_id(Path(args.sessions_dir))
     client = None
     if args.execute:
-        client = LLMClient(provider=provider, model=model, temperature=args.temperature, max_tokens=args.max_tokens)
+        client = LLMClient(
+            provider=provider,
+            model=model,
+            temperature=args.temperature,
+            max_tokens=args.max_tokens,
+        )
 
     output = Path(args.output)
     report = Path(args.report)
@@ -328,47 +529,86 @@ def main() -> int:
     system = (
         RepoPaths.default().prompts / "system" / "benchmark_evaluator_ko.txt"
     ).read_text(encoding="utf-8").strip()
-    for item in tqdm(items, desc="evaluate"):
-        if item.get("stage") == "stage1_event_identification":
-            visible = _visible_sessions(item, dialogues_by_id)
-        else:
-            visible = _visible_sessions(item, sessions_by_id)
+    units = _evaluation_units(items)
+    for unit_index, (unit_type, unit_items) in enumerate(
+        tqdm(units, desc="evaluate"), start=1
+    ):
+        first_item = unit_items[0]
+        visible = _visible_sessions(first_item, sessions_by_id)
+        batch_id = f"batch_{unit_index:04d}" if unit_type == "stage2_batch" else None
+
+        if unit_type == "stage2_batch":
+            prompt = _build_stage2_batch_prompt(unit_items, visible)
+            if args.execute:
+                assert client is not None
+                raw = client.generate(system=system, user=prompt)
+                response_metadata = dict(client.last_response_metadata)
+            else:
+                answers = []
+                for item in unit_items:
+                    gold = item.get("gold") or {}
+                    if gold.get("answer_type") == "mcq":
+                        answer = gold.get("correct_option")
+                    else:
+                        answer = gold.get("answer_value")
+                    answers.append({"item_id": item.get("item_id"), "answer": answer})
+                raw = json.dumps({"answers": answers}, ensure_ascii=False)
+                response_metadata = {"provider": "mock", "model": "mock"}
+
+            parsed_answers = _parse_stage2_batch_answers(raw)
+            for item in unit_items:
+                item_id = str(item.get("item_id"))
+                has_answer, answer = parsed_answers.get(item_id, (False, None))
+                item_raw = (
+                    json.dumps({"answer": answer}, ensure_ascii=False)
+                    if has_answer
+                    else ""
+                )
+                record = _build_record(
+                    item,
+                    item_raw,
+                    response_metadata,
+                    batch_id=batch_id,
+                    batch_size=len(unit_items),
+                )
+                records.append(record)
+                with output.open("a", encoding="utf-8") as handle:
+                    handle.write(json.dumps(record, ensure_ascii=False) + "\n")
+            continue
+
+        item = first_item
         prompt = _build_prompt(item, visible)
         if args.execute:
             assert client is not None
             raw = client.generate(system=system, user=prompt)
-            metadata = client.last_response_metadata
+            response_metadata = client.last_response_metadata
         else:
             raw = _mock_answer(item)
-            metadata = {"provider": "mock", "model": "mock"}
-        pred, gold, correct, error = _score_item(item, raw)
-        record = {
-            "item_id": item.get("item_id"),
-            "stage": item.get("stage"),
-            "trajectory_id": item.get("trajectory_id"),
-            "prefix_id": item.get("prefix_id"),
-            "n_visible_sessions": len(item.get("visible_sessions", [])),
-            "prediction": pred,
-            "gold": gold,
-            "correct": correct,
-            "error": error,
-            "raw_response": raw,
-            "response_metadata": metadata,
-        }
+            response_metadata = {"provider": "mock", "model": "mock"}
+        record = _build_record(item, raw, response_metadata)
         records.append(record)
-        with output.open("a", encoding="utf-8") as f:
-            f.write(json.dumps(record, ensure_ascii=False) + "\n")
+        with output.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(record, ensure_ascii=False) + "\n")
 
     summary = _summarize(records, provider or "mock", model or "mock")
-    report.write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    report.write_text(
+        json.dumps(summary, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
 
-    print(f"evaluated {summary['items']} items: {summary['correct']} correct -> acc {summary['accuracy_percent']}%")
+    print(
+        f"evaluated {summary['items']} items: {summary['correct']} correct "
+        f"-> acc {summary['accuracy_percent']}%"
+    )
     for stage, stats in summary["by_stage"].items():
-        print(f"  {stage}: {stats['correct']}/{stats['items']} = {stats['accuracy'] * 100:.2f}%")
+        print(
+            f"  {stage}: {stats['correct']}/{stats['items']} "
+            f"= {stats['accuracy'] * 100:.2f}%"
+        )
     print(f"predictions -> {output}")
     print(f"report -> {report}")
     if not args.execute:
-        print("NOTE: mock answers only. Add --execute with --provider/--model for real LLM evaluation.")
+        print("NOTE: mock gold answers only; add --execute for a real LLM run.")
     return 0
 
 

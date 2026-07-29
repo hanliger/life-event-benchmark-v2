@@ -57,7 +57,7 @@ dialogue-grounded Gold state와 모델의 최종 state를 비교한다.
 | 구조화 object | field와 타입만 | `{category, amount_krw}` | 구조는 알려주되 실제 값은 숨김 |
 | Open string | 후보 미제공 | 회사명, 주소, 수취인 | 대화에서 직접 복원해야 함 |
 | Number | 범위/단위만 제공 | 급여일, 금액, 부양가족 수 | 실제 정답 누출 방지 |
-| Entity reference | alias 규칙만 제공 | `H001`, `H002` | 내부 simulator ID 노출 방지 |
+| Entity reference | 관계 구조만 제공 | 어떤 주택이 `primary_residence`인지 | 내부 simulator ID 노출 방지 |
 
 회사명, 주소, 금액처럼 대화에서 새로 등장하는 open value의 후보 목록을 제공하면
 closed-set 선택 문제가 되어 기존 MCQ와 비슷하게 쉬워질 수 있다. 따라서 후보를
@@ -87,6 +87,24 @@ closed-set 선택 문제가 되어 기존 MCQ와 비슷하게 쉬워질 수 있�
 Prospective state에 사용되던 `pending`과 `cancelled`는 이 과제의 current-state
 출력에서 제외한다. 내부 provenance, event instance ID, hidden history도 모델이
 출력하지 않는다.
+
+### 2.4 내부 ID는 의미 기반 projection으로 바꾼다
+
+대화에 나타나지 않는 simulator 내부 ID를 모델에게 맞히게 하면 state tracking이
+아니라 생성기 구현을 추측하는 문제가 된다. 다음 값은 raw Gold에서 제거한다.
+
+- `source_event_instance_id`
+- property/event 내부 ID
+- provenance
+- historical audit list
+- simulator month bookkeeping
+
+`housing.properties`는 `address`, `role`, `mortgage_status`,
+`ownership_status`처럼 대화로 확인 가능한 field만 평가한다.
+`housing.primary_residence_property_id`는 ID 문자열을 exact match하지 않고,
+prediction에서 어떤 property가 `primary_residence`로 지정됐는지 관계적으로
+비교한다. 모델이 임의의 local reference를 사용하더라도 property 내용과 참조
+관계가 같으면 동일한 상태로 정규화한다.
 
 ## 3. 기본 비교 단위
 
@@ -340,11 +358,12 @@ trajectory마다 동일한 가중치를 부여한다. 정식 실험에서는 che
 | Method | Final State Acc. | Value Acc. | Status Acc. | Changed State Acc. | Unchanged State Acc. | Correct-Change F1 | Exact Match | Parse Success |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
 | GPT-5.6-sol |  |  |  |  |  |  |  |  |
-| Claude Opus 5 |  |  |  |  |  |  |  |  |
-| Gemini 3.1 Pro |  |  |  |  |  |  |  |  |
 
 Change confusion matrix, status confusion matrix, evidence 점수와 path/domain별 결과는
 보조 표로 제공한다.
+
+초기 검증과 첫 full run은 OpenAI API 한 종류만 사용한다. 다른 provider/model
+비교는 이 protocol과 item set을 freeze한 이후 별도 확장으로 수행한다.
 
 ## 10. 데이터 검수의 의미
 
@@ -360,3 +379,174 @@ Change confusion matrix, status confusion matrix, evidence 점수와 path/domain
   실수로 제거되지 않았는지
 
 이 검수는 미래 계획을 현재 사실로 잘못 반영하는 데이터 누출을 막기 위한 것이다.
+
+## 11. 단일 API smoke protocol
+
+최초 smoke에서는 하나의 provider와 model만 사용한다.
+
+| 항목 | 설정 |
+|---|---|
+| Provider API | OpenAI Responses API |
+| Model | `gpt-5.6-sol` |
+| Method | `fc_gpt_5_6_sol` |
+| Trajectory | `traj_001` |
+| Checkpoints | 45, 300 |
+| Paid requests | 2 |
+| Concurrency | 1 |
+| Automatic retries | 0 |
+| Stage-specific output limit | 12,000 tokens |
+
+두 checkpoint를 사용하는 이유는 짧은 prefix에서의 기본 형식과 300-session
+장문 입력에서의 context/output 안정성을 모두 확인하기 위해서다. smoke의 목적은
+모델 성능을 판단하는 것이 아니라 다음 형식 계약만 검증하는 것이다.
+
+- 요청이 provider context limit 안에서 완료되는가
+- 응답 JSON이 잘리지 않는가
+- required path와 cell 구조를 parser가 읽을 수 있는가
+- invalid key/type/status/evidence 오류가 의도대로 기록되는가
+- raw response, token usage, latency, manifest가 보존되는가
+
+### 11.1 `traj_001`의 최종 평가 포함 원칙
+
+`traj_001`은 최종 논문 평가에서도 제외하지 않는다. 대신 smoke를
+outcome-independent한 형식 검증으로 제한한다.
+
+- smoke 단계에서는 Gold accuracy, changed-state score, 모델 간 순위를 열람하거나
+  이에 따라 prompt를 수정하지 않는다.
+- 수정 가능한 것은 JSON 문법, 누락된 schema 설명, parser/API 호환 문제뿐이다.
+- 특정 대화 내용, path 값 또는 정답 오류에 맞춘 prompt rule을 추가하지 않는다.
+- smoke response는 최종 결과에 재사용하지 않는다.
+- 형식 계약을 freeze한 뒤 `traj_001`을 포함한 전체 trajectory를 새 run으로
+  다시 평가한다.
+- smoke에서 허용된 수정 내역과 freeze commit을 manifest에 기록한다.
+
+이 원칙은 `traj_001`의 정답 성능을 보고 과제나 prompt를 최적화하는 것을 막으면서
+형식 호환성만 사전에 확인하기 위한 것이다.
+
+Provider별 constrained JSON/structured-output 기능은 사용하지 않는다. 공통
+prompt와 strict parser를 사용해 이후 다른 provider를 추가하더라도 output
+제약이 달라지지 않게 한다.
+
+## 12. 난이도 검증과 baseline
+
+새 과제는 기존 MCQ보다 구조적으로 어렵다.
+
+- 하나의 A–D 답이 아니라 전체 state JSON을 생성한다.
+- 여러 path의 최신 값을 동시에 유지해야 한다.
+- 회사명, 주소, 금액 같은 open value를 대화에서 복원한다.
+- 여러 사건에 의한 overwrite, archive, stale 상태를 처리한다.
+- neutral filler와 hard negative를 상태 변화로 오해하지 않아야 한다.
+
+그러나 구조가 어렵다는 사실만으로 실제 난이도 상승을 주장하지 않는다. 최종
+결과에서 기존 MCQ의 ceiling과 새 과제의 다음 지표를 함께 보고 난 뒤에만
+empirical difficulty를 판단한다.
+
+- Final State Accuracy
+- Exact State Match
+- Changed/Unchanged State Accuracy
+- checkpoint 45 대비 300 성능
+- initial-copy baseline 대비 개선
+
+### 12.1 Initial-copy baseline
+
+모든 대화를 무시하고 `S000`을 그대로 최종 prediction으로 사용하는 deterministic
+baseline을 반드시 계산한다.
+
+```text
+InitialCopy(path) = InitialCell(path)
+```
+
+이 baseline은 unchanged path가 많은 경우 전체 정확도가 얼마나 부풀려지는지
+보여준다. 모델이 initial-copy보다 높은 Final State Accuracy를 얻더라도,
+Changed State Accuracy와 Correct-Change F1이 낮다면 대화 속 변화를 제대로
+추적했다고 해석하지 않는다.
+
+Initial-copy는 다음과 같은 예상 패턴을 갖는다.
+
+- Unchanged State Accuracy: 높음
+- Changed State Accuracy: 0에 가까움
+- Change confusion matrix: FN이 많음
+
+## 13. Gold 품질과 학술적 타당성
+
+### 13.1 자동 검증
+
+- 전체 dialogue/gold identity와 session 순서를 검증한다.
+- changed cell마다 checkpoint 이전의 visible supporting dialogue가 있는지
+  검증한다.
+- neutral/no-event session이 current-state update를 만들지 않는지 검증한다.
+- occurred session의 current-state update가 보존됐는지 검증한다.
+- overwrite/archive/stale 적용 후 최종 effective state가 일관적인지 검증한다.
+- 공개 projection에 internal-only ID가 남지 않는지 검증한다.
+
+### 13.2 사람 검수
+
+논문 보고 전에는 changed cell, unchanged hard negative, overwrite, stale/archive
+사례를 층화 표집하여 두 명이 독립 검수한다.
+
+- change 여부와 status: Cohen's kappa
+- open value: exact agreement
+- 불일치: 합의 adjudication
+- annotation guideline, 표본 수, agreement 결과 공개
+
+Gold가 자동 replay로 생성됐다는 사실만으로 대화에서 실제 복원 가능한 정답이라는
+점이 보장되지는 않는다. 사람 검수는 synthetic Gold의 construct validity를
+확인하기 위한 절차다.
+
+### 13.3 평가 freeze와 집계
+
+- smoke 형식 계약이 통과되면 prompt, schema, parser, normalizer를 freeze한다.
+- 최종 run은 20개 trajectory 모두를 처음부터 새로 실행한다.
+- checkpoint를 독립 표본으로 취급하지 않고 trajectory 내부에서 먼저 평균한다.
+- 전체 결과는 trajectory macro-average와 trajectory bootstrap 95% CI로 보고한다.
+- API 실행 날짜, exact model ID, SDK version, prompt hash, dataset revision,
+  Gold projection version을 manifest에 기록한다.
+- 실패 응답을 결과를 본 뒤 선택적으로 재실행하거나 제외하지 않는다.
+
+## 14. 논문 보고 지표의 역할
+
+많은 지표를 출력하되 사후에 유리한 점수만 선택하지 않도록 역할을 미리 고정한다.
+
+| 역할 | 지표 |
+|---|---|
+| 대표 전체-state 지표 | Final State Accuracy |
+| 엄격한 전체 snapshot 지표 | Exact State Match |
+| 실제 dialogue update 반영 | Changed State Accuracy, Correct-Change F1 |
+| 과잉 변경 방지 | Unchanged State Accuracy, FP rate |
+| 오류 분석 | Value/Status Accuracy, confusion matrices |
+| 근거성 | Evidence Hit Rate, Citation Precision |
+| 신뢰성 | Parse success, schema validation, failed requests |
+
+Evidence 오류는 state cell의 정답 여부와 분리한다. 이벤트 복원 개수는
+`stage2_2_reconstruct`의 핵심 지표로 사용하지 않는다. 이미 덮어써져 current
+state에 남지 않은 과거 이벤트를 평가하려면 별도의 event-history reconstruction
+과제가 필요하기 때문이다.
+
+## 15. 관련 평가 관행과의 정합성
+
+- Full-state exact match는 Dialogue State Tracking의 Joint Goal Accuracy와 같은
+  역할을 한다.
+- path별 Final State Accuracy는 slot accuracy에 대응하며 exact match의 엄격함을
+  보완한다.
+- Changed State Accuracy와 change confusion matrix는 unchanged slot의 다수성으로
+  전체 정확도가 부풀려지는 문제를 진단한다.
+- 공개 schema와 open value 생성은 schema-guided/open-vocabulary DST 설정과
+  일치한다.
+- deterministic parser와 schema validation은 state 의미 평가와 출력 형식 실패를
+  구분한다.
+
+참고 문헌:
+
+- Dey, Kummara, and Desarkar. 2022. [Towards Fair Evaluation of Dialogue
+  State Tracking by Flexible Incorporation of Turn-level
+  Performances](https://aclanthology.org/2022.acl-short.35/).
+- Aksu and Chen. 2024. [Granular Change Accuracy: A More Accurate
+  Performance Metric for Dialogue State
+  Tracking](https://aclanthology.org/2024.lrec-main.699/).
+- Li et al. 2024. [Large Language Models as Zero-shot Dialogue State Tracker
+  through Function Calling](https://aclanthology.org/2024.acl-long.471/).
+- Li et al. 2021. [Zero-shot Generalization in Dialog State Tracking through
+  Generative Question Answering](https://aclanthology.org/2021.eacl-main.91/).
+- Ye, Manotumruksa, and Yilmaz. 2021. [MultiWOZ 2.4: A Multi-Domain
+  Task-Oriented Dialogue Dataset with Essential Annotation Corrections to
+  Improve State Tracking Evaluation](https://arxiv.org/abs/2104.00773).

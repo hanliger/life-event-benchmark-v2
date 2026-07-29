@@ -7,7 +7,13 @@ from typing import Any
 
 from fin_life_benchmark.benchmark.stage2_memory import normalize_stage2_answer
 
-from .stage2_2 import ALLOWED_STATUSES, STAGE2_2, VALUE_KINDS
+from .stage2_2 import (
+    ALLOWED_STATUSES,
+    SCHEMA_VERSION,
+    STAGE2_2,
+    VALUE_KINDS,
+    value_schema_description,
+)
 
 
 def _date(value: Any) -> str:
@@ -47,7 +53,7 @@ def s000_as_session(record: dict[str, Any]) -> dict[str, Any]:
 
 def answer_contract(item: dict[str, Any]) -> str:
     if item["stage"] == STAGE2_2:
-        return '{"schema_version":"stage2_2_reconstruct-v1","state":{...}}'
+        return f'{{"schema_version":"{SCHEMA_VERSION}","state":{{...}}}}'
     if item["stage"] == "stage1_event_identification":
         return "<answer>event_id</answer>"
     if (
@@ -106,10 +112,11 @@ def _build_stage2_2_query(
     item: dict[str, Any], evidence: list[dict[str, Any]]
 ) -> str:
     schema_lines = [
-        f"- {path}: {kind}" for path, kind in VALUE_KINDS.items()
+        f"- {path}: {value_schema_description(path)}"
+        for path in VALUE_KINDS
     ]
     example = {
-        "schema_version": "stage2_2_reconstruct-v1",
+        "schema_version": SCHEMA_VERSION,
         "state": {
             "<각 required path>": {
                 "value": "<현재 값 또는 null>",

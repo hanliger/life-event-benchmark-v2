@@ -8,6 +8,9 @@ import pytest
 from financial_memory_experiment.prompts import build_query
 from financial_memory_experiment.stage2_2 import (
     ALLOWED_STATUSES,
+    LIST_ELEMENT_CLOSED_VALUES,
+    SCALAR_CLOSED_VALUES,
+    SCHEMA_VERSION,
     STAGE2_2,
     VALUE_KINDS,
     initial_copy_score,
@@ -26,6 +29,21 @@ def _state() -> dict[str, dict]:
         }
         for path in VALUE_KINDS
     }
+
+
+def _valid_prediction_state() -> dict[str, dict]:
+    state = _state()
+    for path, values in SCALAR_CLOSED_VALUES.items():
+        state[path]["value"] = next(
+            (value for value in values if value is not None),
+            None,
+        )
+    for path in LIST_ELEMENT_CLOSED_VALUES:
+        state[path]["value"] = []
+    state["housing.properties"]["value"] = []
+    state["housing.primary_residence_property_id"]["value"] = None
+    state["cashflow.recent_one_off_expense"]["value"] = None
+    return state
 
 
 def test_projection_removes_internal_property_ids():
@@ -71,15 +89,8 @@ def test_projection_removes_internal_property_ids():
 
 def test_parser_requires_all_cells_but_preserves_valid_partial_output():
     payload = {
-        "schema_version": "stage2_2_reconstruct-v1",
-        "state": {
-            path: {
-                "value": None,
-                "status": "unknown",
-                "evidence_session_ids": [],
-            }
-            for path in VALUE_KINDS
-        },
+        "schema_version": SCHEMA_VERSION,
+        "state": _valid_prediction_state(),
     }
     payload["state"]["employment.employer"]["evidence_session_ids"] = ["D046"]
     parsed = parse_stage2_2_prediction(
@@ -142,7 +153,76 @@ def test_stage2_2_prompt_exposes_schema_not_gold_values():
     assert "[D001 |" in query
     assert "employment.employer" in query
     assert ", ".join(ALLOWED_STATUSES) in query
-    assert "retired | student | homemaker" in query
-    assert "owner | jeonse | wolse | family_home | other" in query
+    assert '"retired" | "student" | "homemaker"' in query
+    assert '"owner" | "jeonse" | "wolse" | "family_home" | "other"' in query
+    assert 'household.spouse_or_partner: closed enum or null' in query
+    assert '"spouse" | null' in query
+    assert '"mortgage" | "jeonse_loan" | "credit"' in query
+    assert '"medical" | "accident_or_disaster" | "fraud_loss" | "funeral"' in query
     assert "미래정보시스템" not in query
     assert "JSON 객체 하나만" in query
+
+
+def test_projection_resolves_exactly_one_owned_primary_residence():
+    raw = {
+        path: {"value": None, "status": "unknown"}
+        for path in VALUE_KINDS
+    }
+    raw["housing.properties"] = {
+        "value": [
+            {
+                "property_id": "old",
+                "address": "강원 원주시",
+                "role": "primary_residence",
+                "mortgage_status": "none",
+                "ownership_status": "owned",
+            },
+            {
+                "property_id": "new",
+                "address": "인천 연수구",
+                "role": "primary_residence",
+                "mortgage_status": "active",
+                "ownership_status": "owned",
+            },
+        ],
+        "status": "current",
+    }
+    raw["housing.primary_residence_property_id"] = {
+        "value": "new",
+        "status": "current",
+    }
+
+    projected = project_state(raw)
+
+    by_address = {
+        item["address"]: item
+        for item in projected["housing.properties"]["value"]
+    }
+    assert by_address["강원 원주시"]["role"] == "secondary_property"
+    assert by_address["인천 연수구"]["role"] == "primary_residence"
+    assert (
+        projected["housing.primary_residence_property_id"]["value"]
+        == by_address["인천 연수구"]
+    )
+
+
+def test_parser_rejects_values_outside_published_closed_ontology():
+    payload = {
+        "schema_version": SCHEMA_VERSION,
+        "state": _valid_prediction_state(),
+    }
+    payload["state"]["household.spouse_or_partner"] = {
+        "value": "남편",
+        "status": "current",
+        "evidence_session_ids": ["D001"],
+    }
+
+    parsed = parse_stage2_2_prediction(
+        json.dumps(payload, ensure_ascii=False), checkpoint=15
+    )
+
+    assert "household.spouse_or_partner" not in parsed["state"]
+    assert any(
+        "household.spouse_or_partner:invalid_closed_value" in error
+        for error in parsed["validation_errors"]
+    )

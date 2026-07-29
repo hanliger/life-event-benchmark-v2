@@ -29,64 +29,137 @@ from .util import read_jsonl, sha256_file, sha256_json, write_json, write_jsonl
 
 
 STAGE2_2 = "stage2_2_reconstruct"
-SCHEMA_VERSION = "stage2_2_reconstruct-v1"
-PROJECTOR_VERSION = "stage2_2_observable_state-v1"
+SCHEMA_VERSION = "stage2_2_reconstruct-v2"
+PROJECTOR_VERSION = "stage2_2_observable_state-v2"
+
+SCALAR_CLOSED_VALUES: dict[str, tuple[Any, ...]] = {
+    "household.marital_status": (
+        "single",
+        "married",
+        "separated",
+        "divorced",
+        "widowed",
+    ),
+    "household.spouse_or_partner": ("spouse", None),
+    "employment.employment_status": (
+        "employed",
+        "self_employed",
+        "unemployed",
+        "on_leave",
+        "retired",
+        "student",
+        "homemaker",
+    ),
+    "employment.income_stability": (
+        "stable",
+        "variable",
+        "reduced",
+        "unstable",
+        "retired",
+        None,
+    ),
+    "employment.salary_day": (10, 15, 21, 25, None),
+    "employment.salary_account": ("main_checking", None),
+    "housing.residence_status": (
+        "owner",
+        "jeonse",
+        "wolse",
+        "family_home",
+        "other",
+    ),
+    "housing.contract_type": (
+        "owner",
+        "jeonse",
+        "wolse",
+        "family_home",
+        "other",
+        None,
+    ),
+    "housing.mortgage_status": ("none", "active", "closed"),
+    "education.self_education_status": ("none", "enrolled", "study_abroad"),
+    "education.child_education_stage": (
+        "preschool",
+        "primary",
+        "middle",
+        "high",
+        "adult",
+        None,
+    ),
+    "financial_products.pension_or_irp": ("irp", "receiving", None),
+    "goals.emergency_fund": ("building", None),
+    "goals.housing_deposit_goal": ("active", None),
+    "goals.child_education_goal": ("active", None),
+    "goals.retirement_goal": ("active", None),
+}
+
+LIST_ELEMENT_CLOSED_VALUES: dict[str, tuple[str, ...]] = {
+    "financial_products.checking_accounts": ("main_checking",),
+    "financial_products.savings_accounts": ("savings_1",),
+    "financial_products.loans": ("mortgage", "jeonse_loan", "credit"),
+}
+
+OBJECT_FIELD_CLOSED_VALUES: dict[str, dict[str, tuple[str, ...]]] = {
+    "housing.properties": {
+        "role": ("primary_residence", "secondary_property"),
+        "mortgage_status": ("none", "active", "closed"),
+        "ownership_status": ("owned", "sold"),
+    },
+    "housing.primary_residence_property_id": {
+        "role": ("primary_residence",),
+        "mortgage_status": ("none", "active", "closed"),
+        "ownership_status": ("owned",),
+    },
+    "cashflow.recent_one_off_expense": {
+        "category": (
+            "medical",
+            "accident_or_disaster",
+            "fraud_loss",
+            "funeral",
+        ),
+    },
+}
 
 VALUE_KINDS: dict[str, str] = {
     "profile.age": "integer",
     "profile.locale": "string",
     "profile.region": "string",
-    "household.marital_status": (
-        "enum: single | married | separated | divorced | widowed"
-    ),
-    "household.spouse_or_partner": "string or null",
+    "household.marital_status": "closed enum",
+    "household.spouse_or_partner": "closed enum or null",
     "household.children": "array of integer ages",
     "household.dependents": "integer",
-    "household.child_support_arrangement": "string or null",
-    "employment.employment_status": (
-        "enum: employed | self_employed | unemployed | on_leave | retired | "
-        "student | homemaker"
-    ),
+    "household.child_support_arrangement": "integer KRW or null",
+    "employment.employment_status": "closed enum",
     "employment.employer": "open string or null",
     "employment.occupation": "open string or null",
-    "employment.income_stability": (
-        "enum: stable | variable | reduced | unstable | retired, or null"
-    ),
-    "employment.salary_day": "integer 1..31 or null",
-    "employment.salary_account": "string or null",
-    "housing.residence_status": (
-        "enum: owner | jeonse | wolse | family_home | other"
-    ),
+    "employment.income_stability": "closed enum or null",
+    "employment.salary_day": "closed integer enum or null",
+    "employment.salary_account": "closed enum or null",
+    "housing.residence_status": "closed enum",
     "housing.address": "open string or null",
-    "housing.contract_type": (
-        "enum: owner | jeonse | wolse | family_home | other, or null"
-    ),
+    "housing.contract_type": "closed enum or null",
     "housing.rent_amount": "integer KRW or null",
     "housing.rent_payee": "string or null",
     "housing.maintenance_fee_payee": "string or null",
-    "housing.mortgage_status": "enum: active | closed | none",
+    "housing.mortgage_status": "closed enum",
     "housing.properties": (
-        "array of {address:open string, "
-        "role:primary_residence|secondary_property, "
-        "mortgage_status:active|none, ownership_status:owned|sold}"
+        "array of {address:open string, role:closed enum, "
+        "mortgage_status:closed enum, ownership_status:closed enum}"
     ),
     "housing.primary_residence_property_id": (
         "observable primary property object "
-        "{address:open string, role:primary_residence, "
-        "mortgage_status:active|none, ownership_status:owned|sold} or null"
+        "{address:open string, role:closed enum, "
+        "mortgage_status:closed enum, ownership_status:closed enum} or null"
     ),
-    "education.self_education_status": "enum: none | enrolled | study_abroad",
-    "education.child_education_stage": (
-        "enum: preschool | primary | middle | high | adult, or null"
-    ),
-    "financial_products.checking_accounts": "array of strings",
-    "financial_products.savings_accounts": "array of strings",
-    "financial_products.loans": "array of strings",
-    "financial_products.pension_or_irp": "string or null",
-    "goals.emergency_fund": "string or null",
-    "goals.housing_deposit_goal": "string or null",
-    "goals.child_education_goal": "string or null",
-    "goals.retirement_goal": "string or null",
+    "education.self_education_status": "closed enum",
+    "education.child_education_stage": "closed enum or null",
+    "financial_products.checking_accounts": "array of closed enum strings",
+    "financial_products.savings_accounts": "array of closed enum strings",
+    "financial_products.loans": "array of closed enum strings",
+    "financial_products.pension_or_irp": "closed enum or null",
+    "goals.emergency_fund": "closed enum or null",
+    "goals.housing_deposit_goal": "closed enum or null",
+    "goals.child_education_goal": "closed enum or null",
+    "goals.retirement_goal": "closed enum or null",
     "cashflow.recent_one_off_expense": (
         "object {category:string, amount_krw:integer} or null"
     ),
@@ -107,6 +180,34 @@ _PROPERTY_FIELDS = (
     "mortgage_status",
     "ownership_status",
 )
+
+
+def _candidate_text(values: tuple[Any, ...]) -> str:
+    return " | ".join(
+        "null" if value is None else json.dumps(value, ensure_ascii=False)
+        for value in values
+    )
+
+
+def value_schema_description(path: str) -> str:
+    description = VALUE_KINDS[path]
+    if path in SCALAR_CLOSED_VALUES:
+        return (
+            f"{description}; allowed values: "
+            f"{_candidate_text(SCALAR_CLOSED_VALUES[path])}"
+        )
+    if path in LIST_ELEMENT_CLOSED_VALUES:
+        return (
+            f"{description}; allowed element values: "
+            f"{_candidate_text(LIST_ELEMENT_CLOSED_VALUES[path])}"
+        )
+    if path in OBJECT_FIELD_CLOSED_VALUES:
+        fields = "; ".join(
+            f"{field}: {_candidate_text(values)}"
+            for field, values in OBJECT_FIELD_CLOSED_VALUES[path].items()
+        )
+        return f"{description}; allowed object fields: {fields}"
+    return description
 
 
 def active_stage2_2_raw_manifest(paths: ExperimentPaths) -> dict[str, Any]:
@@ -284,6 +385,11 @@ def project_state(raw_state: dict[str, Any]) -> dict[str, dict[str, Any]]:
     properties = (
         (raw_state.get("housing.properties") or {}).get("value") or []
     )
+    primary_property_id = str(
+        (raw_state.get("housing.primary_residence_property_id") or {}).get(
+            "value"
+        )
+    )
     property_by_id = {
         str(item.get("property_id")): item
         for item in properties
@@ -294,11 +400,20 @@ def project_state(raw_state: dict[str, Any]) -> dict[str, dict[str, Any]]:
         raw = raw_state.get(path) or {}
         value = copy.deepcopy(raw.get("value"))
         if path == "housing.properties":
-            value = [
-                item
-                for raw_property in properties
-                if (item := _observable_property(raw_property)) is not None
-            ]
+            value = []
+            for raw_property in properties:
+                item = _observable_property(raw_property)
+                if item is None:
+                    continue
+                property_id = str(raw_property.get("property_id"))
+                if property_id == primary_property_id:
+                    item["role"] = "primary_residence"
+                elif (
+                    item.get("ownership_status") == "owned"
+                    and item.get("role") == "primary_residence"
+                ):
+                    item["role"] = "secondary_property"
+                value.append(item)
             value.sort(
                 key=lambda item: (
                     str(item.get("address")),
@@ -308,6 +423,8 @@ def project_state(raw_state: dict[str, Any]) -> dict[str, dict[str, Any]]:
             )
         elif path == "housing.primary_residence_property_id":
             value = _observable_property(property_by_id.get(str(value)))
+            if value is not None:
+                value["role"] = "primary_residence"
         projected[path] = {
             "value": value,
             "status": str(raw.get("status") or "unknown"),
@@ -343,6 +460,62 @@ def _with_gold_evidence(
         changed = cell != initial[path]
         cell["evidence_session_ids"] = latest.get(path, []) if changed else []
     return result
+
+
+def _closed_value_errors(path: str, value: Any) -> list[str]:
+    errors: list[str] = []
+    if path in SCALAR_CLOSED_VALUES:
+        if value not in SCALAR_CLOSED_VALUES[path]:
+            errors.append(f"invalid_closed_value:{value!r}")
+        return errors
+    if path in LIST_ELEMENT_CLOSED_VALUES:
+        if not isinstance(value, list):
+            return ["closed_collection_not_list"]
+        allowed = LIST_ELEMENT_CLOSED_VALUES[path]
+        for element in value:
+            if element not in allowed:
+                errors.append(f"invalid_closed_element:{element!r}")
+        return errors
+    if path not in OBJECT_FIELD_CLOSED_VALUES or value is None:
+        return errors
+    records = value if path == "housing.properties" else [value]
+    if not isinstance(records, list):
+        return ["structured_value_wrong_shape"]
+    for index, record in enumerate(records):
+        if not isinstance(record, dict):
+            errors.append(f"structured_record_not_object:{index}")
+            continue
+        for field, allowed in OBJECT_FIELD_CLOSED_VALUES[path].items():
+            if record.get(field) not in allowed:
+                errors.append(
+                    f"invalid_object_field:{index}:{field}:{record.get(field)!r}"
+                )
+    return errors
+
+
+def _property_consistency_errors(
+    state: dict[str, dict[str, Any]],
+) -> list[str]:
+    properties = state["housing.properties"]["value"]
+    primary = state["housing.primary_residence_property_id"]["value"]
+    if not isinstance(properties, list):
+        return ["housing.properties:not_list"]
+    owned_primary = [
+        item
+        for item in properties
+        if isinstance(item, dict)
+        and item.get("ownership_status") == "owned"
+        and item.get("role") == "primary_residence"
+    ]
+    errors: list[str] = []
+    if len(owned_primary) > 1:
+        errors.append("housing.properties:multiple_owned_primary_residences")
+    if primary is None:
+        if owned_primary:
+            errors.append("housing.primary_residence:missing_pointer")
+    elif owned_primary != [primary]:
+        errors.append("housing.primary_residence:pointer_collection_mismatch")
+    return errors
 
 
 def prepare_stage2_2_data(paths: ExperimentPaths) -> Path:
@@ -486,6 +659,9 @@ def prepare_stage2_2_data(paths: ExperimentPaths) -> Path:
         "raw_manifest": raw_manifest,
         "projector_version": PROJECTOR_VERSION,
         "value_kinds": VALUE_KINDS,
+        "scalar_closed_values": SCALAR_CLOSED_VALUES,
+        "list_element_closed_values": LIST_ELEMENT_CLOSED_VALUES,
+        "object_field_closed_values": OBJECT_FIELD_CLOSED_VALUES,
         "allowed_statuses": list(ALLOWED_STATUSES),
         "item_count": len(item_rows),
         "item_sha256": sha256_file(item_path),
@@ -511,6 +687,15 @@ def validate_stage2_2_prepared(paths: ExperimentPaths) -> dict[str, Any]:
         if initial != required or state != required:
             errors.append(f"{item['item_id']}: path contract mismatch")
         checkpoint = int((item.get("metadata") or {})["query_checkpoint"])
+        for label in ("initial_state", "state"):
+            gold_state = item["gold"][label]
+            for path, cell in gold_state.items():
+                for issue in _closed_value_errors(path, cell.get("value")):
+                    errors.append(
+                        f"{item['item_id']}:{label}:{path}:{issue}"
+                    )
+            for issue in _property_consistency_errors(gold_state):
+                errors.append(f"{item['item_id']}:{label}:{issue}")
         for cell in (item["gold"]["state"] or {}).values():
             for public_id in cell.get("evidence_session_ids") or []:
                 if not public_id.startswith("D") or int(public_id[1:]) > checkpoint:
@@ -584,6 +769,9 @@ def parse_stage2_2_prediction(
     if not isinstance(payload, dict) or not isinstance(payload.get("state"), dict):
         result["parse_error"] = "invalid_json_or_missing_state"
         return result
+    if payload.get("schema_version") != SCHEMA_VERSION:
+        result["parse_error"] = "schema_version_mismatch"
+        return result
     raw_state = payload["state"]
     extras = sorted(set(raw_state) - set(VALUE_KINDS))
     result["validation_errors"].extend(f"unknown_path:{path}" for path in extras)
@@ -615,6 +803,12 @@ def parse_stage2_2_prediction(
             elif value not in valid_evidence:
                 valid_evidence.append(value)
         if evidence_error:
+            continue
+        value_errors = _closed_value_errors(path, raw_cell.get("value"))
+        if value_errors:
+            result["validation_errors"].extend(
+                f"{path}:{error}" for error in value_errors
+            )
             continue
         result["state"][path] = {
             "value": copy.deepcopy(raw_cell.get("value")),

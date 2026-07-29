@@ -106,6 +106,52 @@ prediction에서 어떤 property가 `primary_residence`로 지정됐는지 관�
 비교한다. 모델이 임의의 local reference를 사용하더라도 property 내용과 참조
 관계가 같으면 동일한 상태로 정규화한다.
 
+### 2.5 Closed ontology 전수 공개와 Gold coverage
+
+최종 protocol은 `stage2_2_reconstruct-v2` schema와
+`stage2_2_observable_state-v2` projector를 사용한다. 후보는 20개 trajectory의
+정답 문자열을 무조건 나열해서 만들지 않는다. generator registry와 memory
+contract에서 closed domain을 먼저 정의하고, 20개 trajectory의 400개 checkpoint
+Gold를 전수 검사하여 모든 Gold 값이 그 domain 안에 포함되는지 검증한다.
+
+모델에 공개하는 closed domain은 다음과 같다.
+
+| 종류 | Path 또는 field | 공개 후보 |
+|---|---|---|
+| 혼인·배우자 | `household.marital_status` | `single`, `married`, `separated`, `divorced`, `widowed` |
+|  | `household.spouse_or_partner` | `spouse`, `null` |
+| 고용 | `employment.employment_status` | `employed`, `self_employed`, `unemployed`, `on_leave`, `retired`, `student`, `homemaker` |
+|  | `employment.income_stability` | `stable`, `variable`, `reduced`, `unstable`, `retired`, `null` |
+|  | `employment.salary_day` | `10`, `15`, `21`, `25`, `null` |
+|  | `employment.salary_account` | `main_checking`, `null` |
+| 주거 | `housing.residence_status`, `housing.contract_type` | `owner`, `jeonse`, `wolse`, `family_home`, `other` |
+|  | mortgage status | `none`, `active`, `closed` |
+| property subfield | `role` | `primary_residence`, `secondary_property` |
+|  | `ownership_status` | `owned`, `sold` |
+| 교육 | `education.self_education_status` | `none`, `enrolled`, `study_abroad` |
+|  | `education.child_education_stage` | `preschool`, `primary`, `middle`, `high`, `adult`, `null` |
+| 금융상품 | checking/savings element | `main_checking`, `savings_1` |
+|  | loan element | `mortgage`, `jeonse_loan`, `credit` |
+|  | `pension_or_irp` | `irp`, `receiving`, `null` |
+| 목표 | emergency fund | `building`, `null` |
+|  | housing/education/retirement goal | `active`, `null` |
+| 일회성 지출 | `category` | `medical`, `accident_or_disaster`, `fraud_loss`, `funeral` |
+
+회사명, 직업, 주소, 지역, 금액, 자녀 나이처럼 실제 대화에서 복원해야 하는
+open value는 Gold에서 관측됐더라도 후보로 공개하지 않는다. object는 구조와
+closed subfield 후보만 공개하고 주소와 금액은 계속 open으로 둔다.
+
+prepared-data validator는 initial state와 모든 checkpoint Gold에 대해 다음을
+자동 검사한다.
+
+- scalar closed value가 공개 후보 안에 있는가
+- closed collection의 모든 element가 공개 후보 안에 있는가
+- property와 expense object의 closed subfield가 공개 후보 안에 있는가
+- 보유 중인 `primary_residence`가 최대 한 채이며 primary pointer와 일치하는가
+
+후보 밖의 새 Gold 값이 생기면 silently 허용하지 않고 preparation을 실패시킨다.
+새 값이 정당하면 schema version과 ontology를 명시적으로 갱신한다.
+
 ## 3. 기본 비교 단위
 
 한 path의 prediction은 `value`와 `status`가 모두 Gold와 일치할 때만 정확한
@@ -479,18 +525,26 @@ tokens였다. OpenAI가
 output $30/1M을 uncached 기준으로 적용한 추정 증분 비용은 약 $0.6002다.
 실제 청구액은 provider billing record를 기준으로 별도 대조한다.
 
-Smoke 점수를 본 뒤 prompt rule, comparator, normalizer 또는 path 가중치를
-변경하지 않았다. 다만 점수와 무관한 계약 검수에서 다음 두 누락을 발견해
-정식 run 전에 보완했다.
+Smoke 점수를 본 뒤 path별 오답을 맞히기 위한 rule, comparator, normalizer 또는
+path 가중치는 변경하지 않았다. 다만 strict 비교 결과를 검토하면서 출력
+ontology가 모델에게 완전히 공개되지 않았다는 construct-validity 문제를
+발견했다. 따라서 해당 smoke는 v1 형식 검증 결과로 보존하고 정식 run 전에
+schema/projector v2로 다음 사항을 보완했다.
 
-1. 문서에서 사전 공개하기로 한 closed-enum 후보가 prompt의 type 설명에서
-   누락되어 후보 목록을 추가했다.
-2. 최초 smoke row에는 token usage와 전체 run 시간만 있고 요청별 latency가 없어,
+1. 20개 trajectory 전체 Gold와 generator registry를 대조하여 closed scalar,
+   collection element, object subfield 후보를 전부 공개했다.
+2. open value는 Gold에서 관측됐더라도 후보로 공개하지 않았다.
+3. `child_support_arrangement`의 실제 값 타입을 integer KRW 또는 null로
+   바로잡았다.
+4. 29개 checkpoint에서 두 보유 주택이 동시에 `primary_residence`로 projection된
+   문제를 primary pointer 기준으로 정규화했다.
+5. 모든 Gold 값의 ontology coverage와 primary-property 일관성을 자동 검증한다.
+6. 최초 smoke row에는 token usage와 전체 run 시간만 있고 요청별 latency가 없어,
    이후 실행부터 provider metadata에 `latency_seconds`를 기록하도록 했다.
 
-두 변경은 state Gold나 smoke path별 오답을 참조하지 않았으며 parser와 scorer를
-변경하지 않는다. 이 smoke 응답은 최종 결과에 재사용하지 않고, 최종 run에서는
-보완된 protocol로 `traj_001`을 포함한 전 항목을 새로 호출한다.
+v2의 parser는 공개 closed ontology 밖의 값을 validation error로 처리한다.
+v1 smoke 점수는 v2 점수와 직접 비교하지 않으며 최종 결과에 재사용하지 않는다.
+최종 run에서는 v2 protocol로 `traj_001`을 포함한 전 항목을 새로 호출한다.
 
 Provider별 constrained JSON/structured-output 기능은 사용하지 않는다. 공통
 prompt와 strict parser를 사용해 이후 다른 provider를 추가하더라도 output

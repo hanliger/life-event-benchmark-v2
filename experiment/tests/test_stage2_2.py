@@ -154,10 +154,13 @@ def test_stage2_2_prompt_exposes_schema_not_gold_values():
     assert "employment.employer" in query
     assert ", ".join(ALLOWED_STATUSES) in query
     assert '"retired" | "student" | "homemaker"' in query
-    assert '"owner" | "jeonse" | "wolse" | "family_home" | "other"' in query
+    assert '"public_rental" | "company_housing" | "dormitory"' in query
     assert 'household.spouse_or_partner: closed enum or null' in query
-    assert '"spouse" | null' in query
-    assert '"mortgage" | "jeonse_loan" | "credit"' in query
+    assert '"spouse" | "partner" | null' in query
+    assert '"auto_loan" | "student_loan" | "business_loan"' in query
+    assert '"study_abroad" | "on_leave" | "completed"' in query
+    assert "partner=non-married committed partner" in query
+    assert "credit=general unsecured credit without a designated purpose" in query
     assert '"medical" | "accident_or_disaster" | "fraud_loss" | "funeral"' in query
     assert "미래정보시스템" not in query
     assert "JSON 객체 하나만" in query

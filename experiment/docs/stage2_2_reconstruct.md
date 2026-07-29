@@ -108,7 +108,7 @@ prediction에서 어떤 property가 `primary_residence`로 지정됐는지 관�
 
 ### 2.5 Closed ontology 전수 공개와 Gold coverage
 
-최종 protocol은 `stage2_2_reconstruct-v2` schema와
+기본 ontology protocol은 `stage2_2_reconstruct-v2` schema와
 `stage2_2_observable_state-v2` projector를 사용한다. 후보는 20개 trajectory의
 정답 문자열을 무조건 나열해서 만들지 않는다. generator registry와 memory
 contract에서 closed domain을 먼저 정의하고, 20개 trajectory의 400개 checkpoint
@@ -151,6 +151,49 @@ prepared-data validator는 initial state와 모든 checkpoint Gold에 대해 다
 
 후보 밖의 새 Gold 값이 생기면 silently 허용하지 않고 preparation을 실패시킨다.
 새 값이 정당하면 schema version과 ontology를 명시적으로 갱신한다.
+
+### 2.6 v3 non-overlapping ontology robustness extension
+
+`stage2_2_reconstruct-v3`는 Gold와 observable projector를 변경하지 않고
+closed ontology만 넓힌 robustness variant다. v2의 400개 item과 v3의 Gold를
+전수 비교한 결과 변경은 0건이며, v3 Gold payload SHA-256은
+`0c3bec21b1c87c43b1763cba14189b79405cb1736c2d7544a318a0222118aa79`다.
+
+추가 후보는 기존 후보와 같은 의미 축에서 배타적으로 해석할 수 있는 다음
+9개로 제한한다.
+
+| Path | v3 추가 후보 |
+|---|---|
+| `household.spouse_or_partner` | `partner` |
+| `housing.residence_status` | `public_rental`, `company_housing`, `dormitory` |
+| `housing.contract_type` | `public_rental`, `company_housing`, `dormitory` |
+| `financial_products.loans[]` | `auto_loan`, `student_loan`, `business_loan` |
+| `education.self_education_status` | `on_leave`, `completed` |
+
+후보의 배타적 의미를 prompt에도 함께 공개한다.
+
+- `spouse`: 법적 배우자
+- `partner`: 비혼의 지속적 파트너
+- `jeonse`/`wolse`: 민간 임대
+- `public_rental`: 공공기관 제공 임대
+- `company_housing`: 고용주 제공 주거
+- `dormitory`: 학교·기관 기숙사
+- `credit`: 특정 목적이 없는 일반 신용대출
+- `auto_loan`, `student_loan`, `business_loan`: 계약상 목적이 각각 차량,
+  교육, 사업으로 지정된 대출
+- `enrolled`: 국내 과정 재학
+- `study_abroad`: 해외 과정 재학
+- `on_leave`: 등록을 유지한 휴학
+- `completed`: 과정 완료
+
+`part_time`, `contract_worker`, `freelancer`, `personal_loan`,
+`rental_property`, `joint_checking`, `business_checking`, `university`,
+`graduate_school`는 기존 후보와 의미 축이 겹치므로 추가하지 않는다.
+
+v3의 새 후보는 현재 Gold에서 정답으로 등장하지 않는다. 따라서 v3는 상태
+다양성이 증가한 dataset이 아니라, 더 넓은 사전 정의 ontology 안에서 기존
+Gold 상태를 선택하는 robustness test로 해석한다. v2 결과와 v3 결과는 schema
+version을 구분하여 보고한다.
 
 ## 3. 기본 비교 단위
 

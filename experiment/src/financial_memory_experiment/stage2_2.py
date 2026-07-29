@@ -29,7 +29,7 @@ from .util import read_jsonl, sha256_file, sha256_json, write_json, write_jsonl
 
 
 STAGE2_2 = "stage2_2_reconstruct"
-SCHEMA_VERSION = "stage2_2_reconstruct-v2"
+SCHEMA_VERSION = "stage2_2_reconstruct-v3"
 PROJECTOR_VERSION = "stage2_2_observable_state-v2"
 
 SCALAR_CLOSED_VALUES: dict[str, tuple[Any, ...]] = {
@@ -40,7 +40,7 @@ SCALAR_CLOSED_VALUES: dict[str, tuple[Any, ...]] = {
         "divorced",
         "widowed",
     ),
-    "household.spouse_or_partner": ("spouse", None),
+    "household.spouse_or_partner": ("spouse", "partner", None),
     "employment.employment_status": (
         "employed",
         "self_employed",
@@ -64,6 +64,9 @@ SCALAR_CLOSED_VALUES: dict[str, tuple[Any, ...]] = {
         "owner",
         "jeonse",
         "wolse",
+        "public_rental",
+        "company_housing",
+        "dormitory",
         "family_home",
         "other",
     ),
@@ -71,12 +74,21 @@ SCALAR_CLOSED_VALUES: dict[str, tuple[Any, ...]] = {
         "owner",
         "jeonse",
         "wolse",
+        "public_rental",
+        "company_housing",
+        "dormitory",
         "family_home",
         "other",
         None,
     ),
     "housing.mortgage_status": ("none", "active", "closed"),
-    "education.self_education_status": ("none", "enrolled", "study_abroad"),
+    "education.self_education_status": (
+        "none",
+        "enrolled",
+        "study_abroad",
+        "on_leave",
+        "completed",
+    ),
     "education.child_education_stage": (
         "preschool",
         "primary",
@@ -95,7 +107,45 @@ SCALAR_CLOSED_VALUES: dict[str, tuple[Any, ...]] = {
 LIST_ELEMENT_CLOSED_VALUES: dict[str, tuple[str, ...]] = {
     "financial_products.checking_accounts": ("main_checking",),
     "financial_products.savings_accounts": ("savings_1",),
-    "financial_products.loans": ("mortgage", "jeonse_loan", "credit"),
+    "financial_products.loans": (
+        "mortgage",
+        "jeonse_loan",
+        "credit",
+        "auto_loan",
+        "student_loan",
+        "business_loan",
+    ),
+}
+
+CLOSED_VALUE_DEFINITIONS: dict[str, tuple[str, ...]] = {
+    "household.spouse_or_partner": (
+        "spouse=legal spouse",
+        "partner=non-married committed partner",
+    ),
+    "housing.residence_status": (
+        "jeonse/wolse=private-market lease",
+        "public_rental=public-entity rental",
+        "company_housing=employer-provided housing",
+        "dormitory=school or institution dormitory",
+    ),
+    "housing.contract_type": (
+        "jeonse/wolse=private-market lease contract",
+        "public_rental=public-rental contract",
+        "company_housing=employer housing allocation",
+        "dormitory=dormitory occupancy",
+    ),
+    "education.self_education_status": (
+        "enrolled=domestic program currently attended",
+        "study_abroad=overseas program currently attended",
+        "on_leave=enrollment retained but attendance paused",
+        "completed=program finished",
+    ),
+    "financial_products.loans": (
+        "credit=general unsecured credit without a designated purpose",
+        "auto_loan=vehicle-purchase loan",
+        "student_loan=education-purpose loan",
+        "business_loan=business-purpose loan",
+    ),
 }
 
 OBJECT_FIELD_CLOSED_VALUES: dict[str, dict[str, tuple[str, ...]]] = {
@@ -192,22 +242,29 @@ def _candidate_text(values: tuple[Any, ...]) -> str:
 def value_schema_description(path: str) -> str:
     description = VALUE_KINDS[path]
     if path in SCALAR_CLOSED_VALUES:
-        return (
+        rendered = (
             f"{description}; allowed values: "
             f"{_candidate_text(SCALAR_CLOSED_VALUES[path])}"
         )
-    if path in LIST_ELEMENT_CLOSED_VALUES:
-        return (
+    elif path in LIST_ELEMENT_CLOSED_VALUES:
+        rendered = (
             f"{description}; allowed element values: "
             f"{_candidate_text(LIST_ELEMENT_CLOSED_VALUES[path])}"
         )
-    if path in OBJECT_FIELD_CLOSED_VALUES:
+    elif path in OBJECT_FIELD_CLOSED_VALUES:
         fields = "; ".join(
             f"{field}: {_candidate_text(values)}"
             for field, values in OBJECT_FIELD_CLOSED_VALUES[path].items()
         )
-        return f"{description}; allowed object fields: {fields}"
-    return description
+        rendered = f"{description}; allowed object fields: {fields}"
+    else:
+        rendered = description
+    definitions = CLOSED_VALUE_DEFINITIONS.get(path)
+    if definitions:
+        rendered += "; mutually exclusive definitions: " + "; ".join(
+            definitions
+        )
+    return rendered
 
 
 def active_stage2_2_raw_manifest(paths: ExperimentPaths) -> dict[str, Any]:
@@ -526,7 +583,10 @@ def prepare_stage2_2_data(paths: ExperimentPaths) -> Path:
     raw_root = Path(raw_manifest["root"])
     output = (
         paths.stage2_2_prepared
-        / f"{raw_manifest['tree_hash']}--{PROJECTOR_VERSION}"
+        / (
+            f"{raw_manifest['tree_hash']}--{PROJECTOR_VERSION}"
+            f"--{SCHEMA_VERSION}"
+        )
     )
     if (output / "manifest.json").exists():
         write_json(
@@ -662,6 +722,7 @@ def prepare_stage2_2_data(paths: ExperimentPaths) -> Path:
         "scalar_closed_values": SCALAR_CLOSED_VALUES,
         "list_element_closed_values": LIST_ELEMENT_CLOSED_VALUES,
         "object_field_closed_values": OBJECT_FIELD_CLOSED_VALUES,
+        "closed_value_definitions": CLOSED_VALUE_DEFINITIONS,
         "allowed_statuses": list(ALLOWED_STATUSES),
         "item_count": len(item_rows),
         "item_sha256": sha256_file(item_path),

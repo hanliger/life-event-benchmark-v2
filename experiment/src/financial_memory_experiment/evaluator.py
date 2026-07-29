@@ -13,6 +13,12 @@ from .methods import create_method
 from .methods.base import CloneEquivalenceError
 from .paths import ExperimentPaths
 from .prompts import gold_answer, parse_answer
+from .stage2_2 import (
+    STAGE2_2,
+    active_stage2_2_prepared_manifest,
+    parse_stage2_2_prediction,
+    score_stage2_2,
+)
 from .util import read_jsonl, session_number, sha256_file, sha256_json, write_json
 
 
@@ -79,7 +85,11 @@ class _RunRecorder:
         output.parent.mkdir(parents=True, exist_ok=True)
         output.touch(exist_ok=False)
         item_ids = sorted(str(item["item_id"]) for item in items)
-        prepared = active_prepared_manifest(paths)
+        prepared = (
+            active_stage2_2_prepared_manifest(paths)
+            if items and all(item.get("stage") == STAGE2_2 for item in items)
+            else active_prepared_manifest(paths)
+        )
         self.manifest: dict[str, Any] = {
             "schema_version": "evaluation-output-manifest-v2",
             "status": "RUNNING",
@@ -206,7 +216,16 @@ def run_method(
         mock=mock,
         top_k=top_k,
     )
-    root = Path(active_prepared_manifest(paths)["root"])
+    is_stage2_2 = [item.get("stage") == STAGE2_2 for item in items]
+    if any(is_stage2_2) and not all(is_stage2_2):
+        raise ValueError("Stage 2.2 items must run in a separate invocation")
+    root = Path(
+        (
+            active_stage2_2_prepared_manifest(paths)
+            if all(is_stage2_2)
+            else active_prepared_manifest(paths)
+        )["root"]
+    )
     by_trajectory: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for item in items:
         by_trajectory[str(item["trajectory_id"])].append(item)
@@ -274,6 +293,42 @@ def _prediction(
     checkpoint: int,
     answer: Any,
 ) -> dict[str, Any]:
+    if item.get("stage") == STAGE2_2:
+        parsed = parse_stage2_2_prediction(
+            answer.raw_answer, checkpoint=checkpoint
+        )
+        metrics = score_stage2_2(
+            prediction=parsed,
+            initial_state=item["gold"]["initial_state"],
+            gold_state=item["gold"]["state"],
+        )
+        _assert_no_future_evidence(
+            [
+                public_id.replace("D", "S", 1)
+                for cell in (parsed.get("state") or {}).values()
+                for public_id in (cell.get("evidence_session_ids") or [])
+            ],
+            checkpoint,
+        )
+        return {
+            "schema_version": "financial-memory-prediction-v2",
+            "method_id": method_id,
+            "item_id": item["item_id"],
+            "stage": item["stage"],
+            "trajectory_id": item["trajectory_id"],
+            "prefix_id": item.get("prefix_id"),
+            "query_checkpoint": checkpoint,
+            "prediction": parsed.get("state") or {},
+            "gold": item["gold"]["state"],
+            "correct": bool(metrics["exact_state_match"]),
+            "parse_error": parsed.get("parse_error"),
+            "validation_errors": parsed.get("validation_errors") or [],
+            "metrics": metrics,
+            "evidence_session_ids": answer.evidence_session_ids,
+            "response_metadata": answer.metadata,
+            "item_metadata": item.get("metadata") or {},
+            "raw_answer": answer.raw_answer,
+        }
     prediction = parse_answer(item, answer.raw_answer)
     gold = gold_answer(item)
     _assert_no_future_evidence(answer.evidence_session_ids, checkpoint)

@@ -9,5 +9,5 @@
     }
   ],
   "schema_version": "paid-smoke-ledger-v1",
-  "standing_limit_usd": 5.0
+  "standing_limit_usd": 10.0
 }

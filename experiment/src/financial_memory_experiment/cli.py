@@ -43,6 +43,14 @@ from .safety import (
     load_verified_smoke_plan,
     reserve_smoke_budget,
 )
+from .stage2_2 import (
+    download_stage2_2_data,
+    prepare_stage2_2_data,
+    stage2_2_item_path,
+    validate_stage2_2_prepared,
+    validate_stage2_2_raw_data,
+    write_stage2_2_initial_copy_report,
+)
 from .util import read_jsonl, sha256_file, sha256_json, write_json
 
 
@@ -57,9 +65,14 @@ def _canonical_item_paths(paths: ExperimentPaths) -> list[Path]:
 
 def _all_item_paths(paths: ExperimentPaths) -> list[Path]:
     root = Path(active_prepared_manifest(paths)["root"])
-    return _canonical_item_paths(paths) + [
+    result = _canonical_item_paths(paths) + [
         root / "masking_items" / "masking_questions.jsonl"
     ]
+    try:
+        result.append(stage2_2_item_path(paths))
+    except FileNotFoundError:
+        pass
+    return result
 
 
 def _selected_items(paths: ExperimentPaths, item_ids: list[str]) -> list[dict[str, Any]]:
@@ -338,9 +351,15 @@ def build_parser() -> argparse.ArgumentParser:
     download = sub.add_parser("download-data")
     download.add_argument("--source-dir", type=Path)
     download.add_argument("--revision")
+    download_stage2_2 = sub.add_parser("download-stage2-2-data")
+    download_stage2_2.add_argument("--revision")
     for name in (
         "validate-raw-data",
         "prepare-data",
+        "validate-stage2-2-raw",
+        "prepare-stage2-2",
+        "validate-stage2-2-prepared",
+        "stage2-2-initial-copy",
         "build-prefix-gold",
         "build-canonical-items",
         "build-masking-items",
@@ -388,10 +407,20 @@ def main() -> int:
     paths = ExperimentPaths.discover()
     if args.command == "download-data":
         result: Any = download_data(paths, source_dir=args.source_dir, revision=args.revision)
+    elif args.command == "download-stage2-2-data":
+        result = download_stage2_2_data(paths, revision=args.revision)
     elif args.command == "validate-raw-data":
         result = validate_raw_data(paths)
+    elif args.command == "validate-stage2-2-raw":
+        result = validate_stage2_2_raw_data(paths)
     elif args.command == "prepare-data":
         result = prepare_data(paths)
+    elif args.command == "prepare-stage2-2":
+        result = prepare_stage2_2_data(paths)
+    elif args.command == "validate-stage2-2-prepared":
+        result = validate_stage2_2_prepared(paths)
+    elif args.command == "stage2-2-initial-copy":
+        result = write_stage2_2_initial_copy_report(paths)
     elif args.command == "build-prefix-gold":
         result = build_prefix_gold_artifact(paths)
     elif args.command == "build-canonical-items":

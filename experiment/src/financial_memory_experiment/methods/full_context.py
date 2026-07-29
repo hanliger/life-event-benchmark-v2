@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from ..prompts import build_query, s000_as_session
+from ..stage2_2 import STAGE2_2
 from .base import MemoryMethod, MethodAnswer
 from .readers import Reader
 
@@ -23,10 +24,20 @@ class FullContextMethod(MemoryMethod):
         self.sessions.append(session)
 
     def answer(self, item: dict[str, Any]) -> MethodAnswer:
-        raw, metadata = self.reader.generate(
-            system=self.system,
-            user=build_query(item, self.sessions),
+        max_tokens = (
+            int((item.get("metadata") or {}).get("max_output_tokens", 12000))
+            if item.get("stage") == STAGE2_2
+            else None
         )
+        query = build_query(item, self.sessions)
+        if max_tokens is None:
+            raw, metadata = self.reader.generate(system=self.system, user=query)
+        else:
+            raw, metadata = self.reader.generate(
+                system=self.system,
+                user=query,
+                max_tokens=max_tokens,
+            )
         return MethodAnswer(
             raw_answer=raw,
             evidence_session_ids=[str(row["session_id"]) for row in self.sessions],

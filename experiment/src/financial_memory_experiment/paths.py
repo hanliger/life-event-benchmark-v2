@@ -32,6 +32,18 @@ class ExperimentPaths:
         return self.data / "prepared"
 
     @property
+    def stage2_2_data(self) -> Path:
+        return self.data / "stage2_2_reconstruct"
+
+    @property
+    def stage2_2_raw(self) -> Path:
+        return self.stage2_2_data / "raw"
+
+    @property
+    def stage2_2_prepared(self) -> Path:
+        return self.stage2_2_data / "prepared"
+
+    @property
     def runs(self) -> Path:
         return self.root / "runs"
 

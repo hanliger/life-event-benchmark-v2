@@ -31,14 +31,18 @@ def _usage_dict(usage: Any) -> dict[str, int] | None:
 
 
 class Reader(Protocol):
-    def generate(self, *, system: str, user: str) -> tuple[str, dict[str, Any]]: ...
+    def generate(
+        self, *, system: str, user: str, max_tokens: int | None = None
+    ) -> tuple[str, dict[str, Any]]: ...
 
 
 @dataclass
 class MockReader:
     answer: str = "<answer>A</answer>"
 
-    def generate(self, *, system: str, user: str) -> tuple[str, dict[str, Any]]:
+    def generate(
+        self, *, system: str, user: str, max_tokens: int | None = None
+    ) -> tuple[str, dict[str, Any]]:
         return self.answer, {"provider": "mock", "model": "mock", "paid": False}
 
 
@@ -85,11 +89,14 @@ class ProviderReader:
         else:
             raise ValueError(f"unsupported provider: {provider}")
 
-    def generate(self, *, system: str, user: str) -> tuple[str, dict[str, Any]]:
+    def generate(
+        self, *, system: str, user: str, max_tokens: int | None = None
+    ) -> tuple[str, dict[str, Any]]:
+        output_tokens = int(max_tokens or self.max_tokens)
         if self.provider == "anthropic":
             response = self.client.messages.create(
                 model=self.model,
-                max_tokens=self.max_tokens,
+                max_tokens=output_tokens,
                 messages=[{"role": "user", "content": user}],
                 system=system,
             )
@@ -100,7 +107,7 @@ class ProviderReader:
                 model=self.model,
                 instructions=system,
                 input=user,
-                max_output_tokens=self.max_tokens,
+                max_output_tokens=output_tokens,
             )
             text = response.output_text
             usage = getattr(response, "usage", None)
@@ -108,7 +115,7 @@ class ProviderReader:
             response = self.client.models.generate_content(
                 model=self.model,
                 contents=user,
-                config={"system_instruction": system, "max_output_tokens": self.max_tokens},
+                config={"system_instruction": system, "max_output_tokens": output_tokens},
             )
             text = response.text
             usage = getattr(response, "usage_metadata", None)
@@ -120,4 +127,5 @@ class ProviderReader:
             "usage": _usage_dict(usage),
             "automatic_retries": 0,
             "request_timeout_seconds": self.timeout_seconds,
+            "max_output_tokens": output_tokens,
         }

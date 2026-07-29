@@ -3,6 +3,7 @@
 .cache/
 data/raw/
 data/prepared/
+data/stage2_2_reconstruct/
 runs/
 __pycache__/
 *.py[cod]

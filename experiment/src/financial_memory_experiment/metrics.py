@@ -13,6 +13,80 @@ from .config import load_experiment_config
 from .methods import method_ids as configured_method_ids
 from .paths import ExperimentPaths
 from .util import read_jsonl, sha256_file, write_json
+from .stage2_2 import STAGE2_2
+
+
+_STAGE2_2_SCALAR_METRICS = (
+    "final_state_accuracy",
+    "value_accuracy",
+    "status_accuracy",
+    "changed_state_accuracy",
+    "unchanged_state_accuracy",
+    "exact_state_match",
+    "change_detection_precision",
+    "change_detection_recall",
+    "change_detection_f1",
+    "correct_change_precision",
+    "correct_change_recall",
+    "correct_change_f1",
+    "evidence_hit_rate",
+    "evidence_citation_precision",
+)
+
+
+def summarize_stage2_2_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    by_trajectory: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for row in rows:
+        by_trajectory[str(row["trajectory_id"])].append(row)
+    trajectory_metrics: dict[str, dict[str, float | None]] = {}
+    for trajectory_id, group in sorted(by_trajectory.items()):
+        trajectory_metrics[trajectory_id] = {}
+        for metric in _STAGE2_2_SCALAR_METRICS:
+            values = [
+                float(row["metrics"][metric])
+                for row in group
+                if row.get("metrics", {}).get(metric) is not None
+            ]
+            trajectory_metrics[trajectory_id][metric] = (
+                mean(values) if values else None
+            )
+    aggregate = {
+        metric: (
+            mean(
+                value
+                for values in trajectory_metrics.values()
+                if (value := values[metric]) is not None
+            )
+            if any(values[metric] is not None for values in trajectory_metrics.values())
+            else None
+        )
+        for metric in _STAGE2_2_SCALAR_METRICS
+    }
+    change_confusion: dict[str, int] = defaultdict(int)
+    status_confusion: dict[str, dict[str, int]] = defaultdict(
+        lambda: defaultdict(int)
+    )
+    for row in rows:
+        for key, value in row["metrics"]["change_confusion"].items():
+            change_confusion[key] += int(value)
+        for gold, predictions in row["metrics"]["status_confusion"].items():
+            for predicted, value in predictions.items():
+                status_confusion[gold][predicted] += int(value)
+    return {
+        "items": len(rows),
+        "aggregation": "checkpoint_then_trajectory_macro",
+        "metrics": aggregate,
+        "trajectory_metrics": trajectory_metrics,
+        "change_confusion": dict(change_confusion),
+        "status_confusion": {
+            gold: dict(predictions)
+            for gold, predictions in status_confusion.items()
+        },
+        "parse_errors": sum(bool(row.get("parse_error")) for row in rows),
+        "validation_error_count": sum(
+            len(row.get("validation_errors") or []) for row in rows
+        ),
+    }
 
 
 def _accuracy(rows: list[dict[str, Any]]) -> float | None:
@@ -212,7 +286,19 @@ def summarize_predictions(
         stages: dict[str, Any] = {}
         for stage in sorted({str(row["stage"]) for row in method_rows}):
             subset = [row for row in method_rows if row["stage"] == stage]
-            if stage == "stage2_memory_value":
+            if stage == STAGE2_2:
+                stage2_2 = summarize_stage2_2_rows(subset)
+                trajectory_scores = {
+                    trajectory_id: float(
+                        values["final_state_accuracy"] or 0.0
+                    )
+                    for trajectory_id, values in stage2_2[
+                        "trajectory_metrics"
+                    ].items()
+                }
+                score = stage2_2["metrics"]["final_state_accuracy"]
+                aggregation = stage2_2["aggregation"]
+            elif stage == "stage2_memory_value":
                 score, trajectory_scores = hierarchical_stage2(subset)
                 aggregation = "trajectory_target_checkpoint_macro"
             else:
@@ -236,6 +322,8 @@ def summarize_predictions(
                     str(lag): _accuracy(group) for lag, group in sorted(lag_groups.items())
                 },
             }
+            if stage == STAGE2_2:
+                stages[stage]["state_reconstruction"] = stage2_2
             retrieval_rows = [
                 row
                 for row in subset

@@ -7,6 +7,8 @@ from typing import Any
 
 from fin_life_benchmark.benchmark.stage2_memory import normalize_stage2_answer
 
+from .stage2_2 import ALLOWED_STATUSES, STAGE2_2, VALUE_KINDS
+
 
 def _date(value: Any) -> str:
     try:
@@ -44,6 +46,8 @@ def s000_as_session(record: dict[str, Any]) -> dict[str, Any]:
 
 
 def answer_contract(item: dict[str, Any]) -> str:
+    if item["stage"] == STAGE2_2:
+        return '{"schema_version":"stage2_2_reconstruct-v1","state":{...}}'
     if item["stage"] == "stage1_event_identification":
         return "<answer>event_id</answer>"
     if (
@@ -55,6 +59,8 @@ def answer_contract(item: dict[str, Any]) -> str:
 
 
 def build_query(item: dict[str, Any], evidence: list[dict[str, Any]]) -> str:
+    if item["stage"] == STAGE2_2:
+        return _build_stage2_2_query(item, evidence)
     lines = [
         "아래 제공된 상담 이력 또는 검색 근거와 질문만 사용하세요.",
         "질문의 대상 기간과 현재 질의 checkpoint를 혼동하지 마세요.",
@@ -83,6 +89,60 @@ def build_query(item: dict[str, Any], evidence: list[dict[str, Any]]) -> str:
         )
     lines.extend(["", f"설명 없이 {answer_contract(item)} 형식으로만 답하세요."])
     return "\n".join(lines)
+
+
+def _public_session(session: dict[str, Any]) -> str:
+    canonical = str(session["session_id"])
+    public = (
+        f"D{int(canonical[1:]):03d}"
+        if canonical.startswith("S") and canonical[1:].isdigit()
+        else canonical
+    )
+    rendered = {**session, "session_id": public}
+    return format_session(rendered)
+
+
+def _build_stage2_2_query(
+    item: dict[str, Any], evidence: list[dict[str, Any]]
+) -> str:
+    schema_lines = [
+        f"- {path}: {kind}" for path, kind in VALUE_KINDS.items()
+    ]
+    example = {
+        "schema_version": "stage2_2_reconstruct-v1",
+        "state": {
+            "<각 required path>": {
+                "value": "<현재 값 또는 null>",
+                "status": "<허용 status>",
+                "evidence_session_ids": ["D015"],
+            }
+        },
+    }
+    return "\n".join(
+        [
+            "초기 금융 memory와 checkpoint까지의 상담만 사용하여 현재 상태를 복원하세요.",
+            "미래 계획이나 가능성은 현재 사실로 반영하지 마세요.",
+            "일반 조회와 과거 회상은 명시적인 현재 상태 변경이 아니면 초기/최신 상태를 유지하세요.",
+            "각 path의 value와 status는 checkpoint 시점의 최종 상태여야 합니다.",
+            "초기 상태와 달라진 path에는 이를 뒷받침하는 D### 상담 ID를 하나 이상 쓰세요.",
+            "초기 상태와 같은 path의 evidence_session_ids는 빈 배열로 쓰세요.",
+            "설명, Markdown, 코드 펜스 없이 JSON 객체 하나만 출력하세요.",
+            "",
+            "[허용 status]",
+            ", ".join(ALLOWED_STATUSES),
+            "",
+            "[필수 state schema: 아래 34개 path를 정확히 한 번씩 모두 출력]",
+            *schema_lines,
+            "",
+            "[출력 구조 예시 — 값은 예시가 아니라 placeholder]",
+            json.dumps(example, ensure_ascii=False, indent=2),
+            "",
+            "[초기 상태와 상담 이력]",
+            *(_public_session(row) for row in evidence),
+            "",
+            f"[질문]\n{item['question']}",
+        ]
+    )
 
 
 _ANSWER = re.compile(r"<answer>\s*([^<]+?)\s*</answer>", re.IGNORECASE)

@@ -20,6 +20,24 @@ dataset:
     masking_arms: 5
     masking_cases: 2255
     masking_questions: 4510
+stage2_2_reconstruct:
+  task_id: stage2_2_reconstruct
+  revision: 716a1ae9cddcfeeb2638ab61b5a3c25cd724b3bf
+  tree_hash: 663d289d354ddcb036261ad3a9c2a95146736c84722a72b9abc12b81b299fbdb
+  dialogues_dir: dialogues_no_prospective
+  gold_dir: gold_no_prospective
+  source_gold_dir: gold
+  expected:
+    trajectories: 20
+    sessions_per_trajectory: 300
+    sessions: 6000
+    substitutions: 555
+    checkpoints: 400
+  smoke:
+    trajectory_id: traj_001
+    checkpoints: [45, 300]
+    method_id: fc_gpt_5_6_sol
+    max_output_tokens: 12000
 benchmark:
   checkpoint_stride: 15
   option_seed: 20260725

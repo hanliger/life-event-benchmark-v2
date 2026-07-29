@@ -25,7 +25,7 @@ class FullContextMethod(MemoryMethod):
 
     def answer(self, item: dict[str, Any]) -> MethodAnswer:
         max_tokens = (
-            int((item.get("metadata") or {}).get("max_output_tokens", 12000))
+            int((item.get("metadata") or {}).get("max_output_tokens", 20000))
             if item.get("stage") == STAGE2_2
             else None
         )
@@ -82,7 +82,7 @@ class OracleRelevantContextMethod(FullContextMethod):
             )
         evidence = [available["S000"], *(available[session_id] for session_id in support_ids)]
         max_tokens = int(
-            (item.get("metadata") or {}).get("max_output_tokens", 12000)
+            (item.get("metadata") or {}).get("max_output_tokens", 20000)
         )
         query = build_query(item, evidence)
         raw, metadata = self.reader.generate(

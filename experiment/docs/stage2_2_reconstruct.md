@@ -592,7 +592,7 @@ Oracle Relevant는 서로 다른 provider가 아니라 같은 model의 두 input
 | Paid requests | 2 |
 | Concurrency | 1 |
 | Automatic retries | 0 |
-| Stage-specific output limit | 12,000 tokens |
+| Stage-specific output limit | 20,000 tokens |
 
 두 checkpoint를 사용하는 이유는 짧은 prefix에서의 기본 형식과 300-session
 장문 입력에서의 context/output 안정성을 모두 확인하기 위해서다. smoke에서도
@@ -622,6 +622,12 @@ Gold와 비교하여 이 문서에 정의된 모든 점수와 confusion matrix�
 - 형식 계약을 freeze한 뒤 `traj_001`을 포함한 전체 trajectory를 새 run으로
   다시 평가한다.
 - smoke 점수, 허용된 수정 내역과 freeze commit을 manifest에 기록한다.
+
+20,000-token 상한은 `traj_010`의 Gemini 3.1 Pro Preview 300-session smoke가
+12,000-token 상한에서 두 번 연속 잘린 뒤 적용한 형식 안정성 수정이다. 두 실행은
+각각 thinking 11,517 + visible answer 479 tokens, thinking 10,679 + visible
+answer 1,317 tokens로 정확히 상한에 도달했다. 이는 정답이나 점수에 따른 수정이
+아니며, 세 모델에 동일하게 적용되어 완전한 JSON 제출 기회를 보장한다.
 
 이 원칙은 smoke 점수를 투명하게 확인·보고하면서도 `traj_001`의 결과에 맞춰
 과제나 prompt를 최적화하는 것을 막기 위한 것이다.

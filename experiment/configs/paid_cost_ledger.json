@@ -1,5 +1,5 @@
 {
-  "conservative_spent_usd": 11.659,
+  "conservative_spent_usd": 12.251,
   "entries": [
     {
       "amount_usd": 1.98,
@@ -67,6 +67,30 @@
           "input_tokens": 18160,
           "output_tokens": 15656
         }
+      }
+    },
+    {
+      "amount_usd": 0.5,
+      "kind": "plan_reservation",
+      "note": "Reconciled to a rounded-up usage-based upper bound: Gemini 3.1 Pro Preview used 68,579 input tokens at $2/M and 11,996 output tokens including thoughts at $12/M = $0.281110, rounded up to $0.282. The retry again reached the 12,000-token output limit and produced truncated JSON. Provider billing remains the final authority.",
+      "plan_sha256": "a293adc54394c010fc5ac8de1013bdb4910d428ac76dd45d90b3a1d171e3dc34",
+      "reconciled_amount_usd": 0.282,
+      "status": "reconciled_usage_upper_bound",
+      "usage": {
+        "input_tokens": 68579,
+        "output_tokens_including_thoughts": 11996
+      }
+    },
+    {
+      "amount_usd": 0.5,
+      "kind": "plan_reservation",
+      "note": "Reconciled to a rounded-up usage-based upper bound after raising the Stage 2.2 output limit to 20,000 tokens: Gemini 3.1 Pro Preview used 68,579 input tokens at $2/M and 14,402 output tokens including thoughts at $12/M = $0.309982, rounded up to $0.310. The response completed with valid JSON. Provider billing remains the final authority.",
+      "plan_sha256": "feac9e9cf1e1b7a53c8339b517db8f16618295bde1516dcbe04108cea8d23667",
+      "reconciled_amount_usd": 0.31,
+      "status": "reconciled_usage_upper_bound",
+      "usage": {
+        "input_tokens": 68579,
+        "output_tokens_including_thoughts": 14402
       }
     }
   ],

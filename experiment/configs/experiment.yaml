@@ -37,7 +37,7 @@ stage2_2_reconstruct:
     trajectory_id: traj_001
     checkpoints: [45, 300]
     method_id: fc_gpt_5_6_sol
-    max_output_tokens: 12000
+    max_output_tokens: 20000
 benchmark:
   checkpoint_stride: 15
   option_seed: 20260725

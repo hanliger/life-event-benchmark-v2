@@ -606,6 +606,7 @@ def prepare_stage2_2_data(paths: ExperimentPaths) -> Path:
     validate_stage2_2_raw_data(paths)
     cfg = load_experiment_config(paths)
     stage_cfg = cfg[STAGE2_2]
+    max_output_tokens = int(stage_cfg["smoke"]["max_output_tokens"])
     raw_manifest = active_stage2_2_raw_manifest(paths)
     raw_root = Path(raw_manifest["root"])
     output = (
@@ -613,6 +614,7 @@ def prepare_stage2_2_data(paths: ExperimentPaths) -> Path:
         / (
             f"{raw_manifest['tree_hash']}--{PROJECTOR_VERSION}"
             f"--{SCHEMA_VERSION}--{METRIC_PROTOCOL_VERSION}"
+            f"--maxout{max_output_tokens}"
         )
     )
     if (output / "manifest.json").exists():
@@ -724,9 +726,7 @@ def prepare_stage2_2_data(paths: ExperimentPaths) -> Path:
                     "projector_version": PROJECTOR_VERSION,
                     "required_paths": list(VALUE_KINDS),
                     "allowed_statuses": list(ALLOWED_STATUSES),
-                    "max_output_tokens": int(
-                        stage_cfg["smoke"]["max_output_tokens"]
-                    ),
+                    "max_output_tokens": max_output_tokens,
                 },
             }
         )
@@ -751,6 +751,7 @@ def prepare_stage2_2_data(paths: ExperimentPaths) -> Path:
         "raw_manifest": raw_manifest,
         "projector_version": PROJECTOR_VERSION,
         "metric_protocol_version": METRIC_PROTOCOL_VERSION,
+        "max_output_tokens": max_output_tokens,
         "dynamic_paths": dynamic_paths,
         "dynamic_path_count": len(dynamic_paths),
         "value_kinds": VALUE_KINDS,
@@ -792,6 +793,10 @@ def validate_stage2_2_prepared(paths: ExperimentPaths) -> dict[str, Any]:
         metadata = item.get("metadata") or {}
         if metadata.get("metric_protocol_version") != METRIC_PROTOCOL_VERSION:
             errors.append(f"{item['item_id']}: metric protocol mismatch")
+        if int(metadata.get("max_output_tokens", 0)) != int(
+            manifest.get("max_output_tokens", 0)
+        ):
+            errors.append(f"{item['item_id']}: output limit mismatch")
         if list(metadata.get("dynamic_paths") or []) != expected_dynamic_paths:
             errors.append(f"{item['item_id']}: dynamic path contract mismatch")
         for label in ("initial_state", "state"):

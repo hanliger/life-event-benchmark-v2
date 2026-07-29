@@ -1,130 +1,157 @@
-# Stage 2.2 traj_010 three-model smoke
+# Stage 2.2 `traj_010` 3개 모델 예비 실험
 
-## Scope
+## 1. 실행 범위
 
-- Date: 2026-07-30
-- Immutable plan: `f84f98315cc1fd165734bc601808e2d10bf3ad959ef36d51ec76c9ccdfef18cd`
-- Trajectory: `traj_010`
-- Checkpoints: 60, 120, 180, 240, 300
-- Full-context models: GPT-5.6 Sol, Claude Opus 5, Gemini 3.1 Pro Preview
-- Analysis arm: GPT-5.6 Sol with oracle-relevant dialogue only
-- Requests: 20
-- Concurrency: 1
-- Automatic retries: 0
-- Metric protocol: `stage2_2_metrics-v2`
+- 실행일: 2026-07-30
+- 최초 실행 계획: `f84f98315cc1fd165734bc601808e2d10bf3ad959ef36d51ec76c9ccdfef18cd`
+- 동일 설정 재실행 계획: `a293adc54394c010fc5ac8de1013bdb4910d428ac76dd45d90b3a1d171e3dc34`
+- 출력 상한 수정 후 확인 계획: `feac9e9cf1e1b7a53c8339b517db8f16618295bde1516dcbe04108cea8d23667`
+- 대상 trajectory: `traj_010`
+- 평가 checkpoint: 60, 120, 180, 240, 300
+- 전체 대화 입력 모델: GPT-5.6 Sol, Claude Opus 5, Gemini 3.1 Pro Preview
+- 분석용 입력 조건: GPT-5.6 Sol에 정답 관련 대화만 제공하는 Oracle Relevant
+- 최초 유료 요청 수: 20회
+- Gemini 실패 확인 및 수정 검증 요청 수: 2회
+- 동시 실행 수: 1
+- 자동 재시도: 0회
+- 평가 지표 규약: `stage2_2_metrics-v2`
 
-This is a format and pipeline smoke test on one trajectory. It is not a model-ranking
-result, and the one-trajectory bootstrap intervals are not inferential confidence
-intervals.
+이 실행은 한 개 trajectory에서 문제 형식, 장문 출력 안정성, 평가 파이프라인을
+검증하기 위한 예비 실험이다. 모델의 최종 순위를 정하는 실험이 아니다.
+trajectory가 하나뿐이므로 bootstrap 신뢰구간도 통계적 추론에 사용할 수 없다.
 
-## Aggregate results
+## 2. 지표의 의미
 
-All values except parse errors are percentages. `Final` is accuracy over all 34 state
-paths. `Dynamic Final` is accuracy over the 25 paths that change in at least one
-trajectory. `Correct-change F1` is checkpoint-micro F1 for detecting a changed path
-and predicting its new value correctly. `Path-macro F1` gives each eligible changed
-path equal weight. `Event Update` gives each update event equal weight. `Retention`
-averages correctness after an update over observed lags.
+- **전체 최종 상태 정확도**: 34개 전체 상태 path 중 값과 상태가 모두 맞은 비율
+- **동적 path 최종 상태 정확도**: 전체 데이터에서 한 번이라도 실제로 바뀌는
+  25개 path만 대상으로 계산한 최종 상태 정확도
+- **정확한 변경 F1**: 변경 여부를 맞히는 것에 더해 변경된 새 값까지 정확히
+  예측해야 정답으로 인정하는 F1
+- **path 매크로 정확한 변경 F1**: 자주 바뀌는 path가 결과를 지배하지 않도록,
+  실제 변경이 있는 각 path의 정확한 변경 F1에 같은 가중치를 부여한 평균
+- **이벤트 매크로 갱신 정확도**: 각 Gold 갱신 이벤트가 이후 첫 평가 시점에
+  얼마나 정확히 반영됐는지 계산하고 이벤트별로 같은 가중치를 부여한 평균
+- **갱신 후 유지 정확도**: 한 번 반영한 갱신을 이후 checkpoint에서도 계속
+  정확히 유지하는지를 관측 가능한 지연 구간에 걸쳐 평균한 값
 
-| Method | Final | Dynamic Final | Correct-change F1 | Path-macro F1 | Event Update | Retention | Parse errors |
+## 3. 최종 집계 결과
+
+모든 값은 백분율이다. Gemini의 checkpoint 300은 20,000-token 상한에서 성공한
+확인 실행 결과로 교체했다. 12,000-token 상한에서 잘린 두 응답은 점수 표에서는
+제외했지만 실패 기록과 비용 원장에는 그대로 보존했다.
+
+| 모델 및 입력 조건 | 전체 최종 상태 | 동적 path 최종 상태 | 정확한 변경 F1 | path 매크로 F1 | 이벤트 갱신 | 갱신 후 유지 | 파싱 성공 |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Claude Opus 5, full context | 87.65 | 91.20 | 83.07 | 78.55 | 88.12 | 87.50 | 0/5 |
-| Gemini 3.1 Pro Preview, full context | 64.71 | 66.40 | 57.45 | 49.29 | 62.19 | 55.31 | 1/5 |
-| GPT-5.6 Sol, full context | 74.71 | 77.60 | 62.77 | 59.71 | 67.92 | 61.98 | 0/5 |
-| GPT-5.6 Sol, oracle relevant | 75.88 | 76.00 | 65.65 | 64.95 | 70.10 | 62.29 | 0/5 |
+| Claude Opus 5, 전체 대화 | **87.65** | **91.20** | **83.07** | **78.55** | **88.12** | **87.50** | 5/5 |
+| Gemini 3.1 Pro Preview, 전체 대화 | 79.41 | 81.60 | 69.07 | 59.33 | 74.69 | 75.97 | 5/5 |
+| GPT-5.6 Sol, 전체 대화 | 74.71 | 77.60 | 62.77 | 59.71 | 67.92 | 61.98 | 5/5 |
+| GPT-5.6 Sol, 정답 관련 대화만 제공 | 75.88 | 76.00 | 65.65 | 64.95 | 70.10 | 62.29 | 5/5 |
 
-The Gemini aggregate includes the checkpoint-300 parse failure as zero, as required
-by the evaluation protocol. It must not be interpreted as a clean five-checkpoint
-quality estimate.
+## 4. checkpoint별 결과
 
-## Checkpoint results
+### 4.1 Claude Opus 5, 전체 대화
 
-### Claude Opus 5, full context
-
-| Checkpoint | Parse | Final | Dynamic Final | Correct-change F1 | Changed accuracy | Unchanged accuracy |
+| checkpoint | 파싱 | 전체 최종 상태 | 동적 path 최종 상태 | 정확한 변경 F1 | 변경 path 정확도 | 미변경 path 정확도 |
 |---:|---|---:|---:|---:|---:|---:|
-| 60 | OK | 85.3 | 88.0 | 78.6 | 78.6 | 90.0 |
-| 120 | OK | 97.1 | 100.0 | 95.7 | 100.0 | 95.7 |
-| 180 | OK | 91.2 | 96.0 | 88.9 | 100.0 | 86.4 |
-| 240 | OK | 79.4 | 84.0 | 72.2 | 76.5 | 82.4 |
-| 300 | OK | 85.3 | 88.0 | 80.0 | 80.0 | 89.5 |
+| 60 | 성공 | 85.3 | 88.0 | 78.6 | 78.6 | 90.0 |
+| 120 | 성공 | 97.1 | 100.0 | 95.7 | 100.0 | 95.7 |
+| 180 | 성공 | 91.2 | 96.0 | 88.9 | 100.0 | 86.4 |
+| 240 | 성공 | 79.4 | 84.0 | 72.2 | 76.5 | 82.4 |
+| 300 | 성공 | 85.3 | 88.0 | 80.0 | 80.0 | 89.5 |
 
-### Gemini 3.1 Pro Preview, full context
+### 4.2 Gemini 3.1 Pro Preview, 전체 대화
 
-| Checkpoint | Parse | Final | Dynamic Final | Correct-change F1 | Changed accuracy | Unchanged accuracy |
+| checkpoint | 파싱 | 전체 최종 상태 | 동적 path 최종 상태 | 정확한 변경 F1 | 변경 path 정확도 | 미변경 path 정확도 |
 |---:|---|---:|---:|---:|---:|---:|
-| 60 | OK | 79.4 | 84.0 | 73.3 | 78.6 | 80.0 |
-| 120 | OK | 91.2 | 96.0 | 87.0 | 90.9 | 91.3 |
-| 180 | OK | 82.4 | 84.0 | 71.4 | 83.3 | 81.8 |
-| 240 | OK | 70.6 | 68.0 | 55.6 | 58.8 | 82.4 |
-| 300 | FAIL | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 |
+| 60 | 성공 | 79.4 | 84.0 | 73.3 | 78.6 | 80.0 |
+| 120 | 성공 | 91.2 | 96.0 | 87.0 | 90.9 | 91.3 |
+| 180 | 성공 | 82.4 | 84.0 | 71.4 | 83.3 | 81.8 |
+| 240 | 성공 | 70.6 | 68.0 | 55.6 | 58.8 | 82.4 |
+| 300 | 성공 | 73.5 | 76.0 | 58.1 | 60.0 | 84.2 |
 
-At checkpoint 300, Gemini used 11,517 thinking tokens and emitted only 479 candidate
-tokens within the 12,000-token output allowance. The JSON ended partway through
-`employment.employer`, producing `invalid_json_or_missing_state`. No retry was made.
-Before a full run, the Gemini thinking/output-budget interaction must be fixed and
-re-smoked at long context.
+### 4.3 GPT-5.6 Sol, 전체 대화
 
-### GPT-5.6 Sol, full context
-
-| Checkpoint | Parse | Final | Dynamic Final | Correct-change F1 | Changed accuracy | Unchanged accuracy |
+| checkpoint | 파싱 | 전체 최종 상태 | 동적 path 최종 상태 | 정확한 변경 F1 | 변경 path 정확도 | 미변경 path 정확도 |
 |---:|---|---:|---:|---:|---:|---:|
-| 60 | OK | 79.4 | 80.0 | 69.0 | 71.4 | 85.0 |
-| 120 | OK | 88.2 | 96.0 | 84.6 | 100.0 | 82.6 |
-| 180 | OK | 79.4 | 84.0 | 69.0 | 83.3 | 77.3 |
-| 240 | OK | 58.8 | 60.0 | 46.2 | 52.9 | 64.7 |
-| 300 | OK | 67.6 | 68.0 | 45.2 | 46.7 | 84.2 |
+| 60 | 성공 | 79.4 | 80.0 | 69.0 | 71.4 | 85.0 |
+| 120 | 성공 | 88.2 | 96.0 | 84.6 | 100.0 | 82.6 |
+| 180 | 성공 | 79.4 | 84.0 | 69.0 | 83.3 | 77.3 |
+| 240 | 성공 | 58.8 | 60.0 | 46.2 | 52.9 | 64.7 |
+| 300 | 성공 | 67.6 | 68.0 | 45.2 | 46.7 | 84.2 |
 
-### GPT-5.6 Sol, oracle-relevant dialogue
+### 4.4 GPT-5.6 Sol, 정답 관련 대화만 제공
 
-| Checkpoint | Parse | Final | Dynamic Final | Correct-change F1 | Changed accuracy | Unchanged accuracy |
+| checkpoint | 파싱 | 전체 최종 상태 | 동적 path 최종 상태 | 정확한 변경 F1 | 변경 path 정확도 | 미변경 path 정확도 |
 |---:|---|---:|---:|---:|---:|---:|
-| 60 | OK | 79.4 | 80.0 | 73.3 | 78.6 | 80.0 |
-| 120 | OK | 88.2 | 92.0 | 84.6 | 100.0 | 82.6 |
-| 180 | OK | 88.2 | 88.0 | 76.9 | 83.3 | 90.9 |
-| 240 | OK | 58.8 | 56.0 | 37.8 | 41.2 | 76.5 |
-| 300 | OK | 64.7 | 64.0 | 55.6 | 66.7 | 63.2 |
+| 60 | 성공 | 79.4 | 80.0 | 73.3 | 78.6 | 80.0 |
+| 120 | 성공 | 88.2 | 92.0 | 84.6 | 100.0 | 82.6 |
+| 180 | 성공 | 88.2 | 88.0 | 76.9 | 83.3 | 90.9 |
+| 240 | 성공 | 58.8 | 56.0 | 37.8 | 41.2 | 76.5 |
+| 300 | 성공 | 64.7 | 64.0 | 55.6 | 66.7 | 63.2 |
 
-## Oracle-relevant comparison
+## 5. Gemini 출력 상한 실패와 수정
 
-Oracle-relevant minus GPT full-context:
+최초 checkpoint 300 실행은 thinking 11,517 tokens와 실제 답변 479 tokens를
+사용해 정확히 12,000-token 상한에 도달했다. JSON은
+`employment.employer` 값을 작성하던 중 잘렸고
+`invalid_json_or_missing_state`로 판정됐다.
 
-| Metric | Delta, percentage points |
+동일 설정으로 명시적으로 한 번 더 실행했지만 thinking 10,679 tokens와 실제
+답변 1,317 tokens를 사용해 다시 상한에 도달했고 동일하게 실패했다. 따라서
+일회성 API 변동이 아니라 재현 가능한 출력 예산 문제로 판단했다.
+
+Stage 2.2의 공통 출력 상한을 20,000 tokens로 올린 뒤 다시 확인한 결과,
+thinking 12,669 tokens와 실제 답변 1,733 tokens를 사용하고 완전한 JSON을
+반환했다. 파싱 오류와 schema 검증 오류는 모두 0이었다.
+
+이 수정은 특정 정답이나 점수를 보고 prompt를 조정한 것이 아니다. 세 모델에
+동일한 상한을 적용해 완전한 구조화 답변을 제출할 기회를 보장하는 형식 안정성
+수정이다. 준비 데이터 경로에도 `maxout20000`을 포함해 설정 변경이 과거
+12,000-token item을 잘못 재사용하지 않도록 했다. Gold와 평가 대상 path는
+변경하지 않았다.
+
+## 6. 정답 관련 대화만 제공한 조건과의 비교
+
+GPT 정답 관련 대화 조건에서 전체 대화 조건을 뺀 차이는 다음과 같다.
+
+| 지표 | 차이, %p |
 |---|---:|
-| Final | +1.18 |
-| Dynamic Final | -1.60 |
-| Correct-change F1 | +2.88 |
-| Path-macro Correct-change F1 | +5.24 |
-| Event-macro Update Accuracy | +2.19 |
-| Retention-after-update | +0.31 |
+| 전체 최종 상태 정확도 | +1.18 |
+| 동적 path 최종 상태 정확도 | -1.60 |
+| 정확한 변경 F1 | +2.88 |
+| path 매크로 정확한 변경 F1 | +5.24 |
+| 이벤트 매크로 갱신 정확도 | +2.19 |
+| 갱신 후 유지 정확도 | +0.31 |
 
-On this one trajectory, filtering to oracle-relevant dialogue modestly improved the
-update-sensitive metrics but not Dynamic Final. This is consistent with some
-full-context distraction, but one trajectory is insufficient to support that claim
-statistically.
+이 한 trajectory에서는 정답 관련 대화만 제공했을 때 갱신 중심 지표가 소폭
+상승했지만 동적 path 최종 상태 정확도는 하락했다. 전체 대화의 방해 효과가
+일부 존재할 가능성과 일치하지만, 한 trajectory만으로 이를 통계적으로
+주장할 수는 없다.
 
-## Usage-based cost upper bound
+## 7. 비용
 
-Standard API token rates were applied to provider-reported usage. Gemini output
-includes thinking tokens.
+provider가 보고한 token 사용량에 표준 API 단가를 적용했다. Gemini 출력
+token에는 thinking token을 포함했다.
 
-| Arm | Input tokens | Billable output tokens | Calculated USD |
-|---|---:|---:|---:|
-| Claude Opus 5 full context | 370,404 | 34,953 | 2.725845 |
-| Gemini 3.1 Pro Preview full context | 211,511 | 50,040 | 1.023502 |
-| GPT-5.6 Sol full context | 215,720 | 17,043 | 1.589890 |
-| GPT-5.6 Sol oracle relevant | 18,160 | 15,656 | 0.560480 |
-| **Total** | 815,795 | 117,692 | **5.899717** |
+| 실행 | 계산 비용 |
+|---|---:|
+| 최초 20회 실행 | $5.899717 |
+| Gemini 12,000-token 동일 설정 재실행 | $0.281110 |
+| Gemini 20,000-token 수정 후 확인 실행 | $0.309982 |
+| **이번 예비 실험 전체** | **$6.490809** |
 
-The cost ledger records a rounded-up upper bound of `$5.900`; provider billing is
-authoritative. The cumulative conservative ledger is `$11.659 / $20.000`.
+비용 원장에는 각 실행을 올림한 보수적 상한인 `$5.900`, `$0.282`, `$0.310`으로
+기록했다. 현재 누적 보수적 비용은 `$12.251 / $20.000`이며, 실제 provider
+청구 내역이 최종 기준이다.
 
-## Smoke conclusion
+## 8. 결론
 
-- The Stage 2.2 v3 schema and A–E metric pipeline work end to end for Claude,
-  GPT full-context, and GPT oracle-relevant.
-- Claude and GPT produced five valid reconstructions each.
-- Gemini is not ready for a full long-context run with the current 12,000-token
-  allowance because adaptive thinking can consume almost the entire output budget.
-- The update-sensitive metrics materially separate model behavior even when overall
-  final-state accuracy remains relatively high.
+- Stage 2.2 v3 JSON 구조와 A–E 평가 파이프라인은 세 모델에서 끝까지 작동했다.
+- 20,000-token 상한 적용 후 세 모델 모두 5개 checkpoint의 완전한 상태를
+  제출했다.
+- 12,000-token 상한은 Gemini의 adaptive thinking과 함께 사용할 때 장문
+  checkpoint에서 구조적 파싱 실패를 일으킬 수 있으므로 사용하면 안 된다.
+- 갱신 중심 지표는 전체 최종 상태 정확도만 볼 때 가려지는 모델 차이를 실제로
+  드러냈다.
+- 다만 이 결과는 `traj_010` 하나의 예비 결과이므로 논문의 모델 성능 결론으로
+  사용하지 않는다.

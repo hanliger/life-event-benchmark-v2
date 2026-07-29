@@ -6,6 +6,7 @@ import json
 import pytest
 
 from financial_memory_experiment.prompts import build_query
+from financial_memory_experiment.metrics import summarize_stage2_2_rows
 from financial_memory_experiment.stage2_2 import (
     ALLOWED_STATUSES,
     LIST_ELEMENT_CLOSED_VALUES,
@@ -130,6 +131,89 @@ def test_state_metrics_separate_changed_and_unchanged_behavior():
     assert baseline["changed_state_accuracy"] == 0.0
     assert baseline["unchanged_state_accuracy"] == 1.0
     assert baseline["change_confusion"]["fn"] == 1
+
+
+def test_dynamic_path_and_path_event_retention_metrics():
+    initial = _state()
+    gold = copy.deepcopy(initial)
+    gold["employment.employer"] = {
+        "value": "미래정보시스템",
+        "status": "current",
+        "evidence_session_ids": ["D015"],
+    }
+    correct = score_stage2_2(
+        prediction={"state": copy.deepcopy(gold)},
+        initial_state=initial,
+        gold_state=gold,
+        dynamic_paths=["employment.employer"],
+    )
+    wrong_state = copy.deepcopy(gold)
+    wrong_state["employment.employer"]["value"] = "잘못된회사"
+    wrong = score_stage2_2(
+        prediction={"state": wrong_state},
+        initial_state=initial,
+        gold_state=gold,
+        dynamic_paths=["employment.employer"],
+    )
+    rows = [
+        {
+            "trajectory_id": "traj_test",
+            "item_id": "q015",
+            "query_checkpoint": 15,
+            "metrics": correct,
+            "parse_error": None,
+            "validation_errors": [],
+        },
+        {
+            "trajectory_id": "traj_test",
+            "item_id": "q030",
+            "query_checkpoint": 30,
+            "metrics": wrong,
+            "parse_error": None,
+            "validation_errors": [],
+        },
+    ]
+
+    summary = summarize_stage2_2_rows(rows)
+
+    assert summary["metrics"]["dynamic_path_final_state_accuracy"] == 0.5
+    assert summary["path_macro"]["correct_change_f1"] == 0.5
+    assert summary["path_macro"]["eligible_path_count"] == 1
+    assert summary["event_macro"]["update_accuracy"] == 1.0
+    assert summary["event_macro"]["exact_update_accuracy"] == 1.0
+    assert summary["retention_after_update"]["by_lag_sessions"] == {
+        "0": 1.0,
+        "15": 0.0,
+    }
+    assert summary["retention_after_update"]["by_lag_bucket"] == {
+        "0": 1.0,
+        "1-15": 0.0,
+    }
+    assert (
+        summary["retention_after_update"]["mean_over_observed_lags"]
+        == 0.5
+    )
+
+
+def test_correct_change_f1_is_zero_when_update_is_entirely_missed():
+    initial = _state()
+    gold = copy.deepcopy(initial)
+    gold["employment.employer"] = {
+        "value": "미래정보시스템",
+        "status": "current",
+        "evidence_session_ids": ["D015"],
+    }
+
+    metrics = score_stage2_2(
+        prediction={"state": copy.deepcopy(initial)},
+        initial_state=initial,
+        gold_state=gold,
+        dynamic_paths=["employment.employer"],
+    )
+
+    assert metrics["correct_change_precision"] == 0.0
+    assert metrics["correct_change_recall"] == 0.0
+    assert metrics["correct_change_f1"] == 0.0
 
 
 def test_stage2_2_prompt_exposes_schema_not_gold_values():

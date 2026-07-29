@@ -31,6 +31,7 @@ from .util import read_jsonl, sha256_file, sha256_json, write_json, write_jsonl
 STAGE2_2 = "stage2_2_reconstruct"
 SCHEMA_VERSION = "stage2_2_reconstruct-v3"
 PROJECTOR_VERSION = "stage2_2_observable_state-v2"
+METRIC_PROTOCOL_VERSION = "stage2_2_metrics-v2"
 
 SCALAR_CLOSED_VALUES: dict[str, tuple[Any, ...]] = {
     "household.marital_status": (
@@ -519,6 +520,32 @@ def _with_gold_evidence(
     return result
 
 
+def _discover_dynamic_paths(
+    items: list[dict[str, Any]],
+) -> list[str]:
+    """Return paths with an observed value/status transition in the full corpus."""
+
+    by_trajectory: dict[str, list[dict[str, Any]]] = {}
+    for item in items:
+        by_trajectory.setdefault(str(item["trajectory_id"]), []).append(item)
+    dynamic: set[str] = set()
+    for group in by_trajectory.values():
+        ordered = sorted(
+            group,
+            key=lambda item: int(item["metadata"]["query_checkpoint"]),
+        )
+        previous = ordered[0]["gold"]["initial_state"]
+        for item in ordered:
+            current = item["gold"]["state"]
+            dynamic.update(
+                path
+                for path in VALUE_KINDS
+                if not _cell_equal(path, previous[path], current[path])
+            )
+            previous = current
+    return [path for path in VALUE_KINDS if path in dynamic]
+
+
 def _closed_value_errors(path: str, value: Any) -> list[str]:
     errors: list[str] = []
     if path in SCALAR_CLOSED_VALUES:
@@ -585,7 +612,7 @@ def prepare_stage2_2_data(paths: ExperimentPaths) -> Path:
         paths.stage2_2_prepared
         / (
             f"{raw_manifest['tree_hash']}--{PROJECTOR_VERSION}"
-            f"--{SCHEMA_VERSION}"
+            f"--{SCHEMA_VERSION}--{METRIC_PROTOCOL_VERSION}"
         )
     )
     if (output / "manifest.json").exists():
@@ -704,6 +731,11 @@ def prepare_stage2_2_data(paths: ExperimentPaths) -> Path:
             }
         )
 
+    dynamic_paths = _discover_dynamic_paths(item_rows)
+    for item in item_rows:
+        item["metadata"]["dynamic_paths"] = dynamic_paths
+        item["metadata"]["metric_protocol_version"] = METRIC_PROTOCOL_VERSION
+
     item_path = (
         output / "canonical_items" / "stage2_2_reconstruct.jsonl"
     )
@@ -718,6 +750,9 @@ def prepare_stage2_2_data(paths: ExperimentPaths) -> Path:
         "root": str(output),
         "raw_manifest": raw_manifest,
         "projector_version": PROJECTOR_VERSION,
+        "metric_protocol_version": METRIC_PROTOCOL_VERSION,
+        "dynamic_paths": dynamic_paths,
+        "dynamic_path_count": len(dynamic_paths),
         "value_kinds": VALUE_KINDS,
         "scalar_closed_values": SCALAR_CLOSED_VALUES,
         "list_element_closed_values": LIST_ELEMENT_CLOSED_VALUES,
@@ -741,6 +776,12 @@ def validate_stage2_2_prepared(paths: ExperimentPaths) -> dict[str, Any]:
     )
     errors: list[str] = []
     counts = Counter(str(item["trajectory_id"]) for item in items)
+    expected_dynamic_paths = list(manifest.get("dynamic_paths") or [])
+    discovered_dynamic_paths = _discover_dynamic_paths(items)
+    if expected_dynamic_paths != discovered_dynamic_paths:
+        errors.append(
+            "manifest dynamic paths differ from observed Gold transitions"
+        )
     for item in items:
         required = set(VALUE_KINDS)
         initial = set((item.get("gold") or {}).get("initial_state") or {})
@@ -748,6 +789,11 @@ def validate_stage2_2_prepared(paths: ExperimentPaths) -> dict[str, Any]:
         if initial != required or state != required:
             errors.append(f"{item['item_id']}: path contract mismatch")
         checkpoint = int((item.get("metadata") or {})["query_checkpoint"])
+        metadata = item.get("metadata") or {}
+        if metadata.get("metric_protocol_version") != METRIC_PROTOCOL_VERSION:
+            errors.append(f"{item['item_id']}: metric protocol mismatch")
+        if list(metadata.get("dynamic_paths") or []) != expected_dynamic_paths:
+            errors.append(f"{item['item_id']}: dynamic path contract mismatch")
         for label in ("initial_state", "state"):
             gold_state = item["gold"][label]
             for path, cell in gold_state.items():
@@ -757,8 +803,23 @@ def validate_stage2_2_prepared(paths: ExperimentPaths) -> dict[str, Any]:
                     )
             for issue in _property_consistency_errors(gold_state):
                 errors.append(f"{item['item_id']}:{label}:{issue}")
-        for cell in (item["gold"]["state"] or {}).values():
-            for public_id in cell.get("evidence_session_ids") or []:
+        for path, cell in (item["gold"]["state"] or {}).items():
+            gold_changed = not _cell_equal(
+                path,
+                item["gold"]["initial_state"][path],
+                cell,
+            )
+            evidence = list(cell.get("evidence_session_ids") or [])
+            if gold_changed and len(evidence) != 1:
+                errors.append(
+                    f"{item['item_id']}:{path}: changed cell must have exactly "
+                    "one update-event evidence session"
+                )
+            if not gold_changed and evidence:
+                errors.append(
+                    f"{item['item_id']}:{path}: unchanged cell has event evidence"
+                )
+            for public_id in evidence:
                 if not public_id.startswith("D") or int(public_id[1:]) > checkpoint:
                     errors.append(
                         f"{item['item_id']}: invalid/future evidence {public_id}"
@@ -771,6 +832,8 @@ def validate_stage2_2_prepared(paths: ExperimentPaths) -> dict[str, Any]:
         "decision": "PASS" if not errors else "FAIL",
         "item_count": len(items),
         "trajectory_count": len(counts),
+        "dynamic_paths": expected_dynamic_paths,
+        "dynamic_path_count": len(expected_dynamic_paths),
         "changed_path_counts": {
             item["item_id"]: sum(
                 item["gold"]["state"][path]["value"]
@@ -945,8 +1008,15 @@ def score_stage2_2(
     prediction: dict[str, Any],
     initial_state: dict[str, dict[str, Any]],
     gold_state: dict[str, dict[str, Any]],
+    dynamic_paths: list[str] | tuple[str, ...] | None = None,
 ) -> dict[str, Any]:
     predicted_state = prediction.get("state") or {}
+    dynamic_path_set = set(dynamic_paths or VALUE_KINDS)
+    unknown_dynamic_paths = dynamic_path_set - set(VALUE_KINDS)
+    if unknown_dynamic_paths:
+        raise ValueError(
+            f"unknown dynamic paths: {sorted(unknown_dynamic_paths)}"
+        )
     counts = {
         "tn": 0,
         "fp": 0,
@@ -972,6 +1042,8 @@ def score_stage2_2(
     evidence_paths = 0
     valid_citations = 0
     total_citations = 0
+    dynamic_correct = 0
+    path_outcomes: dict[str, dict[str, Any]] = {}
 
     for path in VALUE_KINDS:
         initial = initial_state[path]
@@ -1001,6 +1073,8 @@ def score_stage2_2(
 
         if cell_correct:
             correct_cells += 1
+            if path in dynamic_path_set:
+                dynamic_correct += 1
         if gold_changed and predicted_changed:
             if cell_correct:
                 counts["tp_correct"] += 1
@@ -1016,6 +1090,30 @@ def score_stage2_2(
             if cell_correct:
                 unchanged_correct += 1
 
+        classification = (
+            "tp_correct"
+            if gold_changed and predicted_changed and cell_correct
+            else "tp_wrong_value"
+            if gold_changed and predicted_changed
+            else "fn"
+            if gold_changed
+            else "fp"
+            if predicted_changed
+            else "tn"
+        )
+        gold_event_sessions = (
+            list(gold.get("evidence_session_ids") or [])
+            if gold_changed
+            else []
+        )
+        path_outcomes[path] = {
+            "gold_changed": gold_changed,
+            "predicted_changed": predicted_changed,
+            "cell_correct": cell_correct,
+            "classification": classification,
+            "gold_event_session_ids": gold_event_sessions,
+        }
+
         gold_evidence = set(gold.get("evidence_session_ids") or [])
         if gold_changed:
             evidence_paths += 1
@@ -1028,11 +1126,19 @@ def score_stage2_2(
             valid_citations += len(gold_evidence & predicted_evidence)
 
     detected = counts["tp_correct"] + counts["tp_wrong_value"]
-    detection_precision = _safe_ratio(detected, detected + counts["fp"])
+    detection_precision = (
+        _safe_ratio(detected, detected + counts["fp"])
+        if detected + counts["fp"]
+        else 0.0
+    )
     detection_recall = _safe_ratio(detected, detected + counts["fn"])
-    correct_change_precision = _safe_ratio(
-        counts["tp_correct"],
-        counts["tp_correct"] + counts["tp_wrong_value"] + counts["fp"],
+    correct_change_denominator = (
+        counts["tp_correct"] + counts["tp_wrong_value"] + counts["fp"]
+    )
+    correct_change_precision = (
+        _safe_ratio(counts["tp_correct"], correct_change_denominator)
+        if correct_change_denominator
+        else 0.0
     )
     correct_change_recall = _safe_ratio(
         counts["tp_correct"],
@@ -1041,6 +1147,9 @@ def score_stage2_2(
     total = len(VALUE_KINDS)
     return {
         "final_state_accuracy": correct_cells / total,
+        "dynamic_path_final_state_accuracy": _safe_ratio(
+            dynamic_correct, len(dynamic_path_set)
+        ),
         "value_accuracy": value_correct / total,
         "status_accuracy": status_correct / total,
         "changed_state_accuracy": _safe_ratio(changed_correct, changed_total),
@@ -1065,6 +1174,8 @@ def score_stage2_2(
         "changed_path_count": changed_total,
         "unchanged_path_count": unchanged_total,
         "correct_cell_count": correct_cells,
+        "dynamic_path_count": len(dynamic_path_set),
+        "path_outcomes": path_outcomes,
         "change_confusion": counts,
         "status_confusion": status_confusion,
     }
@@ -1082,6 +1193,7 @@ def initial_copy_score(item: dict[str, Any]) -> dict[str, Any]:
         prediction=prediction,
         initial_state=initial,
         gold_state=item["gold"]["state"],
+        dynamic_paths=(item.get("metadata") or {}).get("dynamic_paths"),
     )
 
 
@@ -1095,6 +1207,9 @@ def write_stage2_2_initial_copy_report(
         {
             "trajectory_id": item["trajectory_id"],
             "item_id": item["item_id"],
+            "query_checkpoint": int(
+                (item.get("metadata") or {})["query_checkpoint"]
+            ),
             "metrics": initial_copy_score(item),
             "parse_error": None,
             "validation_errors": [],
@@ -1102,7 +1217,7 @@ def write_stage2_2_initial_copy_report(
         for item in items
     ]
     report = {
-        "schema_version": "stage2_2_initial_copy_report-v1",
+        "schema_version": "stage2_2_initial_copy_report-v2",
         "baseline": "initial_copy",
         **summarize_stage2_2_rows(rows),
     }

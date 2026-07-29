@@ -301,6 +301,7 @@ def _prediction(
             prediction=parsed,
             initial_state=item["gold"]["initial_state"],
             gold_state=item["gold"]["state"],
+            dynamic_paths=(item.get("metadata") or {}).get("dynamic_paths"),
         )
         _assert_no_future_evidence(
             [
@@ -311,7 +312,7 @@ def _prediction(
             checkpoint,
         )
         return {
-            "schema_version": "financial-memory-prediction-v2",
+            "schema_version": "financial-memory-prediction-v3",
             "method_id": method_id,
             "item_id": item["item_id"],
             "stage": item["stage"],

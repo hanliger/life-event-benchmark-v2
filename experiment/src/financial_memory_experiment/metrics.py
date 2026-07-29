@@ -18,6 +18,7 @@ from .stage2_2 import STAGE2_2
 
 _STAGE2_2_SCALAR_METRICS = (
     "final_state_accuracy",
+    "dynamic_path_final_state_accuracy",
     "value_accuracy",
     "status_accuracy",
     "changed_state_accuracy",
@@ -34,7 +35,274 @@ _STAGE2_2_SCALAR_METRICS = (
 )
 
 
+def _ratio(numerator: int, denominator: int) -> float | None:
+    return numerator / denominator if denominator else None
+
+
+def _f1(precision: float | None, recall: float | None) -> float | None:
+    if precision is None or recall is None:
+        return None
+    return (
+        2 * precision * recall / (precision + recall)
+        if precision + recall
+        else 0.0
+    )
+
+
+def _correct_change_metrics(counts: dict[str, int]) -> dict[str, float | None]:
+    predicted_change = (
+        counts["tp_correct"] + counts["tp_wrong_value"] + counts["fp"]
+    )
+    gold_change = counts["tp_correct"] + counts["tp_wrong_value"] + counts["fn"]
+    precision = (
+        _ratio(counts["tp_correct"], predicted_change)
+        if predicted_change
+        else 0.0
+    )
+    recall = _ratio(counts["tp_correct"], gold_change)
+    return {
+        "correct_change_precision": precision,
+        "correct_change_recall": recall,
+        "correct_change_f1": _f1(precision, recall),
+    }
+
+
+def _stage2_2_path_macro(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    counts_by_path: dict[str, dict[str, int]] = defaultdict(
+        lambda: {
+            "tn": 0,
+            "fp": 0,
+            "fn": 0,
+            "tp_correct": 0,
+            "tp_wrong_value": 0,
+        }
+    )
+    changed_trajectories: dict[str, set[str]] = defaultdict(set)
+    update_events: dict[str, set[tuple[str, str]]] = defaultdict(set)
+    for row in rows:
+        trajectory_id = str(row["trajectory_id"])
+        outcomes = (row.get("metrics") or {}).get("path_outcomes") or {}
+        for path, outcome in outcomes.items():
+            classification = str(outcome["classification"])
+            counts_by_path[str(path)][classification] += 1
+            if outcome.get("gold_changed"):
+                changed_trajectories[str(path)].add(trajectory_id)
+                for event_id in outcome.get("gold_event_session_ids") or []:
+                    update_events[str(path)].add(
+                        (trajectory_id, str(event_id))
+                    )
+
+    path_metrics: dict[str, dict[str, Any]] = {}
+    eligible_f1: list[float] = []
+    for path, counts in sorted(counts_by_path.items()):
+        metrics = _correct_change_metrics(counts)
+        changed_items = (
+            counts["tp_correct"] + counts["tp_wrong_value"] + counts["fn"]
+        )
+        eligible = changed_items > 0
+        if eligible and metrics["correct_change_f1"] is not None:
+            eligible_f1.append(float(metrics["correct_change_f1"]))
+        path_metrics[path] = {
+            "eligible": eligible,
+            "changed_items": changed_items,
+            "changed_trajectories": len(changed_trajectories[path]),
+            "update_events": len(update_events[path]),
+            "change_confusion": counts,
+            **metrics,
+        }
+    return {
+        "correct_change_f1": mean(eligible_f1) if eligible_f1 else None,
+        "eligible_path_count": len(eligible_f1),
+        "reported_path_count": len(path_metrics),
+        "path_metrics": path_metrics,
+    }
+
+
+def _event_number(event_id: str) -> int:
+    if not event_id.startswith("D") or not event_id[1:].isdigit():
+        raise ValueError(f"invalid Stage 2.2 update-event session ID: {event_id}")
+    return int(event_id[1:])
+
+
+def _retention_lag_bucket(lag: int) -> str:
+    if lag < 0:
+        raise ValueError(f"negative retention lag: {lag}")
+    if lag == 0:
+        return "0"
+    for upper in (15, 30, 60, 120, 180, 240):
+        lower = 1 if upper == 15 else {
+            30: 16,
+            60: 31,
+            120: 61,
+            180: 121,
+            240: 181,
+        }[upper]
+        if lag <= upper:
+            return f"{lower}-{upper}"
+    return "241+"
+
+
+def _stage2_2_event_and_retention(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    observations: dict[
+        tuple[str, str], dict[int, dict[str, bool]]
+    ] = defaultdict(lambda: defaultdict(dict))
+    for row in rows:
+        trajectory_id = str(row["trajectory_id"])
+        checkpoint = int(row["query_checkpoint"])
+        outcomes = (row.get("metrics") or {}).get("path_outcomes") or {}
+        for path, outcome in outcomes.items():
+            if not outcome.get("gold_changed"):
+                continue
+            event_ids = list(outcome.get("gold_event_session_ids") or [])
+            if len(event_ids) != 1:
+                raise ValueError(
+                    f"{row['item_id']}/{path}: expected exactly one Gold "
+                    "update-event session"
+                )
+            event_id = str(event_ids[0])
+            if _event_number(event_id) > checkpoint:
+                raise ValueError(
+                    f"{row['item_id']}/{path}: future update event {event_id}"
+                )
+            observations[(trajectory_id, event_id)][checkpoint][str(path)] = bool(
+                outcome.get("cell_correct")
+            )
+
+    update_scores_by_trajectory: dict[str, list[float]] = defaultdict(list)
+    update_exact_by_trajectory: dict[str, list[float]] = defaultdict(list)
+    first_lags: list[int] = []
+    lag_event_scores: dict[
+        int, dict[str, list[float]]
+    ] = defaultdict(lambda: defaultdict(list))
+    bucket_event_scores: dict[
+        str, dict[str, dict[str, list[float]]]
+    ] = defaultdict(
+        lambda: defaultdict(lambda: defaultdict(list))
+    )
+    retention_by_trajectory: dict[str, list[float]] = defaultdict(list)
+
+    for (trajectory_id, event_id), checkpoints in sorted(observations.items()):
+        first_checkpoint = min(checkpoints)
+        first_values = list(checkpoints[first_checkpoint].values())
+        update_scores_by_trajectory[trajectory_id].append(mean(first_values))
+        update_exact_by_trajectory[trajectory_id].append(
+            float(all(first_values))
+        )
+        first_lags.append(first_checkpoint - _event_number(event_id))
+
+        event_retention_scores: list[float] = []
+        for checkpoint, outcomes in sorted(checkpoints.items()):
+            score = mean(outcomes.values())
+            lag = checkpoint - _event_number(event_id)
+            lag_event_scores[lag][trajectory_id].append(score)
+            bucket_event_scores[_retention_lag_bucket(lag)][trajectory_id][
+                event_id
+            ].append(score)
+            event_retention_scores.append(score)
+        retention_by_trajectory[trajectory_id].append(
+            mean(event_retention_scores)
+        )
+
+    trajectory_update = {
+        trajectory_id: mean(scores)
+        for trajectory_id, scores in sorted(update_scores_by_trajectory.items())
+    }
+    trajectory_exact = {
+        trajectory_id: mean(scores)
+        for trajectory_id, scores in sorted(update_exact_by_trajectory.items())
+    }
+    trajectory_retention = {
+        trajectory_id: mean(scores)
+        for trajectory_id, scores in sorted(retention_by_trajectory.items())
+    }
+    by_lag = {
+        str(lag): mean(
+            mean(scores) for scores in trajectory_scores.values()
+        )
+        for lag, trajectory_scores in sorted(lag_event_scores.items())
+    }
+    by_lag_support = {
+        str(lag): {
+            "events": sum(len(scores) for scores in trajectory_scores.values()),
+            "trajectories": len(trajectory_scores),
+        }
+        for lag, trajectory_scores in sorted(lag_event_scores.items())
+    }
+    bucket_order = {
+        label: index
+        for index, label in enumerate(
+            ("0", "1-15", "16-30", "31-60", "61-120", "121-180", "181-240", "241+")
+        )
+    }
+    by_bucket = {
+        bucket: mean(
+            mean(
+                mean(event_scores)
+                for event_scores in events.values()
+            )
+            for events in trajectories.values()
+        )
+        for bucket, trajectories in sorted(
+            bucket_event_scores.items(),
+            key=lambda item: bucket_order[item[0]],
+        )
+    }
+    by_bucket_support = {
+        bucket: {
+            "events": sum(len(events) for events in trajectories.values()),
+            "trajectories": len(trajectories),
+        }
+        for bucket, trajectories in sorted(
+            bucket_event_scores.items(),
+            key=lambda item: bucket_order[item[0]],
+        )
+    }
+    return {
+        "event_macro": {
+            "aggregation": "event_then_trajectory_macro",
+            "update_accuracy": (
+                mean(trajectory_update.values()) if trajectory_update else None
+            ),
+            "exact_update_accuracy": (
+                mean(trajectory_exact.values()) if trajectory_exact else None
+            ),
+            "event_count": len(observations),
+            "trajectory_count": len(trajectory_update),
+            "mean_first_evaluation_lag_sessions": (
+                mean(first_lags) if first_lags else None
+            ),
+            "trajectory_update_accuracy": trajectory_update,
+            "trajectory_exact_update_accuracy": trajectory_exact,
+        },
+        "retention_after_update": {
+            "aggregation": "event_lag_then_trajectory_macro",
+            "mean_over_observed_lags": (
+                mean(trajectory_retention.values())
+                if trajectory_retention
+                else None
+            ),
+            "event_count": len(observations),
+            "by_lag_sessions": by_lag,
+            "support_by_lag_sessions": by_lag_support,
+            "by_lag_bucket": by_bucket,
+            "support_by_lag_bucket": by_bucket_support,
+            "trajectory_mean_over_observed_lags": trajectory_retention,
+        },
+    }
+
+
 def summarize_stage2_2_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    required_metric_fields = {
+        "dynamic_path_final_state_accuracy",
+        "path_outcomes",
+    }
+    for row in rows:
+        missing = required_metric_fields - set(row.get("metrics") or {})
+        if missing:
+            raise ValueError(
+                f"{row.get('item_id')}: Stage 2.2 metrics-v2 fields missing; "
+                f"rerun prediction under the frozen protocol: {sorted(missing)}"
+            )
     by_trajectory: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for row in rows:
         by_trajectory[str(row["trajectory_id"])].append(row)
@@ -72,6 +340,8 @@ def summarize_stage2_2_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
         for gold, predictions in row["metrics"]["status_confusion"].items():
             for predicted, value in predictions.items():
                 status_confusion[gold][predicted] += int(value)
+    path_macro = _stage2_2_path_macro(rows)
+    event_and_retention = _stage2_2_event_and_retention(rows)
     return {
         "items": len(rows),
         "aggregation": "checkpoint_then_trajectory_macro",
@@ -82,6 +352,8 @@ def summarize_stage2_2_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
             gold: dict(predictions)
             for gold, predictions in status_confusion.items()
         },
+        "path_macro": path_macro,
+        **event_and_retention,
         "parse_errors": sum(bool(row.get("parse_error")) for row in rows),
         "validation_error_count": sum(
             len(row.get("validation_errors") or []) for row in rows
@@ -149,6 +421,16 @@ def _trajectory_scores(
 ) -> dict[str, float]:
     if stage == "stage2_memory_value":
         return hierarchical_stage2(rows)[1]
+    if stage == STAGE2_2:
+        by_trajectory: dict[str, list[float]] = defaultdict(list)
+        for row in rows:
+            by_trajectory[str(row["trajectory_id"])].append(
+                float(row["metrics"]["final_state_accuracy"])
+            )
+        return {
+            trajectory_id: mean(scores)
+            for trajectory_id, scores in sorted(by_trajectory.items())
+        }
     by_trajectory: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for row in rows:
         by_trajectory[str(row["trajectory_id"])].append(row)
@@ -156,6 +438,32 @@ def _trajectory_scores(
         trajectory_id: float(_accuracy(group) or 0.0)
         for trajectory_id, group in sorted(by_trajectory.items())
     }
+
+
+def _stage2_2_metric_trajectory_scores(
+    rows: list[dict[str, Any]], metric: str
+) -> dict[str, float]:
+    by_trajectory: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for row in rows:
+        by_trajectory[str(row["trajectory_id"])].append(row)
+    scores: dict[str, float] = {}
+    for trajectory_id, group in sorted(by_trajectory.items()):
+        summary = summarize_stage2_2_rows(group)
+        if metric in _STAGE2_2_SCALAR_METRICS:
+            value = summary["metrics"][metric]
+        elif metric == "path_macro_correct_change_f1":
+            value = summary["path_macro"]["correct_change_f1"]
+        elif metric == "event_macro_update_accuracy":
+            value = summary["event_macro"]["update_accuracy"]
+        elif metric == "retention_mean_over_observed_lags":
+            value = summary["retention_after_update"][
+                "mean_over_observed_lags"
+            ]
+        else:
+            raise ValueError(f"unsupported Stage 2.2 comparison metric: {metric}")
+        if value is not None:
+            scores[trajectory_id] = float(value)
+    return scores
 
 
 def _paired_bootstrap_delta(
@@ -375,6 +683,7 @@ def summarize_predictions(
                 }
         results[method_id] = stages
     paired: dict[str, Any] = {}
+    oracle_relevant_comparisons: dict[str, Any] = {}
     methods = sorted(results)
     stages = sorted({stage for method in results.values() for stage in method})
     for stage in stages:
@@ -395,12 +704,59 @@ def summarize_predictions(
             )
             for left, right in itertools.combinations(methods, 2)
         }
+    oracle_pairs = (
+        ("oracle_rel_gpt_5_6_sol", "fc_gpt_5_6_sol"),
+    )
+    comparison_metrics = (
+        "final_state_accuracy",
+        "dynamic_path_final_state_accuracy",
+        "correct_change_f1",
+        "path_macro_correct_change_f1",
+        "event_macro_update_accuracy",
+        "retention_mean_over_observed_lags",
+    )
+    for oracle_method, full_method in oracle_pairs:
+        if oracle_method not in methods or full_method not in methods:
+            continue
+        stage_rows = [
+            row for row in rows if str(row["stage"]) == STAGE2_2
+        ]
+        oracle_rows = [
+            row
+            for row in stage_rows
+            if str(row["method_id"]) == oracle_method
+        ]
+        full_rows = [
+            row
+            for row in stage_rows
+            if str(row["method_id"]) == full_method
+        ]
+        if not oracle_rows or not full_rows:
+            continue
+        comparison_id = f"{oracle_method}__minus__{full_method}"
+        oracle_relevant_comparisons[comparison_id] = {
+            "direction": "oracle_relevant_minus_full_context",
+            "metrics": {
+                metric: _paired_bootstrap_delta(
+                    _stage2_2_metric_trajectory_scores(
+                        oracle_rows, metric
+                    ),
+                    _stage2_2_metric_trajectory_scores(
+                        full_rows, metric
+                    ),
+                    samples=samples,
+                    seed=seed,
+                )
+                for metric in comparison_metrics
+            },
+        }
     return {
-        "schema_version": "financial-memory-metrics-v1",
+        "schema_version": "financial-memory-metrics-v2",
         "bootstrap": {"samples": samples, "seed": seed, "unit": "trajectory"},
         "completeness": completeness,
         "methods": results,
         "paired_method_deltas": paired,
+        "oracle_relevant_comparisons": oracle_relevant_comparisons,
     }
 
 
@@ -410,15 +766,27 @@ def write_tables(report: dict[str, Any], output_dir: Path) -> None:
     masking_rows: list[dict[str, Any]] = []
     stage3_rows: list[dict[str, Any]] = []
     lag_rows: list[dict[str, Any]] = []
+    stage2_2_path_rows: list[dict[str, Any]] = []
+    stage2_2_event_rows: list[dict[str, Any]] = []
+    stage2_2_retention_rows: list[dict[str, Any]] = []
     for method_id, stages in report["methods"].items():
         family = (
-            "Full Context"
+            "Oracle Relevant"
+            if method_id.startswith("oracle_rel_")
+            else "Full Context"
             if method_id.startswith("fc_")
             else "Retrieval"
             if method_id.startswith(("bm25_", "dense_"))
             else "Memory"
         )
         for stage, values in stages.items():
+            state_reconstruction = values.get("state_reconstruction") or {}
+            state_metrics = state_reconstruction.get("metrics") or {}
+            path_macro = state_reconstruction.get("path_macro") or {}
+            event_macro = state_reconstruction.get("event_macro") or {}
+            retention = (
+                state_reconstruction.get("retention_after_update") or {}
+            )
             rows.append(
                 {
                     "method_family": family,
@@ -430,8 +798,100 @@ def write_tables(report: dict[str, Any], output_dir: Path) -> None:
                     "ci95_high": values["ci95"][1],
                     "parse_errors": values["parse_errors"],
                     "aggregation": values["aggregation"],
+                    "dynamic_path_final_state_accuracy": state_metrics.get(
+                        "dynamic_path_final_state_accuracy"
+                    ),
+                    "correct_change_f1": state_metrics.get(
+                        "correct_change_f1"
+                    ),
+                    "path_macro_correct_change_f1": path_macro.get(
+                        "correct_change_f1"
+                    ),
+                    "event_macro_update_accuracy": event_macro.get(
+                        "update_accuracy"
+                    ),
+                    "event_exact_update_accuracy": event_macro.get(
+                        "exact_update_accuracy"
+                    ),
+                    "retention_mean_over_observed_lags": retention.get(
+                        "mean_over_observed_lags"
+                    ),
                 }
             )
+            for path, path_values in (
+                path_macro.get("path_metrics") or {}
+            ).items():
+                stage2_2_path_rows.append(
+                    {
+                        "method_id": method_id,
+                        "path": path,
+                        **{
+                            key: value
+                            for key, value in path_values.items()
+                            if key != "change_confusion"
+                        },
+                        **{
+                            f"confusion_{key}": value
+                            for key, value in (
+                                path_values.get("change_confusion") or {}
+                            ).items()
+                        },
+                    }
+                )
+            if event_macro:
+                stage2_2_event_rows.append(
+                    {
+                        "method_id": method_id,
+                        "event_count": event_macro.get("event_count"),
+                        "trajectory_count": event_macro.get(
+                            "trajectory_count"
+                        ),
+                        "update_accuracy": event_macro.get(
+                            "update_accuracy"
+                        ),
+                        "exact_update_accuracy": event_macro.get(
+                            "exact_update_accuracy"
+                        ),
+                        "mean_first_evaluation_lag_sessions": event_macro.get(
+                            "mean_first_evaluation_lag_sessions"
+                        ),
+                        "aggregation": event_macro.get("aggregation"),
+                    }
+                )
+            for lag, accuracy in (
+                retention.get("by_lag_sessions") or {}
+            ).items():
+                support = (
+                    retention.get("support_by_lag_sessions") or {}
+                ).get(lag, {})
+                stage2_2_retention_rows.append(
+                    {
+                        "method_id": method_id,
+                        "lag_type": "exact_sessions",
+                        "lag": lag,
+                        "accuracy": accuracy,
+                        "events": support.get("events"),
+                        "trajectories": support.get("trajectories"),
+                        "aggregation": retention.get("aggregation"),
+                    }
+                )
+            for bucket, accuracy in (
+                retention.get("by_lag_bucket") or {}
+            ).items():
+                support = (
+                    retention.get("support_by_lag_bucket") or {}
+                ).get(bucket, {})
+                stage2_2_retention_rows.append(
+                    {
+                        "method_id": method_id,
+                        "lag_type": "session_bucket",
+                        "lag": bucket,
+                        "accuracy": accuracy,
+                        "events": support.get("events"),
+                        "trajectories": support.get("trajectories"),
+                        "aggregation": retention.get("aggregation"),
+                    }
+                )
             for arm, accuracy in (values.get("accuracy_by_masking_arm") or {}).items():
                 masking_rows.append(
                     {
@@ -476,25 +936,45 @@ def write_tables(report: dict[str, Any], output_dir: Path) -> None:
         writer.writeheader()
         writer.writerows(rows)
     lines = [
-        "| Family | Method | Stage | Score | 95% CI | N | Aggregation |",
-        "|---|---|---|---:|---:|---:|---|",
+        "| Family | Method | Stage | Score | Dynamic Final | "
+        "Correct-change F1 | Path-macro F1 | Event Update | Retention | "
+        "95% CI | N | Aggregation |",
+        "|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---|",
     ]
     for row in rows:
         score = "—" if row["score"] is None else f"{100 * row['score']:.2f}"
+        stage2_values = [
+            (
+                "—"
+                if row[key] is None
+                else f"{100 * float(row[key]):.2f}"
+            )
+            for key in (
+                "dynamic_path_final_state_accuracy",
+                "correct_change_f1",
+                "path_macro_correct_change_f1",
+                "event_macro_update_accuracy",
+                "retention_mean_over_observed_lags",
+            )
+        ]
         ci = (
             "—"
             if row["ci95_low"] is None
             else f"[{100 * row['ci95_low']:.2f}, {100 * row['ci95_high']:.2f}]"
         )
         lines.append(
-            f"| {row['method_family']} | {row['method_id']} | {row['stage']} | {score} | {ci} | "
-            f"{row['items']} | {row['aggregation']} |"
+            f"| {row['method_family']} | {row['method_id']} | "
+            f"{row['stage']} | {score} | {' | '.join(stage2_values)} | "
+            f"{ci} | {row['items']} | {row['aggregation']} |"
         )
     (output_dir / "main_results.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
     for filename, table_rows in (
         ("masking_by_arm.csv", masking_rows),
         ("stage3_by_derivation.csv", stage3_rows),
         ("retention_lag.csv", lag_rows),
+        ("stage2_2_path_metrics.csv", stage2_2_path_rows),
+        ("stage2_2_event_metrics.csv", stage2_2_event_rows),
+        ("stage2_2_retention_after_update.csv", stage2_2_retention_rows),
     ):
         with (output_dir / filename).open("w", encoding="utf-8", newline="") as handle:
             writer = csv.DictWriter(
@@ -524,4 +1004,29 @@ def write_tables(report: dict[str, Any], output_dir: Path) -> None:
         )
         writer.writeheader()
         writer.writerows(paired_rows)
+    oracle_rows = [
+        {
+            "comparison": comparison,
+            "metric": metric,
+            "delta": values["delta"],
+            "ci95_low": values["ci95"][0],
+            "ci95_high": values["ci95"][1],
+            "trajectory_units": values["units"],
+        }
+        for comparison, comparison_values in report.get(
+            "oracle_relevant_comparisons", {}
+        ).items()
+        for metric, values in comparison_values.get("metrics", {}).items()
+    ]
+    with (output_dir / "oracle_relevant_deltas.csv").open(
+        "w", encoding="utf-8", newline=""
+    ) as handle:
+        writer = csv.DictWriter(
+            handle,
+            fieldnames=(
+                list(oracle_rows[0]) if oracle_rows else ["comparison"]
+            ),
+        )
+        writer.writeheader()
+        writer.writerows(oracle_rows)
     write_json(output_dir / "metrics.json", report)

@@ -9,10 +9,12 @@ from financial_memory_experiment.paths import ExperimentPaths
 from financial_memory_experiment.prompts import build_query, gold_answer, parse_answer
 
 
-def test_exactly_seven_methods_and_short_output_cap():
+def test_exactly_eight_methods_and_short_output_cap():
     cfg = load_experiment_config()
-    assert len(method_ids()) == 7
-    assert len(set(method_ids())) == 7
+    assert len(method_ids()) == 8
+    assert len(set(method_ids())) == 8
+    assert len(cfg["methods"]) == 7
+    assert cfg["analysis_methods"] == ["oracle_rel_gpt_5_6_sol"]
     assert cfg["models"]["final_answer_max_tokens"] == 4096
     assert cfg["models"]["reasoning_policy"] == "vendor_default"
     assert cfg["dataset"]["expected"]["stage3_items"] == 123

@@ -3,7 +3,10 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 from financial_memory_experiment.evaluator import _answer_with_query_isolation
-from financial_memory_experiment.methods.full_context import FullContextMethod
+from financial_memory_experiment.methods.full_context import (
+    FullContextMethod,
+    OracleRelevantContextMethod,
+)
 from financial_memory_experiment.methods.letta_adapter import LettaMethod
 from financial_memory_experiment.methods.mem0_adapter import InMemoryMem0Double, Mem0Method
 from financial_memory_experiment.methods.readers import MockReader
@@ -44,6 +47,15 @@ ITEM = {
 }
 
 
+class _CapturingReader:
+    def __init__(self):
+        self.user = ""
+
+    def generate(self, *, system, user, max_tokens=None):
+        self.user = user
+        return "{}", {"provider": "capture", "model": "capture", "paid": False}
+
+
 def test_local_methods_are_query_read_only_and_cloneable():
     reader = MockReader()
     methods = [
@@ -63,6 +75,49 @@ def test_local_methods_are_query_read_only_and_cloneable():
         clone.ingest_session({**SESSION, "session_id": "S002"})
         assert method.state_fingerprint() == before
         assert clone.state_fingerprint() != before
+
+
+def test_oracle_relevant_context_uses_only_s000_and_gold_support_sessions():
+    reader = _CapturingReader()
+    method = OracleRelevantContextMethod("oracle", reader, "system")
+    method.ingest_initial(S000)
+    for number in range(1, 4):
+        method.ingest_session(
+            {
+                **SESSION,
+                "session_id": f"S{number:03d}",
+                "turns": [
+                    {
+                        "speaker": "user",
+                        "text": f"SESSION-{number}",
+                    }
+                ],
+            }
+        )
+    state = {
+        "employment.employer": {
+            "value": "한빛테크",
+            "status": "current",
+            "evidence_session_ids": ["D002"],
+        }
+    }
+    item = {
+        "item_id": "oracle-q",
+        "stage": "stage2_2_reconstruct",
+        "trajectory_id": "traj_test",
+        "question": "현재 상태를 복원하세요.",
+        "gold": {"state": state},
+        "metadata": {"max_output_tokens": 12000},
+    }
+
+    answer = method.answer(item)
+
+    assert "SESSION-2" in reader.user
+    assert "SESSION-1" not in reader.user
+    assert "SESSION-3" not in reader.user
+    assert answer.evidence_session_ids == ["S000", "S002"]
+    assert answer.metadata["context_arm"] == "oracle_relevant"
+    assert answer.metadata["oracle_support_session_count"] == 1
 
 
 class _FakeAgentsMessages:

@@ -68,6 +68,8 @@ methods:
   - dense_ge2_gemini_3_1_pro
   - mem0_gemini_3_1_pro
   - letta_gemini_3_1_pro
+analysis_methods:
+  - oracle_rel_gpt_5_6_sol
 statistics:
   bootstrap_samples: 10000
   seed: 20260725

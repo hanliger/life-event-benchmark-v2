@@ -6,7 +6,7 @@ from typing import Any
 from ..config import load_experiment_config, load_method_config
 from ..paths import ExperimentPaths
 from .base import MemoryMethod
-from .full_context import FullContextMethod
+from .full_context import FullContextMethod, OracleRelevantContextMethod
 from .letta_adapter import LettaContractDouble, LettaMethod, official_letta_client
 from .mem0_adapter import Mem0Method, build_official_mem0
 from .readers import MockReader, ProviderReader, Reader
@@ -39,7 +39,11 @@ def comparison_contract(paths: ExperimentPaths | None = None) -> dict[str, Any]:
 
 def method_ids(paths: ExperimentPaths | None = None) -> list[str]:
     comparison_contract(paths)
-    return list(load_experiment_config(paths)["methods"])
+    cfg = load_experiment_config(paths)
+    return [
+        *map(str, cfg["methods"]),
+        *map(str, cfg.get("analysis_methods") or []),
+    ]
 
 
 def _system(paths: ExperimentPaths) -> str:
@@ -105,6 +109,18 @@ def create_method(
         return FullContextMethod(method_id, gemini, system)
     if method_id == "fc_gpt_5_6_sol":
         return FullContextMethod(
+            method_id,
+            _reader(
+                "openai",
+                str(models["openai_full_context"]),
+                mock,
+                max_tokens,
+                timeout_seconds,
+            ),
+            system,
+        )
+    if method_id == "oracle_rel_gpt_5_6_sol":
+        return OracleRelevantContextMethod(
             method_id,
             _reader(
                 "openai",

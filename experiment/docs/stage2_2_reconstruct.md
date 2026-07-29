@@ -442,17 +442,126 @@ Malformed JSON 전체를 의미적으로 추측해 복구하는 별도 LLM repai
 trajectory마다 동일한 가중치를 부여한다. 정식 실험에서는 checkpoint별 성능,
 `@45`, `@300`, 15-session 간격 progressive curve와 AUC도 함께 보고한다.
 
+### 9.1 Metric protocol v2
+
+`stage2_2_metrics-v2`는 Gold와 model output schema를 변경하지 않고 다음
+집계를 추가한다. prepared artifact에는 전체 400개 Gold에서 value 또는 status가
+한 번 이상 전이한 path를 고정 목록으로 기록한다. 현재 34개 중 25개가 dynamic
+path이며, 이 목록은 평가할 model의 prediction을 보지 않고 결정한다.
+
+#### Dynamic-path Final State Accuracy
+
+```text
+Dynamic-path Final State Accuracy
+  = 정확한 dynamic-path cell 수 / 25
+```
+
+전체 34-path Final State Accuracy와 동시에 보고한다. 이 점수는 전체 corpus에서
+한 번도 변하지 않는 9개 path가 snapshot 점수를 올리는 효과를 제거한다. 특정
+checkpoint에서 변경되지 않은 dynamic path도 현재 상태 보존 평가를 위해
+분모에 포함한다.
+
+제외되는 9개 static path는 `profile.age`, `profile.locale`,
+`profile.region`, `employment.occupation`,
+`financial_products.checking_accounts`,
+`financial_products.savings_accounts`, `goals.emergency_fund`,
+`goals.housing_deposit_goal`, `goals.retirement_goal`이다.
+
+#### Path-macro Correct-change F1
+
+각 path별로 모든 checkpoint의 `TP-correct`, `TP-wrong-value`, `FP`, `FN`을
+합산하여 Correct-change F1을 계산한 뒤, Gold changed support가 하나 이상인
+path를 동일 가중 평균한다. support가 없는 path는 0점으로 간주하지 않고 macro
+분모에서 제외하며, 다음 support를 함께 출력한다.
+
+- changed checkpoint 수
+- changed trajectory 수
+- 고유 update-event 수
+- path별 change confusion counts
+
+Gold positive가 있지만 predicted positive가 하나도 없으면 precision과 F1은
+0이다. 이전 protocol에서 이런 checkpoint의 F1이 `null`이 되어 macro에서
+제외될 수 있던 동작을 v2에서 수정했다. 따라서 v1 smoke의 Correct-change F1과
+v2 결과를 직접 비교하지 않는다.
+
+#### Event-macro Update Accuracy
+
+Gold changed cell은 정확히 하나의 `D###` update-event evidence를 갖는다. 같은
+trajectory와 같은 evidence session으로 갱신된 path를 하나의 event unit으로
+묶는다. 각 event가 결과에 처음 나타나는 평가 checkpoint에서 다음을 계산한다.
+
+```text
+Event Update Accuracy(event)
+  = 정확한 affected path 수 / event의 affected path 수
+
+Event Exact Update(event)
+  = affected path를 모두 맞히면 1, 아니면 0
+```
+
+event별 평균을 trajectory 안에서 먼저 구하고, 그 다음 trajectory macro를
+구한다. 따라서 하나의 주택 사건이 여러 housing path를 갱신하더라도 여러 개의
+독립 사건처럼 전체 점수를 지배하지 않는다. 이 지표는 initial과 다른
+observable current cell만 대상으로 하므로, 중간에 상태가 변했다가 initial과
+같은 값으로 되돌아온 net-zero update의 인과 처리는 측정하지 않는다.
+
+#### Retention-after-update
+
+각 active update event에 대해 다음 lag를 계산한다.
+
+```text
+lag_sessions = query checkpoint - Gold update evidence session number
+```
+
+해당 event가 최신 근거인 동안 affected path의 정확도를 추적한다. 이후 다른
+event가 같은 path를 덮어쓰면 이전 event의 retention 관측은 종료한다. exact
+session lag와 다음 사전 고정 구간을 모두 출력한다.
+
+- `0`
+- `1-15`
+- `16-30`
+- `31-60`
+- `61-120`
+- `121-180`
+- `181-240`
+- `241+`
+
+각 lag에서는 event를 먼저 평균하고 trajectory를 다시 macro-average한다.
+전체 `mean_over_observed_lags`도 event별 관측 lag 평균 후 trajectory macro로
+계산한다. 각 lag의 event 수와 trajectory 수를 반드시 함께 보고한다.
+
+#### Oracle-relevant-dialogue arm
+
+`oracle_rel_gpt_5_6_sol`은 `fc_gpt_5_6_sol`과 같은 OpenAI model, system prompt,
+state schema, parser와 scorer를 사용한다. 차이는 model 입력뿐이다.
+
+- Full Context: `S000`과 checkpoint까지의 모든 dialogue
+- Oracle Relevant: `S000`과 현재 Gold changed cell의 support session 합집합
+
+Gold state value는 model에 제공하지 않으며 Gold evidence는 session 선택에만
+사용한다. Oracle-minus-Full 차이는 관련 update를 적용하는 능력과 장문
+dialogue에서 관련 근거를 찾아 유지하는 부담을 분리하는 분석용 upper-bound다.
+두 arm의 item set이 같을 때 trajectory-paired delta와 bootstrap CI를 출력한다.
+
+새 report artifact는 다음을 포함한다.
+
+- `stage2_2_path_metrics.csv`
+- `stage2_2_event_metrics.csv`
+- `stage2_2_retention_after_update.csv`
+- `oracle_relevant_deltas.csv`
+
 권장 메인 결과 표는 다음과 같다.
 
-| Method | Final State Acc. | Value Acc. | Status Acc. | Changed State Acc. | Unchanged State Acc. | Correct-Change F1 | Exact Match | Parse Success |
+| Method | Final State Acc. | Dynamic-path Final Acc. | Correct-Change F1 | Path-macro F1 | Event Update Acc. | Retention | Exact Match | Parse Success |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
 | GPT-5.6-sol |  |  |  |  |  |  |  |  |
 
 Change confusion matrix, status confusion matrix, evidence 점수와 path/domain별 결과는
 보조 표로 제공한다.
 
-초기 검증과 첫 full run은 OpenAI API 한 종류만 사용한다. 다른 provider/model
-비교는 이 protocol과 item set을 freeze한 이후 별도 확장으로 수행한다.
+초기 검증과 첫 full run은 OpenAI API 한 종류만 사용한다. Full Context와
+Oracle Relevant는 서로 다른 provider가 아니라 같은 model의 두 input arm이다.
+다른 provider/model 비교는 이 protocol과 item set을 freeze한 이후 별도
+확장으로 수행한다.
 
 ## 10. 데이터 검수의 의미
 

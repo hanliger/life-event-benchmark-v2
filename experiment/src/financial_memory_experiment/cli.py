@@ -178,7 +178,10 @@ def _preflight_paid(methods: list[str]) -> None:
     missing_keys: list[str] = []
     if "fc_claude_opus_5" in methods and not os.environ.get("ANTHROPIC_API_KEY"):
         missing_keys.append("ANTHROPIC_API_KEY")
-    if "fc_gpt_5_6_sol" in methods and not os.environ.get("OPENAI_API_KEY"):
+    if {
+        "fc_gpt_5_6_sol",
+        "oracle_rel_gpt_5_6_sol",
+    } & set(methods) and not os.environ.get("OPENAI_API_KEY"):
         missing_keys.append("OPENAI_API_KEY")
     google_methods = {
         "fc_gemini_3_1_pro",
@@ -200,6 +203,7 @@ def _preflight_paid(methods: list[str]) -> None:
     required_modules = {
         "fc_claude_opus_5": "anthropic",
         "fc_gpt_5_6_sol": "openai",
+        "oracle_rel_gpt_5_6_sol": "openai",
         "fc_gemini_3_1_pro": "google.genai",
         "bm25_gemini_3_1_pro": "kiwipiepy",
         "dense_ge2_gemini_3_1_pro": "google.genai",
@@ -330,8 +334,10 @@ def _dry_run(paths: ExperimentPaths) -> dict[str, Any]:
             "read_only": before == method.state_fingerprint(),
         }
     configured = method_ids(paths)
-    if len(configured) != 7 or len(set(configured)) != 7:
-        raise ValueError("exactly seven unique methods must be configured")
+    if len(configured) != 8 or len(set(configured)) != 8:
+        raise ValueError(
+            "exactly eight unique core-plus-analysis methods must be configured"
+        )
     return {
         "decision": "PASS",
         "configured_methods": configured,

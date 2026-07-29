@@ -1,5 +1,5 @@
 {
-  "conservative_spent_usd": 2.581,
+  "conservative_spent_usd": 4.156,
   "entries": [
     {
       "amount_usd": 1.98,
@@ -17,6 +17,18 @@
       "usage": {
         "input_tokens": 81838,
         "output_tokens": 6366
+      }
+    },
+    {
+      "amount_usd": 3.5,
+      "kind": "plan_reservation",
+      "note": "Reconciled to a rounded-up usage-based upper bound: 215,916 input tokens at $5/M plus 16,490 output tokens at $30/M = $1.57428, rounded up to $1.575. Provider billing remains the final authority.",
+      "plan_sha256": "04ef9b5d3459a4732fdf859c1e59f692fc9f251228bf26373a93c6035fbfcfac",
+      "reconciled_amount_usd": 1.575,
+      "status": "reconciled_usage_upper_bound",
+      "usage": {
+        "input_tokens": 215916,
+        "output_tokens": 16490
       }
     }
   ],

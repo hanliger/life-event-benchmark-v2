@@ -546,6 +546,69 @@ v2의 parser는 공개 closed ontology 밖의 값을 validation error로 처리�
 v1 smoke 점수는 v2 점수와 직접 비교하지 않으며 최종 결과에 재사용하지 않는다.
 최종 run에서는 v2 protocol로 `traj_001`을 포함한 전 항목을 새로 호출한다.
 
+### 11.3 2026-07-29 v2 five-checkpoint smoke
+
+고정 plan
+`04ef9b5d3459a4732fdf859c1e59f692fc9f251228bf26373a93c6035fbfcfac`로
+`traj_001`의 60, 120, 180, 240, 300 checkpoint를 새로 실행했다. 실행 commit은
+`bab4f75`, schema는 `stage2_2_reconstruct-v2`, projector는
+`stage2_2_observable_state-v2`다. 단일 `gpt-5.6-sol` Responses API를 사용했고
+동시성 1, 자동 재시도 0으로 5개 요청이 모두 완료됐다.
+
+| Checkpoint | Final | Value | Status | Changed | Unchanged | Correct-change F1 | Exact |
+|---:|---:|---:|---:|---:|---:|---:|---:|
+| 60 | 97.06% | 100.00% | 97.06% | 100.00% | 96.30% | 93.33% | 0 |
+| 120 | 85.29% | 91.18% | 88.24% | 93.33% | 78.95% | 82.35% | 0 |
+| 180 | 70.59% | 73.53% | 85.29% | 62.50% | 77.78% | 60.61% | 0 |
+| 240 | 85.29% | 91.18% | 91.18% | 88.24% | 82.35% | 81.08% | 0 |
+| 300 | 76.47% | 94.12% | 82.35% | 72.22% | 81.25% | 66.67% | 0 |
+| 5-checkpoint macro | 82.94% | 90.00% | 88.82% | 83.26% | 83.32% | 76.81% | 0 |
+
+동일 checkpoint의 initial-copy Final State Accuracy는 각각 79.41%, 55.88%,
+52.94%, 50.00%, 47.06%였고 Changed State Accuracy는 모두 0%,
+Unchanged State Accuracy는 모두 100%였다.
+
+5-checkpoint change confusion 합계는 다음과 같다.
+
+| Gold class | Pred unchanged | Pred changed, correct | Pred changed, wrong |
+|---|---:|---:|---:|
+| Gold unchanged | TN = 82 | 0 | FP = 15 |
+| Gold changed | FN = 3 | TP-correct = 59 | TP-wrong-value = 11 |
+
+- Change detection precision/recall/F1: 82.73% / 96.25% / 88.91%
+- Correct-change precision/recall/F1: 71.38% / 83.26% / 76.81%
+- Evidence hit rate: 75.67%
+- Evidence citation precision: 43.67%
+- Parse errors: 0/5
+- Validation errors: 0
+
+Status confusion matrix는 다음과 같다.
+
+| Gold \ Pred | current | historical | stale | needs_verification | unknown | not_applicable | invalid/missing |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| current | 109 | 3 | 2 | 2 | 0 | 0 | 0 |
+| historical | 0 | 0 | 0 | 0 | 0 | 1 | 0 |
+| stale | 2 | 0 | 2 | 0 | 0 | 2 | 0 |
+| needs_verification | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| unknown | 0 | 0 | 0 | 0 | 15 | 0 | 0 |
+| not_applicable | 3 | 0 | 0 | 0 | 4 | 25 | 0 |
+
+| Checkpoint | Input tokens | Output tokens | Latency |
+|---:|---:|---:|---:|
+| 60 | 15,590 | 2,215 | 35.79s |
+| 120 | 29,586 | 3,441 | 57.50s |
+| 180 | 43,238 | 2,989 | 47.61s |
+| 240 | 56,894 | 3,690 | 66.20s |
+| 300 | 70,608 | 4,155 | 82.30s |
+| 합계 | 215,916 | 16,490 | 289.39s |
+
+공개 standard 단가를 uncached 기준으로 적용한 사용량 상한 비용은
+`$1.57428`이며 ledger에는 `$1.575`로 올림 기록했다. checkpoint가 길수록
+항상 점수가 단조 감소하지는 않았고 180에서 하락한 뒤 240에서 회복됐다.
+하나의 trajectory와 단일 호출 결과이므로 이 변동을 context-length 효과로
+단정하지 않는다. 이 결과를 본 뒤 prompt, ontology, parser, projector 또는
+scorer를 변경하지 않았다.
+
 Provider별 constrained JSON/structured-output 기능은 사용하지 않는다. 공통
 prompt와 strict parser를 사용해 이후 다른 provider를 추가하더라도 output
 제약이 달라지지 않게 한다.

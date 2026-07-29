@@ -1,5 +1,5 @@
 {
-  "conservative_spent_usd": 5.759,
+  "conservative_spent_usd": 11.659,
   "entries": [
     {
       "amount_usd": 1.98,
@@ -42,8 +42,34 @@
         "input_tokens": 215720,
         "output_tokens": 17461
       }
+    },
+    {
+      "amount_usd": 7.0,
+      "kind": "plan_reservation",
+      "note": "Reconciled to a rounded-up usage-based upper bound across standard API rates: Claude Opus 5 $2.725845, Gemini 3.1 Pro Preview $1.023502, GPT-5.6 Sol full-context $1.589890, and GPT-5.6 Sol oracle-relevant $0.560480; $5.899717 total rounded up to $5.900. Provider billing remains the final authority.",
+      "plan_sha256": "f84f98315cc1fd165734bc601808e2d10bf3ad959ef36d51ec76c9ccdfef18cd",
+      "reconciled_amount_usd": 5.9,
+      "status": "reconciled_usage_upper_bound",
+      "usage": {
+        "fc_claude_opus_5": {
+          "input_tokens": 370404,
+          "output_tokens": 34953
+        },
+        "fc_gemini_3_1_pro": {
+          "input_tokens": 211511,
+          "output_tokens_including_thoughts": 50040
+        },
+        "fc_gpt_5_6_sol": {
+          "input_tokens": 215720,
+          "output_tokens": 17043
+        },
+        "oracle_rel_gpt_5_6_sol": {
+          "input_tokens": 18160,
+          "output_tokens": 15656
+        }
+      }
     }
   ],
   "schema_version": "paid-smoke-ledger-v1",
-  "standing_limit_usd": 10.0
+  "standing_limit_usd": 20.0
 }

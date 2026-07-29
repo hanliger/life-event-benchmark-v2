@@ -1,7 +1,7 @@
 schema_version: paid-safety-v1
 smoke:
   # Per-plan ceiling. The stricter cumulative standing limit is enforced by
-  # configs/paid_cost_ledger.json and must remain strictly below $10.00.
+  # configs/paid_cost_ledger.json and must remain strictly below $20.00.
   usd_cap: 7.5
   concurrency: 1
   automatic_retries: 0

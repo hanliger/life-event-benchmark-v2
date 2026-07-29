@@ -1,5 +1,5 @@
 {
-  "conservative_spent_usd": 9.48,
+  "conservative_spent_usd": 2.581,
   "entries": [
     {
       "amount_usd": 1.98,
@@ -10,9 +10,14 @@
     {
       "amount_usd": 7.5,
       "kind": "plan_reservation",
-      "note": "Conservative reservation made before provider construction; manual billing reconciliation is required to reduce it.",
+      "note": "Reconciled to a rounded-up usage-based upper bound: 81,838 input tokens at $5/M plus 6,366 output tokens at $30/M = $0.60017, rounded up to $0.601. Provider billing remains the final authority.",
       "plan_sha256": "14e17c83bc5ae689450e497a47408d6ec6030cbd2c1a4d22ace344b0c6aeb9f5",
-      "status": "reserved"
+      "reconciled_amount_usd": 0.601,
+      "status": "reconciled_usage_upper_bound",
+      "usage": {
+        "input_tokens": 81838,
+        "output_tokens": 6366
+      }
     }
   ],
   "schema_version": "paid-smoke-ledger-v1",

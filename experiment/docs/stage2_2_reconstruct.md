@@ -652,6 +652,67 @@ Status confusion matrix는 다음과 같다.
 단정하지 않는다. 이 결과를 본 뒤 prompt, ontology, parser, projector 또는
 scorer를 변경하지 않았다.
 
+### 11.4 2026-07-29 v3 `traj_010` robustness smoke
+
+비중복 후보 9개를 추가한 `stage2_2_reconstruct-v3`를 구현 commit
+`c274d05`에서 `traj_010`의 60, 120, 180, 240, 300 checkpoint에 실행했다.
+고정 plan은
+`d0c01022ed52aa00589f542045b2b6841979e3a650c8f91d46c99493f2a9f1ca`다.
+Gold와 projector는 v2와 동일하며 단일 `gpt-5.6-sol` Responses API,
+동시성 1, 자동 재시도 0을 사용했다.
+
+| Checkpoint | Final | Value | Status | Changed | Unchanged | Correct-change F1 | Exact |
+|---:|---:|---:|---:|---:|---:|---:|---:|
+| 60 | 79.41% | 85.29% | 91.18% | 71.43% | 85.00% | 68.97% | 0 |
+| 120 | 88.24% | 91.18% | 94.12% | 90.91% | 86.96% | 80.00% | 0 |
+| 180 | 82.35% | 85.29% | 94.12% | 91.67% | 77.27% | 75.86% | 0 |
+| 240 | 58.82% | 61.76% | 76.47% | 52.94% | 64.71% | 46.15% | 0 |
+| 300 | 61.76% | 73.53% | 79.41% | 40.00% | 78.95% | 38.71% | 0 |
+| 5-checkpoint macro | 74.12% | 79.41% | 87.06% | 69.39% | 78.58% | 61.94% | 0 |
+
+동일 checkpoint의 initial-copy Final State Accuracy는 각각 58.82%, 67.65%,
+64.71%, 50.00%, 55.88%였고 Changed State Accuracy는 모두 0%,
+Unchanged State Accuracy는 모두 100%였다.
+
+| Gold class | Pred unchanged | Pred changed, correct | Pred changed, wrong |
+|---|---:|---:|---:|
+| Gold unchanged | TN = 80 | 0 | FP = 21 |
+| Gold changed | FN = 6 | TP-correct = 46 | TP-wrong-value = 17 |
+
+- Change detection precision/recall/F1: 75.38% / 91.97% / 82.60%
+- Correct-change precision/recall/F1: 56.24% / 69.39% / 61.94%
+- Evidence hit rate: 69.80%
+- Evidence citation precision: 46.53%
+- Parse errors: 0/5
+- Validation errors: 0
+
+Status confusion matrix는 다음과 같다.
+
+| Gold \ Pred | current | historical | stale | needs_verification | unknown | not_applicable | invalid/missing |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| current | 118 | 2 | 3 | 5 | 1 | 2 | 0 |
+| historical | 1 | 0 | 0 | 0 | 0 | 1 | 0 |
+| stale | 1 | 0 | 1 | 0 | 0 | 2 | 0 |
+| needs_verification | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| unknown | 0 | 0 | 0 | 0 | 10 | 0 | 0 |
+| not_applicable | 4 | 0 | 0 | 0 | 0 | 19 | 0 |
+
+| Checkpoint | Input tokens | Output tokens | Latency |
+|---:|---:|---:|---:|
+| 60 | 15,996 | 3,362 | 64.67s |
+| 120 | 29,865 | 3,026 | 57.38s |
+| 180 | 43,074 | 3,649 | 67.20s |
+| 240 | 56,672 | 3,456 | 66.89s |
+| 300 | 70,113 | 3,968 | 70.91s |
+| 합계 | 215,720 | 17,461 | 327.06s |
+
+공개 standard 단가의 uncached 상한 비용은 `$1.60243`이며 ledger에는
+`$1.603`으로 올림 기록했다. v3 추가 후보는 Gold 정답으로 등장하지 않으므로
+이 결과는 새 상태 인식 능력이 아니라 넓어진 ontology에서 기존 Gold를 선택하는
+robustness 결과다. 다른 trajectory에서 실행한 v2 smoke와 직접적인 모델 성능
+차이로 해석하지 않는다. 결과 확인 후 prompt, ontology, parser, projector,
+Gold 또는 scorer를 변경하지 않았다.
+
 Provider별 constrained JSON/structured-output 기능은 사용하지 않는다. 공통
 prompt와 strict parser를 사용해 이후 다른 provider를 추가하더라도 output
 제약이 달라지지 않게 한다.

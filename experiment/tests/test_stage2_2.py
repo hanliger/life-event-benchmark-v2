@@ -142,5 +142,7 @@ def test_stage2_2_prompt_exposes_schema_not_gold_values():
     assert "[D001 |" in query
     assert "employment.employer" in query
     assert ", ".join(ALLOWED_STATUSES) in query
+    assert "retired | student | homemaker" in query
+    assert "owner | jeonse | wolse | family_home | other" in query
     assert "미래정보시스템" not in query
     assert "JSON 객체 하나만" in query

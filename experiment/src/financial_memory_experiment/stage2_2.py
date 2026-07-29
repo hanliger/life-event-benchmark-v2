@@ -36,34 +36,49 @@ VALUE_KINDS: dict[str, str] = {
     "profile.age": "integer",
     "profile.locale": "string",
     "profile.region": "string",
-    "household.marital_status": "enum string",
+    "household.marital_status": (
+        "enum: single | married | separated | divorced | widowed"
+    ),
     "household.spouse_or_partner": "string or null",
     "household.children": "array of integer ages",
     "household.dependents": "integer",
     "household.child_support_arrangement": "string or null",
-    "employment.employment_status": "enum string",
+    "employment.employment_status": (
+        "enum: employed | self_employed | unemployed | on_leave | retired | "
+        "student | homemaker"
+    ),
     "employment.employer": "open string or null",
     "employment.occupation": "open string or null",
-    "employment.income_stability": "enum string or null",
+    "employment.income_stability": (
+        "enum: stable | variable | reduced | unstable | retired, or null"
+    ),
     "employment.salary_day": "integer 1..31 or null",
     "employment.salary_account": "string or null",
-    "housing.residence_status": "enum string",
+    "housing.residence_status": (
+        "enum: owner | jeonse | wolse | family_home | other"
+    ),
     "housing.address": "open string or null",
-    "housing.contract_type": "enum string or null",
+    "housing.contract_type": (
+        "enum: owner | jeonse | wolse | family_home | other, or null"
+    ),
     "housing.rent_amount": "integer KRW or null",
     "housing.rent_payee": "string or null",
     "housing.maintenance_fee_payee": "string or null",
-    "housing.mortgage_status": "enum string",
+    "housing.mortgage_status": "enum: active | closed | none",
     "housing.properties": (
-        "array of {address:string, role:string, mortgage_status:string, "
-        "ownership_status:string}"
+        "array of {address:open string, "
+        "role:primary_residence|secondary_property, "
+        "mortgage_status:active|none, ownership_status:owned|sold}"
     ),
     "housing.primary_residence_property_id": (
         "observable primary property object "
-        "{address, role, mortgage_status, ownership_status} or null"
+        "{address:open string, role:primary_residence, "
+        "mortgage_status:active|none, ownership_status:owned|sold} or null"
     ),
-    "education.self_education_status": "enum string",
-    "education.child_education_stage": "enum string or null",
+    "education.self_education_status": "enum: none | enrolled | study_abroad",
+    "education.child_education_stage": (
+        "enum: preschool | primary | middle | high | adult, or null"
+    ),
     "financial_products.checking_accounts": "array of strings",
     "financial_products.savings_accounts": "array of strings",
     "financial_products.loans": "array of strings",

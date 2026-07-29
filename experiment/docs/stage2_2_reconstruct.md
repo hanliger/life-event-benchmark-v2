@@ -428,6 +428,70 @@ Gold와 비교하여 이 문서에 정의된 모든 점수와 confusion matrix�
 이 원칙은 smoke 점수를 투명하게 확인·보고하면서도 `traj_001`의 결과에 맞춰
 과제나 prompt를 최적화하는 것을 막기 위한 것이다.
 
+### 11.2 2026-07-29 smoke 실행 결과
+
+고정 plan
+`14e17c83bc5ae689450e497a47408d6ec6030cbd2c1a4d22ace344b0c6aeb9f5`를
+구현 commit `062053c`에서 실행했다. OpenAI Responses API가 반환한 model ID는
+`gpt-5.6-sol`, SDK version은 `2.48.0`이었다. 두 요청 모두 자동 재시도 없이
+완료됐고, JSON parse와 34-path schema validation도 모두 통과했다.
+
+| Checkpoint | Final state | Value | Status | Changed state | Unchanged state | Correct-change F1 | Exact match |
+|---:|---:|---:|---:|---:|---:|---:|---:|
+| 45 | 94.12% | 100.00% | 94.12% | 100.00% | 93.10% | 83.33% | 0 |
+| 300 | 55.88% | 64.71% | 82.35% | 44.44% | 68.75% | 39.02% | 0 |
+| 2-checkpoint macro | 75.00% | 82.35% | 88.24% | 72.22% | 80.93% | 61.18% | 0 |
+
+같은 두 checkpoint의 initial-copy baseline은 Final State Accuracy가 각각
+85.29%, 47.06%이고 Changed State Accuracy는 모두 0%였다. 두-checkpoint
+macro는 Final State Accuracy 66.18%, Changed State Accuracy 0%,
+Unchanged State Accuracy 100%다. 따라서 전체 상태 점수만으로는 대화 속 변경
+추적 여부를 판단할 수 없다는 설계 동기가 실제 데이터에서도 확인됐다.
+
+Change confusion matrix의 두 checkpoint 합계는 다음과 같다.
+
+| Gold class | Pred unchanged | Pred changed, correct | Pred changed, wrong |
+|---|---:|---:|---:|
+| Gold unchanged | TN = 38 | 0 | FP = 7 |
+| Gold changed | FN = 0 | TP-correct = 13 | TP-wrong-value = 10 |
+
+- Change detection precision/recall/F1: 74.84% / 100.00% / 85.57%
+- Correct-change precision/recall/F1: 53.11% / 72.22% / 61.18%
+- Evidence hit rate: 80.56%
+- Evidence citation precision: 44.66%
+- Parse errors: 0/2
+- Validation errors: 0
+
+Status confusion matrix는 다음과 같다. 행이 Gold, 열이 prediction이다.
+
+| Gold \ Pred | current | historical | stale | needs_verification | unknown | not_applicable | invalid/missing |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| current | 42 | 1 | 2 | 1 | 0 | 0 | 0 |
+| historical | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| stale | 1 | 0 | 1 | 0 | 0 | 0 | 0 |
+| needs_verification | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| unknown | 0 | 0 | 0 | 0 | 6 | 0 | 0 |
+| not_applicable | 0 | 0 | 0 | 1 | 2 | 11 | 0 |
+
+Provider usage는 input 81,838 tokens, output 6,366 tokens, 총 88,204
+tokens였다. OpenAI가
+[공개한 standard 가격](https://openai.com/index/gpt-5-6/)인 input $5/1M,
+output $30/1M을 uncached 기준으로 적용한 추정 증분 비용은 약 $0.6002다.
+실제 청구액은 provider billing record를 기준으로 별도 대조한다.
+
+Smoke 점수를 본 뒤 prompt rule, comparator, normalizer 또는 path 가중치를
+변경하지 않았다. 다만 점수와 무관한 계약 검수에서 다음 두 누락을 발견해
+정식 run 전에 보완했다.
+
+1. 문서에서 사전 공개하기로 한 closed-enum 후보가 prompt의 type 설명에서
+   누락되어 후보 목록을 추가했다.
+2. 최초 smoke row에는 token usage와 전체 run 시간만 있고 요청별 latency가 없어,
+   이후 실행부터 provider metadata에 `latency_seconds`를 기록하도록 했다.
+
+두 변경은 state Gold나 smoke path별 오답을 참조하지 않았으며 parser와 scorer를
+변경하지 않는다. 이 smoke 응답은 최종 결과에 재사용하지 않고, 최종 run에서는
+보완된 protocol로 `traj_001`을 포함한 전 항목을 새로 호출한다.
+
 Provider별 constrained JSON/structured-output 기능은 사용하지 않는다. 공통
 prompt와 strict parser를 사용해 이후 다른 provider를 추가하더라도 output
 제약이 달라지지 않게 한다.

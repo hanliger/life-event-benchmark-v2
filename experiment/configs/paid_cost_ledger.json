@@ -1,11 +1,18 @@
 {
-  "conservative_spent_usd": 1.98,
+  "conservative_spent_usd": 9.48,
   "entries": [
     {
       "amount_usd": 1.98,
       "kind": "historical_reserve",
       "note": "Conservative cumulative reserve for approved paid smoke work before the versioned ledger was introduced.",
       "recorded_at": "2026-07-26"
+    },
+    {
+      "amount_usd": 7.5,
+      "kind": "plan_reservation",
+      "note": "Conservative reservation made before provider construction; manual billing reconciliation is required to reduce it.",
+      "plan_sha256": "14e17c83bc5ae689450e497a47408d6ec6030cbd2c1a4d22ace344b0c6aeb9f5",
+      "status": "reserved"
     }
   ],
   "schema_version": "paid-smoke-ledger-v1",

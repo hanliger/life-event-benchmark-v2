@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from time import perf_counter
 from typing import Any, Protocol
 
 from ..safety import assert_provider_construction_allowed
@@ -93,6 +94,7 @@ class ProviderReader:
         self, *, system: str, user: str, max_tokens: int | None = None
     ) -> tuple[str, dict[str, Any]]:
         output_tokens = int(max_tokens or self.max_tokens)
+        started = perf_counter()
         if self.provider == "anthropic":
             response = self.client.messages.create(
                 model=self.model,
@@ -119,6 +121,7 @@ class ProviderReader:
             )
             text = response.text
             usage = getattr(response, "usage_metadata", None)
+        latency_seconds = perf_counter() - started
         if not str(text).strip():
             raise RuntimeError(f"empty response from {self.provider}/{self.model}")
         return str(text), {
@@ -128,4 +131,5 @@ class ProviderReader:
             "automatic_retries": 0,
             "request_timeout_seconds": self.timeout_seconds,
             "max_output_tokens": output_tokens,
+            "latency_seconds": round(latency_seconds, 6),
         }

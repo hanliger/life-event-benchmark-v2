@@ -96,7 +96,7 @@ class BM25Method(MemoryMethod):
         b: float,
         tokenizer: Tokenize = kiwi_tokenize,
     ):
-        self.method_id = "bm25_gemini_3_6"
+        self.method_id = "bm25_gemini_3_1_pro"
         self.reader = reader
         self.system = system
         self.k = k
@@ -175,7 +175,7 @@ class BM25Method(MemoryMethod):
 
 class DenseMethod(MemoryMethod):
     def __init__(self, reader: Reader, system: str, embedder: Any, *, k: int):
-        self.method_id = "dense_ge2_gemini_3_6"
+        self.method_id = "dense_ge2_gemini_3_1_pro"
         self.reader = reader
         self.system = system
         self.embedder = embedder

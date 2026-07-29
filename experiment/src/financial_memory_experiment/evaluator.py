@@ -339,7 +339,7 @@ def _run_masking_method(
     mock: bool,
     top_k: int | None,
 ) -> Path:
-    if method_id == "letta_gemini_3_6" and not mock:
+    if method_id == "letta_gemini_3_1_pro" and not mock:
         return _run_masking_letta_replay(
             paths,
             method_id=method_id,

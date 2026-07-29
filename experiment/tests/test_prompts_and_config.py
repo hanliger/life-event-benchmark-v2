@@ -21,9 +21,9 @@ def test_exactly_seven_methods_and_short_output_cap():
         "embedding_dimensions": 768,
         "top_k": 10,
         "methods": [
-            "dense_ge2_gemini_3_6",
-            "mem0_gemini_3_6",
-            "letta_gemini_3_6",
+            "dense_ge2_gemini_3_1_pro",
+            "mem0_gemini_3_1_pro",
+            "letta_gemini_3_1_pro",
         ],
     }
 

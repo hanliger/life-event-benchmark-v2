@@ -21,9 +21,9 @@ def comparison_contract(paths: ExperimentPaths | None = None) -> dict[str, Any]:
         "embedding_dimensions": int(models["embedding_dimensions"]),
         "top_k": int(cfg["benchmark"]["top_k_main"]),
         "methods": [
-            "dense_ge2_gemini_3_6",
-            "mem0_gemini_3_6",
-            "letta_gemini_3_6",
+            "dense_ge2_gemini_3_1_pro",
+            "mem0_gemini_3_1_pro",
+            "letta_gemini_3_1_pro",
         ],
     }
     if contract["embedding_model"] != "gemini-embedding-2":
@@ -101,7 +101,7 @@ def create_method(
             ),
             system,
         )
-    if method_id == "fc_gemini_3_6_flash":
+    if method_id == "fc_gemini_3_1_pro":
         return FullContextMethod(method_id, gemini, system)
     if method_id == "fc_gpt_5_6_sol":
         return FullContextMethod(
@@ -115,7 +115,7 @@ def create_method(
             ),
             system,
         )
-    if method_id == "bm25_gemini_3_6":
+    if method_id == "bm25_gemini_3_1_pro":
         tokenizer = regex_tokenize if mock else kiwi_tokenize
         return BM25Method(
             gemini,
@@ -125,7 +125,7 @@ def create_method(
             b=float(method_cfg["bm25"]["b"]),
             tokenizer=tokenizer,
         )
-    if method_id == "dense_ge2_gemini_3_6":
+    if method_id == "dense_ge2_gemini_3_1_pro":
         if mock:
             from .retrieval import HashEmbedder
 
@@ -137,7 +137,7 @@ def create_method(
                 timeout_seconds,
             )
         return DenseMethod(gemini, system, embedder, k=k)
-    if method_id == "mem0_gemini_3_6":
+    if method_id == "mem0_gemini_3_1_pro":
         if mock:
             from .mem0_adapter import InMemoryMem0Double
 
@@ -159,7 +159,7 @@ def create_method(
                 )
 
         return Mem0Method(factory, gemini, system, trajectory_id=trajectory_id, k=k)
-    if method_id == "letta_gemini_3_6":
+    if method_id == "letta_gemini_3_1_pro":
         if mock:
             return LettaContractDouble()
         return LettaMethod(

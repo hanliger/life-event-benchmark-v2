@@ -34,7 +34,7 @@ def official_letta_client(base_url: str, timeout_seconds: float = 120) -> Any:
 class LettaMethod(MemoryMethod):
     """Official Letta server adapter using native archival passages."""
 
-    method_id = "letta_gemini_3_6"
+    method_id = "letta_gemini_3_1_pro"
     query_on_clone = False
 
     def __init__(
@@ -550,7 +550,7 @@ class LettaMethod(MemoryMethod):
 class LettaContractDouble(MemoryMethod):
     """Offline-only stateful double. It is never a reported benchmark method."""
 
-    method_id = "letta_gemini_3_6"
+    method_id = "letta_gemini_3_1_pro"
 
     def __init__(self):
         self.s000: dict[str, Any] | None = None

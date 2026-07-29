@@ -64,7 +64,7 @@ def test_stage3_derivation_table_is_written(tmp_path):
     report = {
         "completeness": {"reporting_ready": False},
         "methods": {
-            "bm25_gemini_3_6": {
+            "bm25_gemini_3_1_pro": {
                 "stage3_multi_hop_mcq": {
                     "items": 2,
                     "score": 0.5,

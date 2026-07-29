@@ -77,7 +77,7 @@ def build_official_mem0(
 class Mem0Method(MemoryMethod):
     """Official Mem0 ingestion/search plus the shared Gemini answer reader."""
 
-    method_id = "mem0_gemini_3_6"
+    method_id = "mem0_gemini_3_1_pro"
 
     def __init__(
         self,

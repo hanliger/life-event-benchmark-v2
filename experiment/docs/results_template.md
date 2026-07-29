@@ -47,7 +47,7 @@ Family별로 표를 분리하고 Stage 1, Stage 2, Stage 3를 별도 열로 보�
 | Method | Stage 1 [95% CI] | Stage 2 hierarchical [95% CI] | Stage 3 [95% CI] |
 |---|---:|---:|---:|
 | Claude Opus 5 | `TBD` | `TBD` | `TBD` |
-| Gemini 3.6 Flash | `TBD` | `TBD` | `TBD` |
+| Gemini 3.1 Pro Preview | `TBD` | `TBD` | `TBD` |
 | GPT-5.6 Sol | `TBD` | `TBD` | `TBD` |
 
 ### Retrieval

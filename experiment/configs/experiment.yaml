@@ -34,7 +34,7 @@ benchmark:
     - mask_all
     - placebo_all
 models:
-  gemini_reader: gemini-3.6-flash
+  gemini_reader: gemini-3.1-pro-preview
   gemini_embedding: gemini-embedding-2
   embedding_dimensions: 768
   claude_full_context: claude-opus-5
@@ -44,12 +44,12 @@ models:
   request_timeout_seconds: 120
 methods:
   - fc_claude_opus_5
-  - fc_gemini_3_6_flash
+  - fc_gemini_3_1_pro
   - fc_gpt_5_6_sol
-  - bm25_gemini_3_6
-  - dense_ge2_gemini_3_6
-  - mem0_gemini_3_6
-  - letta_gemini_3_6
+  - bm25_gemini_3_1_pro
+  - dense_ge2_gemini_3_1_pro
+  - mem0_gemini_3_1_pro
+  - letta_gemini_3_1_pro
 statistics:
   bootstrap_samples: 10000
   seed: 20260725

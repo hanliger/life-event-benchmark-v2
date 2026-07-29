@@ -32,12 +32,12 @@ occurred event에 근거하며, 정답은 값의 시간 순서 또는 두 일회
 | Family | Method ID | 입력 또는 memory | Final answer |
 |---|---|---|---|
 | Full Context | `fc_claude_opus_5` | S001…checkpoint 전체 | Claude |
-| Full Context | `fc_gemini_3_6_flash` | S001…checkpoint 전체 | Gemini |
+| Full Context | `fc_gemini_3_1_pro` | S001…checkpoint 전체 | Gemini |
 | Full Context | `fc_gpt_5_6_sol` | S001…checkpoint 전체 | OpenAI |
-| Retrieval | `bm25_gemini_3_6` | BM25 session top-k | 공통 Gemini reader |
-| Retrieval | `dense_ge2_gemini_3_6` | GE2 session top-k | 공통 Gemini reader |
-| Memory | `mem0_gemini_3_6` | Mem0 search top-k | 공통 Gemini reader |
-| Memory | `letta_gemini_3_6` | Letta archival memory | Letta agent |
+| Retrieval | `bm25_gemini_3_1_pro` | BM25 session top-k | 공통 Gemini reader |
+| Retrieval | `dense_ge2_gemini_3_1_pro` | GE2 session top-k | 공통 Gemini reader |
+| Memory | `mem0_gemini_3_1_pro` | Mem0 search top-k | 공통 Gemini reader |
+| Memory | `letta_gemini_3_1_pro` | Letta archival memory | Letta agent |
 
 Main `top_k=10`, sensitivity `top_k=5`, reranker 없음이다. Sensitivity는 frozen
 문항과 다른 설정을 바꾸지 않고 별도 run으로 실행한다.

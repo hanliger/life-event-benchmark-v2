@@ -54,7 +54,7 @@ def test_paid_plan_requires_exact_hash_and_approval(tmp_path):
     paths = _paths(tmp_path)
     plan = build_smoke_plan(
         paths,
-        method_ids=["fc_gemini_3_6_flash"],
+        method_ids=["fc_gemini_3_1_pro"],
         item_ids=["q1"],
         estimated_usd=0.5,
         input_items_sha256="items",
@@ -97,7 +97,7 @@ def test_cumulative_smoke_limit_is_strictly_enforced(tmp_path):
     with pytest.raises(PaidExecutionBlocked, match="reach or exceed"):
         build_smoke_plan(
             paths,
-            method_ids=["fc_gemini_3_6_flash"],
+            method_ids=["fc_gemini_3_1_pro"],
             item_ids=["q1"],
             estimated_usd=3.0,
             input_items_sha256="items",
@@ -110,7 +110,7 @@ def test_reservation_is_atomic_conservative_and_single_use(tmp_path):
     paths = _paths(tmp_path)
     plan = build_smoke_plan(
         paths,
-        method_ids=["fc_gemini_3_6_flash"],
+            method_ids=["fc_gemini_3_1_pro"],
         item_ids=["q1"],
         estimated_usd=0.5,
         input_items_sha256="items",
@@ -132,7 +132,7 @@ def test_changed_ledger_invalidates_an_existing_plan(tmp_path):
     paths = _paths(tmp_path)
     plan = build_smoke_plan(
         paths,
-        method_ids=["fc_gemini_3_6_flash"],
+            method_ids=["fc_gemini_3_1_pro"],
         item_ids=["q1"],
         estimated_usd=0.5,
         input_items_sha256="items",

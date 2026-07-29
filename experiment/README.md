@@ -201,12 +201,12 @@ rg -n '"derivation_type": "(state_sequence|expense_aggregation)"' \
 ```bash
 ./scripts/pipeline.sh plan-paid-smoke \
   --method fc_claude_opus_5 \
-  --method fc_gemini_3_6_flash \
+  --method fc_gemini_3_1_pro \
   --method fc_gpt_5_6_sol \
-  --method bm25_gemini_3_6 \
-  --method dense_ge2_gemini_3_6 \
-  --method mem0_gemini_3_6 \
-  --method letta_gemini_3_6 \
+  --method bm25_gemini_3_1_pro \
+  --method dense_ge2_gemini_3_1_pro \
+  --method mem0_gemini_3_1_pro \
+  --method letta_gemini_3_1_pro \
   --item-id '<STATE_SEQUENCE_ITEM_ID>' \
   --item-id '<EXPENSE_AGGREGATION_ITEM_ID>' \
   --estimated-usd '<REVIEWED_ESTIMATE>'
@@ -238,12 +238,12 @@ sed -n '1,20p' data/prepared/*/masking_items/masking_questions.jsonl
 ```bash
 ./scripts/pipeline.sh plan-paid-smoke \
   --method fc_claude_opus_5 \
-  --method fc_gemini_3_6_flash \
+  --method fc_gemini_3_1_pro \
   --method fc_gpt_5_6_sol \
-  --method bm25_gemini_3_6 \
-  --method dense_ge2_gemini_3_6 \
-  --method mem0_gemini_3_6 \
-  --method letta_gemini_3_6 \
+  --method bm25_gemini_3_1_pro \
+  --method dense_ge2_gemini_3_1_pro \
+  --method mem0_gemini_3_1_pro \
+  --method letta_gemini_3_1_pro \
   --item-id '<LIFECYCLE_ITEM_ID>' \
   --item-id '<MEMORY_ITEM_ID>' \
   --estimated-usd '<REVIEWED_ESTIMATE>'
@@ -281,12 +281,12 @@ Stage 3와 masking smoke, readiness checklist가 통과한 후 exact 전체 범�
 ```bash
 ./scripts/pipeline.sh plan-paid-full \
   --method fc_claude_opus_5 \
-  --method fc_gemini_3_6_flash \
+  --method fc_gemini_3_1_pro \
   --method fc_gpt_5_6_sol \
-  --method bm25_gemini_3_6 \
-  --method dense_ge2_gemini_3_6 \
-  --method mem0_gemini_3_6 \
-  --method letta_gemini_3_6 \
+  --method bm25_gemini_3_1_pro \
+  --method dense_ge2_gemini_3_1_pro \
+  --method mem0_gemini_3_1_pro \
+  --method letta_gemini_3_1_pro \
   --scope all \
   --estimated-usd '<REVIEWED_FULL_ESTIMATE>'
 ```

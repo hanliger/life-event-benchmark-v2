@@ -168,11 +168,11 @@ def _preflight_paid(methods: list[str]) -> None:
     if "fc_gpt_5_6_sol" in methods and not os.environ.get("OPENAI_API_KEY"):
         missing_keys.append("OPENAI_API_KEY")
     google_methods = {
-        "fc_gemini_3_6_flash",
-        "bm25_gemini_3_6",
-        "dense_ge2_gemini_3_6",
-        "mem0_gemini_3_6",
-        "letta_gemini_3_6",
+        "fc_gemini_3_1_pro",
+        "bm25_gemini_3_1_pro",
+        "dense_ge2_gemini_3_1_pro",
+        "mem0_gemini_3_1_pro",
+        "letta_gemini_3_1_pro",
     }
     if google_methods & set(methods) and not (
         os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
@@ -187,11 +187,11 @@ def _preflight_paid(methods: list[str]) -> None:
     required_modules = {
         "fc_claude_opus_5": "anthropic",
         "fc_gpt_5_6_sol": "openai",
-        "fc_gemini_3_6_flash": "google.genai",
-        "bm25_gemini_3_6": "kiwipiepy",
-        "dense_ge2_gemini_3_6": "google.genai",
-        "mem0_gemini_3_6": "mem0",
-        "letta_gemini_3_6": "letta_client",
+        "fc_gemini_3_1_pro": "google.genai",
+        "bm25_gemini_3_1_pro": "kiwipiepy",
+        "dense_ge2_gemini_3_1_pro": "google.genai",
+        "mem0_gemini_3_1_pro": "mem0",
+        "letta_gemini_3_1_pro": "letta_client",
     }
     missing_modules: list[str] = []
     for method in methods:
@@ -211,7 +211,7 @@ def _preflight_paid(methods: list[str]) -> None:
             + ", ".join(missing_modules)
         )
 
-    if "letta_gemini_3_6" in methods:
+    if "letta_gemini_3_1_pro" in methods:
         try:
             with urllib.request.urlopen(
                 "http://localhost:8283/v1/health", timeout=3

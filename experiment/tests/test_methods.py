@@ -32,7 +32,7 @@ SESSION = {
 }
 ITEM = {
     "item_id": "q1",
-    "stage": "stage2_memory_mcq",
+    "stage": "stage2_memory_value",
     "trajectory_id": "traj_test",
     "question": "직장은?",
     "options": [
@@ -40,6 +40,7 @@ ITEM = {
         for option in "ABCD"
     ],
     "gold": {"correct_option": "A"},
+    "metadata": {"answer_type": "mcq"},
 }
 
 

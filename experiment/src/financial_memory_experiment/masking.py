@@ -9,7 +9,6 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from fin_life_benchmark.benchmark.item_builder import ItemBuilder
 from fin_life_benchmark.benchmark.mcq_input import Stage2Target, load_stage2_question_policy
 from fin_life_benchmark.gold.prefix_gold_exporter import export_prefix_gold
 from fin_life_benchmark.trajectory.models import Trajectory
@@ -230,7 +229,134 @@ def _project_value(
         after_state=cell,
         value_selector=selector,
     )
-    return ItemBuilder._project_value(target, cell)
+    value = copy.deepcopy(cell.get("value"))
+    if selector == "amount_krw":
+        return (
+            value.get("amount_krw", value.get("amount"))
+            if isinstance(value, dict)
+            else value
+        )
+    if selector == "stage_transition":
+        return "no_change" if operation == "no_change" else value
+    if selector == "property_address":
+        if isinstance(value, list):
+            matched = [
+                item.get("address")
+                for item in value
+                if isinstance(item, dict)
+                and event_instance_id
+                in {
+                    item.get("acquisition_event_instance_id"),
+                    item.get("disposal_event_instance_id"),
+                    item.get("event_instance_id"),
+                }
+            ]
+            if matched:
+                return matched[-1]
+            return next(
+                (
+                    item["address"]
+                    for item in reversed(value)
+                    if isinstance(item, dict) and item.get("address")
+                ),
+                None,
+            )
+        if isinstance(value, dict):
+            return value.get("address", value)
+    if selector in {"property_loan_type", "property_ownership_status"}:
+        property_record: dict[str, Any] | None = None
+        records = value if isinstance(value, list) else [value]
+        for item in records:
+            if not isinstance(item, dict):
+                continue
+            event_keys = {
+                item.get("acquisition_event_instance_id"),
+                item.get("disposal_event_instance_id"),
+                item.get("event_instance_id"),
+            }
+            if not isinstance(value, list) or event_instance_id in event_keys:
+                property_record = item
+        if property_record is None:
+            return None
+        if selector == "property_ownership_status":
+            return property_record.get("ownership_status")
+        mortgage_status = property_record.get("mortgage_status")
+        if mortgage_status == "active":
+            return "mortgage"
+        if mortgage_status == "none":
+            return "none"
+        return mortgage_status
+    return value
+
+
+def _format_option_value(target: Stage2Target, value: Any) -> str:
+    if value is None:
+        return "값 없음"
+    if isinstance(value, bool):
+        return "예" if value else "아니오"
+    if isinstance(value, (int, float)):
+        if target.value_selector == "amount_krw" or "expense" in target.memory_path:
+            return f"{value:,.0f}원"
+        if target.option_pool_type == "count":
+            return f"{value:,.0f}명"
+        return f"{value:,}" if isinstance(value, int) else str(value)
+    if target.memory_path == "housing.contract_type" and value == "other":
+        return "주거 유형이 언급되지 않음"
+    if target.value_selector == "property_loan_type":
+        return {
+            "none": "대출 없음",
+            "credit_loan": "신용대출",
+            "jeonse_loan": "전세자금대출",
+            "mortgage": "주택담보대출",
+        }.get(str(value), str(value))
+    if target.memory_path == "housing.mortgage_status":
+        return {
+            "none": "주택담보대출 없음",
+            "active": "주택담보대출 보유",
+            "closed": "주택담보대출 종료",
+            "unknown": "주택담보대출 상태 확인 필요",
+        }.get(str(value), str(value))
+    if target.value_selector == "property_ownership_status":
+        return {
+            "owned": "현재 보유 중",
+            "sold": "매각 완료",
+            "pending_sale": "매각 예정",
+            "unknown": "확인 불가",
+        }.get(str(value), str(value))
+    translations = {
+        "stable": "안정적",
+        "variable": "변동적",
+        "reduced": "감소",
+        "unstable": "불안정",
+        "employed": "재직",
+        "self_employed": "자영업",
+        "unemployed": "무직",
+        "retired": "은퇴",
+        "owner": "자가",
+        "jeonse": "전세",
+        "wolse": "월세",
+        "family_home": "가족과 거주",
+        "single": "미혼",
+        "married": "기혼",
+        "separated": "별거",
+        "divorced": "이혼",
+        "widowed": "사별",
+        "pre_school": "취학 전",
+        "primary": "초등학교",
+        "middle": "중학교",
+        "high": "고등학교",
+        "none": "해당 없음",
+        "enrolled": "교육 과정 등록",
+        "study_abroad": "유학 중",
+        "completed": "교육 과정 완료",
+        "no_change": "변화 없음",
+        "irp": "IRP",
+        "receiving": "연금 수령",
+        "both": "IRP 및 연금 수령",
+    }
+    if isinstance(value, (list, dict)):
+        return json.dumps(value, ensure_ascii=False, sort_keys=True, default=str)
+    return translations.get(str(value), str(value))
 
 
 def _family_options(
@@ -282,7 +408,7 @@ def _family_options(
     options = [
         {
             "option_id": "ABCD"[index],
-            "text": ItemBuilder._format_option_value(target, value),
+            "text": _format_option_value(target, value),
             "value": value,
         }
         for index, value in enumerate(selected)

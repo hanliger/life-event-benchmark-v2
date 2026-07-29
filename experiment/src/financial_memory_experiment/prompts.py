@@ -5,6 +5,8 @@ import re
 from datetime import date
 from typing import Any
 
+from fin_life_benchmark.benchmark.stage2_memory import normalize_stage2_answer
+
 
 def _date(value: Any) -> str:
     try:
@@ -44,6 +46,11 @@ def s000_as_session(record: dict[str, Any]) -> dict[str, Any]:
 def answer_contract(item: dict[str, Any]) -> str:
     if item["stage"] == "stage1_event_identification":
         return "<answer>event_id</answer>"
+    if (
+        item["stage"] == "stage2_memory_value"
+        and (item.get("metadata") or {}).get("answer_type") == "free_response"
+    ):
+        return "<answer>값</answer>"
     return "<answer>A</answer>"
 
 
@@ -70,7 +77,7 @@ def build_query(item: dict[str, Any], evidence: list[dict[str, Any]]) -> str:
         lines.extend(
             ["", "[가능한 event_id]", *(f"- {c['event_id']}: {c['label_ko']}" for c in candidates)]
         )
-    else:
+    elif item.get("options"):
         lines.extend(
             ["", "[선택지]", *(f"{o['option_id']}. {o['text']}" for o in item["options"])]
         )
@@ -78,7 +85,7 @@ def build_query(item: dict[str, Any], evidence: list[dict[str, Any]]) -> str:
     return "\n".join(lines)
 
 
-_ANSWER = re.compile(r"<answer>\s*([^<\s]+)\s*</answer>", re.IGNORECASE)
+_ANSWER = re.compile(r"<answer>\s*([^<]+?)\s*</answer>", re.IGNORECASE)
 
 
 def parse_answer(item: dict[str, Any], raw: str) -> str:
@@ -86,10 +93,22 @@ def parse_answer(item: dict[str, Any], raw: str) -> str:
     value = match.group(1).strip() if match else ""
     if item["stage"] == "stage1_event_identification":
         return value
-    return value.upper()[:1] if value.upper()[:1] in "ABCDE" else ""
+    if item["stage"] == "stage2_memory_value":
+        metadata = item.get("metadata") or {}
+        if metadata.get("answer_type") == "free_response":
+            return normalize_stage2_answer(
+                value,
+                metadata.get("normalizer"),
+                metadata.get("answer_aliases") or {},
+            )
+    return value.upper()[:1] if value.upper()[:1] in "ABCDEFGHIJKLMNOPQRSTUVWXYZ" else ""
 
 
 def gold_answer(item: dict[str, Any]) -> str:
     if item["stage"] == "stage1_event_identification":
         return str((item.get("gold") or {}).get("event_id") or "")
+    if item["stage"] == "stage2_memory_value":
+        gold = item.get("gold") or {}
+        if (item.get("metadata") or {}).get("answer_type") == "free_response":
+            return str(gold.get("normalized_answer") or "")
     return str((item.get("gold") or {}).get("correct_option") or "")

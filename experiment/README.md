@@ -118,7 +118,7 @@ data/raw/hf/hangyeul-lee--life-event-benchmark-v2-dialogues/<revision>/
 | trajectory | 20 |
 | session | 6,000 |
 | Stage 1 | 400 |
-| Stage 2 | 4,200 |
+| Stage 2 | 8,714 (MCQ 4,897 + free response 3,817) |
 | Stage 3 | 123 |
 | masking event | 451 |
 | masking arm | 5 |
@@ -276,7 +276,7 @@ first-error stop이다. timeout 또는 비용 귀속 불명 상태에서는 자�
 ## 8. 논문용 full plan과 실행
 
 Stage 3와 masking smoke, readiness checklist가 통과한 후 exact 전체 범위 plan을 만든다.
-계획에는 방법당 9,233문항, 전체 64,631 predictions가 고정된다.
+계획에는 방법당 13,747문항, 전체 96,229 predictions가 고정된다.
 
 ```bash
 ./scripts/pipeline.sh plan-paid-full \
@@ -293,7 +293,7 @@ Stage 3와 masking smoke, readiness checklist가 통과한 후 exact 전체 범�
 
 Plan JSON에서 다음을 검토한다.
 
-- `item_ids`: 9,233
+- `item_ids`: 13,747
 - `method_ids`: 7
 - `input_items_sha256`
 - `execution_provenance`

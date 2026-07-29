@@ -17,8 +17,9 @@
 Stage 1은 각 15-session target window 안에서 가장 최근에 `occurred`가 된 event의
 `event_id`를 맞힌다.
 
-Stage 2는 query 시점의 최신 상태가 아니라 target window 종료 시점의 historical
-state를 A–D 중에서 고른다. 예를 들어 S001–S015 종료 직장이 한빛테크이고
+Stage 2는 query 시점의 최신 상태가 아니라 문항에 표시된 기준일의 historical
+state를 답한다. 닫힌 값 집합은 A–D 객관식이고, 회사명·주소·금액·목록 등은
+정규화된 단답형으로 채점한다. 예를 들어 S001–S015 종료 직장이 한빛테크이고
 S016–S030에 새봄금융으로 바뀌었다면, 이후에도 첫 target 질문의 정답은
 한빛테크이고 두 번째 target 질문만 새봄금융이다.
 

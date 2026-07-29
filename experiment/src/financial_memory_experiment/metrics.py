@@ -25,6 +25,13 @@ def _target_key(row: dict[str, Any]) -> str:
         metadata.get("canonical_target_id")
         or metadata.get("target_event_instance_id")
         or metadata.get("event_instance_id")
+        or "::".join(
+            (
+                str(metadata.get("introduced_by_event_instance_id") or ""),
+                str(metadata.get("memory_path") or ""),
+                str(metadata.get("value_selector") or ""),
+            )
+        ).strip(":")
         or row["item_id"]
     )
 
@@ -66,7 +73,7 @@ def _bootstrap_ci(
 def _trajectory_scores(
     stage: str, rows: list[dict[str, Any]]
 ) -> dict[str, float]:
-    if stage == "stage2_memory_mcq":
+    if stage == "stage2_memory_value":
         return hierarchical_stage2(rows)[1]
     by_trajectory: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for row in rows:
@@ -105,7 +112,7 @@ def _expected_ids(paths: ExperimentPaths, scope: str) -> set[str]:
     files = {
         "canonical": [
             root / "canonical_items" / "stage1_event_identification.jsonl",
-            root / "canonical_items" / "stage2_historical_memory_mcq.jsonl",
+            root / "canonical_items" / "stage2_memory_value.jsonl",
             root / "canonical_items" / "stage3_multi_hop_mcq.jsonl",
         ],
         "masking": [root / "masking_items" / "masking_questions.jsonl"],
@@ -205,7 +212,7 @@ def summarize_predictions(
         stages: dict[str, Any] = {}
         for stage in sorted({str(row["stage"]) for row in method_rows}):
             subset = [row for row in method_rows if row["stage"] == stage]
-            if stage == "stage2_memory_mcq":
+            if stage == "stage2_memory_value":
                 score, trajectory_scores = hierarchical_stage2(subset)
                 aggregation = "trajectory_target_checkpoint_macro"
             else:

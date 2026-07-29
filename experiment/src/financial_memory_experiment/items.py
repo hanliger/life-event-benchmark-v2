@@ -3,20 +3,17 @@ from __future__ import annotations
 import copy
 import json
 from collections import Counter
+from datetime import date
 from pathlib import Path
 from typing import Any
 
 from fin_life_benchmark.benchmark.item_builder import ItemBuilder
-from fin_life_benchmark.benchmark.mcq_input import (
-    build_stage2_checkpoints,
-    load_mcq_windows,
-    load_stage2_question_policy,
-)
+from fin_life_benchmark.benchmark.mcq_input import load_mcq_windows
+from fin_life_benchmark.benchmark.models import BenchmarkItem
 from fin_life_benchmark.fsm.registry import load_life_event_templates
 from fin_life_benchmark.gold.loader import read_prefix_gold
 from fin_life_benchmark.gold.prefix_gold_exporter import (
     export_prefix_gold,
-    serialize_memory_state,
 )
 from fin_life_benchmark.io.paths import RepoPaths
 from fin_life_benchmark.trajectory.models import Trajectory
@@ -75,19 +72,71 @@ def build_prefix_gold_artifact(paths: ExperimentPaths) -> Path:
     return output
 
 
-def _initial_memory(trajectories: dict[str, Trajectory]) -> dict[str, dict[str, Any]]:
-    return {
-        trajectory_id: serialize_memory_state(trajectory.initial_financial_memory_state)
-        for trajectory_id, trajectory in trajectories.items()
-    }
-
-
 def _strip_query_time_initial_memory(item: dict[str, Any]) -> dict[str, Any]:
     result = copy.deepcopy(item)
     metadata = result.setdefault("metadata", {})
     metadata.pop("initial_memory", None)
     metadata["initial_state_protocol"] = "S000_ingest_once"
     return result
+
+
+def _format_date(value: str | None) -> str | None:
+    if not value:
+        return None
+    try:
+        parsed = date.fromisoformat(str(value))
+    except ValueError:
+        return str(value)
+    return f"{parsed.year}년 {parsed.month}월 {parsed.day}일"
+
+
+def _build_stage1_event_identification(
+    windows: list[Any],
+    event_templates: dict[str, Any],
+) -> list[BenchmarkItem]:
+    """Preserve the experiment's frozen Stage 1 contract across core refactors."""
+
+    candidate_events = [
+        {"event_id": template.event_id, "label_ko": template.label_ko}
+        for template in sorted(event_templates.values(), key=lambda item: item.event_id)
+        if template.active
+    ]
+    items: list[BenchmarkItem] = []
+    for window in windows:
+        prefix_id = f"{window.trajectory_id}_w{window.window_index:02d}"
+        fallback = f"{window.target_session_start}~{window.target_session_end}"
+        start = _format_date(window.target_date_start)
+        end = _format_date(window.target_date_end)
+        date_range = f"{start}~{end}" if start and end else fallback
+        items.append(
+            BenchmarkItem(
+                item_id=f"{prefix_id}_s1_event",
+                stage="stage1_event_identification",
+                trajectory_id=window.trajectory_id,
+                prefix_id=prefix_id,
+                visible_sessions=list(window.visible_session_ids),
+                question=(
+                    "전체 상담 이력을 참고하여, "
+                    f"{date_range} 기간에 마지막으로 실제 발생한 Life Event는 "
+                    "무엇인가? 가능한 목록에서 하나를 선택하시오."
+                ),
+                gold={
+                    "event_id": window.target_event_id,
+                    "event_label": window.target_event_label,
+                    "event_instance_id": window.target_event_instance_id,
+                },
+                metadata={
+                    "window_index": window.window_index,
+                    "target_session_start": window.target_session_start,
+                    "target_session_end": window.target_session_end,
+                    "target_date_start": window.target_date_start,
+                    "target_date_end": window.target_date_end,
+                    "target_event_status": window.target_event_status,
+                    "candidate_events": candidate_events,
+                },
+            )
+        )
+    return items
 
 
 def build_canonical_items(paths: ExperimentPaths) -> dict[str, Path]:
@@ -111,7 +160,7 @@ def build_canonical_items(paths: ExperimentPaths) -> dict[str, Path]:
         trajectories_dir,
         window_size=stride,
     )
-    stage1 = ItemBuilder().build_stage1_event_identification(
+    stage1 = _build_stage1_event_identification(
         windows,
         load_life_event_templates(RepoPaths(root=paths.repo_root)),
     )
@@ -135,35 +184,33 @@ def build_canonical_items(paths: ExperimentPaths) -> dict[str, Path]:
         stage1_rows.append(row)
 
     prefixes = list(read_prefix_gold(prefix_path))
-    policy = load_stage2_question_policy(
-        paths.repo_root / "configs" / "registries" / "stage2_question_policy.yaml"
-    )
-    checkpoints = build_stage2_checkpoints(
+    stage2 = ItemBuilder(seed=seed).build_stage2(
         prefixes,
-        sessions_by_traj=sessions,
-        initial_memory_by_traj=_initial_memory(trajectories),
-        question_policy=policy,
-        strict_event_targets=True,
-        window_size=stride,
-    )
-    stage2 = ItemBuilder(seed=seed, shuffle_options=True).build_stage2(
-        checkpoints,
-        initial_memory_by_traj=_initial_memory(trajectories),
-        window_size=stride,
+        sessions,
+        trajectories,
     )
     stage2_rows: list[dict[str, Any]] = []
     for item in stage2:
         row = _strip_query_time_initial_memory(item.model_dump(mode="json"))
         metadata = row["metadata"]
         query_checkpoint = int(metadata["checkpoint_session_count"])
-        first_checkpoint = int(metadata["first_visible_checkpoint"])
+        first_checkpoint = int(metadata["target_checkpoint_session_count"])
+        gold = row.get("gold") or {}
+        metadata["canonical_target_id"] = "::".join(
+            (
+                str(metadata["introduced_by_event_instance_id"]),
+                str(metadata["memory_path"]),
+                str(metadata["value_selector"]),
+                str(gold.get("entity_id") or ""),
+            )
+        )
         metadata.update(
             {
                 "query_checkpoint": query_checkpoint,
                 "target_checkpoint": first_checkpoint,
                 "retention_lag_sessions": query_checkpoint - first_checkpoint,
                 "retention_lag_windows": (query_checkpoint - first_checkpoint) // stride,
-                "task_semantics": "historical_state_as_of_target_window",
+                "task_semantics": "dated_memory_value_at_event_checkpoint",
             }
         )
         stage2_rows.append(row)
@@ -175,7 +222,7 @@ def build_canonical_items(paths: ExperimentPaths) -> dict[str, Path]:
 
     output_dir = root / "canonical_items"
     stage1_path = output_dir / "stage1_event_identification.jsonl"
-    stage2_path = output_dir / "stage2_historical_memory_mcq.jsonl"
+    stage2_path = output_dir / "stage2_memory_value.jsonl"
     write_jsonl(stage1_path, stage1_rows)
     write_jsonl(stage2_path, stage2_rows)
     stage3 = build_stage3_items(paths)
@@ -191,7 +238,10 @@ def build_canonical_items(paths: ExperimentPaths) -> dict[str, Path]:
         "stage3_by_derivation_type": stage3["by_derivation_type"],
         "option_seed": seed,
         "initial_state_protocol": "S000_ingest_once",
-        "stage2_semantics": "historical_state_as_of_target_window",
+        "stage2_semantics": "dated_memory_value_at_event_checkpoint",
+        "stage2_answer_types": dict(
+            sorted(Counter(row["metadata"]["answer_type"] for row in stage2_rows).items())
+        ),
         "stage3_semantics": "two_checkpoint_multi_hop",
         "stage2_lag_distribution": dict(
             sorted(Counter(row["metadata"]["retention_lag_windows"] for row in stage2_rows).items())
@@ -210,7 +260,7 @@ def validate_canonical_items(paths: ExperimentPaths) -> dict[str, Any]:
     expected = cfg["dataset"]["expected"]
     root = _prepared_root(paths)
     stage1 = list(read_jsonl(root / "canonical_items" / "stage1_event_identification.jsonl"))
-    stage2 = list(read_jsonl(root / "canonical_items" / "stage2_historical_memory_mcq.jsonl"))
+    stage2 = list(read_jsonl(root / "canonical_items" / "stage2_memory_value.jsonl"))
     stage3_report = validate_stage3_items(paths)
     stage3 = list(read_jsonl(root / "canonical_items" / "stage3_multi_hop_mcq.jsonl"))
     errors: list[str] = []
@@ -236,9 +286,24 @@ def validate_canonical_items(paths: ExperimentPaths) -> dict[str, Any]:
             errors.append(f"{row['item_id']}: query-time initial_memory leakage")
         if metadata.get("retention_lag_sessions", -1) < 0:
             errors.append(f"{row['item_id']}: negative retention lag")
+        answer_type = str(metadata.get("answer_type") or "")
         options = row.get("options") or []
-        if len(options) != 4 or sum(bool(option.get("correct")) for option in options) != 1:
-            errors.append(f"{row['item_id']}: invalid A-D option contract")
+        if answer_type == "mcq":
+            option_ids = [str(option.get("option_id") or "") for option in options]
+            if (
+                len(options) < 2
+                or len(option_ids) != len(set(option_ids))
+                or sum(bool(option.get("correct")) for option in options) != 1
+                or (row.get("gold") or {}).get("correct_option") not in option_ids
+            ):
+                errors.append(f"{row['item_id']}: invalid closed-choice option contract")
+        elif answer_type == "free_response":
+            if options:
+                errors.append(f"{row['item_id']}: free response unexpectedly has options")
+            if "normalized_answer" not in (row.get("gold") or {}):
+                errors.append(f"{row['item_id']}: missing normalized free-response gold")
+        else:
+            errors.append(f"{row['item_id']}: invalid Stage 2 answer type {answer_type!r}")
     report = {
         "decision": "PASS" if not errors else "FAIL",
         "stage1_items": len(stage1),

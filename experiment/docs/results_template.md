@@ -24,10 +24,10 @@
 | Check | Expected | Observed |
 |---|---:|---:|
 | Configured methods | 7 | `TBD` |
-| Items per method | 9,233 | `TBD` |
-| Total predictions | 64,631 | `TBD` |
+| Items per method | 13,747 | `TBD` |
+| Total predictions | 96,229 | `TBD` |
 | Stage 1 per method | 400 | `TBD` |
-| Stage 2 per method | 4,200 | `TBD` |
+| Stage 2 per method | 8,714 | `TBD` |
 | Stage 3 per method | 123 | `TBD` |
 | Masking per method | 4,510 | `TBD` |
 | COMPLETE manifests | 14 | `TBD` |

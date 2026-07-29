@@ -6,7 +6,7 @@
 
 - [x] HF dialogues, gold, fillers, plans commit SHA와 content-tree hash 고정
 - [x] 20 trajectories × 300 sessions 검증
-- [x] Stage 1 400개, Stage 2 4,200개 생성
+- [x] Stage 1 400개, Stage 2 8,714개 생성(MCQ 4,897 + free response 3,817)
 - [x] Stage 3 multi-hop 123개 생성, upstream audit 123/123, normalized JSONL hash 결합
 - [x] Stage 3 123문항 × 7방법 offline end-to-end, 총 861 predictions
 - [x] 5-arm masking 4,510문항 생성
@@ -32,7 +32,7 @@
 - [ ] provider별 full cost estimate 검토
 - [ ] Letta health check
 - [ ] exact `--scope all` full plan 생성
-- [ ] plan의 9,233 item IDs, 7 methods, operation limits 검토
+- [ ] plan의 13,747 item IDs, 7 methods, operation limits 검토
 - [ ] full-run 별도 승인
 
 ## 확정된 비교 결정

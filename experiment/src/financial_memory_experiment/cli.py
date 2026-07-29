@@ -50,7 +50,7 @@ def _canonical_item_paths(paths: ExperimentPaths) -> list[Path]:
     root = Path(active_prepared_manifest(paths)["root"])
     return [
         root / "canonical_items" / "stage1_event_identification.jsonl",
-        root / "canonical_items" / "stage2_historical_memory_mcq.jsonl",
+        root / "canonical_items" / "stage2_memory_value.jsonl",
         root / "canonical_items" / "stage3_multi_hop_mcq.jsonl",
     ]
 
@@ -288,7 +288,7 @@ def _dry_run(paths: ExperimentPaths) -> dict[str, Any]:
     }
     item = {
         "item_id": "dry-stage2",
-        "stage": "stage2_memory_mcq",
+        "stage": "stage2_memory_value",
         "trajectory_id": "traj_dry",
         "question": "직장은?",
         "options": [
@@ -296,7 +296,7 @@ def _dry_run(paths: ExperimentPaths) -> dict[str, Any]:
             for option in "ABCD"
         ],
         "gold": {"correct_option": "A"},
-        "metadata": {"query_checkpoint": 1},
+        "metadata": {"query_checkpoint": 1, "answer_type": "mcq"},
     }
     system = "테스트"
     reader = MockReader()

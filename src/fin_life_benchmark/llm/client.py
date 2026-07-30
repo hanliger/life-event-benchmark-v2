@@ -472,10 +472,26 @@ class LLMClient:
             else:
                 temperature_omission_reason = "model_rejects_temperature"
 
+            streamed_output_details: Any = None
             if adaptive:
                 # Streaming keeps the SDK from rejecting a request whose thinking
                 # budget could push it past the non-streaming time limit.
+                #
+                # get_final_message() rebuilds usage without
+                # output_tokens_details, so the thinking count is present on the
+                # wire but absent from the accumulated object. Capture it off the
+                # message_delta events instead -- otherwise an adaptive run looks
+                # like the provider never reported a count, which is what made
+                # Opus 5 appear to have an unfixable metadata gap.
                 with self._client.messages.stream(**kwargs) as stream:
+                    for event in stream:
+                        if getattr(event, "type", "") != "message_delta":
+                            continue
+                        details = _attr_or_key(
+                            getattr(event, "usage", None), "output_tokens_details"
+                        )
+                        if details is not None:
+                            streamed_output_details = details
                     response = stream.get_final_message()
                 streaming_used = True
             else:
@@ -489,6 +505,12 @@ class LLMClient:
             usage_raw = getattr(response, "usage", None)
             usage = _usage_metadata(usage_raw) or {}
             thinking_tokens, thinking_tokens_source = anthropic_thinking_tokens(usage_raw)
+            if thinking_tokens is None and streamed_output_details is not None:
+                streamed = _attr_or_key(streamed_output_details, "thinking_tokens")
+                if streamed is not None:
+                    thinking_tokens = int(streamed)
+                    thinking_tokens_source = "stream_message_delta"
+                    usage["thinking_tokens"] = thinking_tokens
             stop_reason = getattr(response, "stop_reason", None)
             duration_ms = round((time.monotonic() - (self._request_started_at or time.monotonic())) * 1000, 3)
             self.last_response_metadata = {

@@ -47,14 +47,20 @@ class _Response:
 
 
 class _Stream:
-    def __init__(self, response):
+    def __init__(self, response, events=()):
         self._response = response
+        self._events = events
 
     def __enter__(self):
         return self
 
     def __exit__(self, *exc):
         return False
+
+    def __iter__(self):
+        # The real SDK stream is iterable, and the thinking count only appears
+        # on its message_delta events -- get_final_message() drops it.
+        return iter(self._events)
 
     def get_final_message(self):
         return self._response
@@ -414,3 +420,109 @@ def test_older_anthropic_model_keeps_temperature_and_never_gets_adaptive(monkeyp
     assert meta["thinking_mode_applied"] is None
     assert meta["temperature_applied"] == 0.0
     assert meta["temperature_omission_reason"] is None
+
+
+# ---------------------------------------------------------------------------
+# streaming usage aggregation
+
+
+class _StreamEvent:
+    def __init__(self, type_, usage=None):
+        self.type = type_
+        self.usage = usage
+
+
+class _FakeStream:
+    """Mimics the SDK: message_delta carries output_tokens_details, the
+    accumulated final message does not."""
+
+    def __init__(self, events, final):
+        self._events, self._final = events, final
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+    def __iter__(self):
+        return iter(self._events)
+
+    def get_final_message(self):
+        return self._final
+
+
+def test_adaptive_reads_thinking_tokens_from_the_stream_deltas():
+    """get_final_message() drops output_tokens_details.
+
+    The count is on the wire in message_delta but absent from the accumulated
+    usage, which made Opus 5 look like it never reported a thinking count at
+    all. Reading the delta is what makes an adaptive run measurable.
+    """
+
+    from types import SimpleNamespace
+    from fin_life_benchmark.llm.client import LLMClient
+
+    final = SimpleNamespace(
+        content=[SimpleNamespace(type="thinking"), SimpleNamespace(type="text", text="ok")],
+        stop_reason="end_turn",
+        stop_sequence=None,
+        # note: no output_tokens_details here, exactly like the real SDK
+        usage=SimpleNamespace(input_tokens=32, output_tokens=81),
+    )
+    events = [
+        _StreamEvent("content_block_delta"),
+        _StreamEvent(
+            "message_delta",
+            SimpleNamespace(
+                input_tokens=32,
+                output_tokens=81,
+                output_tokens_details=SimpleNamespace(thinking_tokens=36),
+            ),
+        ),
+    ]
+
+    client = LLMClient(
+        provider="mock", model="claude-opus-5", max_tokens=128,
+        thinking_mode="adaptive", reasoning_effort="low",
+    )
+    client.provider = "anthropic"
+    client._client = SimpleNamespace(
+        messages=SimpleNamespace(stream=lambda **kw: _FakeStream(events, final))
+    )
+
+    assert client.generate("system", "prompt") == "ok"
+    meta = client.last_response_metadata
+    assert meta["streaming_used"] is True
+    assert meta["thinking_tokens"] == 36
+    assert meta["thinking_tokens_source"] == "stream_message_delta"
+    # and it reaches the usage block the token accounting reads
+    assert meta["usage"]["thinking_tokens"] == 36
+
+
+def test_a_stream_without_details_still_reports_unavailable():
+    """No invented number when the provider genuinely does not report one."""
+
+    from types import SimpleNamespace
+    from fin_life_benchmark.llm.client import LLMClient
+
+    final = SimpleNamespace(
+        content=[SimpleNamespace(type="text", text="ok")],
+        stop_reason="end_turn", stop_sequence=None,
+        usage=SimpleNamespace(input_tokens=32, output_tokens=10),
+    )
+    events = [_StreamEvent("message_delta", SimpleNamespace(input_tokens=32, output_tokens=10))]
+
+    client = LLMClient(
+        provider="mock", model="claude-opus-5", max_tokens=128,
+        thinking_mode="adaptive", reasoning_effort="low",
+    )
+    client.provider = "anthropic"
+    client._client = SimpleNamespace(
+        messages=SimpleNamespace(stream=lambda **kw: _FakeStream(events, final))
+    )
+
+    client.generate("system", "prompt")
+    meta = client.last_response_metadata
+    assert meta["thinking_tokens"] is None
+    assert meta["thinking_tokens_source"] == "unavailable"

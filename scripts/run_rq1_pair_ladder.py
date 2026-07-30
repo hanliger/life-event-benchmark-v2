@@ -140,11 +140,27 @@ def main() -> int:
         "--config", default="configs/experiments/rq1_pair_ladder.yaml"
     )
     parser.add_argument("--models", nargs="*", default=None, help="subset by key")
+    # Per-trajectory overrides so one config serves every trajectory instead of
+    # being copied per run. Anything not overridden comes from the config.
+    parser.add_argument("--trajectory-id", default=None)
+    parser.add_argument("--items", default=None)
+    parser.add_argument("--taxonomy", default=None)
+    parser.add_argument("--protocol-manifest", default=None)
+    parser.add_argument("--output-root", default=None)
     parser.add_argument("--skip-audit", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
 
     cfg = yaml.safe_load((REPO / args.config).read_text(encoding="utf-8"))
+    for key, value in (
+        ("trajectory_id", args.trajectory_id),
+        ("items", args.items),
+        ("taxonomy", args.taxonomy),
+        ("protocol_manifest", args.protocol_manifest),
+        ("output_root", args.output_root),
+    ):
+        if value:
+            cfg[key] = value
     common = cfg["common"]
     checkpoints = cfg["checkpoints"]
     out_root = REPO / cfg["output_root"]

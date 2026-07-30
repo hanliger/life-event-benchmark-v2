@@ -555,49 +555,95 @@ make evaluate-rq1-pairs-dev EXECUTE=1 RQ1_PROVIDER=anthropic RQ1_MODEL=claude-op
 산출물은 기존 파일럿을 덮지 않도록 `data/runs/<RUN_ID>/rq1_pair_temp/`
 (`protocol_manifest.json`, `predictions/`, `reports/`, `audit/`)에 씁니다.
 
-##### (임시) cp300 terminal-evidence-only 진단
+##### (임시) no-prospective 진단 (2개 arm)
 
-`--condition terminal_only`은 cp300 prefix에서 **종결 근거 세션만** 남기고
-(`occurred_evidence`, `cancellation_evidence`) 나머지를 전부 제거한 뒤 같은
-질문을 한 번 묻는 단일 item 진단입니다. weak/upcoming 근거 없이도 발생 사건을
-복원할 수 있는지를 봅니다. filler로 대체하지 않고 그냥 빼며, 남은 세션은 원래
-`D###` 공개 id와 시간 순서를 그대로 유지합니다. traj_001 cp300에서는 300개 중
-26개(occurred 20 + cancellation 6)가 남습니다.
+전망 근거(`weak_signal_evidence`, `upcoming_evidence`)**만** 제거하고 나머지는
+전부 남긴 채 같은 질문을 묻는 진단입니다. distractor(routine, hard_negative),
+종결 세션, 후속 세션, cancellation 세션이 모두 그대로 보입니다. 제거 방식이
+다른 두 arm이 있습니다.
 
-gold는 **full prefix 투영 그대로**입니다. 즉 조건이 바꾸는 것은 모델이 보는
-입력뿐이고 정답 20짝은 변하지 않으므로, 같은 item의 기존 full-prefix 점수와
-직접 비교할 수 있습니다. cancellation 세션은 보이지만 gold 짝을 만들지 않는
-음성 예시로 남습니다.
+| condition | cp300 가시 세션 | 방식 |
+| --- | --- | --- |
+| `no_prospective` | 264 | 해당 세션을 **삭제** (컨텍스트도 짧아짐) |
+| `no_prospective_substituted` | **300** | 중립 routine filler로 **치환** (길이 동일) |
+
+치환 arm이 length-matched 대조군입니다. 세션 수·공개 id·위치·날짜가 모두
+보존되고 전망 *내용*만 사라지므로, 점수 차이를 "프롬프트가 짧아져서"로 돌릴 수
+없습니다. 코퍼스는 `scripts/build_no_prospective_corpus.py`로 만들며,
+`--sessions-dir`가 치환 코퍼스가 맞는지 evaluator가 **검증**합니다 — 원본
+코퍼스를 가리키면 조용히 full_prefix 실행이 되는 대신 거부합니다.
+
+gold는 두 arm 모두 **full prefix 투영 그대로**입니다. 조건이 바꾸는 것은 모델이
+보는 입력뿐이고 정답은 변하지 않으므로 같은 item의 full-prefix 점수와 직접
+비교할 수 있습니다. cancellation 세션은 보이지만 gold 짝을 만들지 않는 음성
+예시로 남습니다.
+
+두 arm 모두 items 파일에 있는 **아무 checkpoint에서나** 돌릴 수 있어 사다리
+(cp30, cp60, … cp300)로 읽을 수 있습니다. 단 `--checkpoint`는 항상 명시해야
+합니다.
 
 ```bash
-python scripts/audit_rq1_pair_terminal_only.py \
+# 삭제 arm
+python scripts/audit_rq1_pair_no_prospective.py \
     --items data/runs/$RUN_ID/rq1/natural/progressive_items.jsonl \
-    --sessions-dir data/runs/hf_full/dialogues/sessions \
+    --sessions-dir data/runs/hf_full/final_sessions \
     --taxonomy data/runs/$RUN_ID/rq1/taxonomy.json \
     --trajectory-id traj_001 --checkpoint 300 \
-    --output-dir data/runs/$RUN_ID/rq1_pair_temp/terminal_only/audit
+    --output-dir data/runs/$RUN_ID/rq1_pair_temp/no_prospective/audit
+
+# 치환 arm — 원본 코퍼스도 함께 줘야 "전망 슬롯만 바뀌었는지"를 turn 단위로 검증
+python scripts/audit_rq1_pair_no_prospective.py --substituted \
+    --items data/runs/$RUN_ID/rq1/natural/progressive_items.jsonl \
+    --sessions-dir data/runs/hf_full/no_prospective/final_sessions \
+    --original-sessions-dir data/runs/hf_full/final_sessions \
+    --taxonomy data/runs/$RUN_ID/rq1/taxonomy.json \
+    --trajectory-id traj_001 --checkpoint 300 \
+    --output-dir data/runs/$RUN_ID/rq1_pair_temp/no_prospective_substituted/audit/cp300
 
 python scripts/evaluate_rq1_pairs.py \
     --items data/runs/$RUN_ID/rq1/natural/progressive_items.jsonl \
-    --sessions-dir data/runs/hf_full/dialogues/sessions \
+    --sessions-dir data/runs/hf_full/no_prospective/final_sessions \
     --taxonomy data/runs/$RUN_ID/rq1/taxonomy.json \
-    --trajectory-id traj_001 --checkpoint 300 --condition terminal_only \
-    --baseline-predictions <기존 full cp300 predictions.jsonl> \
-    --output  data/runs/$RUN_ID/rq1_pair_temp/terminal_only/predictions/<tag>.jsonl \
-    --report  data/runs/$RUN_ID/rq1_pair_temp/terminal_only/reports/<tag>.json
+    --trajectory-id traj_001 --condition no_prospective_substituted --execute \
+    --checkpoint 30 --checkpoint 60 --checkpoint 90 --checkpoint 120 \
+    --checkpoint 150 --checkpoint 180 --checkpoint 210 --checkpoint 240 \
+    --checkpoint 270 --checkpoint 300 \
+    --output  data/runs/$RUN_ID/rq1_pair_temp/no_prospective_substituted/predictions/<tag>.jsonl \
+    --report  data/runs/$RUN_ID/rq1_pair_temp/no_prospective_substituted/reports/<tag>.json
+
+# 여러 모델의 사다리를 한 표로
+python scripts/summarize_rq1_pair_ladder.py \
+    data/runs/$RUN_ID/rq1_pair_temp/no_prospective_substituted/predictions/*.jsonl
 ```
+
+설계·지표·**알려진 한계**(cell당 1회 호출, trajectory n=1, checkpoint가 중첩되어
+독립이 아님, checkpoint와 gold 개수가 완전 공선, 평평한 taxonomy를 strict하게
+채점)는 [`docs/rq1_pair_protocol.md`](docs/rq1_pair_protocol.md)에 정리돼
+있습니다.
 
 `--baseline-predictions`는 저장된 full-prefix 예측을 그대로 읽어 delta P/R/F1,
 유지된 짝, full에서 맞았는데 잃은 짝, 새 TP/FP, cancellation 세션 FP를
 계산합니다. baseline 모델을 다시 호출하지 않습니다.
 
 Anthropic adaptive thinking을 쓰려면 `--thinking-mode adaptive
---reasoning-effort xhigh`를 주고, 실제로 적용됐는지 강제하려면
-`--require-thinking-tokens`를 켭니다. 이 게이트는 thinking token이 양수인지,
-adaptive/effort/streaming이 실제로 적용됐는지, 응답이 잘리거나 파싱 실패하지
-않았는지를 확인하고, 실패하면 그 item을 채점에서 제외하고 exit 1 합니다.
-thinking token이 없으면 0이 아니라 `null` + `thinking_tokens_source:
-"unavailable"`로 기록합니다.
+--reasoning-effort high`를 주고, 실제로 적용됐는지 강제하려면
+`--require-thinking-tokens`를 켭니다. 게이트는 두 종류로 나뉩니다.
+
+- **치명적 실패**: adaptive/effort/streaming이 실제로 적용되지 않았거나,
+  thinking token이 있는데 0 이하이거나, 응답이 잘렸거나 파싱에 실패한 경우.
+  해당 item을 채점에서 제외하고 exit 1 합니다.
+- **메타데이터 공백**: 설정 적용은 확인됐는데(mode/effort/streaming 3개 모두)
+  provider가 thinking token **개수**만 보고하지 않는 경우. 호출 자체는 정상이므로
+  `inference_metadata_gap`으로 기록하고 item은 그대로 채점합니다. claude-opus-5가
+  여기 해당하며, 이걸 실패로 처리하면 멀쩡한 측정치를 보고 누락 때문에 버리게
+  됩니다. thinking token이 없을 때 0이 아니라 `null` +
+  `thinking_tokens_source: "unavailable"`로 기록하는 건 그대로입니다.
+
+`--temperature`는 `claude-opus-5`와 GPT-5.x frontier 모델에서 provider 계약상
+**전달되지 않습니다**(Gemini만 적용). 즉 그 두 모델은 provider 기본값으로
+샘플링합니다. cell당 1회 호출이므로 이 사실이 재현성을 좌우하기 때문에, 모든
+prediction row가 `temperature_applied` / `temperature_omission_reason` /
+`deterministic_sampling`을, report가 `sampling` 요약을 함께 기록합니다.
 
 ---
 

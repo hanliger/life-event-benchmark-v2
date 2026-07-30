@@ -8,13 +8,26 @@ One question, one call per model per checkpoint:
     sessions, the downstream sessions and the full distractor mass all left
     exactly as they were?
 
-This is a subtraction, not a counterfactual: removed sessions are not replaced
-with neutral fillers. Unlike a terminal-only reduction it removes very little
-(36 of 300 sessions at cp300), so context *length* is nearly held constant and
-what changes is close to purely the presence of the prospective evidence
-channel. Every distractor -- routine and hard-negative alike -- stays visible,
-and so do the cancellation sessions, which must remain negatives: a cancelled
-plan never earns a gold pair.
+Two arms remove that evidence in different ways:
+
+``no_prospective``
+    A subtraction: the sessions are dropped and not replaced, so the context
+    also gets shorter (264 of 300 sessions survive at cp300).
+``no_prospective_substituted``
+    A counterfactual: each prospective session is replaced in place by a
+    neutral routine filler, so the session count, the public ids, the
+    positions and the dates are all held constant and *only* the prospective
+    content changes. The corpus is built by
+    ``scripts/build_no_prospective_corpus.py``.
+
+The substituted arm is the length-matched control: it is the one whose score
+difference cannot be attributed to a shorter prompt. The subtraction arm is
+kept as the contrast that shows how much of any effect the 12% length
+reduction accounts for.
+
+In both arms every distractor -- routine and hard-negative alike -- stays
+visible, and so do the cancellation sessions, which must remain negatives: a
+cancelled plan never earns a gold pair.
 
 Gold is **not** recomputed from the filtered context. It stays the full-prefix
 projection at that checkpoint, which is what makes this score directly

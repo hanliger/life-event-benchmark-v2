@@ -30,3 +30,7 @@ life_generator/out/
 .DS_Store
 *.swp
 *.swo
+
+# Local triage scratch for the provided_slots/amount audit. Holds dialogue
+# excerpts from the corpus, which lives in the private HF dataset, not here.
+fix/

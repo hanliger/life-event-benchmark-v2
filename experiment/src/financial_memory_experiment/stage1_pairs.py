@@ -22,11 +22,25 @@ Two invariants the harness must not break:
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Any
 
+from fin_life_benchmark.fsm.registry import load_life_event_templates
+from fin_life_benchmark.gold.loader import read_prefix_gold
+from fin_life_benchmark.io.paths import RepoPaths
+
+from .corpus import corpus_root
+from .paths import ExperimentPaths
+from .util import read_jsonl, write_json, write_jsonl
+
 from fin_life_benchmark.benchmark.rq1_builder import (
+    build_natural_items,
+    build_public_taxonomy,
+    load_session_records,
     render_sessions_block,
     render_taxonomy_block,
+    taxonomy_hash,
     to_public_session_id,
     visible_ids_for_condition,
 )
@@ -166,3 +180,65 @@ def score(
         "metrics": metrics,
         "metrics_version": METRICS_VERSION,
     }
+
+
+def build_items(paths: ExperimentPaths) -> dict[str, Any]:
+    """Materialize Stage 1 pair items and the public taxonomy on the corpus.
+
+    Items are the RQ1 progressive items: one per trajectory per 15-session
+    checkpoint. The pair task reuses them and only changes the question, so this
+    is the same item set the root evaluator reads.
+    """
+
+    root = corpus_root(paths)
+    prefixes = list(
+        read_prefix_gold(root / "prefix_gold" / "prefix_gold_checkpoints_15.jsonl")
+    )
+    if not prefixes:
+        raise ValueError("prefix gold is empty; run prepare-stage2-2 first")
+    trajectory_ids = sorted({str(row["trajectory_id"]) for row in prefixes})
+    sessions_by_traj = load_session_records(root / "sessions_joined", trajectory_ids)
+    templates = load_life_event_templates(RepoPaths(root=paths.repo_root))
+    taxonomy = build_public_taxonomy(templates)
+    digest = taxonomy_hash(taxonomy)
+    items = build_natural_items(
+        prefixes,
+        sessions_by_traj,
+        taxonomy_digest=digest,
+        checkpoint_stride=15,
+    )
+    if not items:
+        raise ValueError("no Stage 1 items produced")
+    item_path = item_path_for(paths)
+    write_jsonl(item_path, (item.model_dump(mode="json") for item in items))
+    taxonomy_path = item_path.parent / f"{STAGE1_PAIRS}_taxonomy.json"
+    write_json(taxonomy_path, {"taxonomy": taxonomy, "taxonomy_digest": digest})
+    checkpoints = sorted({int(item.checkpoint_session_count) for item in items})
+    return {
+        "path": str(item_path),
+        "taxonomy_path": str(taxonomy_path),
+        "items": len(items),
+        "trajectories": len(trajectory_ids),
+        "checkpoints": checkpoints,
+        "taxonomy_events": len(taxonomy),
+        "taxonomy_digest": digest,
+        "condition": CONDITION,
+        "corpus": "dialogues_no_prospective + gold_no_prospective",
+    }
+
+
+def item_path_for(paths: ExperimentPaths) -> Path:
+    return corpus_root(paths) / "canonical_items" / f"{STAGE1_PAIRS}.jsonl"
+
+
+def load_items(paths: ExperimentPaths) -> list[dict[str, Any]]:
+    return list(read_jsonl(item_path_for(paths)))
+
+
+def load_taxonomy(paths: ExperimentPaths) -> tuple[list[dict[str, str]], str]:
+    payload = json.loads(
+        (
+            item_path_for(paths).parent / f"{STAGE1_PAIRS}_taxonomy.json"
+        ).read_text(encoding="utf-8")
+    )
+    return list(payload["taxonomy"]), str(payload["taxonomy_digest"])

@@ -155,3 +155,108 @@ token에는 thinking token을 포함했다.
   드러냈다.
 - 다만 이 결과는 `traj_010` 하나의 예비 결과이므로 논문의 모델 성능 결론으로
   사용하지 않는다.
+
+## 9. Gold 대비 오류 Case Study
+
+세 모델의 Full Context 결과를 동일한 checkpoint 300에서 비교했다. cell은
+`value`와 `status`가 모두 Gold와 같아야 정답이다. 아래 error type은 변경
+탐지 관점의 confusion matrix를 따른다.
+
+- **FP (False-positive update)**: Gold상 초기 상태와 동일한 path를 모델이
+  변경했다고 예측한 경우
+- **FN (Missed update)**: Gold상 변경된 path를 모델이 초기 상태로 유지하거나
+  비워 둔 경우
+- **TP-wrong-value**: 변경 자체는 탐지했지만 최종 `value` 또는 `status`가
+  Gold와 다른 경우
+
+| Model | Incorrect Cells | FP | FN | TP-wrong-value |
+|---|---:|---:|---:|---:|
+| Claude Opus 5 | 5/34 | 2 | 2 | 1 |
+| Gemini 3.1 Pro Preview | 9/34 | 3 | 2 | 4 |
+| GPT-5.6 Sol | 11/34 | 3 | 2 | 6 |
+
+### Case 1. Claude Opus 5 — Adjacent-path overwrite
+
+| Field | Content |
+|---|---|
+| Path | `employment.occupation` |
+| Initial State | `value="일반 비서"`, `status="current"` |
+| Gold | `value="일반 비서"`, `status="current"`, evidence `[]` |
+| Prediction | `value=null`, `status="unknown"`, evidence `["D299"]` |
+| Error Type | FP |
+
+`D299`는 새 직장 `두레헬스케어`, 급여일, 급여계좌, 소득 안정성에 관한 update를
+제공하지만 occupation은 명시하지 않는다. 따라서 Gold protocol에서는
+`employment.occupation`의 초기값인 `일반 비서`를 유지해야 한다. Claude는 같은
+employment subtree의 여러 field가 갱신되자 occupation까지 알 수 없는 값으로
+지웠다.
+
+이 사례는 한 event가 인접 field 전체를 덮어쓰는 **adjacent-path overwrite**다.
+모델이 update scope를 path 단위로 분리하지 못했으며, unchanged-state retention
+실패로 해석할 수 있다.
+
+### Case 2. Gemini 3.1 Pro Preview — Temporal projection과 Gold semantics의 충돌
+
+| Field | Content |
+|---|---|
+| Path | `household.children` |
+| Initial State | `value=[]`, `status="current"` |
+| Gold | `value=[0, 2, 3]`, `status="current"`, evidence `["D180"]` |
+| Prediction | `value=[12, 11, 9]`, `status="current"`, evidence `["D181"]` |
+| Error Type | TP-wrong-value |
+
+`D180`과 `D181`은 2016년 12월과 2017년 1월에 자녀 세 명의 나이를
+`[0, 2, 3]`으로 확정한다. checkpoint 300의 상담일은 2026년 6월이다. Gemini는
+약 9년의 시간 경과를 반영해 자녀 나이를 `[12, 11, 9]`로 전진시켰지만, Gold는
+마지막 명시적 update의 `[0, 2, 3]`을 그대로 유지한다. 같은 패턴으로 Gemini는
+`profile.age`도 Gold의 30이 아니라 45로 예측했다.
+
+현재 scoring contract에서는 명시적 update가 없는 자동 시간 전진을 허용하지
+않으므로 이 예측은 오답이다. 그러나 RQ가 “현재 state를 파악하는가”라면 나이는
+시간에 따라 결정적으로 변한다. 따라서 이 사례는 모델 오류만이 아니라 다음
+construct-validity 선택을 요구한다.
+
+1. 나이 path를 마지막 관측값으로 고정한다고 명시한다.
+2. checkpoint date를 이용해 Gold에 deterministic temporal projection을 적용한다.
+3. 자동으로 변하는 path를 primary state-reconstruction metric에서 제외한다.
+
+이 선택을 freeze하지 않으면 시간 계산을 수행한 모델이 오히려 감점될 수 있다.
+
+### Case 3. GPT-5.6 Sol — Stale fact intrusion과 종료 근거 부족
+
+| Field | Content |
+|---|---|
+| Path | `financial_products.loans` |
+| Initial State | `value=["jeonse_loan"]`, `status="current"` |
+| Gold | `value=["mortgage"]`, `status="current"`, evidence `["D255"]` |
+| Prediction | `value=["mortgage", "credit"]`, `status="current"`, evidence `["D129", "D255", "D263"]` |
+| Error Type | TP-wrong-value |
+
+`D129`는 2014년에 사용 중인 신용대출을 명시한다. `D255`는 2022년에
+전세대출이 정리되고 주택담보대출이 시작됐음을 명시하며, Gold는 최종 대출
+목록을 `["mortgage"]`로 갱신한다. GPT는 최신 mortgage는 반영했지만 과거
+`credit`도 계속 보존했다.
+
+Gold contract를 기준으로 보면 이는 과거 fact가 현재 state에 남은
+**stale fact intrusion**이다. 다만 `D255`가 명시적으로 종료했다고 말하는 것은
+전세대출이며 신용대출 종료는 직접 언급하지 않는다. 따라서 모델이 대화만 보고
+`credit`을 제거해야 한다는 근거가 충분한지도 별도로 검토해야 한다.
+
+이 사례는 event의 Gold update가 여러 기존 값을 대체할 때 dialogue에도 각 값의
+종료 근거가 관측 가능해야 함을 보여준다. 그렇지 않으면 memory retention을 잘한
+모델이 Gold상 오답이 되는 under-specification이 발생할 수 있다.
+
+### Case Study 종합
+
+세 사례는 서로 다른 실패 원인을 보인다.
+
+| Case | Primary Issue | Interpretation |
+|---|---|---|
+| Claude | Adjacent-path overwrite | 비교적 명확한 model state-tracking error |
+| Gemini | Deterministic temporal projection | Gold semantics와 current-state RQ 사이의 construct-validity issue |
+| GPT | Stale fact intrusion | Model retention error 가능성과 dialogue termination evidence 부족이 함께 존재 |
+
+따라서 full run 전에는 단순히 parser 통과 여부만이 아니라, 자동 시간 전진 path의
+평가 규칙과 list-valued state의 명시적 종료 근거를 먼저 freeze해야 한다. 이
+작업은 smoke 점수에 맞춘 prompt tuning이 아니라, Gold가 대화로부터 식별 가능한
+현재 state를 나타내는지 보장하기 위한 protocol audit이다.

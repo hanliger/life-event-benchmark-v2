@@ -5,8 +5,6 @@
 - Stage 1: 최근 15-session window에서 실제 발생한 최신 life event를 찾는가?
 - Stage 2: 이후 상태가 바뀌고 retention lag가 늘어나도 과거 checkpoint의 상태를
   회상하는가?
-- Stage 3: 서로 다른 두 상담일의 상태 순서 또는 지출 합계를 두 근거를 모두 사용해
-  추론하는가?
 - System comparison: Full Context, retrieval, persistent memory 중 어떤 접근이
   정확도와 비용 면에서 유리한가?
 - Masking: terminal/upcoming evidence 제거가 lifecycle 탐지와 과거 기억에 어떤
@@ -22,10 +20,6 @@ state를 답한다. 닫힌 값 집합은 A–D 객관식이고, 회사명·주�
 정규화된 단답형으로 채점한다. 예를 들어 S001–S015 종료 직장이 한빛테크이고
 S016–S030에 새봄금융으로 바뀌었다면, 이후에도 첫 target 질문의 정답은
 한빛테크이고 두 번째 target 질문만 새봄금융이다.
-
-Stage 3는 두 번째 hop이 보이는 checkpoint에서 질문한다. 두 hop은 서로 다른
-occurred event에 근거하며, 정답은 값의 시간 순서 또는 두 일회성 지출의 합계다.
-대표 정책은 trajectory × memory path당 의미 있는 한 쌍을 선택한다.
 
 ## 비교 방법
 
@@ -84,10 +78,8 @@ Lifecycle 질문과 memory 질문은 별도 stage로 보고한다.
 |---|---|
 | Stage 1 | trajectory-macro accuracy |
 | Stage 2 | checkpoint → target → trajectory 계층 macro accuracy |
-| Stage 3 | trajectory-macro accuracy, derivation type별 trajectory-macro accuracy |
 | Masking | stage × arm accuracy |
 | Retrieval | latest-state recall@k, complete-evidence recall@k |
-| Stage 3 retrieval | both-hops recall@k |
 | 불확실성 | trajectory bootstrap 95% CI, 10,000 samples |
 | 방법 차이 | 모든 21개 method pair의 paired trajectory bootstrap delta |
 | 신뢰성 | parse error, failed request, COMPLETE 비율 |

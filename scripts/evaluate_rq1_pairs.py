@@ -3,17 +3,29 @@
 
 Stage ``stage1_occurred_event_evidence_pairs``. Two conditions:
 
-    full_prefix     sessions D001..D(15k) at checkpoint k
-    terminal_only   the cp300 prefix reduced to its terminal lifecycle
-                    evidence (occurred + cancellation sessions only), a
-                    temporary one-item diagnostic
+    full_prefix      sessions D001..D(15k) at checkpoint k
+    no_prospective   the same prefix with its prospective evidence *dropped*
+                     (weak-signal and upcoming sessions only); occurred,
+                     cancellation, consequence, stale-recall, hard-negative
+                     and routine sessions all stay, so the context is also
+                     shorter.
+    no_prospective_substituted
+                     the same evidence removed by *substitution* instead:
+                     --sessions-dir must point at a corpus where each
+                     prospective session was replaced in place by a neutral
+                     routine filler, so all k sessions still render and only
+                     the content changed. The evaluator verifies the corpus
+                     really is substituted and refuses to run otherwise.
+
+Both ablation arms run at any checkpoint the items file carries, so they can be
+read as a ladder; --checkpoint must be named explicitly.
 
 The model sees only public session ids (D###), dialogue turns and the public
 taxonomy. Gold -- one pair per occurred event instance, anchored on the earliest
 visible establishing ``occurred_evidence`` session -- is derived from the
 existing item's private PrefixGold payload and never rendered. Gold always comes
-from the *full* prefix, so terminal_only changes what the model sees and nothing
-about what is correct.
+from the *full* prefix, so no_prospective changes what the model sees and
+nothing about what is correct.
 
 Without --execute the run is offline: a mock prediction ({"pairs": []})
 exercises parsing, scoring and reporting without network calls.
@@ -26,6 +38,7 @@ import hashlib
 import json
 import os
 import time
+from collections import Counter
 from pathlib import Path
 from typing import Any
 
@@ -56,14 +69,16 @@ from fin_life_benchmark.benchmark.rq1_pair_models import (
     gold_pairs_from_occurred_trajectory,
 )
 from fin_life_benchmark.benchmark.rq1_pair_parser import parse_pair_prediction
-from fin_life_benchmark.benchmark.rq1_pair_terminal_only import (
-    TERMINAL_ONLY_CHECKPOINT,
-    TERMINAL_ONLY_CONDITION,
+from fin_life_benchmark.benchmark.rq1_pair_no_prospective import (
+    NO_PROSPECTIVE_CONDITION,
+    NO_PROSPECTIVE_DEFAULT_CHECKPOINT,
+    NO_PROSPECTIVE_SUBSTITUTED_CONDITION,
     classify_pair_errors,
     compare_with_baseline,
     find_baseline_row,
+    no_prospective_visible_ids,
     session_type_counts,
-    terminal_only_visible_ids,
+    surviving_prospective_sessions,
 )
 from fin_life_benchmark.io import ensure_dialogue_sessions
 from fin_life_benchmark.io.jsonl import read_jsonl
@@ -125,6 +140,19 @@ def _provider_usage(metadata: dict[str, Any]) -> dict[str, Any]:
         "finish_reason": finish_reason,
         "truncated": truncated,
         "request_duration_ms": metadata.get("request_duration_ms"),
+        # Whether --temperature actually reached the provider. Opus 5 and the
+        # GPT-5.x frontier models reject the parameter, so a requested 0.0 is
+        # dropped and the call samples at the provider default. With one call
+        # per cell this is the difference between a reproducible number and an
+        # unmeasured draw, so it travels with every row.
+        "temperature_requested": metadata.get("temperature_requested"),
+        "temperature_applied": metadata.get("temperature_applied"),
+        "temperature_omission_reason": metadata.get("temperature_omission_reason"),
+        "deterministic_sampling": (
+            None
+            if metadata.get("provider") in (None, "mock")
+            else metadata.get("temperature_applied") == 0.0
+        ),
     }
 
 
@@ -136,26 +164,29 @@ def inference_contract_failures(
     provider: str,
     thinking_mode: str | None,
     reasoning_effort: str | None,
-) -> list[str]:
-    """Reason codes for a call that did not honor the requested inference config.
+) -> tuple[list[str], list[str]]:
+    """Split a call's contract violations into (fatal, metadata-gap) reason codes.
 
-    This is the ``--require-thinking-tokens`` preflight gate. An absent thinking
-    count fails as ``thinking_tokens_unavailable`` rather than passing as zero,
-    and for an Anthropic adaptive request the applied mode, effort and streaming
-    path are all checked -- a request that silently fell back to the
-    non-thinking shape must not be scored as if thinking had happened.
+    This is the ``--require-thinking-tokens`` preflight gate. A *fatal* code means
+    the call did not honor the requested inference config and is therefore not a
+    measurement of the model: it is excluded from scoring and the run exits 1.
+
+    The second list is the narrow exception. When the provider positively
+    confirms it applied the requested config -- for an Anthropic adaptive request
+    that is the applied mode, the applied effort and the streaming path, all
+    three -- but reports no thinking-token *count*, nothing is wrong with the
+    call; the provider's usage block simply does not break the number out.
+    Charging that as a configuration failure discards a valid measurement over a
+    reporting gap, so it is recorded as a gap and the item is still scored. A
+    count that is present and non-positive is a different claim -- the provider
+    is saying no thinking happened -- and stays fatal.
     """
 
     failures: list[str] = []
-    thinking_tokens = usage.get("thinking_tokens")
-    if thinking_tokens is None:
-        failures.append(
-            f"thinking_tokens_unavailable:{usage.get('thinking_tokens_source')}"
-        )
-    elif int(thinking_tokens) <= 0:
-        failures.append(f"thinking_tokens_not_positive:{thinking_tokens}")
+    gaps: list[str] = []
 
-    if provider == "anthropic" and thinking_mode == "adaptive":
+    config_confirmed = provider == "anthropic" and thinking_mode == "adaptive"
+    if config_confirmed:
         if metadata.get("thinking_mode_applied") != "adaptive":
             failures.append("adaptive_thinking_not_applied")
         if reasoning_effort and metadata.get("reasoning_effort_applied") != (
@@ -167,6 +198,15 @@ def inference_contract_failures(
             )
         if not metadata.get("streaming_used"):
             failures.append("streaming_not_used")
+        # only an unblemished config confirmation earns the exception
+        config_confirmed = not failures
+
+    thinking_tokens = usage.get("thinking_tokens")
+    if thinking_tokens is None:
+        code = f"thinking_tokens_unavailable:{usage.get('thinking_tokens_source')}"
+        (gaps if config_confirmed else failures).append(code)
+    elif int(thinking_tokens) <= 0:
+        failures.append(f"thinking_tokens_not_positive:{thinking_tokens}")
 
     if usage.get("truncated"):
         failures.append(f"response_truncated:{usage.get('finish_reason')}")
@@ -174,7 +214,7 @@ def inference_contract_failures(
         failures.append(f"parse_error:{prediction.parse_error}")
     if prediction.invalid_record_count:
         failures.append(f"invalid_records:{prediction.invalid_record_count}")
-    return failures
+    return failures, gaps
 
 
 def main() -> None:
@@ -239,13 +279,18 @@ def main() -> None:
     parser.add_argument("--report", required=True)
     args = parser.parse_args()
 
-    terminal_only = args.condition == TERMINAL_ONLY_CONDITION
-    if terminal_only and args.checkpoint != [TERMINAL_ONLY_CHECKPOINT]:
-        # A temporary single-checkpoint diagnostic. Requiring the checkpoint
-        # explicitly keeps it from being mistaken for a progressive sweep.
+    substituted = args.condition == NO_PROSPECTIVE_SUBSTITUTED_CONDITION
+    # Both arms remove the same evidence and share the reporting path; only the
+    # way the context is built differs.
+    no_prospective = args.condition == NO_PROSPECTIVE_CONDITION or substituted
+    if no_prospective and not args.checkpoint:
+        # Any checkpoint (or ladder of them) is allowed, but each has to be named
+        # explicitly: an unqualified run over every item in the file is never
+        # what this diagnostic is for, and at ~1 long-context call per item it is
+        # expensive to trigger by accident.
         raise SystemExit(
-            f"--condition {TERMINAL_ONLY_CONDITION} requires exactly "
-            f"--checkpoint {TERMINAL_ONLY_CHECKPOINT}"
+            f"--condition {args.condition} requires at least one --checkpoint "
+            f"(e.g. --checkpoint {NO_PROSPECTIVE_DEFAULT_CHECKPOINT})"
         )
 
     provider = args.provider
@@ -294,11 +339,23 @@ def main() -> None:
         records = records[: args.max_items]
     if not records:
         raise SystemExit("no items left after filtering")
-    if terminal_only and len(records) != 1:
-        raise SystemExit(
-            f"--condition {TERMINAL_ONLY_CONDITION} evaluates exactly one item; "
-            f"{len(records)} matched -- narrow it with --trajectory-id"
+    if no_prospective:
+        # One item per (trajectory, checkpoint). More than one means the items
+        # file holds duplicates, which would put two rows under the same rung of
+        # the ladder and make the trend ambiguous.
+        duplicated = sorted(
+            key
+            for key, count in Counter(
+                (r["trajectory_id"], int(r["checkpoint_session_count"]))
+                for r in records
+            ).items()
+            if count > 1
         )
+        if duplicated:
+            raise SystemExit(
+                f"--condition {args.condition} needs one item per "
+                f"trajectory/checkpoint; duplicates at {duplicated}"
+            )
 
     taxonomy_path = (
         Path(args.taxonomy)
@@ -352,6 +409,10 @@ def main() -> None:
         "reasoning_effort": args.reasoning_effort,
         "thinking_mode": args.thinking_mode,
         "require_thinking_tokens": bool(args.require_thinking_tokens),
+        # This pilot runs exactly one call per (model, condition, checkpoint).
+        # Stated in the artifact so a reader never has to infer it from the
+        # row count, and so a future repeated design is distinguishable.
+        "replicates_per_cell": 1,
         "baseline_predictions_file": args.baseline_predictions,
         "prompt_file": args.prompt,
         "prompt_sha256": prompt_hash,
@@ -370,7 +431,9 @@ def main() -> None:
     n_call_errors = 0
     n_invalid_records = 0
     contract_failures: list[dict[str, Any]] = []
-    terminal_only_report: dict[str, Any] | None = None
+    contract_gaps: list[dict[str, Any]] = []
+    sampling_rows: list[dict[str, Any]] = []
+    no_prospective_rungs: list[dict[str, Any]] = []
 
     with output_path.open("w", encoding="utf-8") as sink:
         for record in records:
@@ -378,7 +441,7 @@ def main() -> None:
             sessions = sessions_by_traj[item.trajectory_id]
             id_map = dict(item.gold.session_id_map)
             # Gold is projected over the *full* prefix in every condition, so
-            # terminal_only can only shrink the model's context -- it can never
+            # no_prospective can only shrink the model's context -- it can never
             # relabel an event or move an occurrence anchor.
             prefix_ids = visible_ids_for_condition(item, "full_prefix")
             prefix_map = {sid: id_map[sid] for sid in prefix_ids}
@@ -389,13 +452,29 @@ def main() -> None:
                 taxonomy_event_ids=taxonomy_ids,
             )
 
-            if terminal_only:
-                visible_ids = terminal_only_visible_ids(prefix_ids, sessions)
+            if substituted:
+                # Nothing is dropped: the whole prefix renders, and the corpus
+                # itself is what carries the ablation. Verified, not assumed --
+                # a stray prospective session means --sessions-dir is not the
+                # substituted corpus and this is really a full_prefix run.
+                visible_ids = list(prefix_ids)
+                survivors = surviving_prospective_sessions(visible_ids, sessions)
+                if survivors:
+                    raise SystemExit(
+                        f"{item.item_id}: --condition "
+                        f"{NO_PROSPECTIVE_SUBSTITUTED_CONDITION} needs a corpus "
+                        f"with every prospective session substituted, but "
+                        f"{len(survivors)} survive in {sessions_dir} "
+                        f"(e.g. {survivors[:5]}); point --sessions-dir at the "
+                        "output of scripts/build_no_prospective_corpus.py"
+                    )
+            elif no_prospective:
+                visible_ids = no_prospective_visible_ids(prefix_ids, sessions)
             else:
                 visible_ids = visible_ids_for_condition(item, args.condition)
             visible_map = {sid: id_map[sid] for sid in visible_ids}
 
-            if terminal_only:
+            if no_prospective:
                 rendered_public = set(visible_map.values())
                 orphaned = [
                     f"{event_id}@{public}"
@@ -405,7 +484,7 @@ def main() -> None:
                 if orphaned:
                     raise SystemExit(
                         f"{item.item_id}: gold occurrence anchors missing from the "
-                        f"terminal-only context: {orphaned}"
+                        f"no-prospective context: {orphaned}"
                     )
 
             visible_records = [sessions[sid] for sid in visible_ids]
@@ -460,9 +539,11 @@ def main() -> None:
             )
 
             usage = _provider_usage(response_metadata)
+            sampling_rows.append(usage)
             failures: list[str] = []
+            gaps: list[str] = []
             if args.require_thinking_tokens:
-                failures = inference_contract_failures(
+                failures, gaps = inference_contract_failures(
                     response_metadata,
                     usage,
                     prediction,
@@ -474,6 +555,8 @@ def main() -> None:
                     contract_failures.append(
                         {"item_id": item.item_id, "failures": failures}
                     )
+                if gaps:
+                    contract_gaps.append({"item_id": item.item_id, "gaps": gaps})
 
             comparison: dict[str, Any] | None = None
             if baseline_rows is not None:
@@ -489,21 +572,24 @@ def main() -> None:
                     session_type_by_public_id=session_type_by_public_id,
                 )
 
-            if terminal_only:
-                terminal_only_report = {
+            if no_prospective:
+                no_prospective_rungs.append({
                     "item_id": item.item_id,
                     "trajectory_id": item.trajectory_id,
+                    "condition": args.condition,
                     "checkpoint_session_count": item.checkpoint_session_count,
                     "visible_session_count": len(visible_ids),
                     "visible_session_type_counts": session_type_counts(
                         visible_ids, sessions
                     ),
+                    # zero under the substituted arm, which is the point of it
                     "removed_session_count": len(prefix_ids) - len(visible_ids),
                     "metrics": metrics,
                     "error_decomposition": error_decomposition,
                     "baseline_comparison": comparison,
                     "inference_contract_failures": failures,
-                }
+                    "inference_contract_gaps": gaps,
+                })
 
             sink.write(
                 json.dumps(
@@ -517,7 +603,7 @@ def main() -> None:
                         "condition": args.condition,
                         "n_visible_sessions": len(visible_ids),
                         # explicit: the item is still a cp300 item even when the
-                        # rendered context is shorter than 300 sessions
+                        # rendered context holds fewer than 300 sessions
                         "visible_session_count": len(visible_ids),
                         "visible_session_type_counts": session_type_counts(
                             visible_ids, sessions
@@ -537,6 +623,11 @@ def main() -> None:
                         "thinking_tokens_source": usage["thinking_tokens_source"],
                         "finish_reason": usage["finish_reason"],
                         "truncated": usage["truncated"],
+                        "temperature_applied": usage["temperature_applied"],
+                        "temperature_omission_reason": usage[
+                            "temperature_omission_reason"
+                        ],
+                        "deterministic_sampling": usage["deterministic_sampling"],
                         "request_duration_ms": usage["request_duration_ms"],
                         "raw_response": raw,
                         "response_metadata": response_metadata,
@@ -558,6 +649,8 @@ def main() -> None:
                         "error_decomposition": error_decomposition,
                         "baseline_comparison": comparison,
                         "inference_configuration_error": failures or None,
+                        # config confirmed applied, count simply not reported
+                        "inference_metadata_gap": gaps or None,
                         "run_config": run_config,
                     },
                     ensure_ascii=False,
@@ -589,7 +682,25 @@ def main() -> None:
         "call_error_count": n_call_errors,
         "invalid_record_count": n_invalid_records,
         "inference_configuration_errors": contract_failures,
-        "terminal_only": terminal_only_report,
+        "inference_metadata_gaps": contract_gaps,
+        # Rollup of whether --temperature was honored, so a reader sees the
+        # reproducibility caveat in the report without opening the rows.
+        "sampling": {
+            "replicates_per_cell": 1,
+            "temperature_requested": args.temperature,
+            "deterministic": sorted(
+                {str(r["deterministic_sampling"]) for r in sampling_rows}
+            ),
+            "omission_reasons": sorted(
+                {
+                    r["temperature_omission_reason"]
+                    for r in sampling_rows
+                    if r["temperature_omission_reason"]
+                }
+            ),
+        },
+        # one entry per evaluated checkpoint, in ladder order
+        "no_prospective": no_prospective_rungs or None,
         "checkpoints": aggregate["checkpoints"],
         "per_checkpoint": aggregate["per_checkpoint"],
         "checkpoint_macro_auc": aggregate["checkpoint_macro_auc"],
@@ -617,19 +728,23 @@ def main() -> None:
         f"F1@300={final if final is None else round(final, 4)}, "
         f"checkpoint macro AUC={auc if auc is None else round(auc, 4)}"
     )
-    if terminal_only_report:
+    for rung in no_prospective_rungs:
+        metrics = rung["metrics"]
+        f1 = metrics.get("strict_occurred_event_evidence_f1")
         print(
-            f"terminal_only: {terminal_only_report['visible_session_count']} visible "
-            f"sessions of {terminal_only_report['checkpoint_session_count']} "
-            f"({terminal_only_report['visible_session_type_counts']}), "
-            f"{terminal_only_report['metrics']['gold_pair_count']} gold pairs"
+            f"{args.condition} cp{rung['checkpoint_session_count']}: "
+            f"{rung['visible_session_count']} visible sessions "
+            f"(-{rung['removed_session_count']}), "
+            f"{metrics['gold_pair_count']} gold pairs, "
+            f"F1={f1 if f1 is None else round(f1, 4)}"
         )
-        comparison = terminal_only_report.get("baseline_comparison")
+        comparison = rung.get("baseline_comparison")
         if comparison:
             print(
-                f"vs full_prefix: delta F1={comparison['delta']['f1']}, "
+                f"  vs full_prefix: delta F1={comparison['delta']['f1']}, "
                 f"{len(comparison['full_correct_pairs_lost'])} full-correct pairs "
-                f"lost, {len(comparison['new_terminal_only_true_positives'])} new TPs"
+                f"lost, "
+                f"{len(comparison['new_no_prospective_true_positives'])} new TPs"
             )
     print(f"predictions -> {output_path}")
     print(f"report -> {report_path}")

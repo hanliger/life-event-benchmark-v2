@@ -3,12 +3,18 @@ print secrets."""
 
 from __future__ import annotations
 
+import inspect
 import os
 import time
 from typing import Any
 
 from dotenv import load_dotenv
-from tenacity import retry, stop_after_attempt, wait_exponential
+from tenacity import (
+    retry,
+    retry_if_not_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 
 def _anthropic_supports_temperature(model: str) -> bool:
@@ -49,6 +55,20 @@ class EmptyLLMResponseError(RuntimeError):
     """Raised when a provider returns no usable text after a successful call."""
 
 
+class TruncatedLLMResponseError(EmptyLLMResponseError):
+    """Raised when the output budget ran out before any answer text was emitted.
+
+    Deliberately *not* retried: a response that generated blocks and stopped on
+    ``max_tokens`` without any text block is deterministic, so a retry burns the
+    whole budget again for the same outcome. Under adaptive thinking the fix is a
+    larger ``max_tokens`` (thinking and answer text share one budget) or a lower
+    effort level -- never another attempt at the same settings.
+
+    An empty content list at ``max_tokens`` is *not* this: nothing was generated,
+    which can be transient, so it stays on the retrying path.
+    """
+
+
 # Anthropic output_config effort levels. "adaptive" is deliberately absent: it
 # names a thinking mode, not an effort.
 ANTHROPIC_EFFORT_VALUES = frozenset({"low", "medium", "high", "xhigh", "max"})
@@ -68,6 +88,23 @@ def _anthropic_uses_adaptive_thinking(model: str, thinking_mode: str | None) -> 
         return False
     lowered = model.lower()
     return lowered.startswith(("claude-opus-4-8", "claude-opus-5", "claude-fable-5"))
+
+
+def _accepts_output_config(method: Any) -> bool:
+    """Whether this SDK build takes ``output_config`` as a named parameter.
+
+    ``output_config`` (the adaptive-thinking effort level) is GA on the API but
+    was added to the Python SDK later than the pin in requirements.txt. On an
+    older build the named argument raises TypeError *before* any HTTP call, so
+    the effort level has to ride in ``extra_body`` instead -- same wire bytes,
+    same request. Probing the signature keeps both SDK generations working, and
+    the native path takes over automatically once the SDK is upgraded.
+    """
+
+    try:
+        return "output_config" in inspect.signature(method).parameters
+    except (TypeError, ValueError):
+        return False
 
 
 def _usage_metadata(usage: Any) -> dict[str, int] | None:
@@ -234,7 +271,12 @@ class LLMClient:
             thinking_mode=thinking_mode,
         )
 
-    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=2, min=2, max=30), reraise=True)
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=2, min=2, max=30),
+        retry=retry_if_not_exception_type(TruncatedLLMResponseError),
+        reraise=True,
+    )
     def generate(self, system: str, user: str) -> str:
         if self._provider_attempts_since_success == 0:
             self._request_started_at = time.monotonic()
@@ -249,8 +291,18 @@ class LLMClient:
                 kwargs["max_completion_tokens"] = self.max_tokens
             else:
                 kwargs["max_tokens"] = self.max_tokens
+            temperature_applied: float | None = None
+            temperature_omission_reason: str | None = None
             if _openai_supports_temperature(self.model):
                 kwargs["temperature"] = self.temperature
+                temperature_applied = self.temperature
+            else:
+                # The frontier models reject a non-default temperature, so a
+                # requested 0.0 is silently NOT honored -- the call samples at
+                # the provider default. Recorded rather than dropped: a
+                # single-sample protocol has to be able to state whether its
+                # runs were deterministic.
+                temperature_omission_reason = "model_rejects_temperature"
             if self.reasoning_effort is not None and _openai_supports_reasoning_effort(self.model):
                 kwargs["reasoning_effort"] = self.reasoning_effort
             if self.response_format == "json_schema":
@@ -276,6 +328,9 @@ class LLMClient:
                 "reasoning_effort": self.reasoning_effort,
                 "response_format": self.response_format,
                 "finish_reason": getattr(choice, "finish_reason", None),
+                "temperature_requested": self.temperature,
+                "temperature_applied": temperature_applied,
+                "temperature_omission_reason": temperature_omission_reason,
                 "usage": usage,
                 "prompt_tokens": usage.get("prompt_tokens"),
                 "completion_tokens": usage.get("completion_tokens"),
@@ -310,6 +365,8 @@ class LLMClient:
             adaptive = _anthropic_uses_adaptive_thinking(self.model, self.thinking_mode)
             temperature_applied: float | None = None
             temperature_omission_reason: str | None = None
+            effort_sent = False
+            effort_transport: str | None = None
             if adaptive:
                 # Adaptive thinking: the model decides its own budget, so no
                 # legacy budget_tokens is sent. Temperature is omitted under the
@@ -317,7 +374,20 @@ class LLMClient:
                 kwargs["thinking"] = {"type": "adaptive"}
                 effort = self.reasoning_effort
                 if effort in ANTHROPIC_EFFORT_VALUES:
-                    kwargs["output_config"] = {"effort": effort}
+                    send = (
+                        self._client.messages.stream
+                        if adaptive
+                        else self._client.messages.create
+                    )
+                    if _accepts_output_config(send):
+                        kwargs["output_config"] = {"effort": effort}
+                        effort_transport = "named_parameter"
+                    else:
+                        extra_body = dict(kwargs.get("extra_body") or {})
+                        extra_body["output_config"] = {"effort": effort}
+                        kwargs["extra_body"] = extra_body
+                        effort_transport = "extra_body"
+                    effort_sent = True
                 temperature_omission_reason = "adaptive_thinking_provider_contract"
             elif _anthropic_supports_temperature(self.model):
                 kwargs["temperature"] = self.temperature
@@ -358,10 +428,9 @@ class LLMClient:
                 # The API does not echo effort back; "applied" means the provider
                 # accepted this value without error.
                 "reasoning_effort_applied": (
-                    self.reasoning_effort
-                    if adaptive and "output_config" in kwargs
-                    else None
+                    self.reasoning_effort if adaptive and effort_sent else None
                 ),
+                "reasoning_effort_transport": effort_transport,
                 "temperature_requested": self.temperature,
                 "temperature_applied": temperature_applied,
                 "temperature_omission_reason": temperature_omission_reason,
@@ -385,6 +454,18 @@ class LLMClient:
                 if getattr(block, "type", "") == "text"
             )
             if not text.strip():
+                # A real budget exhaustion produced blocks (typically thinking)
+                # before running out. An empty content list at max_tokens is a
+                # blank response instead, and blank responses can be transient --
+                # so that case keeps the existing retry.
+                if stop_reason == "max_tokens" and blocks:
+                    raise TruncatedLLMResponseError(
+                        f"{self.model} spent its entire {self.max_tokens}-token output "
+                        f"budget without emitting answer text "
+                        f"(blocks={block_types}, effort={self.reasoning_effort!r}); "
+                        f"raise --max-tokens or lower the effort level. "
+                        f"metadata={self.last_response_metadata}"
+                    )
                 raise EmptyLLMResponseError(
                     f"empty text response from {self.provider}; metadata={self.last_response_metadata}"
                 )
@@ -410,6 +491,11 @@ class LLMClient:
                 "model": self.model,
                 "reasoning_effort": None,
                 "response_format": self.response_format,
+                # Gemini accepts temperature on every model this repo uses, so
+                # the requested value is always the applied one.
+                "temperature_requested": self.temperature,
+                "temperature_applied": self.temperature,
+                "temperature_omission_reason": None,
                 "usage": usage,
                 "request_duration_ms": duration_ms,
                 "retry_count": self._provider_attempts_since_success - 1,

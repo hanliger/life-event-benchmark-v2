@@ -3,8 +3,11 @@ from __future__ import annotations
 from pathlib import Path
 
 from fin_life_benchmark.dialogue.counterfactual_fillers import (
+    EXTENDED_SURFACE_VARIANTS,
     FILLERS_PER_PERSONA,
+    LIFECYCLE_LEAK_TERMS,
     SAFE_FILLER_TASK_TEMPLATE_IDS,
+    SURFACE_VARIANTS,
     audit_filler_bank,
     build_filler_plans,
     make_filler,
@@ -46,6 +49,55 @@ def test_build_filler_plans_is_twenty_balanced_style_only_plans() -> None:
     )
     assert all(plan.persona_id == trajectory.persona.persona_id for plan in plans)
     assert all(not hasattr(plan, "month_index") for plan in plans)
+
+
+def test_extended_variants_only_append_and_never_move_the_frozen_twenty() -> None:
+    """The invariant that makes an extended re-plan safe to resume against.
+
+    The v1 bank on disk was generated from the default 20 plans. If extending
+    the variant set renumbered or altered any of those, a resume run would
+    silently pair CF0xx dialogues with different plans, so this is checked
+    rather than assumed.
+    """
+
+    trajectory = _trajectory()
+    base = build_filler_plans(trajectory)
+    extended = build_filler_plans(
+        trajectory, surface_variants=EXTENDED_SURFACE_VARIANTS
+    )
+
+    assert len(extended) == 2 * FILLERS_PER_PERSONA
+    assert extended[:FILLERS_PER_PERSONA] == base
+    assert len({plan.filler_id for plan in extended}) == len(extended)
+    assert [plan.filler_id for plan in extended[FILLERS_PER_PERSONA:]] == [
+        f"CF{n:03d}" for n in range(21, 41)
+    ]
+
+
+def test_extended_variants_keep_the_task_balance_and_add_new_shapes() -> None:
+    added = build_filler_plans(
+        _trajectory(), surface_variants=EXTENDED_SURFACE_VARIANTS
+    )[FILLERS_PER_PERSONA:]
+
+    # every safe task realized exactly once per added discourse shape
+    assert {plan.task_template_id for plan in added} == set(
+        SAFE_FILLER_TASK_TEMPLATE_IDS
+    )
+    assert all(
+        sum(item.task_template_id == plan.task_template_id for item in added) == 2
+        for plan in added
+    )
+    new_shapes = {plan.surface_variant_id for plan in added}
+    assert new_shapes.isdisjoint({vid for vid, _ in SURFACE_VARIANTS})
+    assert new_shapes == {"constraint_first", "alternate_path"}
+
+
+def test_added_variant_instructions_carry_no_lifecycle_terms() -> None:
+    """A leaky instruction would steer generation into the very cues fillers mask."""
+
+    for variant_id, instruction in EXTENDED_SURFACE_VARIANTS:
+        for term in LIFECYCLE_LEAK_TERMS:
+            assert term not in instruction, (variant_id, term)
 
 
 def test_valid_filler_is_timeless_and_has_only_task_intent_cue() -> None:

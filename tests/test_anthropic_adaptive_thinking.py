@@ -12,7 +12,9 @@ import pytest
 
 from fin_life_benchmark.llm.client import (
     ANTHROPIC_EFFORT_VALUES,
+    EmptyLLMResponseError,
     LLMClient,
+    TruncatedLLMResponseError,
     anthropic_thinking_tokens,
 )
 
@@ -59,12 +61,39 @@ class _Stream:
 
 
 class _Messages:
-    """Records kwargs for whichever path the client takes."""
+    """Records kwargs for whichever path the client takes.
+
+    Mirrors an SDK build new enough to take ``output_config`` as a named
+    parameter.
+    """
 
     def __init__(self, response):
         self.response = response
         self.create_kwargs = None
         self.stream_kwargs = None
+
+    _UNSET = object()
+
+    def create(self, *, output_config=_UNSET, **kwargs):
+        # only record what the caller actually sent, not the stub's default
+        if output_config is not self._UNSET:
+            kwargs["output_config"] = output_config
+        self.create_kwargs = kwargs
+        return self.response
+
+    def stream(self, *, output_config=_UNSET, **kwargs):
+        if output_config is not self._UNSET:
+            kwargs["output_config"] = output_config
+        self.stream_kwargs = kwargs
+        return _Stream(self.response)
+
+
+class _LegacyMessages(_Messages):
+    """An older SDK build: no ``output_config`` parameter, only ``extra_body``.
+
+    Calling it with ``output_config=`` raises TypeError before any HTTP request,
+    which is exactly the failure the transport probe exists to avoid.
+    """
 
     def create(self, **kwargs):
         self.create_kwargs = kwargs
@@ -83,6 +112,7 @@ def _client(
     blocks=None,
     usage=None,
     stop_reason="end_turn",
+    messages_cls=_Messages,
     monkeypatch=None,
 ):
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
@@ -99,7 +129,7 @@ def _client(
         usage if usage is not None else _Usage(thinking_tokens=4321),
         stop_reason=stop_reason,
     )
-    messages = _Messages(response)
+    messages = messages_cls(response)
     client._client = type("FakeSDK", (), {"messages": messages})()
     return client, messages
 
@@ -159,6 +189,50 @@ def test_unknown_thinking_mode_is_rejected(monkeypatch):
         LLMClient(
             provider="anthropic", model="claude-opus-4-8", thinking_mode="enabled"
         )
+
+
+def test_effort_rides_in_extra_body_on_an_older_sdk(monkeypatch):
+    """An SDK without an output_config parameter must not raise TypeError."""
+
+    client, messages = _client(
+        thinking_mode="adaptive",
+        reasoning_effort="xhigh",
+        messages_cls=_LegacyMessages,
+        monkeypatch=monkeypatch,
+    )
+    client.generate(system="sys", user="user")
+
+    kwargs = messages.stream_kwargs
+    assert "output_config" not in kwargs
+    assert kwargs["extra_body"] == {"output_config": {"effort": "xhigh"}}
+    # same wire bytes, so the applied-effort record is unchanged
+    meta = client.last_response_metadata
+    assert meta["reasoning_effort_applied"] == "xhigh"
+    assert meta["reasoning_effort_transport"] == "extra_body"
+
+
+def test_effort_uses_the_named_parameter_when_the_sdk_supports_it(monkeypatch):
+    client, messages = _client(
+        thinking_mode="adaptive", reasoning_effort="xhigh", monkeypatch=monkeypatch
+    )
+    client.generate(system="sys", user="user")
+
+    assert messages.stream_kwargs["output_config"] == {"effort": "xhigh"}
+    assert "extra_body" not in messages.stream_kwargs
+    meta = client.last_response_metadata
+    assert meta["reasoning_effort_transport"] == "named_parameter"
+
+
+def test_no_effort_requested_sends_no_output_config(monkeypatch):
+    client, messages = _client(
+        thinking_mode="adaptive", messages_cls=_LegacyMessages, monkeypatch=monkeypatch
+    )
+    client.generate(system="sys", user="user")
+
+    assert "extra_body" not in messages.stream_kwargs
+    meta = client.last_response_metadata
+    assert meta["reasoning_effort_applied"] is None
+    assert meta["reasoning_effort_transport"] is None
 
 
 def test_supported_effort_values():
@@ -254,6 +328,57 @@ def test_truncation_indicator_follows_stop_reason(monkeypatch):
     client.generate(system="sys", user="user")
     assert client.last_response_metadata["truncated"] is True
     assert client.last_response_metadata["stop_reason"] == "max_tokens"
+
+
+def test_thinking_only_response_at_max_tokens_is_not_retried(monkeypatch):
+    """The whole budget went to thinking; retrying burns it again for nothing."""
+
+    client, messages = _client(
+        thinking_mode="adaptive",
+        reasoning_effort="xhigh",
+        blocks=[_Block("thinking", thinking="...")],  # no text block at all
+        stop_reason="max_tokens",
+        monkeypatch=monkeypatch,
+    )
+    call_count = 0
+    inner = messages.stream
+
+    def counting_stream(**kwargs):
+        nonlocal call_count
+        call_count += 1
+        return inner(**kwargs)
+
+    messages.stream = counting_stream
+
+    with pytest.raises(TruncatedLLMResponseError, match="output budget"):
+        client.generate(system="sys", user="user")
+    assert call_count == 1, "a deterministic truncation must not be retried"
+    meta = client.last_response_metadata
+    assert meta["truncated"] is True
+    assert meta["content_block_types"] == ["thinking"]
+
+
+def test_empty_response_without_truncation_is_still_retried(monkeypatch):
+    """A blank response that did not hit the cap may be transient."""
+
+    client, messages = _client(
+        blocks=[_Block("text", "")],
+        stop_reason="end_turn",
+        monkeypatch=monkeypatch,
+    )
+    call_count = 0
+    inner = messages.create
+
+    def counting_create(**kwargs):
+        nonlocal call_count
+        call_count += 1
+        return inner(**kwargs)
+
+    messages.create = counting_create
+
+    with pytest.raises(EmptyLLMResponseError):
+        client.generate(system="sys", user="user")
+    assert call_count == 3, "transient empties keep the existing retry behavior"
 
 
 # ---------------------------------------------------------------------------

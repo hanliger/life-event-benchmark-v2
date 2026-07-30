@@ -12,7 +12,11 @@ try:
 except ModuleNotFoundError:
     from scripts import _bootstrap  # type: ignore[no-redef]  # noqa: F401
 
-from fin_life_benchmark.dialogue.counterfactual_fillers import build_filler_plans
+from fin_life_benchmark.dialogue.counterfactual_fillers import (
+    EXTENDED_SURFACE_VARIANTS,
+    SURFACE_VARIANTS,
+    build_filler_plans,
+)
 from fin_life_benchmark.trajectory.models import Trajectory
 
 
@@ -23,7 +27,17 @@ def main() -> int:
     parser.add_argument("--trajectory-id", action="append", default=[])
     parser.add_argument("--exclude-trajectory-id", action="append", default=[])
     parser.add_argument("--overwrite", action="store_true")
+    parser.add_argument(
+        "--extended-variants",
+        action="store_true",
+        help=(
+            "plan 40 fillers/persona instead of 20, by appending two further "
+            "discourse shapes; CF001..CF020 are unchanged, so an extended run "
+            "only adds CF021..CF040"
+        ),
+    )
     args = parser.parse_args()
+    variants = EXTENDED_SURFACE_VARIANTS if args.extended_variants else SURFACE_VARIANTS
 
     requested = set(args.trajectory_id)
     excluded = set(args.exclude_trajectory_id)
@@ -46,7 +60,7 @@ def main() -> int:
         if out_path.exists() and not args.overwrite:
             print(f"skip existing {out_path}")
             continue
-        plans = build_filler_plans(trajectory)
+        plans = build_filler_plans(trajectory, surface_variants=variants)
         with out_path.open("w", encoding="utf-8") as handle:
             for plan in plans:
                 handle.write(json.dumps(plan.model_dump(mode="json"), ensure_ascii=False) + "\n")

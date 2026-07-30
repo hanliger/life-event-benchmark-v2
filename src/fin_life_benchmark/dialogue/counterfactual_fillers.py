@@ -42,6 +42,24 @@ SURFACE_VARIANTS = (
     ),
 )
 
+# Two further discourse shapes, used only when a persona needs more than
+# FILLERS_PER_PERSONA reserve sessions -- substituting every weak-signal and
+# upcoming session in the published corpus needs up to 36 per persona. They are
+# appended, never inserted, so ordinals CF001..CF020 keep the exact plans the
+# frozen v1 bank was generated from; the extended set only adds CF021..CF040.
+ADDITIONAL_SURFACE_VARIANTS = (
+    (
+        "constraint_first",
+        "사용자가 조회 조건을 먼저 말하고, 챗봇은 그 조건을 적용하는 화면 순서만 안내한다.",
+    ),
+    (
+        "alternate_path",
+        "사용자가 메뉴를 찾지 못했다고 말하고, 챗봇은 대체 경로와 확인할 항목만 안내한다.",
+    ),
+)
+
+EXTENDED_SURFACE_VARIANTS = SURFACE_VARIANTS + ADDITIONAL_SURFACE_VARIANTS
+
 LIFECYCLE_LEAK_TERMS = (
     "결혼",
     "이혼",
@@ -132,8 +150,17 @@ class CounterfactualFiller(BaseModel):
 def build_filler_plans(
     trajectory: Trajectory,
     paths: RepoPaths | None = None,
+    *,
+    surface_variants: tuple[tuple[str, str], ...] = SURFACE_VARIANTS,
 ) -> list[CounterfactualFillerPlan]:
-    """Build exactly 20 style-only plans without trajectory state."""
+    """Build ``len(surface_variants) * 10`` style-only plans, no trajectory state.
+
+    The default variant set yields the frozen 20 plans of the v1 filler
+    contract. Passing :data:`EXTENDED_SURFACE_VARIANTS` yields 40, and because
+    the extra variants are *appended* the first 20 ordinals are byte-identical
+    to the default set -- an extended run therefore only adds CF021..CF040 and
+    never invalidates an already-generated filler.
+    """
     paths = paths or RepoPaths.default()
     registry = load_yaml(paths.registries / "dialogue_routine_tasks.yaml")
     by_id = {
@@ -146,7 +173,7 @@ def build_filler_plans(
 
     style = trajectory.persona.style
     plans: list[CounterfactualFillerPlan] = []
-    for variant_index, (variant_id, variant_instruction) in enumerate(SURFACE_VARIANTS):
+    for variant_index, (variant_id, variant_instruction) in enumerate(surface_variants):
         for task_index, task_template_id in enumerate(SAFE_FILLER_TASK_TEMPLATE_IDS):
             task = by_id[task_template_id]
             ordinal = variant_index * len(SAFE_FILLER_TASK_TEMPLATE_IDS) + task_index + 1
@@ -165,8 +192,9 @@ def build_filler_plans(
                     style_verbosity=style.verbosity,
                 )
             )
-    if len(plans) != FILLERS_PER_PERSONA:
-        raise AssertionError(f"expected {FILLERS_PER_PERSONA} plans, got {len(plans)}")
+    expected = len(surface_variants) * len(SAFE_FILLER_TASK_TEMPLATE_IDS)
+    if len(plans) != expected:
+        raise AssertionError(f"expected {expected} plans, got {len(plans)}")
     return plans
 
 

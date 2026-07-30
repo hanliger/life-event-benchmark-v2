@@ -170,27 +170,6 @@ def _build_stage2_batch_prompt(
     return "\n".join(lines)
 
 
-def _build_stage1_prompt(
-    item: dict[str, Any],
-    sessions: list[dict[str, Any]],
-) -> str:
-    lines = [
-        "다음은 한 고객의 은행 상담 세션 이력입니다.",
-        "현재 보이는 상담 이력만 근거로 감지되는 Life Event와 상태를 답하세요.",
-        "상태는 weak_signal, upcoming, occurred, cancelled 중 하나입니다.",
-        "확인되는 이벤트가 없으면 no_event로 답하세요.",
-        "",
-        _format_sessions(sessions),
-        "",
-        item["question"],
-        "",
-        "JSON만 답하세요.",
-        '이벤트가 있으면: {"life_events": [{"life_event_label": "이사", "event_status": "weak_signal"}]}',
-        '이벤트가 없으면: {"life_events": [{"life_event_label": null, "event_status": "no_event"}]}',
-    ]
-    return "\n".join(lines)
-
-
 def _extract_json(raw: str) -> dict[str, Any] | None:
     raw = raw.strip()
     try:
@@ -251,33 +230,6 @@ def _parse_free_response(raw: str) -> tuple[Any, bool]:
     return (text, True) if text else (None, False)
 
 
-def _event_key(event: dict[str, Any]) -> tuple[str | None, str]:
-    label = event.get("life_event_label")
-    status = event.get("event_status")
-    if status == "no_event":
-        label = None
-    return label, str(status)
-
-
-def _parse_stage1_answer(raw: str) -> list[dict[str, Any]]:
-    payload = _extract_json(raw)
-    if not payload:
-        return []
-    events = payload.get("life_events")
-    if isinstance(events, dict):
-        events = [events]
-    if not isinstance(events, list):
-        return []
-    return [
-        {
-            "life_event_label": event.get("life_event_label"),
-            "event_status": event.get("event_status"),
-        }
-        for event in events
-        if isinstance(event, dict)
-    ]
-
-
 def _score_item(
     item: dict[str, Any],
     raw: str,
@@ -311,17 +263,6 @@ def _score_item(
                 None if parsed else "parse_error",
             )
         return None, None, False, f"unsupported_answer_type:{answer_type}"
-    if stage == "stage1_event_status":
-        pred_events = _parse_stage1_answer(raw)
-        gold_events = (item.get("gold") or {}).get("life_events") or []
-        pred = sorted({_event_key(event) for event in pred_events})
-        gold = sorted({_event_key(event) for event in gold_events})
-        return (
-            pred_events,
-            gold_events,
-            pred == gold,
-            None if pred_events else "parse_error",
-        )
     return None, None, False, f"unsupported_stage:{stage}"
 
 
@@ -331,8 +272,6 @@ def _build_prompt(
 ) -> str:
     if item.get("stage") == "stage2_memory_value":
         return _build_stage2_prompt(item, sessions)
-    if item.get("stage") == "stage1_event_status":
-        return _build_stage1_prompt(item, sessions)
     raise ValueError(f"unsupported stage: {item.get('stage')}")
 
 

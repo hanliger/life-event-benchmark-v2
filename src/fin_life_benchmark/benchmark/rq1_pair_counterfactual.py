@@ -1,4 +1,4 @@
-"""cp300 single-target counterfactual canary for the occurred-pair pilot.
+"""cp300 single-target counterfactual canary for the Stage 1 pair task.
 
 Question: when the dialogue evidence that confirms one occurred event is
 removed, does the model retract that exact pair, or keep predicting the event

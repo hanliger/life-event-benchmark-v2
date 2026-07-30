@@ -26,17 +26,9 @@ import json
 from pathlib import Path
 from typing import Any
 
-from fin_life_benchmark.fsm.registry import load_life_event_templates
-from fin_life_benchmark.gold.loader import read_prefix_gold
-from fin_life_benchmark.io.paths import RepoPaths
-
-from .corpus import corpus_root
-from .paths import ExperimentPaths
-from .util import read_jsonl, write_json, write_jsonl
-
 from fin_life_benchmark.benchmark.rq1_builder import (
-    build_natural_items,
     build_public_taxonomy,
+    build_stage1_pair_items,
     load_session_records,
     render_sessions_block,
     render_taxonomy_block,
@@ -58,7 +50,13 @@ from fin_life_benchmark.benchmark.rq1_pair_no_prospective import (
     surviving_prospective_sessions,
 )
 from fin_life_benchmark.benchmark.rq1_pair_parser import parse_pair_prediction
+from fin_life_benchmark.fsm.registry import load_life_event_templates
+from fin_life_benchmark.gold.loader import read_prefix_gold
+from fin_life_benchmark.io.paths import RepoPaths
 
+from .corpus import corpus_root
+from .paths import ExperimentPaths
+from .util import read_jsonl, write_json, write_jsonl
 
 STAGE1_PAIRS = RQ1_PAIR_STAGE
 CONDITION = NO_PROSPECTIVE_SUBSTITUTED_CONDITION
@@ -105,6 +103,19 @@ def gold_pairs(
     """Project Gold over the full prefix, independent of what the model saw."""
 
     parsed = RQ1Item.model_validate(item)
+    if parsed.gold.occurred_event_evidence_pairs:
+        pairs = [
+            (row["event_id"], row["evidence_session_id"])
+            for row in parsed.gold.occurred_event_evidence_pairs
+        ]
+        invalid = sorted(
+            event_id
+            for event_id, _ in pairs
+            if event_id not in taxonomy_event_ids
+        )
+        if invalid:
+            raise ValueError(f"Stage 1 Gold contains unknown event IDs: {invalid}")
+        return pairs
     prefix_ids = visible_ids_for_condition(parsed, "full_prefix")
     return gold_pairs_from_occurred_trajectory(
         parsed.gold.occurred_trajectory,
@@ -201,16 +212,28 @@ def build_items(paths: ExperimentPaths) -> dict[str, Any]:
     templates = load_life_event_templates(RepoPaths(root=paths.repo_root))
     taxonomy = build_public_taxonomy(templates)
     digest = taxonomy_hash(taxonomy)
-    items = build_natural_items(
+    items = build_stage1_pair_items(
         prefixes,
         sessions_by_traj,
         taxonomy_digest=digest,
+        taxonomy_event_ids={row["event_id"] for row in taxonomy},
         checkpoint_stride=15,
     )
     if not items:
         raise ValueError("no Stage 1 items produced")
     item_path = item_path_for(paths)
-    write_jsonl(item_path, (item.model_dump(mode="json") for item in items))
+    rows: list[dict[str, Any]] = []
+    for item in items:
+        row = item.model_dump(mode="json")
+        row["metadata"] = {
+            **row["metadata"],
+            "candidate_events": taxonomy,
+            "n_visible_sessions": item.checkpoint_session_count,
+            "input_semantics": "cumulative_prefix_at_15_session_checkpoints",
+            "initial_state_protocol": "not_used_by_stage1",
+        }
+        rows.append(row)
+    write_jsonl(item_path, rows)
     taxonomy_path = item_path.parent / f"{STAGE1_PAIRS}_taxonomy.json"
     write_json(taxonomy_path, {"taxonomy": taxonomy, "taxonomy_digest": digest})
     checkpoints = sorted({int(item.checkpoint_session_count) for item in items})

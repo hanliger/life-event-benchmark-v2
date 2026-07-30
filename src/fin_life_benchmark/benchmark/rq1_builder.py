@@ -42,6 +42,12 @@ from .rq1_models import (
     session_number,
     to_public_session_id,
 )
+from .rq1_pair_models import (
+    RQ1_PAIR_PROMPT_CONTRACT,
+    RQ1_PAIR_QUESTION,
+    RQ1_PAIR_STAGE,
+    gold_pairs_from_occurred_trajectory,
+)
 
 # Rough chars-per-token for Korean consultation text; recorded as an
 # estimate only, never used for gating.
@@ -320,6 +326,57 @@ def build_natural_items(
             build_natural_item(record, sessions, taxonomy_digest=taxonomy_digest)
         )
     items.sort(key=lambda i: (i.trajectory_id, i.checkpoint_session_count))
+    return items
+
+
+def build_stage1_pair_items(
+    prefix_records: Iterable[dict[str, Any]],
+    sessions_by_traj: dict[str, dict[str, dict[str, Any]]],
+    *,
+    taxonomy_digest: str,
+    taxonomy_event_ids: set[str] | None = None,
+    checkpoint_stride: int = CHECKPOINT_STRIDE,
+) -> list[RQ1Item]:
+    """Build the official cumulative Stage 1 item grid.
+
+    Gold keeps the rich evaluator-only ledger because it is the canonical
+    source for projecting one exact ``(event_id, evidence_session_id)`` atom
+    per occurred event instance. The item identity and prompt contract,
+    however, belong to the pair task rather than the broader lifecycle-ledger
+    research task.
+    """
+
+    items = build_natural_items(
+        prefix_records,
+        sessions_by_traj,
+        taxonomy_digest=taxonomy_digest,
+        checkpoint_stride=checkpoint_stride,
+    )
+    for item in items:
+        item.stage = RQ1_PAIR_STAGE
+        item.item_id = (
+            f"{item.trajectory_id}_cp{item.checkpoint_session_count:03d}_stage1"
+        )
+        item.prompt_contract = RQ1_PAIR_PROMPT_CONTRACT
+        item.question = RQ1_PAIR_QUESTION
+        sessions = sessions_by_traj[item.trajectory_id]
+        pairs = gold_pairs_from_occurred_trajectory(
+            item.gold.occurred_trajectory,
+            session_id_map=item.gold.session_id_map,
+            sessions=sessions,
+            taxonomy_event_ids=taxonomy_event_ids,
+        )
+        item.gold.occurred_event_evidence_pairs = [
+            {"event_id": event_id, "evidence_session_id": session_id}
+            for event_id, session_id in pairs
+        ]
+        item.metadata.update(
+            {
+                "query_checkpoint": item.checkpoint_session_count,
+                "checkpoint_stride": checkpoint_stride,
+                "task_semantics": "all_occurred_event_evidence_pairs_in_prefix",
+            }
+        )
     return items
 
 

@@ -103,32 +103,42 @@ def stage1_paths(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
             start = checkpoint - 1
             items.append(
                 {
-                    "item_id": f"{trajectory}_w{index:02d}_s1_event",
+                    "item_id": f"{trajectory}_cp{checkpoint:03d}_stage1",
                     "stage": STAGE1,
                     "trajectory_id": trajectory,
                     "prefix_id": f"{trajectory}_w{index:02d}",
+                    "question": (
+                        "지금까지 실제로 일어난 모든 Life Event와 각 발생을 "
+                        "처음 확정하는 상담 세션의 pair를 찾으시오."
+                    ),
+                    "checkpoint_session_count": checkpoint,
                     "visible_sessions": [
                         f"S{number:03d}" for number in range(1, checkpoint + 1)
                     ],
-                    "question": (
-                        f"전체 상담 이력을 참고하여, 2026년 1월 {start}일~"
-                        f"2026년 1월 {checkpoint}일 기간에 마지막으로 실제 "
-                        "발생한 Life Event는 무엇인가? 가능한 목록에서 하나를 "
-                        "선택하시오."
-                    ),
                     "gold": {
-                        "event_id": "E003" if checkpoint == 4 else "E002",
-                        "event_label": "이사" if checkpoint == 4 else "결혼",
-                        "event_instance_id": f"{trajectory}::evt_{checkpoint}",
+                        "occurred_event_evidence_pairs": [
+                            {
+                                "event_id": "E001",
+                                "evidence_session_id": "D001",
+                            },
+                            {
+                                "event_id": "E002",
+                                "evidence_session_id": "D002",
+                            },
+                            *(
+                                [
+                                    {
+                                        "event_id": "E003",
+                                        "evidence_session_id": "D004",
+                                    }
+                                ]
+                                if checkpoint == 4
+                                else []
+                            ),
+                        ],
                     },
                     "metadata": {
-                        "window_index": index,
                         "query_checkpoint": checkpoint,
-                        "target_session_start": f"S{start:03d}",
-                        "target_session_end": f"S{checkpoint:03d}",
-                        "target_date_start": f"2026-01-{start:02d}",
-                        "target_date_end": f"2026-01-{checkpoint:02d}",
-                        "target_event_status": "occurred",
                         "candidate_events": CANDIDATE_EVENTS,
                         "n_visible_sessions": checkpoint,
                     },
@@ -213,7 +223,10 @@ def test_stage1_grid_runs_all_nine_methods_and_reports(stage1_paths, tmp_path):
     report = summarize_predictions(stage1_paths, outputs, allow_partial=True)
     assert sorted(report["methods"]) == sorted(NINE_METHODS)
     for stages in report["methods"].values():
-        assert stages[STAGE1]["aggregation"] == "trajectory_macro"
+        assert (
+            stages[STAGE1]["aggregation"]
+            == "checkpoint_macro_then_equal_checkpoint_average"
+        )
         assert stages[STAGE1]["items"] == len(items)
 
     run_dir = stage1_paths.runs / "reported"
@@ -238,8 +251,8 @@ def test_stage1_grid_runs_all_nine_methods_and_reports(stage1_paths, tmp_path):
     ).read_text(encoding="utf-8").splitlines()
     assert len(trajectory_csv) - 1 == len(NINE_METHODS) * len(TRAJECTORIES)
     for figure in (
-        "checkpoint_event_identification_accuracy.svg",
-        "method_trajectory_accuracy_heatmap.svg",
+        "checkpoint_strict_pair_f1.svg",
+        "method_trajectory_strict_pair_f1_heatmap.svg",
     ):
         svg = (run_dir / "report" / "figures" / figure).read_text(
             encoding="utf-8"
@@ -254,9 +267,12 @@ def test_stage1_grid_runs_all_nine_methods_and_reports(stage1_paths, tmp_path):
             / "cp_004.json"
         ).read_text(encoding="utf-8")
     )
-    assert pair["gold_event_id"] == "E003"
+    assert pair["gold_pairs"][-1] == {
+        "event_id": "E003",
+        "evidence_session_id": "D004",
+    }
     assert pair["candidate_event_count"] == len(CANDIDATE_EVENTS)
-    assert pair["retrieval_evidence"]["target_window_recall"] == 1.0
+    assert pair["retrieval_evidence"]["visible_prefix_recall"] == 1.0
 
 
 def test_stage1_offline_prompt_render_passes_audit_for_all_methods(

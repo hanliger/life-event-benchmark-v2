@@ -51,7 +51,6 @@ def main() -> int:
 
     builder = ItemBuilder(seed=args.seed)
     outputs = {
-        "stage1_event_status.jsonl": builder.build_stage1(prefixes, sessions_by_traj),
         "stage2_memory_value.jsonl": builder.build_stage2(
             prefixes, sessions_by_traj, trajectories_by_traj
         ),

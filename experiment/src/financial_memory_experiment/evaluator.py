@@ -19,6 +19,7 @@ from .paths import ExperimentPaths
 from .prompts import gold_answer, parse_answer
 from .stage1 import STAGE1
 from .stage1 import generation_item as stage1_generation_item
+from .stage1_pairs import score as score_stage1_pairs
 from .stage2_2 import (
     STAGE2_2,
     parse_stage2_2_prediction,
@@ -485,6 +486,51 @@ def _prediction(
     checkpoint: int,
     answer: Any,
 ) -> dict[str, Any]:
+    if item.get("stage") == STAGE1:
+        metadata = item.get("metadata") or {}
+        taxonomy_ids = {
+            str(row["event_id"])
+            for row in metadata.get("candidate_events") or []
+        }
+        gold = [
+            (str(row["event_id"]), str(row["evidence_session_id"]))
+            for row in (item.get("gold") or {}).get(
+                "occurred_event_evidence_pairs", []
+            )
+        ]
+        scored = score_stage1_pairs(
+            raw_answer=answer.raw_answer,
+            gold=gold,
+            visible_session_ids=list(item.get("visible_sessions") or []),
+            # Session types are optional diagnostics. The answer-free runtime
+            # corpus intentionally does not carry private annotations.
+            sessions={},
+            taxonomy_event_ids=taxonomy_ids,
+        )
+        metrics = scored["metrics"]
+        _assert_no_future_evidence(answer.evidence_session_ids, checkpoint)
+        return {
+            "schema_version": "financial-memory-prediction-v3",
+            "method_id": method_id,
+            "item_id": item["item_id"],
+            "stage": item["stage"],
+            "trajectory_id": item["trajectory_id"],
+            "prefix_id": item.get("prefix_id"),
+            "query_checkpoint": checkpoint,
+            "prediction": scored["prediction"],
+            "gold": scored["gold"],
+            "correct": bool(metrics["exact_pair_multiset_match"]),
+            "parse_error": scored["parse_error"],
+            "validation_errors": scored["validation_errors"],
+            "rejected_records": scored["rejected_records"],
+            "invalid_record_count": scored["invalid_record_count"],
+            "metrics": metrics,
+            "metrics_version": scored["metrics_version"],
+            "evidence_session_ids": answer.evidence_session_ids,
+            "response_metadata": answer.metadata,
+            "item_metadata": metadata,
+            "raw_answer": answer.raw_answer,
+        }
     if item.get("stage") == STAGE2_2:
         parsed = parse_stage2_2_prediction(
             answer.raw_answer, checkpoint=checkpoint

@@ -15,7 +15,7 @@ class CounterfactualOption(BaseModel):
 
 class BenchmarkItem(BaseModel):
     item_id: str
-    stage: str  # stage1_event_status|stage2_memory_value
+    stage: str
     trajectory_id: str
     prefix_id: str
     visible_sessions: list[str]

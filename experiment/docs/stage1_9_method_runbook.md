@@ -1,18 +1,10 @@
 # Stage 1 Nine-Method Runbook
 
-> **이 runbook은 아직 실행하지 마십시오.** `stage1_runner`는
-> `stage1_event_identification`(15세션 window에서 사건 하나 선택)을 평가하도록
-> 배선돼 있으나, 보고 대상 Stage 1은
-> `stage1_occurred_event_evidence_pairs`(prefix 전체의 occurred 사건과 각 사건의
-> 확정 근거 세션 짝, `strict_occurred_event_evidence_f1`)이다. 과제 전환이
->끝나기 전에 실행하면 잘못된 과제를 측정한다. 아래 절차와 게이트 자체는 전환
-> 후에도 그대로 쓰인다.
-
-Stage 1은 각 15-session target window 안에서 가장 최근에 `occurred`가 된 event의
-`event_id`를 맞힌다. Grid는 20 trajectory × 20 window checkpoint = 400 item이며
-9개 method로 3,600 prediction이다. Plan·audit·execute·resume·report 단계와
-provider lock, attempt 보존, resume 규칙은 Stage 2.2와 동일한
-`run_harness`를 공유한다.
+Stage 1은 15세션씩 늘어나는 누적 prefix에서 지금까지 실제 발생한 모든
+Life Event와 각 발생을 처음 확정하는 session의 pair를 복원한다. Grid는
+20 trajectory × 20 checkpoint = 400 item이며 9개 method로 3,600 prediction이다.
+Plan·audit·execute·resume·report 단계와 provider lock, attempt 보존, resume
+규칙은 Stage 2.2와 동일한 `run_harness`를 공유한다.
 
 Stage 1은 Stage 2.2와 **같은 코퍼스**(`dialogues_no_prospective` +
 `gold_no_prospective`)를 쓴다. 코퍼스는 한 번만 준비하면 두 stage가 공유한다.
@@ -26,7 +18,7 @@ $PY -m financial_memory_experiment.cli build-stage1-items
 ```
 
 `build-stage1-items`는 그 prepared tree에
-`canonical_items/stage1_event_identification.jsonl`(400 item)을 만들고 개수와
+`canonical_items/stage1_occurred_event_evidence_pairs.jsonl`(400 item)을 만들고 개수와
 trajectory 수를 검증한다. 생성 파이프라인의 `prepare-data`/`build-canonical-items`는
 Stage 1 실행에 필요하지 않다.
 
@@ -59,7 +51,7 @@ frozen grid를 `immutable_plan.json`에 고정한다. 같은 분에 중복되면
 suffix를 사용한다.
 
 Retrieval 설정은 CLI flag가 아니라 `configs/experiment.yaml`의
-`stage1_event_identification` block이며, `stage1_contract()`가 code의 frozen
+`stage1_occurred_event_evidence_pairs` block이며, `stage1_contract()`가 code의 frozen
 상수와 일치하는지 plan 시점에 검사한다. Stage 1은 질문 문장을 그대로 단일
 query로 사용하고 `top_k=10`을 쓴다. Stage 2.2의 4-group retrieval은 Stage 1에
 적용하지 않는다.
@@ -120,8 +112,8 @@ status가 `GENERATED`가 된다.
   --run-dir experiment/runs/stage1/<run-id>
 ```
 
-Primary metric은 trajectory-macro accuracy다. checkpoint별로 채점한 뒤 trajectory
-내부를 평균하고 trajectory를 동일 가중으로 평균한다. 불확실성은 trajectory
+Primary metric은 `strict_occurred_event_evidence_f1`이다. 각 checkpoint에서
+exact multiset F1을 계산하고 checkpoint를 동일 가중한다. 불확실성은 trajectory
 bootstrap 95% CI이며 모든 method pair의 paired delta도 함께 계산된다.
 
 | 산출물 | 내용 |

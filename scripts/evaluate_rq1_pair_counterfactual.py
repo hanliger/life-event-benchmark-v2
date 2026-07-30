@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Evaluate one counterfactual-canary condition (occurred-pair pilot).
+"""Evaluate one counterfactual-canary condition for the Stage 1 pair task.
 
 Conditions are independently resumable. The five cases share one identical
 ``full`` context, so ``--condition full`` issues a single call and every paired
@@ -416,7 +416,7 @@ def main() -> None:
     )
 
     print(
-        f"rq1 pair counterfactual [{args.condition}] {provider}/{model}: "
+        f"stage1 pair counterfactual [{args.condition}] {provider}/{model}: "
         f"{len(rows)} calls ({len(scored)} scored), {n_parse_errors} parse errors, "
         f"{n_config_errors} inference configuration errors"
     )

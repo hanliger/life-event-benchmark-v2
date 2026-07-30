@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Deterministic audit of the temporary occurred-event pair protocol.
+"""Deterministic audit of the official Stage 1 pair protocol.
 
 Prompt checks: no concrete D### literal, no filled active event example, the
 old career_employment/D010/D015 leak absent, the only instantiated answer

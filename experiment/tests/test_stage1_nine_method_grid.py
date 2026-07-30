@@ -30,7 +30,7 @@ from financial_memory_experiment.stage1 import (
     generation_item,
     rendered_candidate_event_ids,
     stage1_contract,
-    target_window_recall,
+    visible_prefix_recall,
 )
 from financial_memory_experiment.paths import ExperimentPaths
 
@@ -63,28 +63,24 @@ CANDIDATE_EVENTS = [
     {"event_id": "E003", "label_ko": "이사"},
 ]
 STAGE1_ITEM = {
-    "item_id": "traj_test_w01_s1_event",
+    "item_id": "traj_test_cp003_stage1",
     "stage": STAGE1,
     "trajectory_id": "traj_test",
     "prefix_id": "traj_test_w01",
     "question": (
-        "전체 상담 이력을 참고하여, 2026년 1월 1일~2026년 1월 3일 기간에 "
-        "마지막으로 실제 발생한 Life Event는 무엇인가? 가능한 목록에서 하나를 "
-        "선택하시오."
+        "지금까지 실제로 일어난 모든 Life Event와 각 발생을 처음 확정하는 "
+        "상담 세션의 pair를 찾으시오."
     ),
+    "checkpoint_session_count": 3,
+    "visible_sessions": ["S001", "S002", "S003"],
     "gold": {
-        "event_id": "E003",
-        "event_label": "이사",
-        "event_instance_id": "traj_test::evt_0007",
+        "occurred_event_evidence_pairs": [
+            {"event_id": "E002", "evidence_session_id": "D002"},
+            {"event_id": "E003", "evidence_session_id": "D003"},
+        ],
     },
     "metadata": {
-        "window_index": 1,
         "query_checkpoint": 3,
-        "target_session_start": "S001",
-        "target_session_end": "S003",
-        "target_date_start": "2026-01-01",
-        "target_date_end": "2026-01-03",
-        "target_event_status": "occurred",
         "candidate_events": CANDIDATE_EVENTS,
     },
 }
@@ -98,7 +94,10 @@ class _CapturingReader:
     def generate(self, *, system, user, max_tokens=None):
         self.user = user
         self.max_tokens = max_tokens
-        return "<answer>E003</answer>", {
+        return (
+            '{"pairs":[{"event_id":"E002","evidence_session_id":"D002"},'
+            '{"event_id":"E003","evidence_session_id":"D003"}]}'
+        ), {
             "provider": "capture",
             "model": "capture",
             "paid": False,
@@ -182,10 +181,10 @@ def test_stage1_methods_expose_prompt_and_pass_leakage_audit():
 def test_stage1_generation_item_drops_gold_and_gold_derived_metadata():
     generation = generation_item(STAGE1_ITEM)
     assert "gold" not in generation
-    assert "target_event_status" not in generation["metadata"]
+    assert "occurred_event_count" not in generation["metadata"]
     assert generation["metadata"]["candidate_events"] == CANDIDATE_EVENTS
     # The original item is untouched so scoring still sees Gold.
-    assert STAGE1_ITEM["gold"]["event_id"] == "E003"
+    assert len(STAGE1_ITEM["gold"]["occurred_event_evidence_pairs"]) == 2
 
 
 def test_stage1_audit_rejects_future_sessions_and_narrowed_candidates():
@@ -204,7 +203,7 @@ def test_stage1_audit_rejects_future_sessions_and_narrowed_candidates():
     ]
     assert audit_rendered_prompt({**base, "prompt": prompt})["passed"]
 
-    future = prompt + "\n[S004 | 상담일: 2026년 1월 4일]\n고객: 미래 세션"
+    future = prompt + "\n[세션 D004]\n고객: 미래 세션"
     result = audit_rendered_prompt({**base, "prompt": future})
     assert result["future_session_ids"] == [4]
     assert not result["passed"]
@@ -214,9 +213,9 @@ def test_stage1_audit_rejects_future_sessions_and_narrowed_candidates():
     assert result["rendered_candidate_events"] == 2
     assert not result["passed"]
 
-    leaked = prompt + "\ntraj_test::evt_0007"
+    leaked = prompt + "\nfull_observed_ledger"
     result = audit_rendered_prompt({**base, "prompt": leaked})
-    assert result["gold_event_instance_id_in_prompt"]
+    assert result["gold_fields_in_prompt"] == ["full_observed_ledger"]
     assert not result["passed"]
 
     field_leak = prompt + '\n"gold": {"event_id": "E003"}'
@@ -232,8 +231,7 @@ def test_candidate_block_reader_ignores_initial_state_bullets():
     prompt = method.answer(generation_item(STAGE1_ITEM)).metadata[
         "rendered_user_prompt"
     ]
-    # S000 renders `- employment.employer: ...` with the same bullet shape.
-    assert "- employment.employer:" in prompt
+    assert "S000" not in prompt
     assert rendered_candidate_event_ids(prompt) == ["E001", "E002", "E003"]
 
 
@@ -241,34 +239,34 @@ def test_letta_double_renders_stage1_prompt_without_evidence():
     double = _ingested(LettaContractDouble())
     answer = double.answer(generation_item(STAGE1_ITEM))
     prompt = answer.metadata["rendered_user_prompt"]
-    assert "[가능한 event_id]" in prompt
+    assert "## 가능한 Life Event 목록" in prompt
     assert "[S001" not in prompt
     assert answer.metadata["archival_search_limit"] == 1
 
 
-def test_target_window_recall_is_gold_independent():
-    full_context = target_window_recall(
-        item_metadata=STAGE1_ITEM["metadata"],
+def test_visible_prefix_recall_is_gold_independent():
+    full_context = visible_prefix_recall(
+        item=STAGE1_ITEM,
         evidence_session_ids=["S000", "S001", "S002", "S003"],
     )
     assert full_context == {
-        "target_window_size": 3,
+        "visible_prefix_size": 3,
         "retrieved_evidence_count": 3,
-        "target_window_recall": 1.0,
-        "target_window_hit": True,
+        "visible_prefix_recall": 1.0,
+        "visible_prefix_complete": True,
     }
-    partial = target_window_recall(
-        item_metadata=STAGE1_ITEM["metadata"],
+    partial = visible_prefix_recall(
+        item=STAGE1_ITEM,
         evidence_session_ids=["S000", "S002"],
     )
-    assert partial["target_window_recall"] == pytest.approx(1 / 3)
-    assert partial["target_window_hit"] is True
-    missed = target_window_recall(
-        item_metadata=STAGE1_ITEM["metadata"],
+    assert partial["visible_prefix_recall"] == pytest.approx(1 / 3)
+    assert partial["visible_prefix_complete"] is False
+    missed = visible_prefix_recall(
+        item=STAGE1_ITEM,
         evidence_session_ids=["S000"],
     )
-    assert missed["target_window_recall"] == 0.0
-    assert missed["target_window_hit"] is False
+    assert missed["visible_prefix_recall"] == 0.0
+    assert missed["visible_prefix_complete"] is False
 
 
 def test_stage1_config_contract_matches_frozen_constants():
@@ -279,6 +277,7 @@ def test_stage1_config_contract_matches_frozen_constants():
     assert contract["max_output_tokens"] == STAGE1_MAX_OUTPUT_TOKENS
     assert contract["checkpoints"] == 400
     assert contract["trajectories"] == 20
+    assert contract["headline_metric"] == "strict_occurred_event_evidence_f1"
 
 
 def test_stage1_retrieval_query_is_the_question_itself():

@@ -12,8 +12,10 @@ from typing import Any, Iterable
 from .config import load_experiment_config
 from .methods import method_ids as configured_method_ids
 from .paths import ExperimentPaths
-from .util import read_jsonl, sha256_file, write_json
+from .stage1 import STAGE1
+from .stage1_pairs import HEADLINE_METRIC
 from .stage2_2 import STAGE2_2
+from .util import read_jsonl, sha256_file, write_json
 
 
 _STAGE2_2_SCALAR_METRICS = (
@@ -571,7 +573,7 @@ def _expected_ids(paths: ExperimentPaths, scope: str) -> set[str]:
     root = Path(active_prepared_manifest(paths)["root"])
     files = {
         "canonical": [
-            root / "canonical_items" / "stage1_event_identification.jsonl",
+            root / "canonical_items" / f"{STAGE1}.jsonl",
             root / "canonical_items" / "stage2_memory_value.jsonl",
         ],
         "masking": [root / "masking_items" / "masking_questions.jsonl"],
@@ -686,6 +688,23 @@ def summarize_predictions(
             elif stage == "stage2_memory_value":
                 score, trajectory_scores = hierarchical_stage2(subset)
                 aggregation = "trajectory_target_checkpoint_macro"
+            elif stage == STAGE1:
+                by_trajectory: dict[str, list[float]] = defaultdict(list)
+                by_checkpoint: dict[int, list[float]] = defaultdict(list)
+                for row in subset:
+                    value = float((row.get("metrics") or {})[HEADLINE_METRIC])
+                    by_trajectory[str(row["trajectory_id"])].append(value)
+                    by_checkpoint[int(row["query_checkpoint"])].append(value)
+                trajectory_scores = {
+                    trajectory: mean(values)
+                    for trajectory, values in by_trajectory.items()
+                }
+                score = (
+                    mean(mean(values) for values in by_checkpoint.values())
+                    if by_checkpoint
+                    else None
+                )
+                aggregation = "checkpoint_macro_then_equal_checkpoint_average"
             else:
                 trajectory_scores = _trajectory_scores(stage, subset)
                 score = mean(trajectory_scores.values()) if trajectory_scores else None
@@ -707,6 +726,9 @@ def summarize_predictions(
                     str(lag): _accuracy(group) for lag, group in sorted(lag_groups.items())
                 },
             }
+            if stage == STAGE1:
+                stages[stage]["headline_metric"] = HEADLINE_METRIC
+                stages[stage][HEADLINE_METRIC] = score
             if stage == STAGE2_2:
                 stages[stage]["state_reconstruction"] = stage2_2
             retrieval_rows = [

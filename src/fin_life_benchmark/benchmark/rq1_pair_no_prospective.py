@@ -1,4 +1,4 @@
-"""No-prospective-evidence diagnostic for the occurred-pair pilot.
+"""No-prospective-evidence diagnostic for the Stage 1 pair task.
 
 One question, one call per model per checkpoint:
 

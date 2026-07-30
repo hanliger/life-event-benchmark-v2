@@ -1,16 +1,15 @@
-"""Models and gold projection for the temporary occurred-event pair pilot.
+"""Models and gold projection for the official Stage 1 pair task.
 
-Stage id ``stage1_occurred_event_evidence_pairs``. A deliberately minimal,
-temporary protocol that runs *beside* ``stage1_event_trajectory``: it reuses the
-same progressive items, the same PrefixGold-derived gold and the same public
-``S### -> D###`` aliasing, but asks one question --
+Stage id ``stage1_occurred_event_evidence_pairs``. The task reuses the
+progressive PrefixGold projection and the public ``S### -> D###`` aliasing, but
+asks one question --
 
     which Life Events have actually occurred by this checkpoint, and which
     session first establishes each occurrence?
 
 No lifecycle status output, no anchors beyond that one session, no confidence,
 no instance alignment. Weak-signal, upcoming and cancellation evidence stays
-visible in the context on purpose: committing to them is the error this pilot
+visible in the context on purpose: committing to them is the error this task
 measures.
 
 A pair atom is ``(event_id, public_evidence_session_id)``. Atoms live in the
@@ -35,13 +34,16 @@ from .rq1_models import (
 )
 
 RQ1_PAIR_STAGE = "stage1_occurred_event_evidence_pairs"
-RQ1_PAIR_PROTOCOL_VERSION = "rq1-occurred-event-pairs-temp-v1"
-RQ1_PAIR_METRICS_VERSION = "rq1-exact-occurred-pair-metrics-v1"
+RQ1_PAIR_PROTOCOL_VERSION = "stage1-occurred-event-evidence-pairs-v1"
+RQ1_PAIR_METRICS_VERSION = "stage1-exact-occurred-pair-metrics-v1"
 RQ1_PAIR_PROMPT_CONTRACT = "rq1_occurred_event_pairs_ko"
 RQ1_PAIR_PROMPT_FILE = "prompts/benchmark/rq1_occurred_event_pairs_ko.md"
+RQ1_PAIR_QUESTION = (
+    "지금까지 실제로 일어난 모든 Life Event와 각 발생을 처음 확정하는 "
+    "상담 세션의 pair를 찾으시오."
+)
 
-# full_prefix is the protocol baseline. no_prospective_substituted is the
-# temporary diagnostic and the evaluator's default: it takes away only the
+# full_prefix is the protocol baseline. no_prospective_substituted takes away only the
 # weak-signal and upcoming sessions -- every distractor, terminal and downstream
 # session stays -- by replacing each with a neutral routine filler, so the
 # session count is held constant and only the content changes. It reuses this

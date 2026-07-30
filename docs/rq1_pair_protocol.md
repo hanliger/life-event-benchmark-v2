@@ -1,197 +1,92 @@
-# RQ1 occurred-event pair protocol
+# Stage 1 occurred-event/evidence pair protocol
 
 Design reference for `stage1_occurred_event_evidence_pairs`
-(`rq1-occurred-event-pairs-temp-v1`). Temporary pilot protocol; it runs beside
-`stage1_event_trajectory` and reuses that stage's items, gold and public
-aliasing. Written 2026-07-30, before the `no_prospective_substituted` ladder
-run.
+(`stage1-occurred-event-evidence-pairs-v1`).
 
-## 1. The question
+## 1. Task
 
-One question per item:
+At every 15-session checkpoint, the model receives the cumulative dialogue
+prefix and returns every Life Event that has actually occurred by that point,
+paired with the session that first establishes that occurrence.
 
-> Which Life Events have actually occurred by this checkpoint, and which
-> session first establishes each occurrence?
+```json
+{
+  "pairs": [
+    {
+      "event_id": "career_employment",
+      "evidence_session_id": "D015"
+    }
+  ]
+}
+```
 
-The model returns pairs of `(event_id, evidence_session_id)` and nothing else —
-no lifecycle status, no anchors beyond that one session, no confidence, no
-instance alignment. Weak-signal, upcoming and cancellation evidence stay visible
-on purpose: committing to them is the error the pilot measures.
+The number of events is not disclosed. Repeated occurrences of the same
+`event_id` remain separate records. The output contains no lifecycle status,
+confidence, explanation, or instance ID.
 
-## 2. Items
+## 2. Checkpoint grid and model-visible input
 
-`traj_001`, 300 sessions, sliced into 20 nested progressive prefixes at stride
-15 (cp15 … cp300). Each item carries `visible_sessions` (canonical `S###`) plus
-a private `PrefixGold` payload that is never rendered.
-
-Public aliasing is deterministic and positional: `S042 → D042`. It hides the
-canonical namespace, not the ordering — sessions render in chronological order
-and the number still encodes absolute position in the trajectory.
-
-Session-type mix of the full cp300 prefix:
-
-| type | n |
-| --- | --- |
-| `routine_financial` | 133 |
-| `hard_negative` | 90 |
-| `occurred_evidence` | 20 |
-| `weak_signal_evidence` | 18 |
-| `upcoming_evidence` | 18 |
-| `consequence_session` | 11 |
-| `cancellation_evidence` | 6 |
-| `stale_recall_session` | 4 |
+- 20 trajectories × checkpoints `15, 30, …, 300` = 400 items.
+- Each item contains the full prefix, not only the newest 15-session window.
+- Session IDs are exposed as deterministic public aliases (`S042 → D042`).
+- The model sees `D###` and dialogue turns only; canonical IDs, session types,
+  cue annotations, event links, and Gold remain private.
+- The public taxonomy contains every active `event_id` and its Korean name.
 
 ## 3. Gold
 
-One pair per occurred event instance, anchored at the **earliest visible session
-linked to that instance** with `session_type == "occurred_evidence"` **and**
-`event_status_after_session == "occurred"`. There is **no fallback**:
-`occurred_anchor_session` raises rather than degrading to weak, upcoming,
-consequence or cancellation evidence. Cancelled, weak-signal and upcoming
-instances contribute nothing.
+Each occurred event instance contributes exactly one pair. Its evidence anchor
+is the earliest visible session linked to that instance for which:
 
-Gold is a multiset — two occurrences of the same `event_id` contribute two pairs
-through two distinct anchors, and multiplicity is never collapsed.
-
-**Gold is always projected over the full prefix, in every condition.** The
-ablation changes what the model sees and never what counts as correct. This is
-verified, not assumed: the audit recomputes gold over the substituted context
-and fails if a single pair moves. Substitution never touches an
-`occurred_evidence` session, so in practice every anchor survives untouched.
-
-## 4. Conditions
-
-| condition | visible at cp300 | mechanism |
-| --- | --- | --- |
-| `no_prospective_substituted` (**default**) | **300** | each weak/upcoming session **replaced** by a neutral routine filler |
-| `full_prefix` | 300 | untouched baseline |
-
-The ablation is the evaluator's default condition; the baseline must be named
-explicitly with `--condition full_prefix`.
-
-Removal is by substitution, never by subtraction. An earlier arm dropped the 36
-prospective sessions outright, which shortened the context by 12% and so
-confounded "the evidence is gone" with "the prompt is shorter". Substituting in
-place holds session count, ids, positions and dates constant, so only the
-prospective *content* differs from `full_prefix`.
-
-The substituted corpus is built by `scripts/build_no_prospective_corpus.py`.
-Because the arm renders the whole prefix, nothing in the render path would
-reveal a wrong `--sessions-dir` — the run would simply be a `full_prefix` run
-wearing the ablation's name. The evaluator therefore verifies the corpus really
-is substituted and refuses to run otherwise.
-
-The ablation accepts any checkpoint the items file carries, so it can be read as
-a ladder, but `--checkpoint` must always be named explicitly.
-
-## 5. Metric
-
-Exact multiset precision / recall / F1 over pair atoms:
-
-```
-TP = sum(min(G[x], P[x]))
-predicted_count = |valid predictions| + invalid_record_count
-FP = predicted_count - TP
-FN = |G| - TP
+```text
+session_type == "occurred_evidence"
+event_status_after_session == "occurred"
 ```
 
-`Counter`, not `set`: a duplicated prediction is a second claim and is charged
-as a false positive. Each invalid record costs exactly one unit of precision.
+There is no fallback. Missing a qualifying anchor is a data error. Weak-signal,
+upcoming, cancelled, consequence, stale-recall, hard-negative, and routine
+sessions cannot become Gold occurrence anchors.
 
-No partial credit anywhere. A sibling or generic-entailed label at the right
-session earns nothing; the right label at the wrong session earns nothing; a
-pair anchored on any non-occurred session type is simply not in gold.
-`event_id`-only and `session`-only component diagnostics are computed for
-debugging — they say *how* a score moved — but are never substituted into the
-headline.
+Gold is a multiset. Multiplicity is not collapsed, including repeated
+occurrences of the same event type.
 
-Aggregation: per item → macro across trajectories within a checkpoint →
-checkpoint AUC weighting checkpoints equally. Atoms are never pooled across
-checkpoints, because an early occurrence appears in many prefixes and would
-dominate.
+## 4. Scoring
 
-## 6. Leakage contract
+The headline metric is `strict_occurred_event_evidence_f1`.
 
-The rendered prompt is public session ids and turns only. The audit bans 11
-private tokens (`session_type`, `cue_annotations`, `linked_event_instance_id`,
-`event_status_after_session`, `traj_`, `persona_id`, `month_index`,
-`transition_order`, `financial_task`, `mapped_action`, `near_miss`) and fails on
-any literal `S###`. Prompt and taxonomy SHA-256 are pinned in
-`protocol_manifest.json`; every audit re-checks both, so a prompt edit
-invalidates the run rather than silently changing the measurement.
+```text
+G = Counter(gold_pairs)
+P = Counter(valid_predicted_pairs)
+TP = Σ min(G[x], P[x])
+```
 
-## 7. Known limitations
+Invalid records each add one false positive. A wrong label at the correct
+session, a correct label at the wrong session, duplicate predictions, and
+unsupported extra pairs receive no partial credit.
 
-These are properties of the pilot's scope, not defects to fix before reading a
-result — but no claim built on this protocol should ignore them.
+Metrics are computed per trajectory/checkpoint. Trajectories are
+macro-averaged within each checkpoint, then the 20 checkpoints are equally
+weighted. Pair atoms are never pooled across checkpoints.
 
-### 7.1 Sampling is not deterministic for two of the three models
+## 5. Corpus conditions
 
-`--temperature 0.0` is **silently dropped** by provider contract for
-`claude-opus-5` (`_anthropic_supports_temperature` → `False`) and for the
-GPT-5.x frontier models including `gpt-5.6-sol`
-(`_openai_supports_temperature` → `False`). Only Gemini receives it. Those two
-models therefore sample at the provider default.
+The reported experiment uses `dialogues_no_prospective` +
+`gold_no_prospective`: weak-signal and upcoming dialogue content is replaced
+with neutral fillers while session count, position, public ID, and date remain
+fixed. Gold is projected from the full occurred-event truth and is unchanged by
+the substitution.
 
-Observed directly: two identical cp30 `claude-opus-5` probes on the same prompt
-returned **F1 1.0** and **F1 0.6667**.
+`full_prefix` remains available for the unmodified corpus. Results from
+different corpus conditions are reported separately.
 
-Every prediction row now carries `temperature_requested`,
-`temperature_applied`, `temperature_omission_reason` and
-`deterministic_sampling`, and each report carries a `sampling` rollup, so the
-caveat is machine-checkable rather than prose-only.
+## 6. Audits
 
-### 7.2 One replicate per cell
+The deterministic audit verifies:
 
-Exactly one call per (model, condition, checkpoint) — recorded as
-`replicates_per_cell: 1`. Combined with §7.1 there is **no variance estimate**,
-so a difference between two cells cannot be separated from run-to-run noise.
-
-### 7.3 n = 1 trajectory
-
-`traj_001` only. The macro-across-trajectories aggregation exists and is
-exercised, but with one trajectory every macro equals its single item. No
-confidence intervals are available from this design.
-
-### 7.4 Checkpoints are nested, not independent
-
-cp30 ⊂ cp60 ⊂ … ⊂ cp300, and so is gold. A ladder over the 20 checkpoints is a
-set of heavily overlapping observations, not 20 independent measurements.
-
-### 7.5 Checkpoint and task size are perfectly collinear
-
-Gold is exactly `checkpoint / 15` pairs — 2 at cp30, 20 at cp300. Occurred
-events are evenly spaced by construction, so nothing in a checkpoint ladder can
-separate "longer context" from "more events to find". A ladder shows *that*
-performance moves with scale, never *which* kind of scale.
-
-### 7.6 The taxonomy is flat but semantically hierarchical
-
-`taxonomy.json` carries only `event_id` and `label_ko` — 24 flat ids with no
-parent or domain field — yet several are genuinely hierarchical
-(`relationship_dependent_addition` subsumes `relationship_childbirth` and
-`relationship_adoption`; `career_employment` vs `career_job_change` /
-`career_reinstatement` looks the same). Under §5's strict metric a
-true-but-coarser answer is charged at full price. Adding `parent_event_id` and
-reporting a hierarchy-aware secondary metric is the standing follow-up.
-
-### 7.7 F1 is close to count-pinned
-
-Models tend to predict roughly one pair per visible `occurred_evidence` session,
-so predicted count tracks gold count and precision and recall move together.
-With 20 gold and 21 predictions, F1 reduces to `2·TP/41` — two models can tie on
-F1 while agreeing on only part of their true positives.
-
-## 8. Files
-
-| role | path |
-| --- | --- |
-| models, gold projection | `src/fin_life_benchmark/benchmark/rq1_pair_models.py` |
-| metrics | `src/fin_life_benchmark/benchmark/rq1_pair_metrics.py` |
-| ablation | `src/fin_life_benchmark/benchmark/rq1_pair_no_prospective.py` |
-| evaluator | `scripts/evaluate_rq1_pairs.py` |
-| protocol audit | `scripts/audit_rq1_pair_protocol.py` |
-| ablation audit | `scripts/audit_rq1_pair_no_prospective.py` |
-| substituted corpus builder | `scripts/build_no_prospective_corpus.py` |
-| ladder summary | `scripts/summarize_rq1_pair_ladder.py` |
-| prompt | `prompts/benchmark/rq1_occurred_event_pairs_ko.md` |
+- exactly one item per trajectory/checkpoint;
+- the complete 15–300 checkpoint grid;
+- cumulative visible-session prefixes;
+- strict occurrence-anchor recoverability;
+- Gold event IDs are in the public taxonomy;
+- public prompt IDs contain no canonical `S###`;
+- prompt/taxonomy digests match the run manifest.

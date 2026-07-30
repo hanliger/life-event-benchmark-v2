@@ -4,8 +4,9 @@ RQ1 asks a model to reconstruct the full ledger of implicit life-event
 instances (type, lifecycle status, temporal order, evidence sessions) from a
 chronological prefix of consultation sessions.
 
-The task id is ``stage1_event_trajectory``. It does not replace the legacy
-``stage1_event_identification`` task; both coexist.
+The task id is ``stage1_event_trajectory``. It is retained as a broader RQ1
+research task; official Stage 1 uses its cumulative Gold projection but emits
+the narrower occurred-event/evidence pair contract.
 
 PrefixGold stays evaluator-only: items carry gold in a dedicated ``gold``
 payload plus the private canonical->public session-id mapping, and the
@@ -94,6 +95,11 @@ class RQ1ItemGold(BaseModel):
 
     full_observed_ledger: list[RQ1GoldEventInstance] = Field(default_factory=list)
     occurred_trajectory: list[RQ1GoldEventInstance] = Field(default_factory=list)
+    # Official Stage 1 projection in the public D### id space. This avoids
+    # requiring private session annotations at model-run time.
+    occurred_event_evidence_pairs: list[dict[str, str]] = Field(
+        default_factory=list
+    )
     # canonical session id -> public session id, for every visible session
     session_id_map: dict[str, str] = Field(default_factory=dict)
     input_session_count: int = 0
@@ -114,6 +120,7 @@ class RQ1Item(BaseModel):
     trajectory_id: str
     prefix_id: str
     checkpoint_session_count: int
+    question: str = ""
     # canonical ids of the chronological prefix; materialized at prompt time
     visible_sessions: list[str] = Field(default_factory=list)
     taxonomy_hash: str = ""

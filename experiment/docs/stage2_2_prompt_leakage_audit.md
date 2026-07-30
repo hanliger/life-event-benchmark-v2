@@ -13,10 +13,12 @@
 계획·희망·검토·신청과 실제 발생을 구분한다.
 취소·철회·정정·갱신이 있으면 질문에 지정된 기간을 기준으로 판단한다.
 현재 질의 checkpoint 이후의 정보는 사용하지 않는다.
-설명 없이 <answer>정답</answer> 형식으로만 답한다.
+설명 없이 각 질문에 명시된 출력 형식으로만 답한다.
 ```
 
-마지막 `<answer>` 지시는 Stage 2.2 user prompt의 “JSON 객체 하나만 출력” 지시와 충돌할 수 있다. Parser/schema failure가 발생할 수 있으므로 first attempt를 보존하고 해당 failure에만 최대 1회 retry한다.
+System prompt와 user prompt 모두 질문별 출력 계약을 따르도록 일치한다.
+Parser/schema failure가 발생하면 first attempt를 보존하고 해당 failure에만 최대
+1회 retry한다.
 
 ## User prompt 전문
 

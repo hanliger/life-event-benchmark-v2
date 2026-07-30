@@ -12,6 +12,7 @@ from fin_life_benchmark.benchmark.rq1_builder import (
     build_gold_ledger,
     build_natural_items,
     build_public_taxonomy,
+    build_stage1_pair_items,
     render_sessions_block,
     taxonomy_hash,
     visible_ids_for_condition,
@@ -89,6 +90,38 @@ def test_natural_items_grid_and_public_mapping():
     assert item.gold.input_char_count > 0
     fr = item.gold.first_recoverable[f"{TRAJ_ID}_ev001"]
     assert fr["session_id"] is not None and fr["checkpoint"] in (15, 30)
+
+
+def test_official_stage1_items_are_cumulative_pair_items():
+    items = build_stage1_pair_items(
+        PREFIXES, {TRAJ_ID: BY_ID}, taxonomy_digest="digest"
+    )
+    assert [item.stage for item in items] == [
+        "stage1_occurred_event_evidence_pairs",
+        "stage1_occurred_event_evidence_pairs",
+    ]
+    assert [len(item.visible_sessions) for item in items] == [15, 30]
+    assert items[0].gold.occurred_event_evidence_pairs == [
+        {
+            "event_id": "career_employment",
+            "evidence_session_id": "D012",
+        }
+    ]
+    # The second checkpoint keeps the prior occurrence and adds the newly
+    # established one; upcoming housing_move is not Gold.
+    assert items[1].gold.occurred_event_evidence_pairs == [
+        {
+            "event_id": "career_employment",
+            "evidence_session_id": "D012",
+        },
+        {
+            "event_id": "career_employment",
+            "evidence_session_id": "D026",
+        },
+    ]
+    assert items[1].metadata["task_semantics"] == (
+        "all_occurred_event_evidence_pairs_in_prefix"
+    )
 
 
 def test_empty_ledger_gold_is_valid():

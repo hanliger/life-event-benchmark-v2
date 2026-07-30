@@ -1,3 +1,10 @@
+"""Official Stage 1 contract for the experiment harness.
+
+Stage 1 is cumulative occurred-event/evidence-session pair reconstruction.
+Every 15 sessions the model receives the prefix visible so far and returns all
+``(event_id, evidence_session_id)`` pairs established in that prefix.
+"""
+
 from __future__ import annotations
 
 import json
@@ -5,33 +12,37 @@ import re
 from pathlib import Path
 from typing import Any
 
+from fin_life_benchmark.benchmark.rq1_pair_models import RQ1_PAIR_STAGE
+
 from .config import load_experiment_config
-from .corpus import corpus_root
 from .paths import ExperimentPaths
+from .stage1_pairs import (
+    HEADLINE_METRIC,
+    MAX_OUTPUT_TOKENS,
+    build_items,
+    item_path_for,
+)
 from .util import read_jsonl
 
 
-STAGE1 = "stage1_event_identification"
-# Anthropic counts adaptive thinking against max_tokens, so the one-line
-# <answer>E###</answer> contract still needs the Stage 2.2 reasoning budget.
-STAGE1_MAX_OUTPUT_TOKENS = 20_000
-# Frozen Stage 1 retrieval budget from docs/protocol.md (`top_k_main`).
+STAGE1 = RQ1_PAIR_STAGE
+STAGE1_MAX_OUTPUT_TOKENS = MAX_OUTPUT_TOKENS
 STAGE1_TOP_K = 10
 
-_SESSION_IN_PROMPT = re.compile(r"\[S(\d{3,})\s*\|")
-CANDIDATE_HEADER = "[가능한 event_id]"
-# Gold-only field names that must never reach a generation prompt.
+_SESSION_IN_PROMPT = re.compile(r"\[세션 D(\d{3,})\]")
+CANDIDATE_HEADER = "## 가능한 Life Event 목록"
 _GOLD_FIELD_NAMES = (
     '"gold"',
     "event_instance_id",
-    "target_event_id",
-    "target_event_label",
-    "target_event_status",
+    "full_observed_ledger",
+    "occurred_trajectory",
+    "session_id_map",
+    "status_anchor_session",
 )
 
 
 def stage1_contract(paths: ExperimentPaths | None = None) -> dict[str, Any]:
-    """Fail closed if the config drifts from the frozen Stage 1 contract."""
+    """Validate the configured task, retrieval, and item-grid contract."""
 
     cfg = load_experiment_config(paths)
     section = cfg[STAGE1]
@@ -42,40 +53,41 @@ def stage1_contract(paths: ExperimentPaths | None = None) -> dict[str, Any]:
         "max_output_tokens": int(section["max_output_tokens"]),
         "trajectories": int(section["expected"]["trajectories"]),
         "checkpoints": int(section["expected"]["checkpoints"]),
+        "checkpoint_stride": int(cfg["benchmark"]["checkpoint_stride"]),
+        "headline_metric": str(section["headline_metric"]),
     }
     if contract["task_id"] != STAGE1:
         raise ValueError(f"Stage 1 task_id must be {STAGE1}")
     if contract["retrieval_strategy"] != "single_question_query":
-        raise ValueError(
-            "Stage 1 retrieval contract is a single question query; per-group "
-            "retrieval belongs to Stage 2.2"
-        )
+        raise ValueError("Stage 1 retrieval must use one task-level query")
     if contract["retrieval_top_k"] != STAGE1_TOP_K:
         raise ValueError(f"Stage 1 retrieval top_k must be {STAGE1_TOP_K}")
     if contract["max_output_tokens"] != STAGE1_MAX_OUTPUT_TOKENS:
         raise ValueError(
             f"Stage 1 max_output_tokens must be {STAGE1_MAX_OUTPUT_TOKENS}"
         )
+    if contract["checkpoint_stride"] != 15:
+        raise ValueError("official Stage 1 checkpoint stride must be 15")
+    if contract["headline_metric"] != HEADLINE_METRIC:
+        raise ValueError(f"Stage 1 headline metric must be {HEADLINE_METRIC}")
     if (
         contract["trajectories"] <= 0
         or contract["checkpoints"] % contract["trajectories"]
     ):
         raise ValueError(
-            "Stage 1 expects the same number of window checkpoints in every "
-            "trajectory"
+            "Stage 1 expects the same checkpoint grid in every trajectory"
         )
     if contract["checkpoints"] != int(
         cfg["dataset"]["expected"]["stage1_items"]
     ):
         raise ValueError(
-            "Stage 1 expected checkpoints must equal the frozen stage1_items "
-            "count"
+            "Stage 1 expected checkpoints must equal dataset.stage1_items"
         )
     return contract
 
 
 def stage1_item_path(paths: ExperimentPaths) -> Path:
-    return corpus_root(paths) / "canonical_items" / f"{STAGE1}.jsonl"
+    return item_path_for(paths)
 
 
 def stage1_items(paths: ExperimentPaths) -> list[dict[str, Any]]:
@@ -83,95 +95,59 @@ def stage1_items(paths: ExperimentPaths) -> list[dict[str, Any]]:
 
 
 def build_stage1_items(paths: ExperimentPaths) -> dict[str, Any]:
-    """Materialize Stage 1 items from the no_prospective corpus."""
-
-    from .items import build_stage1_rows
-    from .util import sha256_file, write_jsonl
-
     contract = stage1_contract(paths)
-    cfg = load_experiment_config(paths)
-    rows = build_stage1_rows(
-        paths,
-        corpus_root(paths),
-        stride=int(cfg["benchmark"]["checkpoint_stride"]),
-    )
-    if len(rows) != contract["checkpoints"]:
+    result = build_items(paths)
+    if result["items"] != contract["checkpoints"]:
         raise ValueError(
-            f"expected {contract['checkpoints']} Stage 1 items, got {len(rows)}"
+            f"expected {contract['checkpoints']} Stage 1 items, "
+            f"got {result['items']}"
         )
-    trajectories = {str(row["trajectory_id"]) for row in rows}
-    if len(trajectories) != contract["trajectories"]:
+    if result["trajectories"] != contract["trajectories"]:
         raise ValueError(
             f"expected {contract['trajectories']} trajectories, "
-            f"got {len(trajectories)}"
+            f"got {result['trajectories']}"
         )
-    path = stage1_item_path(paths)
-    write_jsonl(path, rows)
-    return {
-        "path": str(path),
-        "items": len(rows),
-        "trajectories": len(trajectories),
-        "sha256": sha256_file(path),
-        "corpus": "dialogues_no_prospective + gold_no_prospective",
-    }
+    return result
 
 
 def query_checkpoint(item: dict[str, Any]) -> int:
-    return int((item.get("metadata") or {})["query_checkpoint"])
+    metadata = item.get("metadata") or {}
+    return int(
+        metadata.get("query_checkpoint")
+        or item.get("checkpoint_session_count")
+        or len(item.get("visible_sessions") or [])
+    )
 
 
 def generation_item(item: dict[str, Any]) -> dict[str, Any]:
-    """Strip Gold and Gold-derived annotations before rendering a prompt.
-
-    `build_query` never renders item metadata, so this is defence in depth that
-    also keeps `show-prompt` and the paid path byte-identical.
-    """
+    """Remove evaluator-only Gold before prompt construction."""
 
     result = {key: value for key, value in item.items() if key != "gold"}
     result["metadata"] = {
         key: value
         for key, value in (item.get("metadata") or {}).items()
-        if key not in {"target_event_status"}
+        if key not in {"occurred_event_count", "session_type_counts"}
     }
     return result
 
 
-def target_window_session_ids(item: dict[str, Any]) -> list[str]:
-    """Return the target window's session IDs, e.g. S016…S030."""
-
-    metadata = item.get("metadata") or item
-    start = int(str(metadata["target_session_start"]).removeprefix("S"))
-    end = int(str(metadata["target_session_end"]).removeprefix("S"))
-    return [f"S{number:03d}" for number in range(start, end + 1)]
-
-
-def target_window_recall(
-    *, item_metadata: dict[str, Any], evidence_session_ids: list[str]
+def visible_prefix_recall(
+    *, item: dict[str, Any], evidence_session_ids: list[str]
 ) -> dict[str, Any]:
-    """Gold-independent retrieval quality: did evidence cover the target window?
+    """Gold-independent coverage of the visible dialogue prefix."""
 
-    Full Context necessarily scores 1.0 because it receives every session; the
-    measure separates the retrieval arms from each other, not from Full Context.
-    """
-
-    window = set(target_window_session_ids(item_metadata))
-    retrieved = {str(value) for value in evidence_session_ids}
-    hit = window & retrieved
+    visible = set(map(str, item.get("visible_sessions") or []))
+    retrieved = set(map(str, evidence_session_ids)) - {"S000"}
+    hit = visible & retrieved
     return {
-        "target_window_size": len(window),
-        "retrieved_evidence_count": len(retrieved - {"S000"}),
-        "target_window_recall": len(hit) / len(window) if window else None,
-        "target_window_hit": bool(hit),
+        "visible_prefix_size": len(visible),
+        "retrieved_evidence_count": len(retrieved),
+        "visible_prefix_recall": len(hit) / len(visible) if visible else None,
+        "visible_prefix_complete": visible <= retrieved,
     }
 
 
 def rendered_candidate_event_ids(prompt: str) -> list[str]:
-    """Read back the candidate block so a narrowed list cannot pass unnoticed.
-
-    Only the bullet lines that directly follow the candidate header count; the
-    S000 initial-state block uses the same bullet shape elsewhere in the prompt.
-    """
-
     _, _, tail = prompt.partition(CANDIDATE_HEADER)
     if not tail:
         return []
@@ -187,7 +163,7 @@ def rendered_candidate_event_ids(prompt: str) -> list[str]:
 
 
 def audit_rendered_prompt(rendered: dict[str, Any]) -> dict[str, Any]:
-    """Fail closed on future sessions, Gold fields, or a narrowed candidate set."""
+    """Fail closed on canonical IDs, future sessions, Gold, or taxonomy drift."""
 
     item = rendered["item"]
     checkpoint = query_checkpoint(item)
@@ -209,26 +185,25 @@ def audit_rendered_prompt(rendered: dict[str, Any]) -> dict[str, Any]:
     gold_fields_in_retrieval_query = sorted(
         name for name in _GOLD_FIELD_NAMES if name in groups_json
     )
-    gold_instance_id = str((item.get("gold") or {}).get("event_instance_id") or "")
+    canonical_ids = sorted(set(re.findall(r"\bS\d{3,}\b", prompt)))
+    passed = (
+        not future_session_ids
+        and not canonical_ids
+        and not gold_fields_in_prompt
+        and not gold_fields_in_retrieval_query
+        and rendered_candidates == expected_candidates
+    )
     return {
         "method_id": rendered["method_id"],
         "trajectory_id": item["trajectory_id"],
         "checkpoint": checkpoint,
         "max_visible_session_id": max(session_ids, default=0),
         "future_session_ids": future_session_ids,
+        "canonical_session_ids_in_prompt": canonical_ids,
         "gold_fields_in_prompt": gold_fields_in_prompt,
         "gold_fields_in_retrieval_query": gold_fields_in_retrieval_query,
-        "gold_event_instance_id_in_prompt": bool(
-            gold_instance_id and gold_instance_id in prompt
-        ),
         "expected_candidate_events": expected_candidates,
         "rendered_candidate_events": rendered_candidates,
         "candidate_events_exposed_by_task_prompt": True,
-        "passed": (
-            not future_session_ids
-            and not gold_fields_in_prompt
-            and not gold_fields_in_retrieval_query
-            and not (gold_instance_id and gold_instance_id in prompt)
-            and rendered_candidates == expected_candidates
-        ),
+        "passed": passed,
     }

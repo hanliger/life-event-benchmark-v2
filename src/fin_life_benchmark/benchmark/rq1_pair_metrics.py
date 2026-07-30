@@ -1,6 +1,6 @@
-"""Exact multiset metrics for the occurred-event pair pilot.
+"""Exact multiset metrics for the official Stage 1 pair task.
 
-Headline metric (the only accuracy number for this pilot): exact pair
+Headline metric (the only accuracy number for this task): exact pair
 precision / recall / F1 over the multiset of ``(event_id,
 evidence_session_id)`` atoms, where gold is one atom per occurred event
 instance at its canonical occurrence anchor.
@@ -29,7 +29,7 @@ with rq1_metrics, imported so the two protocols cannot drift):
 - gold empty and prediction empty -> 1.0 / 1.0 / 1.0;
 - gold non-empty and prediction empty -> 0.0 / 0.0 / 0.0;
 - gold empty and prediction non-empty -> precision 0.0, **recall 0.0**, F1 0.0
-  (``_prf`` returns 0.0 for a zero-support recall; this pilot keeps that
+  (``_prf`` returns 0.0 for a zero-support recall; this task keeps that
   convention rather than inventing a 1.0). F1 is 0.0 in every non-trivial
   empty case, as required.
 

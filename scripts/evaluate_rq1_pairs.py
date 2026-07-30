@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Evaluate a model on the temporary occurred-event pair pilot.
+"""Evaluate a model on the official Stage 1 occurred-event pair task.
 
 Stage ``stage1_occurred_event_evidence_pairs``. Two conditions:
 
@@ -504,7 +504,7 @@ def main() -> None:
         "include_thoughts": args.include_thoughts,
         "verbosity": args.verbosity,
         "store": args.store,
-        # This pilot runs exactly one call per (model, condition, checkpoint).
+        # This run uses exactly one call per (model, condition, checkpoint).
         # Stated in the artifact so a reader never has to infer it from the
         # row count, and so a future repeated design is distinguishable.
         "replicates_per_cell": 1,
@@ -850,7 +850,7 @@ def main() -> None:
         "strict_occurred_event_evidence_f1"
     )
     print(
-        f"rq1 occurred-pair evaluate [{args.condition}] {provider}/{model}: "
+        f"stage1 occurred-pair evaluate [{args.condition}] {provider}/{model}: "
         f"{len(results)} items, {n_parse_errors} parse errors, "
         f"{n_invalid_records} invalid records, "
         f"F1@300={final if final is None else round(final, 4)}, "

@@ -57,7 +57,7 @@ Stage 2는 값 후보를 주지 않고 대화에서 직접 복원하게 하며, 
 | 대화 계획(plan) | trajectory에서 세션별 계획(어떤 업무·어떤 단서·어떤 정답 delta)을 만듦 | `scripts/build_dialogue_plans.py`, `src/fin_life_benchmark/dialogue/evidence_planner.py` |
 | 대화 생성 | 계획에 따라 LLM으로 상담 세션을 생성 | `scripts/generate_dialogue_sessions.py`, `prompts/dialogue/` |
 | 검증/audit | 정답 누출, 상태 충돌, life-stage 위반, 복원가능성 점검 | `scripts/validate_dialogues.py`, `scripts/audit_*.py` |
-| Gold/문항 | prefix별 정답 상태와 Stage 1/2 문항 생성 | `scripts/export_prefix_gold.py`, `scripts/build_benchmark_items.py` |
+| Gold/문항 | prefix별 정답 상태와 Stage 1/2 문항 생성 | `scripts/export_prefix_gold.py`, `scripts/build_stage1_event_items.py`, `scripts/build_benchmark_items.py` |
 
 ### 2.3 꼭 알아야 할 개념
 
@@ -164,12 +164,17 @@ make restore-frozen-run RUN_ID=$RUN_ID
 # 2) 정답(gold)과 Stage 1/2 문항 생성 (frozen 데이터로부터 결정적으로 계산)
 make export-gold-controlled build-items-controlled RUN_ID=$RUN_ID
 
-# 3) 모델 평가 — 이 벤치마크로 하는 "실험"
-make evaluate RUN_ID=$RUN_ID EXECUTE=1        # .env의 provider/model 사용
-make evaluate RUN_ID=$RUN_ID                  # EXECUTE 생략 시 offline(mock) — 배관만 점검
+# 3) 모델 평가 — Stage 1 pair 과업과 Stage 2를 각각 실행
+make evaluate-stage1 RUN_ID=$RUN_ID EXECUTE=1
+make evaluate RUN_ID=$RUN_ID EXECUTE=1        # Stage 2
+
+# EXECUTE를 빼면 offline(mock) 배관 점검
+make evaluate-stage1 RUN_ID=$RUN_ID
+make evaluate RUN_ID=$RUN_ID
 ```
 
-결과는 `data/runs/$RUN_ID/eval/report.json`(스테이지별 정확도)과 `predictions.jsonl`에 남습니다.
+Stage 1 결과는 `data/runs/$RUN_ID/stage1/`, Stage 2 결과는
+`data/runs/$RUN_ID/eval/`에 남습니다.
 
 > 일부 trajectory만 쓰려면:
 > `python scripts/restore_frozen_run.py --run-id $RUN_ID --trajectory-id traj_001 --trajectory-id traj_002`
@@ -532,9 +537,9 @@ data/runs/<RUN_ID>/rq1/
 #### D.4 Stage 1 — occurred-event 근거 짝
 
 **보고 대상 Stage 1 과제**입니다
-(`stage1_occurred_event_evidence_pairs`, `rq1-occurred-event-pairs-temp-v1`).
-§5-D.1의 `natural/progressive_items.jsonl`을 그대로 재사용하면서 한 가지를
-묻습니다:
+(`stage1_occurred_event_evidence_pairs`,
+`stage1-occurred-event-evidence-pairs-v1`). 15세션 단위 누적 prefix마다 한
+가지를 묻습니다:
 
 > 이 prefix에서 **실제로 일어난** 생애 사건과, 그 발생을 처음 확정하는 세션의
 > 짝을 모두 복원할 수 있는가?
@@ -557,7 +562,7 @@ make evaluate-rq1-pairs-dev               # offline mock
 make evaluate-rq1-pairs-dev EXECUTE=1 RQ1_PROVIDER=anthropic RQ1_MODEL=claude-opus-4-8
 ```
 
-산출물은 기존 파일럿을 덮지 않도록 `data/runs/<RUN_ID>/rq1_pair_temp/`
+산출물은 `data/runs/<RUN_ID>/stage1/`
 (`protocol_manifest.json`, `predictions/`, `reports/`, `audit/`)에 씁니다.
 
 ##### no-prospective 조건 (기본값)
@@ -601,7 +606,7 @@ python scripts/audit_rq1_pair_no_prospective.py \
     --original-sessions-dir data/runs/hf_full/final_sessions \
     --taxonomy data/runs/$RUN_ID/rq1/taxonomy.json \
     --trajectory-id traj_001 --checkpoint 300 \
-    --output-dir data/runs/$RUN_ID/rq1_pair_temp/no_prospective_substituted/audit/cp300
+    --output-dir data/runs/$RUN_ID/stage1/no_prospective_substituted/audit/cp300
 
 # 사다리 실행 (--condition 생략 시 ablation이 기본값)
 python scripts/evaluate_rq1_pairs.py \
@@ -612,12 +617,12 @@ python scripts/evaluate_rq1_pairs.py \
     --checkpoint 30 --checkpoint 60 --checkpoint 90 --checkpoint 120 \
     --checkpoint 150 --checkpoint 180 --checkpoint 210 --checkpoint 240 \
     --checkpoint 270 --checkpoint 300 \
-    --output  data/runs/$RUN_ID/rq1_pair_temp/no_prospective_substituted/predictions/<tag>.jsonl \
-    --report  data/runs/$RUN_ID/rq1_pair_temp/no_prospective_substituted/reports/<tag>.json
+    --output  data/runs/$RUN_ID/stage1/no_prospective_substituted/predictions/<tag>.jsonl \
+    --report  data/runs/$RUN_ID/stage1/no_prospective_substituted/reports/<tag>.json
 
 # 여러 모델의 사다리를 한 표로
 python scripts/summarize_rq1_pair_ladder.py \
-    data/runs/$RUN_ID/rq1_pair_temp/no_prospective_substituted/predictions/*.jsonl
+    data/runs/$RUN_ID/stage1/no_prospective_substituted/predictions/*.jsonl
 ```
 
 설계·지표·**알려진 한계**(cell당 1회 호출, trajectory n=1, checkpoint가 중첩되어
@@ -651,7 +656,10 @@ prediction row가 `temperature_applied` / `temperature_omission_reason` /
 
 ### E. 모델 비교 하네스 (`experiment/`)
 
-§5-A의 `make evaluate`는 한 모델을 문항에 그대로 통과시키는 **배관 확인용**입니다. 논문에 들어가는 Stage 1 / Stage 2 비교는 별도 패키지 `experiment/`에서 실행합니다. 여기서는 "긴 이력을 어떻게 모델에 넣을지"가 비교 대상입니다.
+§5-A의 `make evaluate-stage1`/`make evaluate`는 한 모델을 문항에 그대로
+통과시키는 **배관 확인용**입니다. 논문에 들어가는 Stage 1 / Stage 2 비교는
+별도 패키지 `experiment/`에서 실행합니다. 여기서는 "긴 이력을 어떻게
+모델에 넣을지"가 비교 대상입니다.
 
 | Family | Method | 입력 |
 | --- | --- | --- |
@@ -676,9 +684,7 @@ PYTHONPATH=.:src:experiment/src $PY -m financial_memory_experiment.cli build-sta
 | Stage | 진입점 | Runbook | 상태 |
 | --- | --- | --- | --- |
 | Stage 2 | `experiment/scripts/paid/run_stage2_2.sh` | [`stage2_2_9_method_runbook.md`](experiment/docs/stage2_2_9_method_runbook.md) | 실행 가능 |
-| Stage 1 | `experiment/scripts/paid/run_stage1.sh` | [`stage1_9_method_runbook.md`](experiment/docs/stage1_9_method_runbook.md) | **사용 금지 — 마이그레이션 중** |
-
-> **Stage 1 runner는 아직 쓰지 마세요.** 현재 `stage1_event_identification`(15세션 window에서 사건 하나 선택)을 평가하도록 배선돼 있는데, 보고 대상 Stage 1은 §5-D.4의 `stage1_occurred_event_evidence_pairs`(prefix 전체의 occurred 사건 + 근거 세션 짝)입니다. 채점 지표도 accuracy가 아니라 `strict_occurred_event_evidence_f1`입니다. 그때까지 Stage 1은 `scripts/evaluate_rq1_pairs.py`로 돌리되, 그 경로에는 RAG·Memory Agent arm과 유료 실행 게이트가 없습니다.
+| Stage 1 | `experiment/scripts/paid/run_stage1.sh` | [`stage1_9_method_runbook.md`](experiment/docs/stage1_9_method_runbook.md) | 실행 가능 |
 
 두 runner는 `run_harness.py`를 공유하므로 provider lock·prompt 감사·resume 절차는 동일합니다.
 

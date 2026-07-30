@@ -75,7 +75,10 @@ def answer_contract(item: dict[str, Any]) -> str:
     if item["stage"] == STAGE2_2:
         return f'{{"schema_version":"{SCHEMA_VERSION}","state":{{...}}}}'
     if item["stage"] == STAGE1:
-        return "<answer>event_id</answer>"
+        return (
+            '{"pairs":[{"event_id":"<EVENT_ID>",'
+            '"evidence_session_id":"<D###>"}]}'
+        )
     if (
         item["stage"] == "stage2_memory_value"
         and (item.get("metadata") or {}).get("answer_type") == "free_response"
@@ -87,6 +90,8 @@ def answer_contract(item: dict[str, Any]) -> str:
 def build_query(item: dict[str, Any], evidence: list[dict[str, Any]]) -> str:
     if item["stage"] == STAGE2_2:
         return _build_stage2_2_query(item, evidence)
+    if item["stage"] == STAGE1:
+        return _build_stage1_query(item, evidence)
     lines = [
         "아래 제공된 상담 이력 또는 검색 근거와 질문만 사용하세요.",
         "질문의 대상 기간과 현재 질의 checkpoint를 혼동하지 마세요.",
@@ -96,17 +101,47 @@ def build_query(item: dict[str, Any], evidence: list[dict[str, Any]]) -> str:
         "",
         f"[질문]\n{item['question']}",
     ]
-    if item["stage"] == STAGE1:
-        candidates = (item.get("metadata") or {}).get("candidate_events") or []
-        lines.extend(
-            ["", "[가능한 event_id]", *(f"- {c['event_id']}: {c['label_ko']}" for c in candidates)]
-        )
-    elif item.get("options"):
+    if item.get("options"):
         lines.extend(
             ["", "[선택지]", *(f"{o['option_id']}. {o['text']}" for o in item["options"])]
         )
     lines.extend(["", f"설명 없이 {answer_contract(item)} 형식으로만 답하세요."])
     return "\n".join(lines)
+
+
+def _build_stage1_query(
+    item: dict[str, Any], evidence: list[dict[str, Any]]
+) -> str:
+    candidates = (item.get("metadata") or {}).get("candidate_events") or []
+    return "\n".join(
+        [
+            "다음은 한 고객의 은행 상담 세션 이력입니다.",
+            "지금까지 실제로 일어난 모든 Life Event와, 각 발생을 처음 "
+            "확정하는 상담 세션을 짝지어 보고하세요.",
+            "",
+            "판단 규칙:",
+            "- 약한 암시, 앞으로의 계획, 예정, 취소된 사건은 보고하지 마세요.",
+            "- 후속 처리나 뒤늦은 과거 회상은 최초 발생 확정 세션이 아닙니다.",
+            "- 같은 event_id가 여러 번 발생했다면 각각 별도 pair로 쓰세요.",
+            "- 사건 수는 알려져 있지 않으며, 발생 사건이 없을 수 있습니다.",
+            "",
+            "## 가능한 Life Event 목록",
+            *(f"- {c['event_id']}: {c['label_ko']}" for c in candidates),
+            "",
+            "## 상담 세션 이력",
+            *(
+                _public_stage1_session(row)
+                for row in evidence
+                if str(row.get("session_id")) != "S000"
+            ),
+            "",
+            "설명이나 Markdown 없이 JSON 객체 하나만 출력하세요.",
+            '형식: {"pairs":[{"event_id":"<목록의 ID>",'
+            '"evidence_session_id":"<보이는 D###>"}]}',
+            "각 레코드에는 위 두 필드만 쓰고, 발생 사건이 없으면 "
+            '{"pairs":[]}를 출력하세요.',
+        ]
+    )
 
 
 def _public_session(session: dict[str, Any]) -> str:
@@ -118,6 +153,27 @@ def _public_session(session: dict[str, Any]) -> str:
     )
     rendered = {**session, "session_id": public}
     return format_session(rendered)
+
+
+def _public_stage1_session(session: dict[str, Any]) -> str:
+    """Render Stage 1 evidence without leaking IDs embedded by memory stores."""
+
+    canonical = str(session["session_id"])
+    public = (
+        f"D{int(canonical[1:]):03d}"
+        if canonical.startswith("S") and canonical[1:].isdigit()
+        else canonical
+    )
+    lines = [f"[세션 {public}]"]
+    for turn in session.get("turns") or []:
+        speaker = "고객" if turn.get("speaker") == "user" else "상담원"
+        text = re.sub(
+            r"\bS(\d{3,})\b",
+            lambda match: f"D{int(match.group(1)):03d}",
+            str(turn.get("text", "")),
+        )
+        lines.append(f"{speaker}: {text}")
+    return "\n".join(lines)
 
 
 def _build_stage2_2_query(
@@ -171,7 +227,7 @@ def parse_answer(item: dict[str, Any], raw: str) -> str:
     match = _ANSWER.search(raw)
     value = match.group(1).strip() if match else ""
     if item["stage"] == STAGE1:
-        return value
+        return raw.strip()
     if item["stage"] == "stage2_memory_value":
         metadata = item.get("metadata") or {}
         if metadata.get("answer_type") == "free_response":
@@ -185,7 +241,7 @@ def parse_answer(item: dict[str, Any], raw: str) -> str:
 
 def gold_answer(item: dict[str, Any]) -> str:
     if item["stage"] == STAGE1:
-        return str((item.get("gold") or {}).get("event_id") or "")
+        return ""
     if item["stage"] == "stage2_memory_value":
         gold = item.get("gold") or {}
         if (item.get("metadata") or {}).get("answer_type") == "free_response":

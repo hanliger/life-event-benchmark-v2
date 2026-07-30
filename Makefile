@@ -47,7 +47,8 @@ DIALOGUE_JUDGE_ROOT := $(CANARY_V2_ROOT)/reports/dialogue_judge
 # packet score instead (same rubric).
 REVIEW_DECISION ?= $(DIALOGUE_JUDGE_ROOT)/judge_review_decision.json
 RQ1_ROOT := $(RUN_DIR)/rq1
-RQ1_PAIR_ROOT := $(RUN_DIR)/rq1_pair_temp
+STAGE1_ROOT := $(RUN_DIR)/stage1
+RQ1_PAIR_ROOT := $(STAGE1_ROOT)
 RQ1_CONDITION ?= full_prefix
 # evaluate_rq1_pairs.py now defaults to the ablation, so the baseline plumbing
 # check has to name full_prefix explicitly. Override to run the ablation --
@@ -62,7 +63,7 @@ RQ1_MODEL_TAG ?= $(if $(filter 1,$(EXECUTE)),live,mock__mock)
 	audit-dialogue-canary-v2 review-dialogue-canary-v2 score-dialogue-canary-v2 dialogue-judge-gate \
 	coverage-trajectories fetch-dialogues fetch-counterfactual-fillers restore-frozen-run counterfactual-ablation \
 	dialogue-smoke-dry dialogue-smoke validate-dialogues \
-	export-gold build-stage1-items build-items evaluate history-filter audit pipeline-smoke test clean-generated \
+	export-gold build-stage1-items build-items evaluate evaluate-stage1 history-filter audit pipeline-smoke test clean-generated \
 	export-gold-controlled build-items-controlled audit-controlled export-public \
 	build-rq1 build-rq1-distractor audit-rq1 evaluate-rq1 rq1-controlled \
 	audit-rq1-pairs evaluate-rq1-pairs-dev
@@ -292,6 +293,9 @@ validate-dialogues:
 export-gold:
 	$(PYTHON) scripts/export_prefix_gold.py \
 		--trajectories-dir $(TRAJ_DIR) --sessions-dir $(SESS_DIR) --output $(GOLD)
+	$(PYTHON) scripts/export_prefix_gold.py \
+		--trajectories-dir $(TRAJ_DIR) --sessions-dir $(SESS_DIR) \
+		--output $(GOLD_CHECKPOINTS) --checkpoint-stride 15
 
 export-gold-controlled:
 	$(PYTHON) scripts/export_prefix_gold.py \
@@ -302,8 +306,9 @@ export-gold-controlled:
 
 build-stage1-items:
 	$(PYTHON) scripts/build_stage1_event_items.py \
-		--sessions-dir $(SESS_DIR) --trajectories-dir $(TRAJ_DIR) \
-		--output $(ITEMS_DIR)/stage1_event_status.jsonl
+		--prefix-gold $(GOLD_CHECKPOINTS) --sessions-dir $(SESS_DIR) \
+		--output $(ITEMS_DIR)/stage1_occurred_event_evidence_pairs.jsonl \
+		--taxonomy-output $(ITEMS_DIR)/stage1_taxonomy.json
 
 build-items: build-stage1-items
 	$(PYTHON) scripts/build_benchmark_items.py \
@@ -325,9 +330,19 @@ export-public:
 # EXECUTE=1 calls the real LLM (provider/model from .env); default is mock.
 evaluate:
 	$(PYTHON) scripts/evaluate_benchmark_items.py \
-		--items $(ITEMS_DIR)/stage1_event_status.jsonl $(ITEMS_DIR)/stage2_memory_value.jsonl \
+		--items $(ITEMS_DIR)/stage2_memory_value.jsonl \
 		--sessions-dir $(SESS_DIR) \
 		--output $(EVAL_DIR)/predictions.jsonl --report $(EVAL_DIR)/report.json \
+		$(if $(filter 1,$(EXECUTE)),--execute,)
+
+evaluate-stage1:
+	$(PYTHON) scripts/evaluate_rq1_pairs.py \
+		--items $(ITEMS_DIR)/stage1_occurred_event_evidence_pairs.jsonl \
+		--sessions-dir $(SESS_DIR) \
+		--taxonomy $(ITEMS_DIR)/stage1_taxonomy.json \
+		--condition full_prefix \
+		--output $(STAGE1_ROOT)/predictions/$(RQ1_MODEL_TAG).jsonl \
+		--report $(STAGE1_ROOT)/reports/$(RQ1_MODEL_TAG).json \
 		$(if $(filter 1,$(EXECUTE)),--execute,)
 
 history-filter:
@@ -392,13 +407,11 @@ evaluate-rq1:
 		--report $(RQ1_ROOT)/reports/$(RQ1_MODEL_TAG)/natural_$(RQ1_CONDITION).json \
 		$(if $(filter 1,$(EXECUTE)),--execute,)
 
-# --- RQ1 temporary pilot: stage1_occurred_event_evidence_pairs -------------
-# Reuses the items built by build-rq1; writes to a separate artifact root so
-# the stage1_event_trajectory pilot stays reproducible.
+# --- Stage 1: stage1_occurred_event_evidence_pairs --------------------------
 audit-rq1-pairs:
 	$(PYTHON) scripts/audit_rq1_pair_protocol.py \
-		--items $(RQ1_ROOT)/natural/progressive_items.jsonl \
-		--sessions-dir $(SESS_DIR) --taxonomy $(RQ1_ROOT)/taxonomy.json \
+		--items $(ITEMS_DIR)/stage1_occurred_event_evidence_pairs.jsonl \
+		--sessions-dir $(SESS_DIR) --taxonomy $(ITEMS_DIR)/stage1_taxonomy.json \
 		$(if $(RQ1_PAIR_TRAJ),--trajectory-id $(RQ1_PAIR_TRAJ),) \
 		--output-dir $(RQ1_PAIR_ROOT)/audit
 
@@ -406,8 +419,8 @@ audit-rq1-pairs:
 # RQ1_MODEL are given); default is an offline mock plumbing check.
 evaluate-rq1-pairs-dev:
 	$(PYTHON) scripts/evaluate_rq1_pairs.py \
-		--items $(RQ1_ROOT)/natural/progressive_items.jsonl \
-		--sessions-dir $(SESS_DIR) --taxonomy $(RQ1_ROOT)/taxonomy.json \
+		--items $(ITEMS_DIR)/stage1_occurred_event_evidence_pairs.jsonl \
+		--sessions-dir $(SESS_DIR) --taxonomy $(ITEMS_DIR)/stage1_taxonomy.json \
 		--condition $(RQ1_PAIR_CONDITION) \
 		$(foreach cp,$(RQ1_PAIR_CHECKPOINTS),--checkpoint $(cp)) \
 		--split dev \

@@ -1,6 +1,6 @@
 """The single frozen corpus both reported stages evaluate on.
 
-Stage 1 (`stage1_event_identification`) and Stage 2
+Stage 1 (`stage1_occurred_event_evidence_pairs`) and Stage 2
 (`stage2_2_reconstruct`) both read `dialogues_no_prospective` +
 `gold_no_prospective` from the dataset. There is no second corpus wiring: one
 `prepare` step materializes the sessions, initial states, prefix gold, and items

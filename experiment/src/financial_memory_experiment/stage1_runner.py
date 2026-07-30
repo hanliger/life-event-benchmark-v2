@@ -1,7 +1,7 @@
 """Stage 1 nine-method paid grid runner.
 
-Stage 1 asks which Life Event most recently occurred inside each 15-session
-target window, so the frozen grid is 20 trajectories × 20 window checkpoints.
+Stage 1 asks for every occurred Life Event and its first establishing session
+in each cumulative 15-session checkpoint prefix.
 The comparison surface, immutable plan, provider lock, and resume semantics are
 shared with Stage 2.2 through `run_harness`; only item selection, the prompt
 leakage audit, and reporting are Stage 1 specific.
@@ -57,8 +57,9 @@ from .stage1 import (
     query_checkpoint,
     stage1_contract,
     stage1_item_path,
-    target_window_recall,
+    visible_prefix_recall,
 )
+from .stage1_pairs import HEADLINE_METRIC
 from .util import read_jsonl, sha256_json, write_json
 
 
@@ -382,8 +383,10 @@ def _validate_complete_grid(
             raise RuntimeError(
                 f"{row.get('item_id')}: unexpected stage {row.get('stage')}"
             )
-        if not str(row.get("gold") or ""):
-            raise RuntimeError(f"{row.get('item_id')}: missing Gold event_id")
+        if not isinstance(row.get("gold"), list):
+            raise RuntimeError(
+                f"{row.get('item_id')}: missing Stage 1 pair Gold"
+            )
     return paths
 
 
@@ -406,32 +409,23 @@ def _materialize_answer_pairs(
                 / trajectory
                 / f"cp_{checkpoint:03d}.json",
                 {
-                    "schema_version": "stage1_answer_pair-v1",
+                    "schema_version": "stage1_answer_pairs-v1",
                     "method_id": method,
                     "trajectory_id": trajectory,
                     "checkpoint": checkpoint,
-                    "window_index": item_metadata.get("window_index"),
-                    "target_window": [
-                        item_metadata.get("target_session_start"),
-                        item_metadata.get("target_session_end"),
-                    ],
-                    "question": item.get("question"),
+                    "task_id": STAGE1,
                     "candidate_event_count": len(
                         item_metadata.get("candidate_events") or []
                     ),
-                    "prediction_event_id": row["prediction"],
-                    "gold_event_id": row["gold"],
-                    "gold_event_label": (item.get("gold") or {}).get(
-                        "event_label"
-                    ),
-                    # Gold-shaped prediction plus its field-level diff.
-                    "answer_record": row.get("answer_record"),
+                    "prediction_pairs": row["prediction"],
+                    "gold_pairs": row["gold"],
+                    "metrics": row.get("metrics") or {},
                     "correct": bool(row["correct"]),
                     "parse_error": bool(row.get("parse_error")),
                     "retrieval_evidence": {
                         "session_ids": row.get("evidence_session_ids") or [],
-                        **target_window_recall(
-                            item_metadata=item_metadata,
+                        **visible_prefix_recall(
+                            item=item,
                             evidence_session_ids=row.get(
                                 "evidence_session_ids"
                             )
@@ -463,25 +457,18 @@ def _write_auxiliary_metrics(
     retrieval_rows: list[dict[str, Any]] = []
     for row in raw_rows:
         item_metadata = row.get("item_metadata") or {}
-        record = row.get("answer_record") or {}
+        metrics = row.get("metrics") or {}
         checkpoint_rows.append(
             {
                 "method_id": row["method_id"],
                 "trajectory_id": row["trajectory_id"],
                 "checkpoint": row["query_checkpoint"],
-                "window_index": item_metadata.get("window_index"),
+                HEADLINE_METRIC: metrics.get(HEADLINE_METRIC),
                 "correct": int(bool(row["correct"])),
-                "prediction_event_id": row["prediction"],
-                "gold_event_id": row["gold"],
-                # Labels make the row readable without joining the item file.
-                "prediction_event_label": (record.get("prediction") or {}).get(
-                    "event_label"
-                ),
-                "gold_event_label": (record.get("gold") or {}).get(
-                    "event_label"
-                ),
-                "prediction_in_candidate_set": record.get(
-                    "prediction_in_candidate_set"
+                "predicted_pair_count": metrics.get("predicted_pair_count"),
+                "gold_pair_count": metrics.get("gold_pair_count"),
+                "true_positive_pair_count": metrics.get(
+                    "true_positive_pair_count"
                 ),
                 "parse_error": int(bool(row.get("parse_error"))),
             }
@@ -493,25 +480,32 @@ def _write_auxiliary_metrics(
                 "method_id": row["method_id"],
                 "trajectory_id": row["trajectory_id"],
                 "checkpoint": row["query_checkpoint"],
-                **target_window_recall(
-                    item_metadata=item_metadata,
+                **visible_prefix_recall(
+                    item={
+                        "visible_sessions": [
+                            f"S{number:03d}"
+                            for number in range(
+                                1, int(row["query_checkpoint"]) + 1
+                            )
+                        ]
+                    },
                     evidence_session_ids=row.get("evidence_session_ids") or [],
                 ),
             }
         )
     trajectory_rows = []
-    grouped: dict[tuple[str, str], list[int]] = {}
+    grouped: dict[tuple[str, str], list[float]] = {}
     for row in raw_rows:
         grouped.setdefault(
             (str(row["method_id"]), str(row["trajectory_id"])), []
-        ).append(int(bool(row["correct"])))
+        ).append(float((row.get("metrics") or {})[HEADLINE_METRIC]))
     for (method, trajectory), values in sorted(grouped.items()):
         trajectory_rows.append(
             {
                 "method_id": method,
                 "trajectory_id": trajectory,
                 "items": len(values),
-                "accuracy": sum(values) / len(values),
+                HEADLINE_METRIC: sum(values) / len(values),
             }
         )
     write_csv(run_dir / "metrics" / "checkpoint_metrics.csv", checkpoint_rows)
@@ -536,12 +530,12 @@ def _write_figures(
     for row in checkpoint_rows:
         counts.setdefault(
             (str(row["method_id"]), int(row["checkpoint"])), []
-        ).append(int(row["correct"]))
+        ).append(float(row[HEADLINE_METRIC]))
     for (method, checkpoint), values in counts.items():
         series.setdefault(method, {})[checkpoint] = sum(values) / len(values)
-    (figure_dir / "checkpoint_event_identification_accuracy.svg").write_text(
+    (figure_dir / "checkpoint_strict_pair_f1.svg").write_text(
         line_chart_svg(
-            title="Stage 1 event identification accuracy by checkpoint",
+            title="Stage 1 strict occurred-event/evidence F1 by checkpoint",
             x_values=checkpoints,
             series=series,
         ),
@@ -551,14 +545,14 @@ def _write_figures(
     trajectories = sorted(
         {str(row["trajectory_id"]) for row in trajectory_rows}
     )
-    (figure_dir / "method_trajectory_accuracy_heatmap.svg").write_text(
+    (figure_dir / "method_trajectory_strict_pair_f1_heatmap.svg").write_text(
         heatmap_svg(
-            title="Method × trajectory Stage 1 accuracy",
+            title="Method × trajectory Stage 1 strict pair F1",
             columns=methods,
             rows=trajectories,
             values={
                 (str(row["method_id"]), str(row["trajectory_id"])): float(
-                    row["accuracy"]
+                    row[HEADLINE_METRIC]
                 )
                 for row in trajectory_rows
             },
@@ -580,11 +574,11 @@ def command_report(args: argparse.Namespace) -> None:
     _write_auxiliary_metrics(run_dir, prediction_paths)
     _materialize_answer_pairs(paths, run_dir, prediction_paths)
     lines = [
-        "# Stage 1 Event Identification — 9-Method Comparison",
+        "# Stage 1 Occurred-Event/Evidence Pairs — 9-Method Comparison",
         "",
-        "Primary metric is trajectory-macro accuracy: each 15-session window "
-        "checkpoint is scored, averaged within a trajectory, then trajectories "
-        "are averaged with equal weight. Retrieval and memory arms share one "
+        f"Primary metric is `{HEADLINE_METRIC}`: each cumulative 15-session "
+        "checkpoint scores the exact multiset of all occurred-event/evidence "
+        "pairs, then checkpoints are equally weighted. Retrieval and memory arms share one "
         "question query at top_k=10; Full Context receives every session up to "
         "the checkpoint.",
         "",
@@ -596,13 +590,13 @@ def command_report(args: argparse.Namespace) -> None:
         "- `metrics/checkpoint_metrics.csv`",
         "- `metrics/trajectory_metrics.csv`",
         "- `metrics/parse_reliability.csv`",
-        "- `metrics/retrieval_recall.csv` — target-window coverage of the "
+        "- `metrics/retrieval_recall.csv` — visible-prefix coverage of the "
         "evidence each method actually used",
         "- `metrics/cost_latency.csv`",
         "- `answer_pairs/<method>/<trajectory>/cp_XXX.json`",
         "",
-        "`retrieval_recall.csv` is Gold-independent: it measures whether the "
-        "target window was in context at all, so Full Context scores 1.0 by "
+        "`retrieval_recall.csv` is Gold-independent: it measures how much of the "
+        "visible prefix was in context, so Full Context scores 1.0 by "
         "construction and the number separates the retrieval arms from each "
         "other.",
         "",

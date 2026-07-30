@@ -2,7 +2,8 @@
 
 ## 연구 질문
 
-- Stage 1: 최근 15-session window에서 실제 발생한 최신 life event를 찾는가?
+- Stage 1: 15-session 단위 누적 prefix에서 발생한 모든 life event와 각 발생
+  확정 session을 복원하는가?
 - Stage 2: 이후 상태가 바뀌고 retention lag가 늘어나도 과거 checkpoint의 상태를
   회상하는가?
 - System comparison: Full Context, retrieval, persistent memory 중 어떤 접근이
@@ -12,8 +13,8 @@
 
 ## Stage 정의
 
-Stage 1은 각 15-session target window 안에서 가장 최근에 `occurred`가 된 event의
-`event_id`를 맞힌다.
+Stage 1은 각 15-session checkpoint까지 누적된 prefix에서 모든 occurred event의
+`event_id`와 최초 발생 확정 `D###` session을 pair로 답한다.
 
 Stage 2는 query 시점의 최신 상태가 아니라 문항에 표시된 기준일의 historical
 state를 답한다. 닫힌 값 집합은 A–D 객관식이고, 회사명·주소·금액·목록 등은
@@ -99,7 +100,7 @@ Lifecycle 질문과 memory 질문은 별도 stage로 보고한다.
 
 | 대상 | Primary |
 |---|---|
-| Stage 1 | trajectory-macro accuracy |
+| Stage 1 | checkpoint 균등가중 `strict_occurred_event_evidence_f1` |
 | Stage 2 | checkpoint → target → trajectory 계층 macro accuracy |
 | Masking | stage × arm accuracy |
 | Retrieval | latest-state recall@k, complete-evidence recall@k |

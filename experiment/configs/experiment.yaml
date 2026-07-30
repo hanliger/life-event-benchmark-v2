@@ -19,12 +19,13 @@ dataset:
     masking_arms: 5
     masking_cases: 2255
     masking_questions: 4510
-stage1_event_identification:
-  task_id: stage1_event_identification
-  # Built from the same no_prospective corpus as stage2_2_reconstruct below.
-  # The 15-session window end is the query checkpoint, so the frozen grid is
-  # 20 trajectories × 20 checkpoints = 400 items.
+stage1_occurred_event_evidence_pairs:
+  task_id: stage1_occurred_event_evidence_pairs
+  # Every checkpoint exposes the cumulative prefix. The answer contains all
+  # occurred event names and their first establishing session, not one target
+  # event selected from the latest window.
   corpus: stage2_2_reconstruct
+  headline_metric: strict_occurred_event_evidence_f1
   retrieval:
     strategy: single_question_query
     top_k: 10

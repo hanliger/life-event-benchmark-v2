@@ -284,7 +284,11 @@ def main() -> int:
             for path in session_files
             for row in read_jsonl(path)
         )
-        stage1_path = run_dir / "benchmark_items" / "stage1_event_status.jsonl"
+        stage1_path = (
+            run_dir
+            / "benchmark_items"
+            / "stage1_occurred_event_evidence_pairs.jsonl"
+        )
         stage2_path = run_dir / "benchmark_items" / "stage2_memory_value.jsonl"
         manifest["controlled_outputs"] = {
             "window_size_sessions": 15,
@@ -304,7 +308,10 @@ def main() -> int:
                 "sha256": _sha256(checkpoints_path),
             },
             "stage1_items": {
-                "path": "benchmark_items/stage1_event_status.jsonl",
+                "path": (
+                    "benchmark_items/"
+                    "stage1_occurred_event_evidence_pairs.jsonl"
+                ),
                 "count": _line_count(stage1_path),
                 "sha256": _sha256(stage1_path),
             },
@@ -316,7 +323,12 @@ def main() -> int:
             "audit": {"path": f"reports/{args.run_version}_controlled_audit.json"},
         }
         public_sessions_dir = run_dir / "public" / "dialogues" / "sessions"
-        public_stage1_path = run_dir / "public" / "benchmark_items" / "stage1_event_status.jsonl"
+        public_stage1_path = (
+            run_dir
+            / "public"
+            / "benchmark_items"
+            / "stage1_occurred_event_evidence_pairs.jsonl"
+        )
         public_stage2_path = run_dir / "public" / "benchmark_items" / "stage2_memory_value.jsonl"
         if public_sessions_dir.exists() and public_stage1_path.exists() and public_stage2_path.exists():
             public_session_files = sorted(public_sessions_dir.glob("sessions_traj_*.jsonl"))
@@ -326,7 +338,10 @@ def main() -> int:
                     "count": sum(_line_count(path) for path in public_session_files),
                 },
                 "stage1_items": {
-                    "path": "public/benchmark_items/stage1_event_status.jsonl",
+                    "path": (
+                        "public/benchmark_items/"
+                        "stage1_occurred_event_evidence_pairs.jsonl"
+                    ),
                     "count": _line_count(public_stage1_path),
                     "sha256": _sha256(public_stage1_path),
                 },

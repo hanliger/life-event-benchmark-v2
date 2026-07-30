@@ -1,4 +1,4 @@
-"""Tests for the temporary occurred-event evidence pair pilot.
+"""Tests for the official Stage 1 occurred-event evidence pair task.
 
 Covers the strict parser, the occurred-anchor gold projection, the exact
 multiset metric (including every error case the protocol pins down), checkpoint
@@ -666,8 +666,14 @@ def test_mock_evaluation_completes_offline(tmp_path, monkeypatch):
 
     payload = json.loads(report.read_text(encoding="utf-8"))
     assert payload["stage"] == "stage1_occurred_event_evidence_pairs"
-    assert payload["protocol_version"] == "rq1-occurred-event-pairs-temp-v1"
-    assert payload["metrics_version"] == "rq1-exact-occurred-pair-metrics-v1"
+    assert (
+        payload["protocol_version"]
+        == "stage1-occurred-event-evidence-pairs-v1"
+    )
+    assert (
+        payload["metrics_version"]
+        == "stage1-exact-occurred-pair-metrics-v1"
+    )
     assert payload["item_count"] == 2
     assert payload["run_config"]["prompt_sha256"]
     assert payload["checkpoints"] == [15, 30]

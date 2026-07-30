@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 
 from financial_memory_experiment.evaluator import run_method
 from financial_memory_experiment.paths import ExperimentPaths
@@ -11,10 +12,32 @@ from financial_memory_experiment.metrics import (
 from financial_memory_experiment.stage2_2 import stage2_2_item_path
 from financial_memory_experiment.stage2_2_runner import (
     DEFAULT_METHODS,
+    _load_approved_environment,
     _materialize_state_pairs,
     _write_auxiliary_metrics,
 )
 from financial_memory_experiment.util import read_jsonl, write_json
+
+
+def test_stage2_2_paid_environment_loads_repo_root_fallback(
+    tmp_path, monkeypatch
+):
+    experiment_root = tmp_path / "experiment"
+    experiment_root.mkdir()
+    (tmp_path / ".env").write_text(
+        "ANTHROPIC_API_KEY=repo-root-key\n"
+        "GEMINI_API_KEY=gemini-key\n",
+        encoding="utf-8",
+    )
+    paths = ExperimentPaths(root=experiment_root, repo_root=tmp_path)
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+
+    _load_approved_environment(paths)
+
+    assert os.environ["ANTHROPIC_API_KEY"] == "repo-root-key"
+    assert os.environ["GOOGLE_API_KEY"] == "gemini-key"
 
 
 def test_nine_methods_share_stage2_2_contract_on_mock_grid(tmp_path):

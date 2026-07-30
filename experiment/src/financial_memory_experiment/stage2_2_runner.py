@@ -833,6 +833,17 @@ def _preflight_paid(plan: dict[str, Any]) -> None:
             ) from exc
 
 
+def _load_approved_environment(paths: ExperimentPaths) -> None:
+    """Load secrets only after the immutable plan is approved and verified."""
+
+    load_dotenv(paths.root / ".env")
+    load_dotenv(paths.repo_root / ".env")
+    if not os.environ.get("GOOGLE_API_KEY") and os.environ.get(
+        "GEMINI_API_KEY"
+    ):
+        os.environ["GOOGLE_API_KEY"] = os.environ["GEMINI_API_KEY"]
+
+
 def _attempt_path(
     run_dir: Path, method: str, trajectory: str
 ) -> tuple[Path | None, Path]:
@@ -1532,7 +1543,7 @@ def command_execute(args: argparse.Namespace) -> None:
     paths = ExperimentPaths.discover()
     run_dir = _resolve_run_dir(paths, args.run_dir)
     plan = _load_verified_plan(run_dir, args)
-    load_dotenv(paths.root / ".env")
+    _load_approved_environment(paths)
     _preflight_paid(plan)
     os.environ["FIN_MEMORY_DISABLE_PAID_APIS"] = "0"
     manifest_path = run_dir / "run_manifest.json"

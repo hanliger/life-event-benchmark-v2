@@ -13,7 +13,7 @@ from financial_memory_experiment.paths import ExperimentPaths
 from financial_memory_experiment.prompts import build_query, gold_answer, parse_answer
 
 
-def test_exactly_nine_methods_and_short_output_cap():
+def test_nine_stage2_methods_and_three_stage1_models():
     cfg = load_experiment_config()
     assert len(method_ids()) == 9
     assert len(set(method_ids())) == 9
@@ -29,6 +29,18 @@ def test_exactly_nine_methods_and_short_output_cap():
         "fc_openrouter_qwen_3_6_35b_a3b_fp8",
     ]
     assert cfg["analysis_methods"] == []
+    assert cfg["stage1_occurred_event_evidence_pairs"]["methods"] == [
+        "fc_gpt_5_6_sol",
+        "fc_claude_opus_4_8",
+        "fc_gemini_3_1_pro",
+    ]
+    assert (
+        cfg["stage1_occurred_event_evidence_pairs"][
+            "request_timeout_seconds"
+        ]
+        == 600
+    )
+    assert cfg["stage1_occurred_event_evidence_pairs"]["parse_retries"] == 0
     assert cfg["models"]["claude_opus_4_8"] == "claude-opus-4-8"
     assert cfg["models"]["claude_opus_4_8_request_timeout_seconds"] == 300
     assert cfg["models"]["final_answer_max_tokens"] == 4096
@@ -177,6 +189,52 @@ def test_opus_4_8_method_uses_pinned_model_and_low_settings(monkeypatch):
             "thinking": {"type": "adaptive", "display": "omitted"},
             "output_config": {"effort": "low"},
         },
+    )
+
+
+def test_stage1_gpt_uses_frozen_chat_completions_settings(monkeypatch):
+    captured = []
+
+    def fake_reader(
+        provider,
+        model,
+        mock,
+        max_tokens,
+        timeout_seconds,
+        generation_settings,
+        *,
+        api_surface=None,
+    ):
+        captured.append(
+            (
+                provider,
+                model,
+                timeout_seconds,
+                generation_settings,
+                api_surface,
+            )
+        )
+        return registry.MockReader()
+
+    monkeypatch.setattr(registry, "_reader", fake_reader)
+    registry.create_method(
+        "fc_gpt_5_6_sol",
+        trajectory_id="traj_010",
+        mock=True,
+        reasoning_policy="deployment_realistic_low",
+        stage="stage1_occurred_event_evidence_pairs",
+    )
+
+    assert captured[-1] == (
+        "openai",
+        "gpt-5.6-sol",
+        120.0,
+        {
+            "reasoning_effort": "low",
+            "verbosity": "medium",
+            "store": False,
+        },
+        "chat_completions",
     )
 
 

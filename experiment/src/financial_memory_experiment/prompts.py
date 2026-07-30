@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import re
 from datetime import date
+from pathlib import Path
 from typing import Any
 
 from fin_life_benchmark.benchmark.stage2_memory import normalize_stage2_answer
@@ -21,6 +22,11 @@ from .stage2_2 import (
 # artifact and a reasoning-aware output budget. Stage 2 and masking keep the
 # config default so their existing frozen outputs stay byte-identical.
 _BUDGETED_STAGES = (STAGE1, STAGE2_2)
+_STAGE1_TEMPLATE = (
+    Path(__file__).resolve().parents[2]
+    / "prompts"
+    / "stage1_occurred_event_pairs_ko.md"
+)
 
 
 def answer_output_tokens(item: dict[str, Any]) -> int | None:
@@ -113,34 +119,20 @@ def _build_stage1_query(
     item: dict[str, Any], evidence: list[dict[str, Any]]
 ) -> str:
     candidates = (item.get("metadata") or {}).get("candidate_events") or []
-    return "\n".join(
-        [
-            "다음은 한 고객의 은행 상담 세션 이력입니다.",
-            "지금까지 실제로 일어난 모든 Life Event와, 각 발생을 처음 "
-            "확정하는 상담 세션을 짝지어 보고하세요.",
-            "",
-            "판단 규칙:",
-            "- 약한 암시, 앞으로의 계획, 예정, 취소된 사건은 보고하지 마세요.",
-            "- 후속 처리나 뒤늦은 과거 회상은 최초 발생 확정 세션이 아닙니다.",
-            "- 같은 event_id가 여러 번 발생했다면 각각 별도 pair로 쓰세요.",
-            "- 사건 수는 알려져 있지 않으며, 발생 사건이 없을 수 있습니다.",
-            "",
-            "## 가능한 Life Event 목록",
-            *(f"- {c['event_id']}: {c['label_ko']}" for c in candidates),
-            "",
-            "## 상담 세션 이력",
-            *(
-                _public_stage1_session(row)
-                for row in evidence
-                if str(row.get("session_id")) != "S000"
-            ),
-            "",
-            "설명이나 Markdown 없이 JSON 객체 하나만 출력하세요.",
-            '형식: {"pairs":[{"event_id":"<목록의 ID>",'
-            '"evidence_session_id":"<보이는 D###>"}]}',
-            "각 레코드에는 위 두 필드만 쓰고, 발생 사건이 없으면 "
-            '{"pairs":[]}를 출력하세요.',
-        ]
+    taxonomy = "\n".join(
+        f"- {candidate['event_id']}: {candidate['label_ko']}"
+        for candidate in candidates
+    )
+    sessions = "\n\n".join(
+        _public_stage1_session(row)
+        for row in evidence
+        if str(row.get("session_id")) != "S000"
+    )
+    template = _STAGE1_TEMPLATE.read_text(encoding="utf-8")
+    if "{{TAXONOMY}}" not in template or "{{SESSIONS}}" not in template:
+        raise ValueError("Stage 1 prompt template is missing placeholders")
+    return template.replace("{{TAXONOMY}}", taxonomy).replace(
+        "{{SESSIONS}}", sessions
     )
 
 

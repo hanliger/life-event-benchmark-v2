@@ -8,16 +8,25 @@ from ..prompts import (
     expose_rendered_prompt,
     s000_as_session,
 )
+from ..stage1 import STAGE1
 from ..stage2_2 import STAGE2_2
 from .base import MemoryMethod, MethodAnswer
 from .readers import Reader
 
 
 class FullContextMethod(MemoryMethod):
-    def __init__(self, method_id: str, reader: Reader, system: str):
+    def __init__(
+        self,
+        method_id: str,
+        reader: Reader,
+        system: str,
+        *,
+        stage1_system: str | None = None,
+    ):
         self.method_id = method_id
         self.reader = reader
         self.system = system
+        self.stage1_system = stage1_system
         self.s000: dict[str, Any] | None = None
         self.sessions: list[dict[str, Any]] = []
 
@@ -31,11 +40,16 @@ class FullContextMethod(MemoryMethod):
     def answer(self, item: dict[str, Any]) -> MethodAnswer:
         max_tokens = answer_output_tokens(item)
         query = build_query(item, self.sessions)
+        system = (
+            self.stage1_system
+            if item.get("stage") == STAGE1 and self.stage1_system is not None
+            else self.system
+        )
         if max_tokens is None:
-            raw, metadata = self.reader.generate(system=self.system, user=query)
+            raw, metadata = self.reader.generate(system=system, user=query)
         else:
             raw, metadata = self.reader.generate(
-                system=self.system,
+                system=system,
                 user=query,
                 max_tokens=max_tokens,
             )
@@ -47,7 +61,7 @@ class FullContextMethod(MemoryMethod):
                 **(
                     {
                         "rendered_user_prompt": query,
-                        "rendered_system_prompt": self.system,
+                        "rendered_system_prompt": system,
                     }
                     if expose_rendered_prompt(item)
                     else {}

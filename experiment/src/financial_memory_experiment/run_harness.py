@@ -432,6 +432,13 @@ def preflight_paid(plan: dict[str, Any]) -> None:
         "OPENROUTER_API_KEY"
     ):
         missing_keys.append("OPENROUTER_API_KEY")
+    if "fc_gpt_5_6_sol" in methods and not os.environ.get("OPENAI_API_KEY"):
+        missing_keys.append("OPENAI_API_KEY")
+    if "fc_gemini_3_1_pro" in methods and not (
+        os.environ.get("GOOGLE_API_KEY")
+        or os.environ.get("GEMINI_API_KEY")
+    ):
+        missing_keys.append("GOOGLE_API_KEY or GEMINI_API_KEY")
     if methods & {
         "dense_ge2_claude_opus_4_8",
         "mem0_claude_opus_4_8",
@@ -451,6 +458,8 @@ def preflight_paid(plan: dict[str, Any]) -> None:
         "dense_ge2_claude_opus_4_8": "google.genai",
         "mem0_claude_opus_4_8": "mem0",
         "letta_claude_opus_4_8": "letta_client",
+        "fc_gpt_5_6_sol": "openai",
+        "fc_gemini_3_1_pro": "google.genai",
         **{method: "openai" for method in OPENROUTER_METHODS},
     }
     missing_modules = sorted(
@@ -674,7 +683,20 @@ def cost_latency_row(
         (provider_lock.get("methods") or {})
         .get(str(row["method_id"]), {})
         .get("price")
-    ) or {}
+    ) or {
+        "fc_gpt_5_6_sol": {
+            "prompt_usd_per_token": 5 / 1_000_000,
+            "completion_usd_per_token": 30 / 1_000_000,
+        },
+        "fc_claude_opus_4_8": {
+            "prompt_usd_per_token": 5 / 1_000_000,
+            "completion_usd_per_token": 25 / 1_000_000,
+        },
+        "fc_gemini_3_1_pro": {
+            "prompt_usd_per_token": 2 / 1_000_000,
+            "completion_usd_per_token": 12 / 1_000_000,
+        },
+    }.get(str(row["method_id"]), {})
     estimated_cost = None
     if (
         input_tokens is not None

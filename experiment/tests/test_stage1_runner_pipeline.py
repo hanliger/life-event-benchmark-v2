@@ -1,7 +1,7 @@
 """End-to-end Stage 1 grid on a synthetic prepared dataset with mock readers.
 
 The real prepared corpus is not committed, so this fixture builds the minimum
-`prepared` tree the Stage 1 runner reads and drives the nine frozen methods
+`prepared` tree the Stage 1 runner reads and drives the three frozen models
 through `run_method` exactly as the paid runner does, then exercises the Stage 1
 reporting path.
 """
@@ -21,9 +21,9 @@ from financial_memory_experiment.metrics import (
     write_tables,
 )
 from financial_memory_experiment.paths import ExperimentPaths
-from financial_memory_experiment.run_harness import NINE_METHODS
 from financial_memory_experiment.stage1 import (
     STAGE1,
+    STAGE1_METHODS,
     STAGE1_MAX_OUTPUT_TOKENS,
     audit_rendered_prompt,
 )
@@ -159,11 +159,11 @@ def stage1_paths(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     return paths
 
 
-def test_stage1_grid_runs_all_nine_methods_and_reports(stage1_paths, tmp_path):
+def test_stage1_grid_runs_all_three_models_and_reports(stage1_paths, tmp_path):
     items = stage1_runner._all_items(stage1_paths)
     assert len(items) == len(TRAJECTORIES) * len(CHECKPOINTS)
     outputs = []
-    for method_id in NINE_METHODS:
+    for method_id in STAGE1_METHODS:
         output = stage1_paths.runs / "grid" / f"{method_id}.jsonl"
         outputs.append(output)
         run_method(
@@ -221,7 +221,7 @@ def test_stage1_grid_runs_all_nine_methods_and_reports(stage1_paths, tmp_path):
             )
 
     report = summarize_predictions(stage1_paths, outputs, allow_partial=True)
-    assert sorted(report["methods"]) == sorted(NINE_METHODS)
+    assert sorted(report["methods"]) == sorted(STAGE1_METHODS)
     for stages in report["methods"].values():
         assert (
             stages[STAGE1]["aggregation"]
@@ -235,7 +235,7 @@ def test_stage1_grid_runs_all_nine_methods_and_reports(stage1_paths, tmp_path):
     checkpoint_rows = stage1_runner._write_auxiliary_metrics(run_dir, outputs)
     stage1_runner._materialize_answer_pairs(stage1_paths, run_dir, outputs)
 
-    assert len(checkpoint_rows) == len(NINE_METHODS) * len(items)
+    assert len(checkpoint_rows) == len(STAGE1_METHODS) * len(items)
     for name in (
         "checkpoint_metrics.csv",
         "trajectory_metrics.csv",
@@ -249,7 +249,7 @@ def test_stage1_grid_runs_all_nine_methods_and_reports(stage1_paths, tmp_path):
     trajectory_csv = (
         run_dir / "metrics" / "trajectory_metrics.csv"
     ).read_text(encoding="utf-8").splitlines()
-    assert len(trajectory_csv) - 1 == len(NINE_METHODS) * len(TRAJECTORIES)
+    assert len(trajectory_csv) - 1 == len(STAGE1_METHODS) * len(TRAJECTORIES)
     for figure in (
         "checkpoint_strict_pair_f1.svg",
         "method_trajectory_strict_pair_f1_heatmap.svg",
@@ -278,7 +278,7 @@ def test_stage1_grid_runs_all_nine_methods_and_reports(stage1_paths, tmp_path):
 def test_stage1_offline_prompt_render_passes_audit_for_all_methods(
     stage1_paths,
 ):
-    for method_id in NINE_METHODS:
+    for method_id in STAGE1_METHODS:
         for checkpoint in CHECKPOINTS:
             rendered = stage1_runner._render_prompt_offline(
                 stage1_paths,
@@ -297,7 +297,7 @@ def test_stage1_plan_audit_report_commands(stage1_paths, capsys):
     import argparse
 
     # Local-only methods keep this offline: no OpenRouter provider lock lookup.
-    methods = "fc_claude_opus_4_8,bm25_claude_opus_4_8"
+    methods = "fc_claude_opus_4_8,fc_gpt_5_6_sol"
     stage1_runner.command_plan(
         argparse.Namespace(
             methods=methods,
@@ -311,9 +311,9 @@ def test_stage1_plan_audit_report_commands(stage1_paths, capsys):
             max_in_flight=8,
             anthropic_max_in_flight=4,
             openrouter_max_in_flight=4,
-            request_timeout_seconds=300,
+            request_timeout_seconds=600,
             provider_retries=0,
-            parse_retries=1,
+            parse_retries=0,
             budget_cap_usd=10.0,
             estimated_usd=1.0,
             provider_lock_file=None,

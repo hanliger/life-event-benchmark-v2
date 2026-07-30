@@ -241,6 +241,13 @@ def run_method(
     is_stage1 = [item.get("stage") == STAGE1 for item in items]
     if any(is_stage1) and not all(is_stage1):
         raise ValueError("Stage 1 items must run in a separate invocation")
+    evaluation_stage = (
+        STAGE1
+        if all(is_stage1)
+        else STAGE2_2
+        if all(is_stage2_2)
+        else None
+    )
     # Stage 1 and Stage 2.2 are both evaluated on the no_prospective corpus;
     # only masking still reads the plain prepared tree.
     root = Path(
@@ -293,6 +300,7 @@ def run_method(
                         mock=mock,
                         top_k=top_k,
                         reasoning_policy=reasoning_policy,
+                        stage=evaluation_stage,
                     )
                     try:
                         base.ingest_initial(_load_s000(root, trajectory_id))
@@ -391,6 +399,7 @@ def run_method(
                     mock=mock,
                     top_k=top_k,
                     reasoning_policy=reasoning_policy,
+                    stage=evaluation_stage,
                 )
                 try:
                     method.ingest_initial(s000)
@@ -430,6 +439,7 @@ def run_method(
                 mock=mock,
                 top_k=top_k,
                 reasoning_policy=reasoning_policy,
+                stage=evaluation_stage,
             )
             try:
                 method.ingest_initial(_load_s000(root, trajectory_id))

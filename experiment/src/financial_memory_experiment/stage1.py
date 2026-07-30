@@ -28,6 +28,11 @@ from .util import read_jsonl
 STAGE1 = RQ1_PAIR_STAGE
 STAGE1_MAX_OUTPUT_TOKENS = MAX_OUTPUT_TOKENS
 STAGE1_TOP_K = 10
+STAGE1_METHODS = (
+    "fc_gpt_5_6_sol",
+    "fc_claude_opus_4_8",
+    "fc_gemini_3_1_pro",
+)
 
 _SESSION_IN_PROMPT = re.compile(r"\[세션 D(\d{3,})\]")
 CANDIDATE_HEADER = "## 가능한 Life Event 목록"
@@ -55,6 +60,9 @@ def stage1_contract(paths: ExperimentPaths | None = None) -> dict[str, Any]:
         "checkpoints": int(section["expected"]["checkpoints"]),
         "checkpoint_stride": int(cfg["benchmark"]["checkpoint_stride"]),
         "headline_metric": str(section["headline_metric"]),
+        "methods": tuple(map(str, section["methods"])),
+        "request_timeout_seconds": int(section["request_timeout_seconds"]),
+        "parse_retries": int(section["parse_retries"]),
     }
     if contract["task_id"] != STAGE1:
         raise ValueError(f"Stage 1 task_id must be {STAGE1}")
@@ -70,6 +78,15 @@ def stage1_contract(paths: ExperimentPaths | None = None) -> dict[str, Any]:
         raise ValueError("official Stage 1 checkpoint stride must be 15")
     if contract["headline_metric"] != HEADLINE_METRIC:
         raise ValueError(f"Stage 1 headline metric must be {HEADLINE_METRIC}")
+    if contract["methods"] != STAGE1_METHODS:
+        raise ValueError(
+            "official Stage 1 methods must be GPT-5.6 Sol, Claude Opus 4.8, "
+            "and Gemini 3.1 Pro in the frozen order"
+        )
+    if contract["request_timeout_seconds"] != 600:
+        raise ValueError("official Stage 1 request timeout must be 600 seconds")
+    if contract["parse_retries"] != 0:
+        raise ValueError("official Stage 1 parse retries must be 0")
     if (
         contract["trajectories"] <= 0
         or contract["checkpoints"] % contract["trajectories"]

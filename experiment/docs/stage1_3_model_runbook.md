@@ -1,8 +1,9 @@
-# Stage 1 Nine-Method Runbook
+# Stage 1 Three-Model Runbook
 
 Stage 1은 15세션씩 늘어나는 누적 prefix에서 지금까지 실제 발생한 모든
 Life Event와 각 발생을 처음 확정하는 session의 pair를 복원한다. Grid는
-20 trajectory × 20 checkpoint = 400 item이며 9개 method로 3,600 prediction이다.
+20 trajectory × 20 checkpoint = 400 item이며 GPT‑5.6 Sol, Claude Opus 4.8,
+Gemini 3.1 Pro의 Full Context 3개 모델로 1,200 prediction이다.
 Plan·audit·execute·resume·report 단계와 provider lock, attempt 보존, resume
 규칙은 Stage 2.2와 동일한 `run_harness`를 공유한다.
 
@@ -25,48 +26,40 @@ Stage 1 실행에 필요하지 않다.
 ## 1. Plan
 
 ```bash
-export OPENROUTER_API_KEY=...
-
 ./experiment/scripts/paid/run_stage1.sh plan \
   --methods all \
   --trajectories all \
   --checkpoint-start 15 \
   --checkpoint-end 300 \
   --checkpoint-stride 15 \
-  --model-workers 9 \
+  --model-workers 3 \
   --trajectory-workers 20 \
   --checkpoint-workers 20 \
   --max-in-flight 60 \
   --anthropic-max-in-flight 20 \
-  --openrouter-max-in-flight 40 \
-  --request-timeout-seconds 300 \
+  --openrouter-max-in-flight 1 \
+  --request-timeout-seconds 600 \
   --provider-retries 0 \
-  --parse-retries 1 \
-  --budget-cap-usd 200 \
-  --estimated-usd 180
+  --parse-retries 0 \
+  --budget-cap-usd 80 \
+  --estimated-usd 60
 ```
 
 `plan`은 KST `MMDD_HHMM` run directory를 `experiment/runs/stage1/` 아래에 만들고
 frozen grid를 `immutable_plan.json`에 고정한다. 같은 분에 중복되면 `_02`, `_03`
 suffix를 사용한다.
 
-Retrieval 설정은 CLI flag가 아니라 `configs/experiment.yaml`의
-`stage1_occurred_event_evidence_pairs` block이며, `stage1_contract()`가 code의 frozen
-상수와 일치하는지 plan 시점에 검사한다. Stage 1은 질문 문장을 그대로 단일
-query로 사용하고 `top_k=10`을 쓴다. Stage 2.2의 4-group retrieval은 Stage 1에
-적용하지 않는다.
-
-OpenRouter method가 포함되면 Stage 2.2와 같은 규칙으로 ZDR endpoint 중 reported
-throughput이 가장 높은 provider를 method마다 선택하고 `provider_lock.json`에
-저장한다. Qwen3.6은 FP8 endpoint만 허용한다. Provider를 직접 고정하려면
-`--provider-lock-file experiment/configs/my_openrouter_provider_lock.json`을
-사용하며 형식은 `openrouter_provider_lock.example.json`을 따른다.
+모델·timeout·retry 설정은 `configs/experiment.yaml`의
+`stage1_occurred_event_evidence_pairs` block이며, `stage1_contract()`가 frozen
+상수와 일치하는지 plan 시점에 검사한다. Stage 1에는 OpenRouter, retrieval,
+memory-agent method가 없다. 공통 harness의 `provider_lock.json`은
+`NOT_APPLICABLE`로 기록된다.
 
 ## 2. Inspect and audit prompts
 
 ```bash
 ./experiment/scripts/paid/run_stage1.sh show-prompt \
-  --method bm25_claude_opus_4_8 \
+  --method fc_gpt_5_6_sol \
   --trajectory traj_001 \
   --checkpoint 15
 
@@ -89,8 +82,8 @@ throughput이 가장 높은 provider를 method마다 선택하고 `provider_lock
 ```
 
 API credential은 explicit approval 검증 후 `experiment/.env`(없으면 repo root
-`.env`)에서 읽는다. Provider SDK retry는 0이며 parse 또는 schema failure에만 1회
-retry한다. 모든 attempt는 보존한다.
+`.env`)에서 읽는다. Provider SDK retry와 parse retry는 모두 0이며 모든 attempt는
+보존한다.
 
 ## 4. Resume
 
@@ -129,20 +122,17 @@ bootstrap 95% CI이며 모든 method pair의 paired delta도 함께 계산된다
 | `report/figures/checkpoint_event_identification_accuracy.svg` | checkpoint accuracy curve |
 | `report/figures/method_trajectory_accuracy_heatmap.svg` | method × trajectory heatmap |
 
-`retrieval_recall.csv`는 Gold-independent 측정이다. target window session이
-context에 실렸는지만 보므로 Full Context는 구조상 1.0이고, 이 값은 retrieval
-arm들을 서로 비교하는 데 쓴다.
+`retrieval_recall.csv`는 Gold-independent context coverage audit이다. 세 모델
+모두 Full Context이므로 구조상 1.0이어야 한다.
 
 ## Selection syntax
 
 `--methods`와 `--trajectories`는 `all` 또는 comma-separated IDs를 받는다.
 
 ```bash
---methods fc_claude_opus_4_8,bm25_claude_opus_4_8
+--methods fc_gpt_5_6_sol,fc_claude_opus_4_8
 --trajectories traj_001,traj_010
 ```
 
 Checkpoint query는 서로 독립적이다. Full Context는 fresh method/client와 독립
-prefix를 사용한다. BM25, Dense, Mem0, Letta는 checkpoint까지 순차 ingest한
-immutable snapshot을 clone해 병렬 query하며 이전 prediction을 다음 query에
-전달하지 않는다.
+prefix를 사용하며 이전 prediction을 다음 query에 전달하지 않는다.

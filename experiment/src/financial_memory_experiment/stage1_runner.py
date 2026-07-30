@@ -1,4 +1,4 @@
-"""Stage 1 nine-method paid grid runner.
+"""Stage 1 three-model paid grid runner.
 
 Stage 1 asks for every occurred Life Event and its first establishing session
 in each cumulative 15-session checkpoint prefix.
@@ -21,13 +21,12 @@ from zoneinfo import ZoneInfo
 
 from .corpus import corpus_manifest_path, corpus_root
 from .evaluator import _load_s000, _load_sessions
-from .methods import create_method, method_ids
+from .methods import create_method
 from .metrics import summarize_predictions, write_tables
 from .paths import ExperimentPaths
 from .prompts import build_query
 from .run_harness import (
     ALL_TRAJECTORIES,
-    NINE_METHODS,
     OPENROUTER_METHODS,
     complete_prediction_paths,
     cost_latency_row,
@@ -50,6 +49,7 @@ from .run_harness import (
 )
 from .stage1 import (
     STAGE1,
+    STAGE1_METHODS,
     STAGE1_MAX_OUTPUT_TOKENS,
     STAGE1_TOP_K,
     audit_rendered_prompt,
@@ -157,6 +157,7 @@ def _render_prompt_offline(
         paths=paths,
         mock=True,
         top_k=STAGE1_TOP_K,
+        stage=STAGE1,
     )
     try:
         method.ingest_initial(s000)
@@ -183,12 +184,11 @@ def _render_prompt_offline(
 def command_plan(args: argparse.Namespace) -> None:
     paths = ExperimentPaths.discover()
     contract = stage1_contract(paths)
-    configured = method_ids(paths)
     methods = parse_selection(
-        args.methods, all_values=NINE_METHODS, label="methods"
+        args.methods, all_values=STAGE1_METHODS, label="methods"
     )
-    if not set(methods) <= set(configured):
-        raise ValueError("selected methods are not in the frozen config")
+    if not set(methods) <= set(contract["methods"]):
+        raise ValueError("selected methods are not in the frozen Stage 1 config")
     trajectories = parse_selection(
         args.trajectories, all_values=ALL_TRAJECTORIES, label="trajectories"
     )
@@ -203,6 +203,12 @@ def command_plan(args: argparse.Namespace) -> None:
         raise ValueError("--budget-cap-usd must be positive")
     if args.provider_retries != 0:
         raise ValueError("provider retries are frozen at 0")
+    if args.request_timeout_seconds != contract["request_timeout_seconds"]:
+        raise ValueError(
+            "request timeout must match the frozen Stage 1 config"
+        )
+    if args.parse_retries != contract["parse_retries"]:
+        raise ValueError("parse retries must match the frozen Stage 1 config")
     estimated = (
         args.estimated_usd
         if args.estimated_usd is not None
@@ -254,7 +260,7 @@ def command_plan(args: argparse.Namespace) -> None:
             )
     run_dir = new_run_dir(paths, TASK)
     plan_body = {
-        "schema_version": "stage1_nine_method_plan-v1",
+        "schema_version": "stage1_three_model_plan-v1",
         "task_id": STAGE1,
         "run_id": run_dir.name,
         "created_at_kst": datetime.now(ZoneInfo("Asia/Seoul")).isoformat(),
@@ -574,13 +580,13 @@ def command_report(args: argparse.Namespace) -> None:
     _write_auxiliary_metrics(run_dir, prediction_paths)
     _materialize_answer_pairs(paths, run_dir, prediction_paths)
     lines = [
-        "# Stage 1 Occurred-Event/Evidence Pairs — 9-Method Comparison",
+        "# Stage 1 Occurred-Event/Evidence Pairs — 3-Model Comparison",
         "",
         f"Primary metric is `{HEADLINE_METRIC}`: each cumulative 15-session "
         "checkpoint scores the exact multiset of all occurred-event/evidence "
-        "pairs, then checkpoints are equally weighted. Retrieval and memory arms share one "
-        "question query at top_k=10; Full Context receives every session up to "
-        "the checkpoint.",
+        "pairs, then checkpoints are equally weighted. GPT-5.6 Sol, Claude "
+        "Opus 4.8, and Gemini 3.1 Pro each receive the same Full Context "
+        "prefix up to the checkpoint.",
         "",
         "## Result artifacts",
         "",
@@ -670,22 +676,22 @@ def build_parser() -> argparse.ArgumentParser:
     plan.add_argument("--checkpoint-start", type=int, default=15)
     plan.add_argument("--checkpoint-end", type=int, default=300)
     plan.add_argument("--checkpoint-stride", type=int, default=15)
-    plan.add_argument("--model-workers", type=int, default=9)
+    plan.add_argument("--model-workers", type=int, default=3)
     plan.add_argument("--trajectory-workers", type=int, default=20)
     plan.add_argument("--checkpoint-workers", type=int, default=20)
     plan.add_argument("--max-in-flight", type=int, default=60)
     plan.add_argument("--anthropic-max-in-flight", type=int, default=20)
     plan.add_argument("--openrouter-max-in-flight", type=int, default=40)
-    plan.add_argument("--request-timeout-seconds", type=int, default=300)
+    plan.add_argument("--request-timeout-seconds", type=int, default=600)
     plan.add_argument("--provider-retries", type=int, default=0)
-    plan.add_argument("--parse-retries", type=int, default=1)
+    plan.add_argument("--parse-retries", type=int, default=0)
     plan.add_argument("--budget-cap-usd", type=float, required=True)
     plan.add_argument("--estimated-usd", type=float)
     plan.add_argument("--provider-lock-file")
     plan.set_defaults(handler=command_plan)
 
     show = commands.add_parser("show-prompt")
-    show.add_argument("--method", required=True, choices=NINE_METHODS)
+    show.add_argument("--method", required=True, choices=STAGE1_METHODS)
     show.add_argument("--trajectory", required=True)
     show.add_argument("--checkpoint", type=int, required=True)
     show.set_defaults(handler=command_show_prompt)

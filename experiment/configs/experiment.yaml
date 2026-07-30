@@ -26,6 +26,12 @@ stage1_occurred_event_evidence_pairs:
   # event selected from the latest window.
   corpus: stage2_2_reconstruct
   headline_metric: strict_occurred_event_evidence_f1
+  methods:
+    - fc_gpt_5_6_sol
+    - fc_claude_opus_4_8
+    - fc_gemini_3_1_pro
+  request_timeout_seconds: 600
+  parse_retries: 0
   retrieval:
     strategy: single_question_query
     top_k: 10

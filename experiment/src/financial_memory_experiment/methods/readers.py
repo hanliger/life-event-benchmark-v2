@@ -99,15 +99,30 @@ class ProviderReader:
         max_tokens: int = 4096,
         timeout_seconds: float = 120,
         generation_settings: dict[str, Any] | None = None,
+        api_surface: str | None = None,
     ):
         self.provider = provider
         self.model = model
         self.max_tokens = max_tokens
         self.timeout_seconds = timeout_seconds
         self.generation_settings = deepcopy(generation_settings or {})
+        self.api_surface = api_surface
+        if provider == "openai" and api_surface not in {
+            None,
+            "responses",
+            "chat_completions",
+        }:
+            raise ValueError(f"unsupported OpenAI API surface: {api_surface}")
         reserved = {
             "anthropic": {"model", "max_tokens", "messages", "system"},
-            "openai": {"model", "instructions", "input", "max_output_tokens"},
+            "openai": {
+                "model",
+                "instructions",
+                "input",
+                "max_output_tokens",
+                "messages",
+                "max_completion_tokens",
+            },
             "google": {"model", "contents", "system_instruction", "max_output_tokens"},
             "gemini": {"model", "contents", "system_instruction", "max_output_tokens"},
             "openrouter": {"model", "messages", "max_tokens"},
@@ -187,16 +202,32 @@ class ProviderReader:
             text = "".join(getattr(block, "text", "") for block in response.content)
             usage = getattr(response, "usage", None)
         elif self.provider == "openai":
-            request = {
-                "model": self.model,
-                "instructions": system,
-                "input": user,
-                "max_output_tokens": output_tokens,
-                **deepcopy(self.generation_settings),
-            }
-            response = self.client.responses.create(**request)
-            text = response.output_text
-            usage = getattr(response, "usage", None)
+            if getattr(self, "api_surface", None) == "chat_completions":
+                request = {
+                    "model": self.model,
+                    "messages": [
+                        {"role": "system", "content": system},
+                        {"role": "user", "content": user},
+                    ],
+                    "max_completion_tokens": output_tokens,
+                    **deepcopy(self.generation_settings),
+                }
+                response = self.client.chat.completions.create(**request)
+                choice = response.choices[0] if response.choices else None
+                message = getattr(choice, "message", None)
+                text = getattr(message, "content", "") or ""
+                usage = getattr(response, "usage", None)
+            else:
+                request = {
+                    "model": self.model,
+                    "instructions": system,
+                    "input": user,
+                    "max_output_tokens": output_tokens,
+                    **deepcopy(self.generation_settings),
+                }
+                response = self.client.responses.create(**request)
+                text = response.output_text
+                usage = getattr(response, "usage", None)
         elif self.provider in {"google", "gemini"}:
             config = {
                 "system_instruction": system,
@@ -246,6 +277,9 @@ class ProviderReader:
             "request_timeout_seconds": self.timeout_seconds,
             "max_output_tokens": output_tokens,
             "generation_settings": deepcopy(self.generation_settings),
+            "api_surface": getattr(self, "api_surface", None) or (
+                "responses" if self.provider == "openai" else None
+            ),
             "latency_seconds": round(latency_seconds, 6),
         }
         if self.provider == "openrouter":

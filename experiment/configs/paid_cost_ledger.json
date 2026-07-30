@@ -1,5 +1,5 @@
 {
-  "conservative_spent_usd": 19.038,
+  "conservative_spent_usd": 0.383,
   "entries": [
     {
       "amount_usd": 1.98,
@@ -238,6 +238,43 @@
         "fc_claude_opus_4_8": {
           "input_tokens": 977167,
           "output_tokens": 87256
+        }
+      }
+    },
+    {
+      "amount_usd": 0.9,
+      "kind": "plan_reservation",
+      "note": "Reconciled to a rounded-up usage-based upper bound for the successful GPT-5.6 Sol Traj010 checkpoint-300 Stage 1 pair test-run: 65,361 input tokens at $5/M plus 1,608 output tokens at $30/M = $0.375045, rounded up to $0.376. Provider billing remains the final authority.",
+      "plan_sha256": "0e16b34170ce9ab0c31968006fe16499303d42c337d30bca42600413680f1f6c",
+      "reconciled_amount_usd": 0.376,
+      "status": "reconciled_usage_upper_bound",
+      "usage": {
+        "fc_gpt_5_6_sol": {
+          "input_tokens": 65361,
+          "output_tokens": 1608
+        }
+      }
+    },
+    {
+      "amount_usd": 0.0,
+      "kind": "allowance_reset",
+      "new_allowance_usd": 20.0,
+      "note": "User explicitly removed the exhausted prior limit and authorized the corrected Stage 1 three-model Traj010 checkpoint-15/checkpoint-300 test-run. Prior entries remain immutable audit history and are excluded from conservative_spent_usd after this marker.",
+      "prior_conservative_spent_usd": 19.414,
+      "recorded_at": "2026-07-31",
+      "status": "active"
+    },
+    {
+      "amount_usd": 1.0,
+      "kind": "plan_reservation",
+      "note": "Reconciled to a rounded-up usage-based upper bound for the successful corrected Stage 1 GPT-5.6 Sol Traj010 checkpoint-300 Chat Completions test-run: 65,789 input tokens at $5/M plus 1,788 output tokens at $30/M = $0.382585, rounded up to $0.383. Provider billing remains the final authority.",
+      "plan_sha256": "938ba63593de8c088bc64b3cdc0725c64e3c9748e3aeef15211e8462dc77195f",
+      "reconciled_amount_usd": 0.383,
+      "status": "reconciled_usage_upper_bound",
+      "usage": {
+        "fc_gpt_5_6_sol": {
+          "input_tokens": 65789,
+          "output_tokens": 1788
         }
       }
     }

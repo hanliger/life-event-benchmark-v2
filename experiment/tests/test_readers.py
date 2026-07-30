@@ -133,6 +133,47 @@ def test_openai_reader_sends_medium_standard_current_turn_reasoning():
     }
 
 
+def test_openai_stage1_reader_uses_chat_completions_surface():
+    endpoint = _Endpoint(
+        SimpleNamespace(
+            choices=[
+                SimpleNamespace(
+                    message=SimpleNamespace(content="{}"),
+                    finish_reason="stop",
+                )
+            ],
+            usage=None,
+        )
+    )
+    reader = _reader(
+        "openai",
+        SimpleNamespace(chat=SimpleNamespace(completions=endpoint)),
+        {
+            "reasoning_effort": "low",
+            "verbosity": "medium",
+            "store": False,
+        },
+    )
+    reader.api_surface = "chat_completions"
+
+    _, metadata = reader.generate(
+        system="system", user="user", max_tokens=20000
+    )
+
+    assert endpoint.request == {
+        "model": "openai-model",
+        "messages": [
+            {"role": "system", "content": "system"},
+            {"role": "user", "content": "user"},
+        ],
+        "max_completion_tokens": 20000,
+        "reasoning_effort": "low",
+        "verbosity": "medium",
+        "store": False,
+    }
+    assert metadata["api_surface"] == "chat_completions"
+
+
 def test_provider_reader_rejects_generation_setting_override():
     reader = ProviderReader.__new__(ProviderReader)
     with pytest.raises(ValueError, match="cannot override"):

@@ -64,6 +64,15 @@ def _system(paths: ExperimentPaths) -> str:
     return (paths.prompts / "system_ko.txt").read_text(encoding="utf-8").strip()
 
 
+def _stage1_system(paths: ExperimentPaths) -> str:
+    path = paths.prompts / "stage1_system_ko.txt"
+    return (
+        path.read_text(encoding="utf-8").strip()
+        if path.exists()
+        else _system(paths)
+    )
+
+
 def _env_override(default: Any, *names: str) -> str:
     """First set environment variable wins; runners set the stage-neutral name.
 
@@ -95,6 +104,8 @@ def _reader(
     max_tokens: int,
     timeout_seconds: float,
     generation_settings: dict[str, Any],
+    *,
+    api_surface: str | None = None,
 ) -> Reader:
     return (
         MockReader()
@@ -105,6 +116,7 @@ def _reader(
             max_tokens=max_tokens,
             timeout_seconds=timeout_seconds,
             generation_settings=generation_settings,
+            api_surface=api_surface,
         )
     )
 
@@ -132,6 +144,7 @@ def create_method(
     mock: bool = False,
     top_k: int | None = None,
     reasoning_policy: str | None = None,
+    stage: str | None = None,
 ) -> MemoryMethod:
     paths = paths or ExperimentPaths.discover()
     cfg = load_experiment_config(paths)
@@ -155,6 +168,7 @@ def create_method(
         models, reasoning_policy
     )
     system = _system(paths)
+    stage1_system = _stage1_system(paths)
     stage2_2_retrieval = method_cfg.get("stage2_2_retrieval") or {}
     group_k = int(
         os.environ.get(
@@ -199,12 +213,14 @@ def create_method(
                 dict(generation_settings["anthropic"]),
             ),
             system,
+            stage1_system=stage1_system,
         )
     if method_id == "fc_claude_opus_4_8":
         return FullContextMethod(
             method_id,
             opus_4_8_reader(),
             system,
+            stage1_system=stage1_system,
         )
     openrouter_models = models.get("openrouter") or {}
     openrouter_timeout_seconds = float(
@@ -258,7 +274,12 @@ def create_method(
             system,
         )
     if method_id == "fc_gemini_3_1_pro":
-        return FullContextMethod(method_id, gemini_reader(), system)
+        return FullContextMethod(
+            method_id,
+            gemini_reader(),
+            system,
+            stage1_system=stage1_system,
+        )
     if method_id == "fc_gpt_5_6_sol":
         return FullContextMethod(
             method_id,
@@ -268,9 +289,27 @@ def create_method(
                 mock,
                 max_tokens,
                 timeout_seconds,
-                dict(generation_settings["openai"]),
+                (
+                    {
+                        "reasoning_effort": generation_settings["openai"][
+                            "reasoning"
+                        ]["effort"],
+                        "verbosity": generation_settings["openai"]["text"][
+                            "verbosity"
+                        ],
+                        "store": generation_settings["openai"]["store"],
+                    }
+                    if stage == "stage1_occurred_event_evidence_pairs"
+                    else dict(generation_settings["openai"])
+                ),
+                api_surface=(
+                    "chat_completions"
+                    if stage == "stage1_occurred_event_evidence_pairs"
+                    else "responses"
+                ),
             ),
             system,
+            stage1_system=stage1_system,
         )
     if method_id == "oracle_rel_gpt_5_6_sol":
         return OracleRelevantContextMethod(

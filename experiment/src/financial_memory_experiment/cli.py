@@ -64,10 +64,17 @@ def _canonical_item_paths(paths: ExperimentPaths) -> list[Path]:
 
 
 def _all_item_paths(paths: ExperimentPaths) -> list[Path]:
-    root = Path(active_prepared_manifest(paths)["root"])
-    result = _canonical_item_paths(paths) + [
-        root / "masking_items" / "masking_questions.jsonl"
-    ]
+    result: list[Path] = []
+    try:
+        root = Path(active_prepared_manifest(paths)["root"])
+    except FileNotFoundError:
+        # The reported Stage 1/2 corpus is prepared independently of the
+        # retired legacy baseline. Paid smoke selection must still work when
+        # only that corpus exists.
+        pass
+    else:
+        result.extend(_canonical_item_paths(paths))
+        result.append(root / "masking_items" / "masking_questions.jsonl")
     for resolve in (stage1_item_path, stage2_2_item_path):
         try:
             result.append(resolve(paths))

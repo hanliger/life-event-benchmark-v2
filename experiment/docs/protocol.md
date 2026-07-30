@@ -37,25 +37,22 @@ S016–S030에 새봄금융으로 바뀌었다면, 이후에도 첫 target 질�
 Main `top_k=10`, sensitivity `top_k=5`, reranker 없음이다. Sensitivity는 frozen
 문항과 다른 설정을 바꾸지 않고 별도 run으로 실행한다.
 
-## 9-method 비교 확장
+## Stage별 비교 surface
 
-`configs/experiment.yaml`의 `methods`는 Claude Opus 4.8 reader를 공유하는 Full
-Context, BM25, Dense, Mem0, Letta와 네 OpenRouter Full Context model로 구성된
-9개 method다. Stage 1과 Stage 2.2는 각각 전용 runner로 이 grid를 실행한다.
+Stage 1은 `stage1_occurred_event_evidence_pairs.methods`에 고정된 GPT‑5.6 Sol,
+Claude Opus 4.8, Gemini 3.1 Pro의 Full Context 3-model 비교다.
+`configs/experiment.yaml`의 전역 `methods` 9개는 Stage 2.2 전용이다.
 
 | Stage | Runner | Grid | Retrieval |
 |---|---|---|---|
-| Stage 1 | `scripts/paid/run_stage1.sh` | 20 traj × 20 window checkpoint | 질문 단일 query, `top_k=10` |
+| Stage 1 | `scripts/paid/run_stage1.sh` | 20 traj × 20 prefix checkpoint × 3 models | Full Context |
 | Stage 2.2 | `scripts/paid/run_stage2_2.sh` | 20 traj × 20 checkpoint | 4개 state group, group별 `top_k=5`, 최대 20 evidence |
 
 두 stage는 같은 코퍼스 `dialogues_no_prospective` + `gold_no_prospective`를 쓰며, `prepare-stage2-2`가 만든 prepared tree를 공유한다. 다른 코퍼스로 실행하는 경로는 없다.
 
-Stage 1은 대상 기간이 질문 본문에 이미 포함되므로 Stage 2.2의 group 분해 없이
-질문 문장을 그대로 검색 query로 사용한다. 두 stage 모두 checkpoint query는 서로
-독립적이며 Full Context는 독립 prefix, BM25/Dense/Mem0/Letta는 immutable snapshot
-clone으로 병렬 질의한다. 출력 상한은 두 stage 모두 20,000 token이다. Anthropic은
-thinking token이 `max_tokens`에 포함되므로 Stage 1의 한 줄 답에도 같은 예산을
-준다.
+Stage 1의 세 모델은 모두 동일한 전체 누적 prefix를 받는다. checkpoint query는
+서로 독립적이고 이전 응답은 다음 checkpoint에 전달되지 않는다. 출력 상한은
+20,000 token이며 timeout 600초, provider retry 0, parse retry 0으로 고정한다.
 
 ## 공정 비교 계약
 

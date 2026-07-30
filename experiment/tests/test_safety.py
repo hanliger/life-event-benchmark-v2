@@ -5,7 +5,10 @@ from types import SimpleNamespace
 
 import pytest
 
-from financial_memory_experiment.cli import _write_environment_snapshot
+from financial_memory_experiment.cli import (
+    _all_item_paths,
+    _write_environment_snapshot,
+)
 from financial_memory_experiment.paths import ExperimentPaths
 from financial_memory_experiment.safety import (
     APPROVAL_PHRASE,
@@ -58,6 +61,27 @@ def test_provider_construction_is_disabled_by_default(monkeypatch):
     monkeypatch.delenv("FIN_MEMORY_DISABLE_PAID_APIS", raising=False)
     with pytest.raises(PaidExecutionBlocked):
         assert_provider_construction_allowed()
+
+
+def test_paid_item_discovery_does_not_require_legacy_prepared_data(
+    tmp_path, monkeypatch
+):
+    paths = _paths(tmp_path)
+    stage1_path = tmp_path / "stage1.jsonl"
+    monkeypatch.setattr(
+        "financial_memory_experiment.cli.active_prepared_manifest",
+        lambda _paths: (_ for _ in ()).throw(FileNotFoundError("legacy absent")),
+    )
+    monkeypatch.setattr(
+        "financial_memory_experiment.cli.stage1_item_path",
+        lambda _paths: stage1_path,
+    )
+    monkeypatch.setattr(
+        "financial_memory_experiment.cli.stage2_2_item_path",
+        lambda _paths: (_ for _ in ()).throw(FileNotFoundError("stage 2 absent")),
+    )
+
+    assert _all_item_paths(paths) == [stage1_path]
 
 
 def test_paid_plan_requires_exact_hash_and_approval(tmp_path):

@@ -1,0 +1,19 @@
+model,metric,medium_pct,low_pct,low_minus_medium_pp
+Claude Opus 5,Final State Accuracy,86.470588,83.529412,-2.941176
+Claude Opus 5,Dynamic-path Final State Accuracy,92.000000,87.200000,-4.800000
+Claude Opus 5,Correct-change F1,81.546360,76.572716,-4.973645
+Claude Opus 5,Path-macro Correct-change F1,80.000000,73.913043,-6.086957
+Claude Opus 5,Event-macro Update Accuracy,88.125000,82.916667,-5.208333
+Claude Opus 5,Retention-after-update,87.500000,82.986111,-4.513889
+Gemini 3.1 Pro Preview,Final State Accuracy,79.411765,80.588235,1.176471
+Gemini 3.1 Pro Preview,Dynamic-path Final State Accuracy,83.200000,80.800000,-2.400000
+Gemini 3.1 Pro Preview,Correct-change F1,70.443069,69.045536,-1.397533
+Gemini 3.1 Pro Preview,Path-macro Correct-change F1,69.420290,70.869565,1.449275
+Gemini 3.1 Pro Preview,Event-macro Update Accuracy,69.375000,70.416667,1.041667
+Gemini 3.1 Pro Preview,Retention-after-update,67.361111,73.506944,6.145833
+GPT-5.6 Sol,Final State Accuracy,71.176471,73.529412,2.352941
+GPT-5.6 Sol,Dynamic-path Final State Accuracy,74.400000,76.000000,1.600000
+GPT-5.6 Sol,Correct-change F1,58.435881,60.977896,2.542015
+GPT-5.6 Sol,Path-macro Correct-change F1,56.956522,58.115942,1.159420
+GPT-5.6 Sol,Event-macro Update Accuracy,70.729167,64.479167,-6.250000
+GPT-5.6 Sol,Retention-after-update,60.729167,58.541667,-2.187500

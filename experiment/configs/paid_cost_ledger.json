@@ -1,5 +1,5 @@
 {
-  "conservative_spent_usd": 4.779,
+  "conservative_spent_usd": 8.935,
   "entries": [
     {
       "amount_usd": 1.98,
@@ -120,6 +120,28 @@
         "fc_gpt_5_6_sol": {
           "input_tokens": 215720,
           "output_tokens": 18652
+        }
+      }
+    },
+    {
+      "amount_usd": 6.0,
+      "kind": "plan_reservation",
+      "note": "Reconciled to a rounded-up usage-based upper bound for the low-reasoning run: Claude Opus 5 $2.183370, Gemini 3.1 Pro Preview $0.611890, and GPT-5.6 Sol $1.360390; $4.155650 total rounded up to $4.156. Provider billing remains the final authority.",
+      "plan_sha256": "460647a3a1bcc38382800ba2e2be6114439c4d2b7f9c09e21d79296f51542bfd",
+      "reconciled_amount_usd": 4.156,
+      "status": "reconciled_usage_upper_bound",
+      "usage": {
+        "fc_claude_opus_5": {
+          "input_tokens": 370404,
+          "output_tokens": 13254
+        },
+        "fc_gemini_3_1_pro": {
+          "input_tokens": 211511,
+          "output_tokens_including_thoughts": 15739
+        },
+        "fc_gpt_5_6_sol": {
+          "input_tokens": 215720,
+          "output_tokens": 9393
         }
       }
     }

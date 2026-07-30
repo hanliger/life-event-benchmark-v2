@@ -11,6 +11,8 @@
 |---|---|---|
 | `vendor_default__f84f98315cc1/` | 과거 vendor-default 실행 | `f84f98315cc1fd165734bc601808e2d10bf3ad959ef36d51ec76c9ccdfef18cd`와 Gemini checkpoint-300 format retry `feac9e9cf1e1b7a53c8339b517db8f16618295bde1516dcbe04108cea8d23667` |
 | `medium_provider_default_parallel__9469ed3620c3/` | Medium reasoning, provider-default sampling, independent parallel checkpoints | `9469ed3620c32e102b4eb97f6831d291cc0f9095798c91e9fc10b140fa474b68` |
+| `low_provider_default_parallel__460647a3a1bc/` | Low reasoning, provider-default sampling, independent parallel checkpoints | `460647a3a1bcc38382800ba2e2be6114439c4d2b7f9c09e21d79296f51542bfd` |
+| `medium_vs_low_provider_default__9469ed3620c3__460647a3a1bc/` | Medium–Low 통합 비교 | 위 두 plan |
 
 상위 디렉터리에 남아 있는 무버전 그림과 CSV는 최초 문서 참조의 호환성을 위한
 legacy copy다. 새 결과는 반드시 새 version directory에 생성한다.

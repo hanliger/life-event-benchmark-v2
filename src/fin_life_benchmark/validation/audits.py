@@ -84,27 +84,6 @@ def audit_full_prefix_recoverability(
     }
 
 
-def audit_stale_distractors(items: list[dict[str, Any]], prefixes: list[dict[str, Any]]) -> dict[str, Any]:
-    mcq = [i for i in items if i.get("stage") == "stage2_memory_mcq"]
-    with_stale = [
-        i for i in mcq
-        if any((opt.get("error_type") == "stale_memory_carryover") for opt in i.get("options", []))
-        or (i.get("metadata") or {}).get("has_stale_distractor")
-    ]
-    # memory-level availability: prefixes where at least one path has historical values
-    prefix_with_hist = [
-        p for p in prefixes
-        if any((v.get("historical_values") or []) for v in p["gold_full_memory_state"].values())
-    ]
-    return {
-        "mcq_items": len(mcq),
-        "mcq_with_stale_distractor": len(with_stale),
-        "stale_distractor_rate": round(len(with_stale) / len(mcq), 4) if mcq else None,
-        "prefixes_with_historical_values": len(prefix_with_hist),
-        "prefixes_total": len(prefixes),
-    }
-
-
 def audit_life_stage_constraints(trajectories: list[dict[str, Any]]) -> dict[str, Any]:
     """Replay each trajectory's occurred events against guards; count violations."""
     templates = load_life_event_templates()

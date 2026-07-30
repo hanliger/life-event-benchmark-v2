@@ -1,0 +1,9 @@
+# Reproducibility input for environments that do not use an installer lock.
+# Run manifests capture critical package versions. Preserve a full `pip freeze`
+# alongside each reportable full run.
+# The supported interpreter is Python 3.11 or 3.12.
+# Reproducible top-level experiment environment. Transitive hashes are frozen
+# after the first approved network install with `pip freeze`.
+-e .[all]
+mem0ai==2.0.12
+letta-client==1.12.1

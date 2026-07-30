@@ -1,6 +1,8 @@
 """Simulator determinism, guard consistency, and end-to-end smoke."""
 
+import json
 import random
+from pathlib import Path
 
 from fin_life_benchmark.actions.initial_actions_generator import build_initial_actions
 from fin_life_benchmark.benchmark.item_builder import ItemBuilder
@@ -17,7 +19,7 @@ from fin_life_benchmark.memory.delta_engine import DeltaEngine
 from fin_life_benchmark.memory.initial_state_generator import build_initial_memory
 from fin_life_benchmark.memory.models import CellStatus, FinancialMemoryState
 from fin_life_benchmark.persona.models import HouseholdState, HousingState, NormalizedPersona, OccupationState
-from fin_life_benchmark.trajectory.models import LifeState
+from fin_life_benchmark.trajectory.models import LifeState, Trajectory
 from fin_life_benchmark.trajectory.simulator import TrajectorySimulator
 from fin_life_benchmark.validation.dialogue_validator import DialogueValidator
 
@@ -551,77 +553,147 @@ def test_forced_event_is_guarded_and_impacts_actions():
             assert any(month < instance.occurred_month for month in marriage_months)
 
 
-def test_stage2_memory_mcq_builds_single_and_multi_hop_items():
+def test_stage2_memory_value_builds_dated_path_questions():
+    fixture_root = Path(__file__).parent / "fixtures"
+    trajectory = Trajectory.model_validate(
+        json.loads(
+            (fixture_root / "trajectories" / "traj_001.json").read_text(
+                encoding="utf-8"
+            )
+        )
+    )
+    plans = [
+        json.loads(line)
+        for line in (
+            fixture_root / "plans" / "plans_traj_001.jsonl"
+        ).read_text(encoding="utf-8").splitlines()
+    ][:15]
+    sessions = [
+        {
+            "trajectory_id": "traj_001",
+            "session_id": plan["session_id"],
+            "session_date": "2025-03-15",
+            "month_index": plan["month_index"],
+            "transition_order": plan["transition_order"],
+            "window_event_instance_id": plan["window_event_instance_id"],
+            "turns": [],
+        }
+        for plan in plans
+    ]
+    prefix = {
+        "prefix_id": "traj_001_pfx015",
+        "trajectory_id": "traj_001",
+        "visible_sessions": [session["session_id"] for session in sessions],
+        "checkpoint_session_count": 15,
+        "gold_life_events": [
+            {
+                "event_instance_id": "traj_001_ev001",
+                "event_status": "occurred",
+            }
+        ],
+    }
+
+    items = ItemBuilder(seed=0).build_stage2(
+        [prefix],
+        {"traj_001": sessions},
+        {"traj_001": trajectory},
+    )
+
+    assert items
+    assert {item.stage for item in items} == {"stage2_memory_value"}
+    assert {item.metadata["answer_type"] for item in items} == {
+        "mcq",
+        "free_response",
+    }
+    assert all("2025년 3월 15일" in item.question for item in items)
+    assert all("career_employment" not in item.question for item in items)
+    assert all(item.gold["target_event_id"] == "career_employment" for item in items)
+    for item in items:
+        assert item.metadata["checkpoint_session_count"] == 15
+        if item.metadata["answer_type"] == "mcq":
+            correct = [option for option in item.options if option.correct]
+            assert len(correct) == 1
+            assert item.gold["correct_option"] == correct[0].option_id
+        else:
+            assert item.options == []
+            assert item.gold["normalized_answer"]
+
+
+def test_stage2_reuses_event_date_at_longer_prefix():
+    fixture_root = Path(__file__).parent / "fixtures"
+    trajectory = Trajectory.model_validate(
+        json.loads(
+            (fixture_root / "trajectories" / "traj_001.json").read_text(
+                encoding="utf-8"
+            )
+        )
+    )
+    plans = [
+        json.loads(line)
+        for line in (
+            fixture_root / "plans" / "plans_traj_001.jsonl"
+        ).read_text(encoding="utf-8").splitlines()
+    ][:30]
+    sessions = [
+        {
+            "trajectory_id": "traj_001",
+            "session_id": plan["session_id"],
+            "session_date": "2025-03-15" if index < 15 else "2025-04-15",
+            "month_index": plan["month_index"],
+            "transition_order": plan["transition_order"],
+            "window_event_instance_id": plan["window_event_instance_id"],
+            "turns": [],
+        }
+        for index, plan in enumerate(plans)
+    ]
     prefixes = [
         {
-            "prefix_id": "traj_mem_pfx001",
-            "trajectory_id": "traj_mem",
-            "visible_sessions": ["S001"],
-            "gold_memory_updates": [
-                {
-                    "path": "employment.salary_day",
-                    "operation": "update",
-                    "old_value": 10,
-                    "new_value": 25,
-                    "evidence_turns": ["S001:0"],
-                }
+            "prefix_id": "traj_001_pfx015",
+            "trajectory_id": "traj_001",
+            "visible_sessions": [session["session_id"] for session in sessions[:15]],
+            "checkpoint_session_count": 15,
+            "gold_life_events": [
+                {"event_instance_id": "traj_001_ev001", "event_status": "occurred"}
             ],
-            "gold_full_memory_state": {
-                "employment.salary_day": {
-                    "value": 25,
-                    "status": "current",
-                    "historical_values": [10],
-                }
-            },
         },
         {
-            "prefix_id": "traj_mem_pfx002",
-            "trajectory_id": "traj_mem",
-            "visible_sessions": ["S001", "S002"],
-            "gold_memory_updates": [
-                {
-                    "path": "employment.salary_day",
-                    "operation": "update",
-                    "old_value": 10,
-                    "new_value": 25,
-                    "evidence_turns": ["S001:0"],
-                },
-                {
-                    "path": "housing.rent_payee",
-                    "operation": "update",
-                    "old_value": "기존 임대인",
-                    "new_value": "새 임대인",
-                    "evidence_turns": ["S002:0"],
-                },
+            "prefix_id": "traj_001_pfx030",
+            "trajectory_id": "traj_001",
+            "visible_sessions": [session["session_id"] for session in sessions],
+            "checkpoint_session_count": 30,
+            "gold_life_events": [
+                {"event_instance_id": "traj_001_ev001", "event_status": "occurred"},
+                {"event_instance_id": "traj_001_ev002", "event_status": "occurred"},
             ],
-            "gold_full_memory_state": {
-                "employment.salary_day": {
-                    "value": 25,
-                    "status": "current",
-                    "historical_values": [10],
-                },
-                "housing.rent_payee": {
-                    "value": "새 임대인",
-                    "status": "needs_verification",
-                    "historical_values": ["기존 임대인"],
-                },
-            },
         },
     ]
 
-    true_initial = {
-        "traj_mem": {
-            "employment.salary_day": {"value": 10, "status": "current", "historical_values": []},
-            "housing.rent_payee": {"value": "기존 임대인", "status": "current", "historical_values": []},
-        }
-    }
-    items = ItemBuilder(seed=0).build_stage2(prefixes, {"traj_mem": []}, true_initial)
-    assert {item.stage for item in items} == {"stage2_memory_mcq"}
-    assert {"single", "multi"} <= {item.metadata["hop_type"] for item in items}
+    items = ItemBuilder(seed=0).build_stage2(
+        prefixes,
+        {"traj_001": sessions},
+        {"traj_001": trajectory},
+    )
+    pfx015 = [item for item in items if item.prefix_id == "traj_001_pfx015"]
+    pfx030 = [item for item in items if item.prefix_id == "traj_001_pfx030"]
+    first_event_15 = next(
+        item
+        for item in pfx015
+        if item.gold["target_event_instance_id"] == "traj_001_ev001"
+        and item.gold["memory_path"] == "employment.employer"
+    )
+    first_event_30 = next(
+        item
+        for item in pfx030
+        if item.gold["target_event_instance_id"] == "traj_001_ev001"
+        and item.gold["memory_path"] == "employment.employer"
+    )
 
-    for item in items:
-        correct = [option for option in item.options if option.correct]
-        assert len(correct) == 1
-        assert item.gold["correct_option"] == correct[0].option_id
-        assert "memory_updates" not in item.gold
-        assert any(option.error_type == "stale_memory_carryover" for option in item.options)
+    assert first_event_15.question == first_event_30.question
+    assert first_event_15.gold["answer_value"] == first_event_30.gold["answer_value"]
+    assert first_event_30.metadata["checkpoint_date"] == "2025-03-15"
+    assert first_event_30.metadata["evaluation_checkpoint_date"] == "2025-04-15"
+    assert first_event_30.metadata["checkpoint_session_count"] == 30
+    assert first_event_30.gold["checkpoint_change_type"] == "update"
+    assert all(
+        item.gold["checkpoint_change_type"] != "carry_forward" for item in items
+    )

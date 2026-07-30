@@ -90,3 +90,84 @@ def test_anthropic_empty_text_retries_provider_call():
     assert retry_without_sleep(client, "system", "prompt") == "ok after retry"
     assert messages.calls == 2
     assert client.last_response_metadata["stop_reason"] == "end_turn"
+
+
+# ---------------------------------------------------------------------------
+# run-configuration knobs that must be honoured or visibly refused
+
+
+def test_temperature_none_is_not_sent_and_is_recorded_as_such():
+    """`--no-temperature` means "do not ask", not "ask for 0.0".
+
+    The distinction matters because the frontier models refuse a requested
+    temperature anyway; without separate reason codes an unspecified
+    temperature and a refused one would look identical in the artifacts.
+    """
+
+    client = LLMClient(
+        provider="mock", model="claude-opus-4-6", temperature=None, max_tokens=128
+    )
+    client.provider = "anthropic"
+    messages = FakeMessages()
+    client._client = SimpleNamespace(messages=messages)
+
+    assert client.generate("system", "prompt") == "ok"
+    assert "temperature" not in messages.kwargs
+    meta = client.last_response_metadata
+    assert meta["temperature_requested"] is None
+    assert meta["temperature_applied"] is None
+    assert meta["temperature_omission_reason"] == "not_requested_provider_default"
+
+
+def test_a_requested_temperature_the_model_refuses_has_a_distinct_reason():
+    client = LLMClient(
+        provider="mock", model="claude-opus-5", temperature=0.0, max_tokens=128
+    )
+    client.provider = "anthropic"
+    client._client = SimpleNamespace(messages=FakeMessages())
+
+    client.generate("system", "prompt")
+    meta = client.last_response_metadata
+    assert meta["temperature_requested"] == 0.0
+    assert meta["temperature_applied"] is None
+    assert meta["temperature_omission_reason"] == "model_rejects_temperature"
+
+
+def test_max_retries_zero_makes_the_first_failure_final():
+    """A single-replicate protocol must not silently redraw.
+
+    The module used to pin stop_after_attempt(3), which would override an
+    `automatic_retries: 0` run configuration and report the second draw as the
+    measurement.
+    """
+
+    client = LLMClient(
+        provider="mock",
+        model="claude-sonnet-5",
+        temperature=0.7,
+        max_tokens=128,
+        max_retries=0,
+    )
+    client.provider = "anthropic"
+    messages = FlakyMessages()
+    client._client = SimpleNamespace(messages=messages)
+
+    retry_without_sleep = client.generate.retry_with(wait=wait_none())
+    try:
+        retry_without_sleep(client, "system", "prompt")
+    except Exception:
+        pass
+    assert messages.calls == 1, "a failure must not be retried when max_retries=0"
+
+
+def test_default_max_retries_still_retries():
+    client = LLMClient(
+        provider="mock", model="claude-sonnet-5", temperature=0.7, max_tokens=128
+    )
+    client.provider = "anthropic"
+    messages = FlakyMessages()
+    client._client = SimpleNamespace(messages=messages)
+
+    retry_without_sleep = client.generate.retry_with(wait=wait_none())
+    assert retry_without_sleep(client, "system", "prompt") == "ok after retry"
+    assert messages.calls == 2

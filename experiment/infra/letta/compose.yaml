@@ -1,0 +1,15 @@
+services:
+  letta:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: financial-memory-letta:0.16.8-googlecompat1
+    ports:
+      - "127.0.0.1:8283:8283"
+    environment:
+      # Letta 0.16.8 names this setting GEMINI_API_KEY; the rest of the
+      # experiment uses Google's current GOOGLE_API_KEY convention.
+      GEMINI_API_KEY: ${GOOGLE_API_KEY:?GOOGLE_API_KEY is required}
+    volumes:
+      - ../../runs/state/letta_pgdata:/var/lib/postgresql/data
+    restart: "no"

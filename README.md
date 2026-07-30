@@ -15,14 +15,24 @@ persona ─▶ 초기 금융 상태 ─▶ 생애사건 trajectory ─▶ 상담
 
 ## 1. 벤치마크가 측정하는 것
 
-각 문항은 "한 사용자의 상담 세션 이력(일부 또는 전체)"을 입력으로 주고, 그 시점까지의 숨은 상태를 묻습니다. 두 종류의 문항이 있습니다.
+각 문항은 "한 사용자의 상담 세션 이력(일부 또는 전체)"을 입력으로 주고, 그 시점까지의 숨은 상태를 묻습니다. 세 종류의 문항이 있습니다.
 
 | Stage | 문항 | 입력 | 정답 |
 | --- | --- | --- | --- |
 | **Stage 1** `stage1_event_status` | 지금까지 감지되는 생애 사건과 그 진행 단계는? | 보이는 세션 발화들 | life event label + status(`weak_signal`/`upcoming`/`occurred`/`cancelled`/`no_event`) |
-| **Stage 2** `stage2_memory_mcq` | 특정 금융 상태 값은? (객관식) | 보이는 세션 발화 + 초기 금융 메모리 | 정답 선택지 |
+| **Stage 2** `stage2_memory_value` | 특정 날짜의 금융 메모리 최종값은? | 날짜가 표시된 세션 발화 + 초기 금융 메모리 | 닫힌 값 집합은 객관식, 그 외는 단답형 |
+| **Stage 3** `stage3_multi_hop_mcq` | 서로 다른 두 시점의 금융 상태 순서·합계는? (객관식) | 두 번째 근거까지의 누적 세션 + 초기 금융 메모리 | 정답 선택지 |
 
 핵심 난이도는 **간접성**입니다. 대화는 상태를 직접 말해 주지 않습니다. 사용자는 업무를 요청하며 단서만 흘리고, 모델은 여러 세션에 흩어진 단서를 모아 상태를 역추론해야 합니다. 평가 대상 모델에게는 정답 계획(plan)·주석(cue)·구조화 문맥은 주지 않고, **보이는 발화와 초기 메모리만** 줍니다.
+
+Stage 2는 다음 원칙으로 만듭니다.
+
+- 15세션 checkpoint에서 `occurred` event가 갱신한 memory path/selector로 문항을 만들고, 이후 더 긴 prefix에서도 event 시점의 기준일·정답을 고정한 채 같은 문항을 재사용
+- 문항의 `checkpoint_date`는 정답 기준일이며, `evaluation_checkpoint_date`는 모델에게 제공한 prefix의 마지막 날짜
+- 질문에는 event 이름이나 ID를 노출하지 않고 `session_date` 기반의 기준일만 제시
+- `update/create`와 의미 있는 동일값 재확인(no-op)은 포함하되, `archive`·`mark_stale`·`set_not_applicable` 같은 상태 전용 operation은 최종값 문항에서 제외
+- 고용 상태·주거 유형처럼 사전에 닫힌 값 집합은 객관식, 회사명·주소·금액·인원 수·목록은 단답형
+- 경로별 질문/selector/선지 정책은 `configs/registries/stage2_memory_questions.yaml`에서 관리
 
 ---
 
@@ -47,7 +57,7 @@ persona ─▶ 초기 금융 상태 ─▶ 생애사건 trajectory ─▶ 상담
 | 대화 계획(plan) | trajectory에서 세션별 계획(어떤 업무·어떤 단서·어떤 정답 delta)을 만듦 | `scripts/build_dialogue_plans.py`, `src/fin_life_benchmark/dialogue/evidence_planner.py` |
 | 대화 생성 | 계획에 따라 LLM으로 상담 세션을 생성 | `scripts/generate_dialogue_sessions.py`, `prompts/dialogue/` |
 | 검증/audit | 정답 누출, 상태 충돌, life-stage 위반, 복원가능성 점검 | `scripts/validate_dialogues.py`, `scripts/audit_*.py` |
-| Gold/문항 | prefix별 정답 상태와 Stage 1/2 문항 생성 | `scripts/export_prefix_gold.py`, `scripts/build_benchmark_items.py` |
+| Gold/문항 | prefix별 정답 상태와 Stage 1/2 문항 생성, Stage 3 Multi-hop 문항 별도 생성 | `scripts/export_prefix_gold.py`, `scripts/build_benchmark_items.py`, `scripts/build_stage3_multihop_items.py` |
 
 ### 2.3 꼭 알아야 할 개념
 
@@ -432,6 +442,208 @@ python scripts/publish_counterfactual_fillers_to_hf.py \
     --fillers-root data/runs/$RUN_ID/counterfactual_fillers --execute
 ```
 
+### D. RQ1: progressive life-event trajectory reconstruction
+
+RQ1은 "긴 상담 이력에서 암묵적 생애 사건 인스턴스의 **종류·lifecycle 상태·시간 순서·근거 세션**을 복원할 수 있는가"를 측정하는 새 Stage 1 과제(`stage1_event_trajectory`)입니다. 기존 `stage1_event_identification` 문항과 Stage 2는 그대로 유지됩니다.
+
+#### D.1 Natural progressive 실험
+
+- trajectory마다 15세션 간격 checkpoint 20개(15, 30, …, 300) × 20 trajectory = **400 natural item**.
+- 각 checkpoint에서 모델은 지금까지 보이는 **누적 event ledger 전체**를 JSON으로 복원합니다(사건 수는 알려주지 않음, 같은 event_id 반복 가능).
+- 모델 입력은 **public session id(`D###`) + 발화(turns)뿐**입니다. 날짜·세션 타입·계획 등 어떤 gold 필드도 노출되지 않고, `S### ↔ D###` 매핑은 item gold에만 저장됩니다. PrefixGold는 evaluator 전용입니다.
+- gold ledger는 checkpoint PrefixGold + 세션 기록에서 파생: core evidence(`weak_signal/upcoming/occurred/cancellation_evidence`)와 supporting(`consequence/stale_recall`)을 분리하고, status anchor는 `occurred/cancelled`=확정을 처음 세운 core 세션, `upcoming/weak_signal`=해당 타입의 최신 core 세션으로 결정적으로 정의합니다.
+- 평가 조건: `full_prefix`(전체 prefix), `last_15`(최신 15세션만), `oracle_evidence`(gold core evidence 세션만; retrieval-free 상한).
+- 채점은 exact-set이 아니라 **monotonic DP instance alignment**(event_id 일치만 매칭, ①매칭 수 최대화 ②anchor 거리 최소화 ③evidence 겹침 최대화, 결정적 tie-break) 위에서 이루어집니다.
+- 주 지표: `ordered_occurred_event_f1`(occurred 시퀀스 LCS F1). 보조: full-ledger P/R/F1, status macro-F1(no_event 포함), core/supporting evidence F1(unmatched gold=0인 end-to-end 포함), anchor 정확도/MAE, count MAE, edit distance, confidence/Brier/ECE. checkpoint별 **trajectory macro** → 20개 checkpoint 균등가중 AUC와 @300 최종점수를 보고하며, checkpoint를 넘나드는 instance pooling은 하지 않습니다.
+- 종단 지표: detection lag(첫 복원 checkpoint − first-recoverable checkpoint), post-detection retention, status regression rate, evidence drift, hallucination persistence.
+
+```bash
+export RUN_ID=exp1
+# 자연 문항 + distractor case 생성과 audit까지 (frozen 데이터만 사용)
+make rq1-controlled RUN_ID=$RUN_ID
+
+# 개별 단계
+make build-rq1 RUN_ID=$RUN_ID              # rq1/natural/*.jsonl + taxonomy + manifest
+make build-rq1-distractor RUN_ID=$RUN_ID   # rq1/distractor/cases.jsonl (filler bank 필요)
+make audit-rq1 RUN_ID=$RUN_ID              # rq1/audit/rq1_{audit,decision}.*  (FAIL시 비정상 종료)
+
+# 평가 — EXECUTE 없으면 offline mock 배관 점검
+make evaluate-rq1 RUN_ID=$RUN_ID RQ1_CONDITION=full_prefix
+make evaluate-rq1 RUN_ID=$RUN_ID RQ1_CONDITION=last_15 EXECUTE=1 \
+     RQ1_PROVIDER=anthropic RQ1_MODEL=claude-sonnet-5 RQ1_MODEL_TAG=anthropic__claude-sonnet-5
+```
+
+dev/test split은 `manifest.json`에 고정됩니다(dev=`traj_001`, test=`traj_002`~`traj_020`; 프롬프트·파서·지표 확정은 dev에서만). `evaluate_rq1.py --split dev|test`로 필터링합니다. manifest에는 git commit, HF revision(고정된 경우만), trajectory/세션/gold 해시, taxonomy·prompt 해시, item 수까지 기록됩니다.
+
+#### D.2 Distractor robustness (paired full / mask_distractor / sham)
+
+hard-negative 세션 1개를 실험 단위로, 같은 checkpoint에서 세 가지 조건을 짝지어 비교합니다.
+
+| 조건 | 내용 |
+| --- | --- |
+| `full` | 원본 prefix (hard negative 노출) |
+| `mask_distractor` | 대상 hard-negative 슬롯만 persona-matched timeless filler로 치환 |
+| `sham` | hard negative는 유지, 가장 가까운 eligible routine 슬롯을 **같은 donor**로 치환 |
+
+- donor 선택·슬롯 치환은 §5-C의 lifecycle masking 기계(`_pick_filler`/`_neutralize`, CF filler bank)를 그대로 재사용합니다. donor는 조건 간 고정이며 한 context에 donor 중복은 없습니다.
+- checkpoint는 기본적으로 대상 세션이 속한 window 끝(15의 배수)이고, prefix에 eligible routine 슬롯이 없으면(초기 window는 hard negative 밀도가 높음) 슬롯이 생길 때까지 15세션씩 결정적으로 연장합니다(`metadata.checkpoint_extended`).
+- **gold event ledger는 세 조건에서 동일**해야 하며, case 생성 시 조건별 PrefixGold 재계산으로 검증하고 audit이 표본 재검증합니다. hard negative를 가짜 no_event 문항으로 바꾸지 않습니다.
+- `near_miss_event_id`/`hard_negative_type`/`near_miss_explanation`은 case에 private으로만 저장됩니다.
+
+```bash
+for c in full mask_distractor sham; do
+python scripts/evaluate_rq1.py \
+  --items data/runs/$RUN_ID/rq1/distractor/cases.jsonl \
+  --sessions-dir data/runs/$RUN_ID/dialogues/sessions \
+  --fillers-dir data/runs/$RUN_ID/counterfactual_fillers/sessions \
+  --condition $c --execute --provider anthropic --model claude-sonnet-5 \
+  --output data/runs/$RUN_ID/rq1/predictions/anthropic__claude-sonnet-5/distractor_$c.jsonl \
+  --report data/runs/$RUN_ID/rq1/reports/anthropic__claude-sonnet-5/distractor_$c.json
+done
+python scripts/score_rq1_distractor.py \
+  --cases data/runs/$RUN_ID/rq1/distractor/cases.jsonl \
+  --full …/distractor_full.jsonl --masked …/distractor_mask_distractor.jsonl \
+  --sham …/distractor_sham.jsonl \
+  --report data/runs/$RUN_ID/rq1/reports/…/distractor_paired.json
+```
+
+paired 분석은 case 단위 `distractor_cost = score(mask) − score(full)`, `replacement_artifact = score(full) − score(sham)`에 대해 trajectory-cluster bootstrap CI와 sign-flip permutation p-value를 보고하고, near-miss hallucination rate, hard-negative evidence attribution rate, false occurred rate, status/evidence 변화, non-target ledger invariance를 함께 계산합니다. natural 점수와 counterfactual 점수는 절대 하나의 headline으로 합치지 않습니다.
+
+#### D.3 산출물 구조
+
+```text
+data/runs/<RUN_ID>/rq1/
+├── manifest.json                  # 재현 manifest (해시·split·개수)
+├── taxonomy.json                  # public taxonomy (event_id + label_ko)
+├── natural/{progressive_items.jsonl,final_items.jsonl}
+├── distractor/cases.jsonl (+ cases.exclusions.json)
+├── predictions/<provider>__<model>/…jsonl
+├── reports/<provider>__<model>/…json
+└── audit/{rq1_audit.json,rq1_audit.md,rq1_decision.json}
+```
+
+프롬프트는 `prompts/benchmark/rq1_event_trajectory_ko.md`에 버전 관리되며 내용 SHA-256이 run metadata와 모든 report에 기록됩니다. item/prediction 파일은 `data/runs/` 아래 생성물이므로 git에 커밋하지 않습니다.
+
+#### D.4 (임시) occurred-event 근거 짝 파일럿
+
+RQ1 재설계 판단 전에 돌리는 **최소·임시** 프로토콜입니다
+(`stage1_occurred_event_evidence_pairs`, `rq1-occurred-event-pairs-temp-v1`).
+위 `stage1_event_trajectory`는 그대로 남아 있고, 이 파일럿은 같은
+`natural/progressive_items.jsonl`을 재사용하면서 딱 한 가지만 묻습니다:
+
+> 이 prefix에서 **실제로 일어난** 생애 사건과, 그 발생을 처음 확정하는 세션의
+> 짝을 모두 복원할 수 있는가?
+
+- gold: occurred 인스턴스 1개당 짝 1개. anchor는 그 인스턴스에 연결된 visible
+  세션 중 `session_type == occurred_evidence`이고
+  `event_status_after_session == occurred`인 **가장 이른** 세션. fallback 없음.
+  cancelled / weak_signal / upcoming 인스턴스는 gold를 만들지 않습니다.
+- 출력은 `{"pairs": [{"event_id", "evidence_session_id"}]}` 뿐입니다. status·
+  confidence·설명은 받지 않습니다.
+- headline은 `strict_occurred_event_evidence_f1` 하나. `collections.Counter`
+  기반 exact multiset P/R/F1이므로 sibling 라벨·잘못된 근거 세션·중복 예측·무효
+  레코드는 전부 precision을 깎고, 놓친 짝은 recall을 깎습니다. 부분점수 없음.
+- 15..300 checkpoint별로 trajectory macro 평균을 낸 뒤 20개 checkpoint를 동일
+  가중으로 평균(AUC)합니다. checkpoint를 가로질러 atom을 pooling하지 않습니다.
+
+```bash
+make audit-rq1-pairs                      # 프로토콜/프롬프트/gold 감사 (실패 시 exit 1)
+make evaluate-rq1-pairs-dev               # offline mock
+make evaluate-rq1-pairs-dev EXECUTE=1 RQ1_PROVIDER=anthropic RQ1_MODEL=claude-opus-4-8
+```
+
+산출물은 기존 파일럿을 덮지 않도록 `data/runs/<RUN_ID>/rq1_pair_temp/`
+(`protocol_manifest.json`, `predictions/`, `reports/`, `audit/`)에 씁니다.
+
+##### (임시) no-prospective 진단
+
+전망 근거(`weak_signal_evidence`, `upcoming_evidence`)**만** 제거하고 나머지는
+전부 남긴 채 같은 질문을 묻는 진단입니다. distractor(routine, hard_negative),
+종결 세션, 후속 세션, cancellation 세션이 모두 그대로 보입니다.
+
+제거 방식은 **치환**입니다. 해당 세션을 삭제하지 않고 중립 routine filler로
+그 자리에서 바꾸므로 세션 수·공개 id·위치·날짜가 모두 보존되고 전망 *내용*만
+사라집니다. cp300에서도 모델이 보는 세션은 그대로 300개입니다. 삭제 방식은
+컨텍스트를 12% 짧게 만들어 "근거가 사라져서"와 "프롬프트가 짧아져서"를 섞기
+때문에 쓰지 않습니다.
+
+| condition | cp300 가시 세션 | 설명 |
+| --- | --- | --- |
+| `no_prospective_substituted` (**기본값**) | **300** | 전망 세션을 filler로 치환 |
+| `full_prefix` | 300 | 손대지 않은 baseline |
+
+`evaluate_rq1_pairs.py`의 `--condition` **기본값이 ablation**입니다. baseline을
+돌리려면 `--condition full_prefix`를 명시하세요.
+
+코퍼스는 `scripts/build_no_prospective_corpus.py`로 만듭니다. 이 arm은 prefix
+전체를 렌더링하므로 `--sessions-dir`를 원본 코퍼스로 잘못 지정해도 렌더 경로만
+봐서는 알 수 없습니다 — 그러면 조용히 full_prefix 실행이 되므로, evaluator가
+치환 코퍼스가 맞는지 **검증**하고 아니면 거부합니다.
+
+gold는 **full prefix 투영 그대로**입니다. 조건이 바꾸는 것은 모델이 보는
+입력뿐이고 정답은 변하지 않으므로 같은 item의 full-prefix 점수와 직접 비교할 수
+있습니다. cancellation 세션은 보이지만 gold 짝을 만들지 않는 음성 예시로
+남습니다.
+
+items 파일에 있는 **아무 checkpoint에서나** 돌릴 수 있어 사다리(cp30, cp60, …
+cp300)로 읽을 수 있습니다. 단 `--checkpoint`는 항상 명시해야 합니다.
+
+```bash
+# 감사 — 원본 코퍼스도 함께 줘야 "전망 슬롯만 바뀌었는지"를 turn 단위로 검증
+python scripts/audit_rq1_pair_no_prospective.py \
+    --items data/runs/$RUN_ID/rq1/natural/progressive_items.jsonl \
+    --sessions-dir data/runs/hf_full/no_prospective/final_sessions \
+    --original-sessions-dir data/runs/hf_full/final_sessions \
+    --taxonomy data/runs/$RUN_ID/rq1/taxonomy.json \
+    --trajectory-id traj_001 --checkpoint 300 \
+    --output-dir data/runs/$RUN_ID/rq1_pair_temp/no_prospective_substituted/audit/cp300
+
+# 사다리 실행 (--condition 생략 시 ablation이 기본값)
+python scripts/evaluate_rq1_pairs.py \
+    --items data/runs/$RUN_ID/rq1/natural/progressive_items.jsonl \
+    --sessions-dir data/runs/hf_full/no_prospective/final_sessions \
+    --taxonomy data/runs/$RUN_ID/rq1/taxonomy.json \
+    --trajectory-id traj_001 --execute \
+    --checkpoint 30 --checkpoint 60 --checkpoint 90 --checkpoint 120 \
+    --checkpoint 150 --checkpoint 180 --checkpoint 210 --checkpoint 240 \
+    --checkpoint 270 --checkpoint 300 \
+    --output  data/runs/$RUN_ID/rq1_pair_temp/no_prospective_substituted/predictions/<tag>.jsonl \
+    --report  data/runs/$RUN_ID/rq1_pair_temp/no_prospective_substituted/reports/<tag>.json
+
+# 여러 모델의 사다리를 한 표로
+python scripts/summarize_rq1_pair_ladder.py \
+    data/runs/$RUN_ID/rq1_pair_temp/no_prospective_substituted/predictions/*.jsonl
+```
+
+설계·지표·**알려진 한계**(cell당 1회 호출, trajectory n=1, checkpoint가 중첩되어
+독립이 아님, checkpoint와 gold 개수가 완전 공선, 평평한 taxonomy를 strict하게
+채점)는 [`docs/rq1_pair_protocol.md`](docs/rq1_pair_protocol.md)에 정리돼
+있습니다.
+
+`--baseline-predictions`는 저장된 full-prefix 예측을 그대로 읽어 delta P/R/F1,
+유지된 짝, full에서 맞았는데 잃은 짝, 새 TP/FP, cancellation 세션 FP를
+계산합니다. baseline 모델을 다시 호출하지 않습니다.
+
+Anthropic adaptive thinking을 쓰려면 `--thinking-mode adaptive
+--reasoning-effort high`를 주고, 실제로 적용됐는지 강제하려면
+`--require-thinking-tokens`를 켭니다. 게이트는 두 종류로 나뉩니다.
+
+- **치명적 실패**: adaptive/effort/streaming이 실제로 적용되지 않았거나,
+  thinking token이 있는데 0 이하이거나, 응답이 잘렸거나 파싱에 실패한 경우.
+  해당 item을 채점에서 제외하고 exit 1 합니다.
+- **메타데이터 공백**: 설정 적용은 확인됐는데(mode/effort/streaming 3개 모두)
+  provider가 thinking token **개수**만 보고하지 않는 경우. 호출 자체는 정상이므로
+  `inference_metadata_gap`으로 기록하고 item은 그대로 채점합니다. claude-opus-5가
+  여기 해당하며, 이걸 실패로 처리하면 멀쩡한 측정치를 보고 누락 때문에 버리게
+  됩니다. thinking token이 없을 때 0이 아니라 `null` +
+  `thinking_tokens_source: "unavailable"`로 기록하는 건 그대로입니다.
+
+`--temperature`는 `claude-opus-5`와 GPT-5.x frontier 모델에서 provider 계약상
+**전달되지 않습니다**(Gemini만 적용). 즉 그 두 모델은 provider 기본값으로
+샘플링합니다. cell당 1회 호출이므로 이 사실이 재현성을 좌우하기 때문에, 모든
+prediction row가 `temperature_applied` / `temperature_omission_reason` /
+`deterministic_sampling`을, report가 `sampling` 요약을 함께 기록합니다.
+
 ---
 
 ## 6. 데이터 정책
@@ -483,7 +695,7 @@ python scripts/audit_session_dates.py \
 | `data/runs/<RUN_ID>/trajectories/traj_*.json` | 생애사건 trajectory |
 | `data/runs/<RUN_ID>/dialogues/sessions/sessions_traj_*.jsonl` | 대화 세션 (분석·평가 입력) |
 | `data/runs/<RUN_ID>/gold/prefix_gold_*.jsonl` | prefix별 정답 상태 |
-| `data/runs/<RUN_ID>/benchmark_items/*.jsonl` | Stage 1/2 문항 |
+| `data/runs/<RUN_ID>/benchmark_items/*.jsonl` | Stage 1 및 `stage2_memory_value` 문항 |
 | `data/runs/<RUN_ID>/quality_reports/*` | 검증·audit 리포트 |
 | `data/runs/<RUN_ID>/eval/report.json` | 모델 평가 결과 |
 | `data/runs/<RUN_ID>/masking_ladder.json` | lifecycle masking abstention 사다리 (§5-C) |
@@ -526,6 +738,7 @@ python scripts/audit_session_dates.py \
 | `docs/history_filter.md` | history-필요성 필터 |
 | `docs/failure_modes.md` | 주요 실패 유형 |
 | `docs/coverage_generation.md` | 희귀 사건 커버리지 생성 |
+| `docs/rq1_pilot_report.md` | RQ1 파일럿 결과(traj_001 dev)와 지표 개선 과제 |
 | `docs/locale_extension_guide.md` | 로케일 추가 가이드 |
 
 ---

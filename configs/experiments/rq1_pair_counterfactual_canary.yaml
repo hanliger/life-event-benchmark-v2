@@ -1,0 +1,29 @@
+# cp300 single-target counterfactual canary for the temporary occurred-pair
+# pilot (stage1_occurred_event_evidence_pairs).
+#
+# Deliberately small: one trajectory, one checkpoint, five single-target cases,
+# three conditions. Not a benchmark sweep.
+protocol_version: rq1-occurred-pair-counterfactual-canary-temp-v1
+artifact_version: canary-artifact-v1
+
+trajectory_id: traj_001
+checkpoint: 300
+target_count: 5
+selection_seed: 42
+
+conditions:
+  - full
+  - mask_terminal
+  - mask_all
+
+# Targets must retain weak/upcoming evidence so that mask_terminal and mask_all
+# are genuinely different contexts; without it the two conditions cannot
+# separate premature commitment from a structural count prior.
+require_pre_occurrence_evidence: true
+
+excluded_event_instance_ids:
+  # education_child_stage_entry, canonical occurred anchor S255/D255. Two
+  # independent models cited D259 in the natural cp300 canary, so which session
+  # establishes occurrence is disputed. Excluded until that is resolved so a
+  # contested anchor cannot drive a retraction verdict.
+  - traj_001_ev022

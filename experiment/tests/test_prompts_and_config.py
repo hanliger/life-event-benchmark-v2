@@ -1,0 +1,70 @@
+from __future__ import annotations
+
+import pytest
+
+from financial_memory_experiment.config import load_experiment_config
+from financial_memory_experiment.methods import method_ids
+from financial_memory_experiment.methods.registry import comparison_contract
+from financial_memory_experiment.paths import ExperimentPaths
+from financial_memory_experiment.prompts import build_query, gold_answer, parse_answer
+
+
+def test_exactly_seven_methods_and_short_output_cap():
+    cfg = load_experiment_config()
+    assert len(method_ids()) == 7
+    assert len(set(method_ids())) == 7
+    assert cfg["models"]["final_answer_max_tokens"] == 4096
+    assert cfg["models"]["reasoning_policy"] == "vendor_default"
+    assert cfg["dataset"]["expected"]["stage3_items"] == 123
+    assert comparison_contract() == {
+        "embedding_model": "gemini-embedding-2",
+        "embedding_dimensions": 768,
+        "top_k": 10,
+        "methods": [
+            "dense_ge2_gemini_3_1_pro",
+            "mem0_gemini_3_1_pro",
+            "letta_gemini_3_1_pro",
+        ],
+    }
+
+
+def test_parser_does_not_repair_invalid_output():
+    item = {"stage": "stage2_memory_value", "metadata": {"answer_type": "mcq"}}
+    assert parse_answer(item, "<answer>B</answer>") == "B"
+    assert parse_answer(item, "<answer>G</answer>") == "G"
+    assert parse_answer(item, "정답은 B입니다") == ""
+
+
+def test_stage2_free_response_is_normalized_with_the_core_contract():
+    item = {
+        "stage": "stage2_memory_value",
+        "metadata": {"answer_type": "free_response", "normalizer": "krw"},
+        "gold": {"normalized_answer": "3000000"},
+    }
+
+    assert parse_answer(item, "<answer>300만원</answer>") == "3000000"
+    assert gold_answer(item) == "3000000"
+    query = build_query(
+        {**item, "question": "기준일의 지출액은?", "options": []},
+        [],
+    )
+    assert "[선택지]" not in query
+    assert "<answer>값</answer>" in query
+
+
+def test_comparison_contract_rejects_dimension_drift(tmp_path):
+    root = tmp_path / "experiment"
+    (root / "configs").mkdir(parents=True)
+    (root / "configs" / "experiment.yaml").write_text(
+        """
+benchmark:
+  top_k_main: 10
+models:
+  gemini_embedding: gemini-embedding-2
+  embedding_dimensions: 1536
+""",
+        encoding="utf-8",
+    )
+    paths = ExperimentPaths(root=root, repo_root=tmp_path)
+    with pytest.raises(ValueError, match="768-dimensional"):
+        comparison_contract(paths)

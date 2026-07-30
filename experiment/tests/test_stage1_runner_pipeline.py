@@ -1,9 +1,8 @@
 """End-to-end Stage 1 grid on a synthetic prepared dataset with mock readers.
 
 The real prepared corpus is not committed, so this fixture builds the minimum
-`prepared` tree the Stage 1 runner reads and drives the three frozen models
-through `run_method` exactly as the paid runner does, then exercises the Stage 1
-reporting path.
+`prepared` tree the Stage 1 runner reads and drives both frozen execution
+profiles through `run_method`, then exercises checkpoint resume and reporting.
 """
 
 from __future__ import annotations
@@ -21,6 +20,7 @@ from financial_memory_experiment.metrics import (
     write_tables,
 )
 from financial_memory_experiment.paths import ExperimentPaths
+from financial_memory_experiment.run_harness import attempt_state
 from financial_memory_experiment.stage1 import (
     STAGE1,
     STAGE1_API3_METHODS,
@@ -304,6 +304,62 @@ def test_stage1_offline_prompt_render_passes_audit_for_all_methods(
                 assert "archival search는 최대 1회" in rendered["prompt"]
 
 
+def test_stage1_checkpoint_cache_resumes_only_missing_items(stage1_paths):
+    method_id = "fc_gpt_5_6_sol"
+    items = [
+        item
+        for item in stage1_runner._all_items(stage1_paths)
+        if item["trajectory_id"] == "traj_001"
+    ]
+    run_dir = stage1_paths.runs / "checkpoint_cache"
+    first_output = (
+        run_dir
+        / "raw"
+        / method_id
+        / "traj_001"
+        / "attempt_01.jsonl"
+    )
+    run_method(
+        stage1_paths,
+        method_id=method_id,
+        items=items[:1],
+        output=first_output,
+        mock=True,
+        query_concurrency=1,
+        prompt_artifact_root=run_dir / "prompts",
+    )
+
+    complete, second_output, cached_rows = attempt_state(
+        run_dir,
+        method_id,
+        "traj_001",
+        expected_item_ids=[str(item["item_id"]) for item in items],
+    )
+    assert complete is None
+    assert second_output.name == "attempt_02.jsonl"
+    assert [row["item_id"] for row in cached_rows] == [items[0]["item_id"]]
+
+    run_method(
+        stage1_paths,
+        method_id=method_id,
+        items=items,
+        output=second_output,
+        mock=True,
+        query_concurrency=2,
+        prompt_artifact_root=run_dir / "prompts",
+        cached_rows=cached_rows,
+    )
+    rows = list(read_jsonl(second_output))
+    assert {row["item_id"] for row in rows} == {
+        str(item["item_id"]) for item in items
+    }
+    manifest = json.loads(
+        second_output.with_suffix(".manifest.json").read_text(encoding="utf-8")
+    )
+    assert manifest["status"] == "COMPLETE"
+    assert manifest["resumed_cached_items"] == 1
+
+
 @pytest.mark.parametrize(
     ("profile", "methods", "timeout_seconds", "parse_retries"),
     [
@@ -374,6 +430,23 @@ def test_stage1_plan_audit_report_commands(
         (run_dir / "run_manifest.json").read_text(encoding="utf-8")
     )
     assert manifest["status"] == "PLANNED"
+
+    from fcntl import LOCK_EX, LOCK_NB, LOCK_UN, flock
+
+    with (run_dir / "execution.lock").open("a", encoding="utf-8") as lock:
+        flock(lock.fileno(), LOCK_EX | LOCK_NB)
+        try:
+            with pytest.raises(RuntimeError, match="already owns"):
+                stage1_runner.command_execute(
+                    argparse.Namespace(
+                        run_dir=str(run_dir),
+                        profile=profile,
+                        execute_paid=False,
+                        approval="not-approved",
+                    )
+                )
+        finally:
+            flock(lock.fileno(), LOCK_UN)
 
     other_profile = "method9" if profile == "api3" else "api3"
     with pytest.raises(ValueError, match="run plan belongs"):

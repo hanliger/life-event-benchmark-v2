@@ -40,6 +40,8 @@ Stage 1 실행에 필요하지 않다.
   --checkpoint-workers 20 \
   --max-in-flight 60 \
   --anthropic-max-in-flight 20 \
+  --openai-max-in-flight 20 \
+  --google-max-in-flight 20 \
   --openrouter-max-in-flight 1 \
   --request-timeout-seconds 600 \
   --provider-retries 0 \
@@ -78,15 +80,20 @@ retrieval, memory-agent method가 없다. 공통 harness의 `provider_lock.json`
 ## 3. Execute
 
 ```bash
-./experiment/scripts/paid/run_stage1_api3.sh execute \
-  --run-dir experiment/runs/stage1_api3/<run-id> \
-  --execute-paid \
-  --approval I_APPROVE_STAGE1_PAID
+RUN_DIR=experiment/runs/stage1_api3/<run-id>
+mkdir -p "$RUN_DIR/logs"
+nohup ./experiment/scripts/paid/run_stage1_api3.sh execute \
+  --run-dir "$RUN_DIR" \
+  --execute-paid --approval I_APPROVE_STAGE1_PAID \
+  > "$RUN_DIR/logs/execute.log" 2>&1 < /dev/null &
+echo $! > "$RUN_DIR/execute.pid"
 ```
 
 API credential은 explicit approval 검증 후 `experiment/.env`(없으면 repo root
 `.env`)에서 읽는다. Provider SDK retry와 parse retry는 모두 0이며 모든 attempt는
-보존한다.
+보존한다. 실행 로그는 checkpoint cache hit와 method × trajectory 시작·완료·실패를
+JSON line으로 기록한다. `execution.lock`은 같은 run의 중복 실행과 이중 과금을
+차단한다.
 
 ## 4. Resume
 
@@ -99,7 +106,8 @@ API credential은 explicit approval 검증 후 `experiment/.env`(없으면 repo 
 
 COMPLETE method × trajectory artifact는 건너뛴다. 실패 attempt는 덮어쓰지 않고
 다음 `attempt_XX.jsonl`에 기록한다. 전체 frozen grid가 중복 없이 완성되어야 run
-status가 `GENERATED`가 된다.
+status가 `GENERATED`가 된다. RUNNING/FAILED attempt에 이미 보존된 유효 checkpoint
+row도 새 attempt에 복사하고, 완료되지 않은 checkpoint만 다시 호출한다.
 
 ## 5. Report
 

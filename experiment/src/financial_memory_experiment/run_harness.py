@@ -18,6 +18,7 @@ import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
+from threading import Lock
 from typing import Any, Iterable
 from zoneinfo import ZoneInfo
 
@@ -59,6 +60,17 @@ SNAPSHOT_METHODS = (
     "letta_claude_opus_4_8",
 )
 ALL_TRAJECTORIES = tuple(f"traj_{index:03d}" for index in range(1, 21))
+_RUN_EVENT_LOCK = Lock()
+
+
+def _emit_run_event(event: str, **fields: Any) -> None:
+    payload = {
+        "timestamp_kst": datetime.now(ZoneInfo("Asia/Seoul")).isoformat(),
+        "event": event,
+        **fields,
+    }
+    with _RUN_EVENT_LOCK:
+        print(json.dumps(payload, ensure_ascii=False, sort_keys=True), flush=True)
 
 
 def parse_selection(
@@ -500,9 +512,32 @@ def load_approved_environment(paths: ExperimentPaths) -> None:
         os.environ["GOOGLE_API_KEY"] = os.environ["GEMINI_API_KEY"]
 
 
+def _recoverable_attempt_rows(path: Path) -> list[dict[str, Any]]:
+    lines = path.read_text(encoding="utf-8").splitlines()
+    rows = []
+    for index, line in enumerate(lines):
+        if not line.strip():
+            continue
+        try:
+            rows.append(json.loads(line))
+        except json.JSONDecodeError:
+            if index != len(lines) - 1:
+                raise ValueError(
+                    f"non-terminal corrupt JSONL row in paid cache: {path}"
+                )
+            _emit_run_event(
+                "cache_trailing_row_ignored",
+                path=str(path),
+                line=index + 1,
+            )
+    return rows
+
+
 def attempt_path(
     run_dir: Path, method: str, trajectory: str
 ) -> tuple[Path | None, Path]:
+    """Backward-compatible whole-trajectory attempt lookup."""
+
     parent = run_dir / "raw" / method / trajectory
     parent.mkdir(parents=True, exist_ok=True)
     attempts = sorted(parent.glob("attempt_*.jsonl"))
@@ -513,6 +548,45 @@ def attempt_path(
             if payload.get("status") == "COMPLETE":
                 return path, path
     return None, parent / f"attempt_{len(attempts) + 1:02d}.jsonl"
+
+
+def attempt_state(
+    run_dir: Path,
+    method: str,
+    trajectory: str,
+    *,
+    expected_item_ids: list[str],
+) -> tuple[Path | None, Path, list[dict[str, Any]]]:
+    parent = run_dir / "raw" / method / trajectory
+    parent.mkdir(parents=True, exist_ok=True)
+    attempts = sorted(parent.glob("attempt_*.jsonl"))
+    expected = set(expected_item_ids)
+    cached: dict[str, dict[str, Any]] = {}
+    for path in reversed(attempts):
+        manifest = path.with_suffix(".manifest.json")
+        if manifest.exists():
+            payload = json.loads(manifest.read_text(encoding="utf-8"))
+            if (
+                payload.get("status") == "COMPLETE"
+                and set(map(str, payload.get("input_item_ids") or []))
+                == expected
+            ):
+                return path, path, []
+    for path in attempts:
+        for row in _recoverable_attempt_rows(path):
+            item_id = str(row.get("item_id") or "")
+            if (
+                item_id in expected
+                and str(row.get("method_id")) == method
+                and str(row.get("trajectory_id")) == trajectory
+                and row.get("attempts")
+            ):
+                cached[item_id] = row
+    return (
+        None,
+        parent / f"attempt_{len(attempts) + 1:02d}.jsonl",
+        [cached[item_id] for item_id in expected_item_ids if item_id in cached],
+    )
 
 
 def run_grid(
@@ -544,6 +618,18 @@ def run_grid(
         max_in_flight=int(concurrency["max_in_flight"]),
         provider_limits={
             "anthropic": int(concurrency["anthropic_max_in_flight"]),
+            "openai": int(
+                concurrency.get(
+                    "openai_max_in_flight",
+                    concurrency["max_in_flight"],
+                )
+            ),
+            "google": int(
+                concurrency.get(
+                    "google_max_in_flight",
+                    concurrency["max_in_flight"],
+                )
+            ),
             "openrouter": int(concurrency["openrouter_max_in_flight"]),
         },
     )
@@ -565,20 +651,63 @@ def run_grid(
 
     def run_one(task: tuple[str, str]) -> str:
         method, trajectory = task
-        complete, output = attempt_path(run_dir, method, trajectory)
+        trajectory_items = by_trajectory[trajectory]
+        expected_item_ids = [
+            str(item["item_id"]) for item in trajectory_items
+        ]
+        complete, output, cached_rows = attempt_state(
+            run_dir,
+            method,
+            trajectory,
+            expected_item_ids=expected_item_ids,
+        )
         if complete is not None:
+            _emit_run_event(
+                "trajectory_cache_hit",
+                method=method,
+                trajectory=trajectory,
+                cached_checkpoints=len(expected_item_ids),
+                output=str(complete),
+            )
             return str(complete)
-        run_method(
-            paths,
-            method_id=method,
-            items=by_trajectory[trajectory],
-            output=output,
-            mock=False,
-            top_k=top_k,
-            query_concurrency=int(concurrency["checkpoint_workers"]),
-            reasoning_policy=reasoning_policy,
-            parse_retries=int(plan["parse_retries"]),
-            prompt_artifact_root=run_dir / "prompts",
+        _emit_run_event(
+            "trajectory_start",
+            method=method,
+            trajectory=trajectory,
+            cached_checkpoints=len(cached_rows),
+            pending_checkpoints=len(expected_item_ids) - len(cached_rows),
+            output=str(output),
+        )
+        try:
+            run_method(
+                paths,
+                method_id=method,
+                items=trajectory_items,
+                output=output,
+                mock=False,
+                top_k=top_k,
+                query_concurrency=int(concurrency["checkpoint_workers"]),
+                reasoning_policy=reasoning_policy,
+                parse_retries=int(plan["parse_retries"]),
+                prompt_artifact_root=run_dir / "prompts",
+                cached_rows=cached_rows,
+            )
+        except BaseException as exc:
+            _emit_run_event(
+                "trajectory_failed",
+                method=method,
+                trajectory=trajectory,
+                error_type=type(exc).__name__,
+                error=str(exc)[:500],
+                output=str(output),
+            )
+            raise
+        _emit_run_event(
+            "trajectory_complete",
+            method=method,
+            trajectory=trajectory,
+            cached_checkpoints=len(cached_rows),
+            output=str(output),
         )
         return str(output)
 

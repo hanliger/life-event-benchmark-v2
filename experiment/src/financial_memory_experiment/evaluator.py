@@ -3,11 +3,12 @@ from __future__ import annotations
 import gzip
 import json
 import subprocess
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from importlib.metadata import PackageNotFoundError, version
 from collections import defaultdict
 from pathlib import Path
+from threading import Lock
 from typing import Any, Iterable
 
 from .answer_record import build_answer_record
@@ -25,7 +26,14 @@ from .stage2_2 import (
     parse_stage2_2_prediction,
     score_stage2_2,
 )
-from .util import read_jsonl, session_number, sha256_file, sha256_json, write_json
+from .util import (
+    read_jsonl,
+    session_number,
+    sha256_file,
+    sha256_json,
+    write_json,
+    write_jsonl,
+)
 
 
 def _utc_now() -> str:
@@ -84,6 +92,7 @@ class _RunRecorder:
         reasoning_policy: str | None = None,
     ):
         self.output = output
+        self._append_lock = Lock()
         self.manifest_path = output.with_suffix(".manifest.json")
         if output.exists() or self.manifest_path.exists():
             raise FileExistsError(
@@ -91,6 +100,18 @@ class _RunRecorder:
             )
         output.parent.mkdir(parents=True, exist_ok=True)
         output.touch(exist_ok=False)
+        ordered_items = sorted(
+            items,
+            key=lambda item: (
+                str(item.get("trajectory_id") or ""),
+                _checkpoint(item),
+                str(item["item_id"]),
+            ),
+        )
+        self._item_order = {
+            str(item["item_id"]): index
+            for index, item in enumerate(ordered_items)
+        }
         item_ids = sorted(str(item["item_id"]) for item in items)
         reported_stages = {STAGE2_2, STAGE1}
         prepared = (
@@ -127,13 +148,29 @@ class _RunRecorder:
         write_json(self.manifest_path, self.manifest)
 
     def append(self, row: dict[str, Any]) -> None:
-        with self.output.open("a", encoding="utf-8") as handle:
-            handle.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
-            handle.flush()
-        self.manifest["completed_items"] += 1
-        write_json(self.manifest_path, self.manifest)
+        with self._append_lock:
+            with self.output.open("a", encoding="utf-8") as handle:
+                handle.write(
+                    json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n"
+                )
+                handle.flush()
+            self.manifest["completed_items"] += 1
+            write_json(self.manifest_path, self.manifest)
 
     def complete(self, **extra: Any) -> None:
+        if self.manifest["completed_items"] != self.manifest["expected_items"]:
+            raise RuntimeError("completed item count differs from frozen input")
+        with self._append_lock:
+            rows = list(read_jsonl(self.output))
+            rows.sort(
+                key=lambda row: self._item_order.get(
+                    str(row.get("item_id") or ""),
+                    len(self._item_order),
+                )
+            )
+            temporary = self.output.with_name(self.output.name + ".complete.tmp")
+            write_jsonl(temporary, rows)
+            temporary.replace(self.output)
         self.manifest.update(extra)
         self.manifest.update(
             {
@@ -142,8 +179,6 @@ class _RunRecorder:
                 "output_sha256": sha256_file(self.output),
             }
         )
-        if self.manifest["completed_items"] != self.manifest["expected_items"]:
-            raise RuntimeError("completed item count differs from frozen input")
         write_json(self.manifest_path, self.manifest)
 
     def fail(self, exc: BaseException) -> None:
@@ -209,36 +244,63 @@ def run_method(
     reasoning_policy: str | None = None,
     parse_retries: int = 0,
     prompt_artifact_root: Path | None = None,
+    cached_rows: list[dict[str, Any]] | None = None,
 ) -> Path:
     if query_concurrency <= 0:
         raise ValueError("query_concurrency must be positive")
     if parse_retries < 0:
         raise ValueError("parse_retries must be non-negative")
-    is_masking = [str(item.get("stage", "")).startswith("masking_") for item in items]
+    all_items = list(items)
+    is_masking = [
+        str(item.get("stage", "")).startswith("masking_")
+        for item in all_items
+    ]
     if any(is_masking):
         if not all(is_masking):
             raise ValueError("canonical and masking items must run in separate invocations")
+        if cached_rows:
+            raise ValueError("checkpoint cache is not supported for masking")
         return _run_masking_method(
             paths,
             method_id=method_id,
-            items=items,
+            items=all_items,
             output=output,
             mock=mock,
             top_k=top_k,
         )
+    item_by_id = {str(item["item_id"]): item for item in all_items}
+    if len(item_by_id) != len(all_items):
+        raise ValueError("duplicate item IDs in method invocation")
+    cached_by_id: dict[str, dict[str, Any]] = {}
+    for row in cached_rows or []:
+        item_id = str(row.get("item_id") or "")
+        item = item_by_id.get(item_id)
+        if item is None:
+            raise ValueError(f"cached row is outside frozen input: {item_id}")
+        if str(row.get("method_id")) != method_id:
+            raise ValueError(f"cached row method mismatch: {item_id}")
+        if row.get("stage") != item.get("stage"):
+            raise ValueError(f"cached row stage mismatch: {item_id}")
+        if str(row.get("trajectory_id")) != str(item.get("trajectory_id")):
+            raise ValueError(f"cached row trajectory mismatch: {item_id}")
+        if int(row.get("query_checkpoint") or -1) != _checkpoint(item):
+            raise ValueError(f"cached row checkpoint mismatch: {item_id}")
+        if not row.get("attempts"):
+            raise ValueError(f"cached row lacks preserved attempts: {item_id}")
+        cached_by_id[item_id] = row
     recorder = _RunRecorder(
         paths,
         output=output,
         method_id=method_id,
-        items=items,
+        items=all_items,
         mock=mock,
         top_k=top_k,
         reasoning_policy=reasoning_policy,
     )
-    is_stage2_2 = [item.get("stage") == STAGE2_2 for item in items]
+    is_stage2_2 = [item.get("stage") == STAGE2_2 for item in all_items]
     if any(is_stage2_2) and not all(is_stage2_2):
         raise ValueError("Stage 2.2 items must run in a separate invocation")
-    is_stage1 = [item.get("stage") == STAGE1 for item in items]
+    is_stage1 = [item.get("stage") == STAGE1 for item in all_items]
     if any(is_stage1) and not all(is_stage1):
         raise ValueError("Stage 1 items must run in a separate invocation")
     evaluation_stage = (
@@ -257,6 +319,24 @@ def run_method(
             else active_prepared_manifest(paths)
         )["root"]
     )
+    for item in all_items:
+        item_id = str(item["item_id"])
+        if item_id in cached_by_id:
+            recorder.append(cached_by_id[item_id])
+    items = [
+        item
+        for item in all_items
+        if str(item["item_id"]) not in cached_by_id
+    ]
+    if not items:
+        recorder.complete(
+            resumed_cached_items=len(cached_by_id),
+            query_execution={
+                "strategy": "checkpoint_cache_only",
+                "previous_prediction_in_later_query": False,
+            },
+        )
+        return output
     by_trajectory: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for item in items:
         by_trajectory[str(item["trajectory_id"])].append(item)
@@ -355,9 +435,21 @@ def run_method(
                 with ThreadPoolExecutor(
                     max_workers=query_concurrency
                 ) as executor:
-                    for row in executor.map(answer_snapshot, snapshot_tasks):
-                        recorder.append(row)
+                    futures = [
+                        executor.submit(answer_snapshot, task)
+                        for task in snapshot_tasks
+                    ]
+                    first_error: BaseException | None = None
+                    for future in as_completed(futures):
+                        try:
+                            recorder.append(future.result())
+                        except BaseException as exc:
+                            if first_error is None:
+                                first_error = exc
+                    if first_error is not None:
+                        raise first_error
                 recorder.complete(
+                    resumed_cached_items=len(cached_by_id),
                     query_execution={
                         "strategy": "parallel_immutable_snapshot_clone",
                         "max_workers": query_concurrency,
@@ -418,11 +510,24 @@ def run_method(
                     method.close()
 
             with ThreadPoolExecutor(max_workers=query_concurrency) as executor:
-                # executor.map runs requests concurrently but yields results in
-                # frozen task order, keeping the JSONL artifact deterministic.
-                for row in executor.map(answer_independent, tasks):
-                    recorder.append(row)
+                # Persist every completed checkpoint immediately. Completion
+                # order is intentional: an interrupted paid run can resume
+                # without reissuing already successful requests.
+                futures = [
+                    executor.submit(answer_independent, task)
+                    for task in tasks
+                ]
+                first_error = None
+                for future in as_completed(futures):
+                    try:
+                        recorder.append(future.result())
+                    except BaseException as exc:
+                        if first_error is None:
+                            first_error = exc
+                if first_error is not None:
+                    raise first_error
             recorder.complete(
+                resumed_cached_items=len(cached_by_id),
                 query_execution={
                     "strategy": "parallel_independent_prefix",
                     "max_workers": query_concurrency,
@@ -471,7 +576,7 @@ def run_method(
                         )
             finally:
                 method.close()
-        recorder.complete()
+        recorder.complete(resumed_cached_items=len(cached_by_id))
     except BaseException as exc:
         recorder.fail(exc)
         raise

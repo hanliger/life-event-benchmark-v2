@@ -14,6 +14,7 @@ import gzip
 import json
 import math
 import os
+from fcntl import LOCK_EX, LOCK_NB, LOCK_UN, flock
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -352,6 +353,12 @@ def command_plan(args: argparse.Namespace) -> None:
             "checkpoint_workers": args.checkpoint_workers,
             "max_in_flight": args.max_in_flight,
             "anthropic_max_in_flight": args.anthropic_max_in_flight,
+            "openai_max_in_flight": getattr(
+                args, "openai_max_in_flight", 20
+            ),
+            "google_max_in_flight": getattr(
+                args, "google_max_in_flight", 20
+            ),
             "openrouter_max_in_flight": args.openrouter_max_in_flight,
         },
         "retrieval": {
@@ -707,9 +714,12 @@ def command_report(args: argparse.Namespace) -> None:
     print(json.dumps({"run_dir": str(run_dir), "report": str(report_path)}))
 
 
-def command_execute(args: argparse.Namespace) -> None:
-    paths = ExperimentPaths.discover()
-    run_dir = _profile_run_dir(paths, args)
+def _command_execute(
+    args: argparse.Namespace,
+    *,
+    paths: ExperimentPaths,
+    run_dir: Path,
+) -> None:
     plan = load_verified_plan(run_dir, args, approval_phrase=APPROVAL_PHRASE)
     _assert_plan_profile(plan, args)
     load_approved_environment(paths)
@@ -762,6 +772,23 @@ def command_execute(args: argparse.Namespace) -> None:
     )
 
 
+def command_execute(args: argparse.Namespace) -> None:
+    paths = ExperimentPaths.discover()
+    run_dir = _profile_run_dir(paths, args)
+    lock_path = run_dir / "execution.lock"
+    with lock_path.open("a", encoding="utf-8") as lock:
+        try:
+            flock(lock.fileno(), LOCK_EX | LOCK_NB)
+        except BlockingIOError as exc:
+            raise RuntimeError(
+                f"another Stage 1 process already owns {lock_path}"
+            ) from exc
+        try:
+            _command_execute(args, paths=paths, run_dir=run_dir)
+        finally:
+            flock(lock.fileno(), LOCK_UN)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -785,6 +812,8 @@ def build_parser() -> argparse.ArgumentParser:
     plan.add_argument("--checkpoint-workers", type=int, default=20)
     plan.add_argument("--max-in-flight", type=int, default=60)
     plan.add_argument("--anthropic-max-in-flight", type=int, default=20)
+    plan.add_argument("--openai-max-in-flight", type=int, default=20)
+    plan.add_argument("--google-max-in-flight", type=int, default=20)
     plan.add_argument("--openrouter-max-in-flight", type=int, default=40)
     plan.add_argument("--request-timeout-seconds", type=int)
     plan.add_argument("--provider-retries", type=int, default=0)

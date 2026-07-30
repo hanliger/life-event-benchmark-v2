@@ -1,5 +1,5 @@
 {
-  "conservative_spent_usd": 17.44,
+  "conservative_spent_usd": 19.038,
   "entries": [
     {
       "amount_usd": 1.98,
@@ -200,6 +200,44 @@
         "fc_gemini_3_1_pro": {
           "input_tokens": 57037,
           "output_tokens_including_thoughts": 2003
+        }
+      }
+    },
+    {
+      "amount_usd": 0.0,
+      "kind": "allowance_reset",
+      "new_allowance_usd": 20.0,
+      "note": "User explicitly reset the paid experiment allowance to a fresh $20.00 before the Claude Opus 4.8 Low three-trajectory run. Prior entries remain immutable audit history and are excluded from conservative_spent_usd after this marker.",
+      "prior_conservative_spent_usd": 17.44,
+      "status": "active"
+    },
+    {
+      "amount_usd": 7.0,
+      "kind": "plan_reservation",
+      "note": "The 120-second run stopped after a read timeout with unknown provider billing state. Three persisted responses used 157,163 input and 11,916 output tokens ($1.083715). The other 12 requests are conservatively treated as sent and billed at their known 977,167 input tokens plus the full 20,000-token output cap each: $10.885835. The $11.969550 combined upper bound is rounded up to $11.970. This exceeds the original $7 estimate and remains reserved because provider billing is unknown.",
+      "plan_sha256": "e46206e6bd6553002c81e89d2daf2af03c80a87efad40bcd3222ad851243c272",
+      "reconciled_amount_usd": 11.97,
+      "status": "unknown_billing_upper_bound",
+      "usage": {
+        "fc_claude_opus_4_8": {
+          "confirmed_input_tokens": 157163,
+          "confirmed_output_tokens": 11916,
+          "unknown_request_input_tokens": 977167,
+          "unknown_request_max_output_tokens": 240000
+        }
+      }
+    },
+    {
+      "amount_usd": 6.0,
+      "kind": "plan_reservation",
+      "note": "Reconciled to a rounded-up usage-based upper bound for the successful 300-second Opus 4.8 continuation: 977,167 input tokens at $5/M and 87,256 output tokens at $25/M = $7.067235, rounded up to $7.068. The actual cost exceeded the original $6 estimate but the fresh $20 standing allowance was not exceeded after conservative timeout accounting. Provider billing remains the final authority.",
+      "plan_sha256": "da155ec4dae9a04cb249411abef075d40af046414fc3245674e9fbfa3ae26dca",
+      "reconciled_amount_usd": 7.068,
+      "status": "reconciled_usage_upper_bound",
+      "usage": {
+        "fc_claude_opus_4_8": {
+          "input_tokens": 977167,
+          "output_tokens": 87256
         }
       }
     }

@@ -177,7 +177,10 @@ def _load_approved_environment(paths: ExperimentPaths) -> None:
 
 def _preflight_paid(methods: list[str]) -> None:
     missing_keys: list[str] = []
-    if "fc_claude_opus_5" in methods and not os.environ.get("ANTHROPIC_API_KEY"):
+    if {
+        "fc_claude_opus_5",
+        "fc_claude_opus_4_8",
+    } & set(methods) and not os.environ.get("ANTHROPIC_API_KEY"):
         missing_keys.append("ANTHROPIC_API_KEY")
     if {
         "fc_gpt_5_6_sol",
@@ -203,6 +206,7 @@ def _preflight_paid(methods: list[str]) -> None:
 
     required_modules = {
         "fc_claude_opus_5": "anthropic",
+        "fc_claude_opus_4_8": "anthropic",
         "fc_gpt_5_6_sol": "openai",
         "oracle_rel_gpt_5_6_sol": "openai",
         "fc_gemini_3_1_pro": "google.genai",
@@ -335,9 +339,9 @@ def _dry_run(paths: ExperimentPaths) -> dict[str, Any]:
             "read_only": before == method.state_fingerprint(),
         }
     configured = method_ids(paths)
-    if len(configured) != 8 or len(set(configured)) != 8:
+    if len(configured) != 9 or len(set(configured)) != 9:
         raise ValueError(
-            "exactly eight unique core-plus-analysis methods must be configured"
+            "exactly nine unique core-plus-analysis methods must be configured"
         )
     return {
         "decision": "PASS",
@@ -543,6 +547,7 @@ def main() -> int:
                     and method_id
                     in {
                         "fc_claude_opus_5",
+                        "fc_claude_opus_4_8",
                         "fc_gemini_3_1_pro",
                         "fc_gpt_5_6_sol",
                     }

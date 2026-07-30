@@ -128,6 +128,19 @@ def create_method(
             ),
             system,
         )
+    if method_id == "fc_claude_opus_4_8":
+        return FullContextMethod(
+            method_id,
+            _reader(
+                "anthropic",
+                str(models["claude_opus_4_8"]),
+                mock,
+                max_tokens,
+                float(models["claude_opus_4_8_request_timeout_seconds"]),
+                dict(generation_settings["anthropic"]),
+            ),
+            system,
+        )
     if method_id == "fc_gemini_3_1_pro":
         return FullContextMethod(method_id, gemini, system)
     if method_id == "fc_gpt_5_6_sol":

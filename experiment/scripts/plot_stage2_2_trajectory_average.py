@@ -46,6 +46,14 @@ TRAJECTORY_SPECS = (
     },
 )
 
+OPUS_4_8_SPEC = {
+    "label": "Claude Opus 4.8",
+    "method_id": "fc_claude_opus_4_8",
+    "color": "#A23B72",
+    "dash": "4 4",
+    "marker": "diamond",
+}
+
 
 def _read_jsonl(path: Path) -> list[dict[str, Any]]:
     return [
@@ -139,6 +147,71 @@ def load_scores(
                     for trajectory_id in plans
                 )
     return scores, parse_failures
+
+
+def add_extra_model_scores(
+    repo_root: Path,
+    scores: dict[str, dict[str, dict[int, dict[str, float]]]],
+    *,
+    plans: list[str],
+    model_spec: dict[str, str],
+) -> None:
+    method_id = str(model_spec["method_id"])
+    rows = []
+    for plan in plans:
+        path = (
+            repo_root
+            / "experiment"
+            / "runs"
+            / "paid_smoke"
+            / plan
+            / f"{method_id}__canonical.jsonl"
+        )
+        rows.extend(_read_jsonl(path))
+    for trajectory_id in ("traj_002", "traj_003", "traj_010"):
+        trajectory_rows = [
+            row for row in rows if row["trajectory_id"] == trajectory_id
+        ]
+        selected = {
+            int(row["query_checkpoint"]): row for row in trajectory_rows
+        }
+        if len(selected) != len(trajectory_rows):
+            raise ValueError(
+                f"{trajectory_id}/{method_id}: duplicate checkpoints "
+                "across extra-model plans"
+            )
+        if set(selected) != set(CHECKPOINTS):
+            raise ValueError(
+                f"{trajectory_id}/{method_id}: incomplete checkpoints"
+            )
+        scores[trajectory_id][method_id] = {}
+        for checkpoint in CHECKPOINTS:
+            row = selected[checkpoint]
+            if row.get("parse_error") is not None:
+                raise ValueError(
+                    f"{trajectory_id}/{method_id}/{checkpoint}: "
+                    f"parse_error={row.get('parse_error')}"
+                )
+            metrics = row.get("metrics") or {}
+            scores[trajectory_id][method_id][checkpoint] = {}
+            for metric_key, _, _ in METRICS:
+                value = metrics.get(metric_key)
+                if not isinstance(value, (int, float)):
+                    raise ValueError(
+                        f"{trajectory_id}/{method_id}/{checkpoint}: "
+                        f"missing {metric_key}"
+                    )
+                scores[trajectory_id][method_id][checkpoint][metric_key] = (
+                    float(value) * 100.0
+                )
+    scores["macro_average"][method_id] = {}
+    for checkpoint in CHECKPOINTS:
+        scores["macro_average"][method_id][checkpoint] = {}
+        for metric_key, _, _ in METRICS:
+            scores["macro_average"][method_id][checkpoint][metric_key] = mean(
+                scores[trajectory_id][method_id][checkpoint][metric_key]
+                for trajectory_id in ("traj_002", "traj_003", "traj_010")
+            )
 
 
 def _marker_svg(
@@ -386,6 +459,7 @@ def build_svg(
 
 def build_macro_model_comparison_svg(
     scores: dict[str, dict[str, dict[int, dict[str, float]]]],
+    model_specs: tuple[dict[str, Any], ...] = MODEL_SPECS,
 ) -> str:
     """Render a compact two-panel comparison of model macro averages."""
     width, height = 720, 780
@@ -401,7 +475,7 @@ def build_macro_model_comparison_svg(
         (
             f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" '
             f'height="{height}" viewBox="0 0 {width} {height}" role="img" '
-            'aria-label="Three-model macro-average comparison">'
+            f'aria-label="{len(model_specs)}-model macro-average comparison">'
         ),
         "<style>",
         "text { font-family: Arial, 'DejaVu Sans', sans-serif; fill: #17202A; }",
@@ -415,7 +489,7 @@ def build_macro_model_comparison_svg(
         '<rect width="720" height="780" fill="#FFFFFF"/>',
         (
             '<text x="360" y="35" text-anchor="middle" class="title">'
-            "Three-model Macro-average Comparison</text>"
+            f"{len(model_specs)}-model Macro-average Comparison</text>"
         ),
         (
             '<text x="360" y="60" text-anchor="middle" class="subtitle">'
@@ -424,8 +498,12 @@ def build_macro_model_comparison_svg(
         ),
     ]
 
-    legend_x = (35, 255, 515)
-    for x, model in zip(legend_x, MODEL_SPECS, strict=True):
+    legend_x = (
+        (25, 200, 390, 570)
+        if len(model_specs) == 4
+        else (35, 255, 515)
+    )
+    for x, model in zip(legend_x, model_specs, strict=True):
         dash = (
             f' stroke-dasharray="{model["dash"]}"'
             if model["dash"]
@@ -502,7 +580,7 @@ def build_macro_model_comparison_svg(
                     ),
                 ]
             )
-        for model in MODEL_SPECS:
+        for model in model_specs:
             method_id = str(model["method_id"])
             points = [
                 (
@@ -553,6 +631,46 @@ def build_macro_model_comparison_svg(
         ]
     )
     return "\n".join(parts) + "\n"
+
+
+def write_macro_comparison_csv(
+    scores: dict[str, dict[str, dict[int, dict[str, float]]]],
+    model_specs: tuple[dict[str, Any], ...],
+    plan_by_method: dict[str, str],
+    output_dir: Path,
+) -> Path:
+    path = output_dir / "macro_average_model_comparison_values.csv"
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.writer(handle, lineterminator="\n")
+        writer.writerow(
+            [
+                "model",
+                "method_id",
+                "plan_sha256",
+                "checkpoint",
+                "dynamic_path_final_state_accuracy_pct",
+                "correct_change_f1_pct",
+                "aggregation",
+            ]
+        )
+        for model in model_specs:
+            method_id = str(model["method_id"])
+            for checkpoint in CHECKPOINTS:
+                values = scores["macro_average"][method_id][checkpoint]
+                writer.writerow(
+                    [
+                        model["label"],
+                        method_id,
+                        plan_by_method.get(
+                            method_id, "three_trajectory_source_plans"
+                        ),
+                        checkpoint,
+                        f"{values['dynamic_path_final_state_accuracy']:.6f}",
+                        f"{values['correct_change_f1']:.6f}",
+                        "checkpoint_then_trajectory_macro",
+                    ]
+                )
+    return path
 
 
 def write_source_csv(
@@ -619,6 +737,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--replacement-trajectory")
     parser.add_argument("--replacement-method")
     parser.add_argument("--replacement-checkpoint", type=int)
+    parser.add_argument("--extra-model-plan", action="append")
     parser.add_argument("--output-dir", type=Path, required=True)
     return parser.parse_args()
 
@@ -656,6 +775,23 @@ def main() -> None:
             )
         ] = str(args.replacement_plan)
     scores, parse_failures = load_scores(repo_root, plans, replacements)
+    comparison_model_specs = MODEL_SPECS
+    if args.extra_model_plan:
+        add_extra_model_scores(
+            repo_root,
+            scores,
+            plans=list(map(str, args.extra_model_plan)),
+            model_spec=OPUS_4_8_SPEC,
+        )
+        comparison_model_specs = (*MODEL_SPECS, OPUS_4_8_SPEC)
+    plan_by_method = {
+        str(model["method_id"]): "three_trajectory_source_plans"
+        for model in MODEL_SPECS
+    }
+    if args.extra_model_plan:
+        plan_by_method[str(OPUS_4_8_SPEC["method_id"])] = "+".join(
+            map(str, args.extra_model_plan)
+        )
     generated = [
         write_source_csv(
             scores,
@@ -663,7 +799,13 @@ def main() -> None:
             plans,
             replacements,
             output_dir,
-        )
+        ),
+        write_macro_comparison_csv(
+            scores,
+            comparison_model_specs,
+            plan_by_method,
+            output_dir,
+        ),
     ]
     for metric_key, title, stem in METRICS:
         svg_path = output_dir / f"{stem}.svg"
@@ -680,7 +822,7 @@ def main() -> None:
         )
     comparison_svg = output_dir / "macro_average_model_comparison.svg"
     comparison_svg.write_text(
-        build_macro_model_comparison_svg(scores),
+        build_macro_model_comparison_svg(scores, comparison_model_specs),
         encoding="utf-8",
     )
     generated.extend(

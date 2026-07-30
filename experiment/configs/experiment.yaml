@@ -56,6 +56,8 @@ models:
   gemini_embedding: gemini-embedding-2
   embedding_dimensions: 768
   claude_full_context: claude-opus-5
+  claude_opus_4_8: claude-opus-4-8
+  claude_opus_4_8_request_timeout_seconds: 300
   openai_full_context: gpt-5.6-sol
   reasoning_policy: deployment_realistic_low
   sampling_policy: provider_default
@@ -104,6 +106,7 @@ models:
   request_timeout_seconds: 120
 methods:
   - fc_claude_opus_5
+  - fc_claude_opus_4_8
   - fc_gemini_3_1_pro
   - fc_gpt_5_6_sol
   - bm25_gemini_3_1_pro

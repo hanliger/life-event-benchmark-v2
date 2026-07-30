@@ -242,6 +242,7 @@ def run_method(
         if query_concurrency > 1:
             supported = {
                 "fc_claude_opus_5",
+                "fc_claude_opus_4_8",
                 "fc_gemini_3_1_pro",
                 "fc_gpt_5_6_sol",
             }

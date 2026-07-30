@@ -4,6 +4,7 @@ import pytest
 
 from financial_memory_experiment.config import load_experiment_config
 from financial_memory_experiment.methods import method_ids
+from financial_memory_experiment.methods import registry
 from financial_memory_experiment.methods.registry import (
     comparison_contract,
     generation_settings_for_policy,
@@ -12,12 +13,14 @@ from financial_memory_experiment.paths import ExperimentPaths
 from financial_memory_experiment.prompts import build_query, gold_answer, parse_answer
 
 
-def test_exactly_eight_methods_and_short_output_cap():
+def test_exactly_nine_methods_and_short_output_cap():
     cfg = load_experiment_config()
-    assert len(method_ids()) == 8
-    assert len(set(method_ids())) == 8
-    assert len(cfg["methods"]) == 7
+    assert len(method_ids()) == 9
+    assert len(set(method_ids())) == 9
+    assert len(cfg["methods"]) == 8
     assert cfg["analysis_methods"] == ["oracle_rel_gpt_5_6_sol"]
+    assert cfg["models"]["claude_opus_4_8"] == "claude-opus-4-8"
+    assert cfg["models"]["claude_opus_4_8_request_timeout_seconds"] == 300
     assert cfg["models"]["final_answer_max_tokens"] == 4096
     assert cfg["stage2_2_reconstruct"]["smoke"]["max_output_tokens"] == 20000
     assert cfg["models"]["reasoning_policy"] == "deployment_realistic_low"
@@ -120,3 +123,39 @@ def test_unknown_reasoning_policy_is_rejected():
     cfg = load_experiment_config()
     with pytest.raises(ValueError, match="unknown reasoning policy"):
         generation_settings_for_policy(cfg["models"], "maximum_magic")
+
+
+def test_opus_4_8_method_uses_pinned_model_and_low_settings(monkeypatch):
+    captured = []
+
+    def fake_reader(
+        provider,
+        model,
+        mock,
+        max_tokens,
+        timeout_seconds,
+        generation_settings,
+    ):
+        captured.append(
+            (provider, model, timeout_seconds, generation_settings)
+        )
+        return registry.MockReader()
+
+    monkeypatch.setattr(registry, "_reader", fake_reader)
+    method = registry.create_method(
+        "fc_claude_opus_4_8",
+        trajectory_id="traj_002",
+        mock=True,
+        reasoning_policy="deployment_realistic_low",
+    )
+
+    assert method.method_id == "fc_claude_opus_4_8"
+    assert captured[-1] == (
+        "anthropic",
+        "claude-opus-4-8",
+        300.0,
+        {
+            "thinking": {"type": "adaptive", "display": "omitted"},
+            "output_config": {"effort": "low"},
+        },
+    )

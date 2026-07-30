@@ -152,6 +152,55 @@ def _provider_usage(metadata: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _token_usage_rollup(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    """Input / thinking / output token accounting for the run.
+
+    Providers scope these differently and the difference is not cosmetic:
+    OpenAI's ``completion_tokens`` and Anthropic's ``output_tokens`` *include*
+    the reasoning/thinking tokens, while Gemini reports ``thoughts_token_count``
+    *outside* ``candidates_token_count``. Summing output across providers
+    therefore does not yield comparable "answer text" volume, so the note ships
+    with the numbers rather than living in someone's head.
+
+    A missing count stays ``None`` and is excluded from the total rather than
+    folded in as 0, and ``items_missing_*`` says how many rows that was.
+    """
+
+    def total(key: str) -> int | None:
+        values = [r[key] for r in rows if r.get(key) is not None]
+        return sum(int(v) for v in values) if values else None
+
+    def missing(key: str) -> int:
+        return sum(1 for r in rows if r.get(key) is None)
+
+    per_checkpoint: dict[str, Any] = {}
+    for row in rows:
+        per_checkpoint[str(row["checkpoint_session_count"])] = {
+            "input_tokens": row["input_tokens"],
+            "output_tokens": row["output_tokens"],
+            "reasoning_tokens": row["reasoning_tokens"],
+            "thinking_tokens": row["thinking_tokens"],
+            "thinking_tokens_source": row["thinking_tokens_source"],
+        }
+    return {
+        "call_count": len(rows),
+        "totals": {
+            "input_tokens": total("input_tokens"),
+            "output_tokens": total("output_tokens"),
+            "reasoning_tokens": total("reasoning_tokens"),
+            "thinking_tokens": total("thinking_tokens"),
+        },
+        "items_missing_thinking_tokens": missing("thinking_tokens"),
+        "items_missing_reasoning_tokens": missing("reasoning_tokens"),
+        "per_checkpoint": per_checkpoint,
+        "scope_note": (
+            "openai/anthropic: reasoning+thinking are counted inside "
+            "output_tokens; gemini: thoughts are reported outside "
+            "candidates_token_count"
+        ),
+    }
+
+
 def inference_contract_failures(
     metadata: dict[str, Any],
     usage: dict[str, Any],
@@ -236,6 +285,15 @@ def main() -> None:
     parser.add_argument("--model", default=None)
     parser.add_argument("--execute", action="store_true")
     parser.add_argument("--temperature", type=float, default=0.0)
+    parser.add_argument(
+        "--no-temperature",
+        action="store_true",
+        help=(
+            "send no temperature at all, so the provider default applies. "
+            "Distinct from --temperature 0.0, which is a request the frontier "
+            "models refuse; this is not asking in the first place."
+        ),
+    )
     parser.add_argument("--max-tokens", type=int, default=8192)
     parser.add_argument("--reasoning-effort", default=None)
     parser.add_argument(
@@ -244,6 +302,32 @@ def main() -> None:
         choices=sorted(mode for mode in THINKING_MODES if mode),
         help="Anthropic thinking mode; omit for the non-thinking request shape",
     )
+    parser.add_argument("--timeout-seconds", type=float, default=None)
+    parser.add_argument(
+        "--max-retries",
+        type=int,
+        default=2,
+        help=(
+            "total attempts = this + 1. 0 makes a failure final, which is what a "
+            "single-replicate protocol wants: a retry would swap one unmeasured "
+            "draw for another and report the second"
+        ),
+    )
+    parser.add_argument(
+        "--thinking-level", default=None, help="Gemini thinking level"
+    )
+    parser.add_argument(
+        "--include-thoughts",
+        dest="include_thoughts",
+        action="store_true",
+        default=None,
+    )
+    parser.add_argument(
+        "--no-include-thoughts", dest="include_thoughts", action="store_false"
+    )
+    parser.add_argument("--verbosity", default=None, help="OpenAI text verbosity")
+    parser.add_argument("--store", dest="store", action="store_true", default=None)
+    parser.add_argument("--no-store", dest="store", action="store_false")
     parser.add_argument(
         "--require-thinking-tokens",
         action="store_true",
@@ -386,10 +470,16 @@ def main() -> None:
         client = LLMClient(
             provider=provider,
             model=model,
-            temperature=args.temperature,
+            temperature=None if args.no_temperature else args.temperature,
             max_tokens=args.max_tokens,
             reasoning_effort=args.reasoning_effort,
             thinking_mode=args.thinking_mode,
+            timeout_seconds=args.timeout_seconds,
+            max_retries=args.max_retries,
+            thinking_level=args.thinking_level,
+            include_thoughts=args.include_thoughts,
+            verbosity=args.verbosity,
+            store=args.store,
         )
 
     baseline_rows: list[dict[str, Any]] | None = None
@@ -403,11 +493,17 @@ def main() -> None:
         "provider": provider,
         "model": model,
         "condition": args.condition,
-        "temperature": args.temperature,
+        "temperature": None if args.no_temperature else args.temperature,
         "max_tokens": args.max_tokens,
         "reasoning_effort": args.reasoning_effort,
         "thinking_mode": args.thinking_mode,
         "require_thinking_tokens": bool(args.require_thinking_tokens),
+        "timeout_seconds": args.timeout_seconds,
+        "max_retries": args.max_retries,
+        "thinking_level": args.thinking_level,
+        "include_thoughts": args.include_thoughts,
+        "verbosity": args.verbosity,
+        "store": args.store,
         # This pilot runs exactly one call per (model, condition, checkpoint).
         # Stated in the artifact so a reader never has to infer it from the
         # row count, and so a future repeated design is distinguishable.
@@ -432,6 +528,7 @@ def main() -> None:
     contract_failures: list[dict[str, Any]] = []
     contract_gaps: list[dict[str, Any]] = []
     sampling_rows: list[dict[str, Any]] = []
+    token_rows: list[dict[str, Any]] = []
     no_prospective_rungs: list[dict[str, Any]] = []
 
     with output_path.open("w", encoding="utf-8") as sink:
@@ -537,6 +634,16 @@ def main() -> None:
 
             usage = _provider_usage(response_metadata)
             sampling_rows.append(usage)
+            token_rows.append(
+                {
+                    "checkpoint_session_count": item.checkpoint_session_count,
+                    "input_tokens": usage["input_tokens"],
+                    "output_tokens": usage["output_tokens"],
+                    "reasoning_tokens": usage["reasoning_tokens"],
+                    "thinking_tokens": usage["thinking_tokens"],
+                    "thinking_tokens_source": usage["thinking_tokens_source"],
+                }
+            )
             failures: list[str] = []
             gaps: list[str] = []
             if args.require_thinking_tokens:
@@ -612,7 +719,9 @@ def main() -> None:
                         "requested_reasoning_effort": args.reasoning_effort,
                         "requested_thinking_mode": args.thinking_mode,
                         "requested_max_tokens": args.max_tokens,
-                        "requested_temperature": args.temperature,
+                        "requested_temperature": (
+                            None if args.no_temperature else args.temperature
+                        ),
                         "provider_input_tokens": usage["input_tokens"],
                         "provider_output_tokens": usage["output_tokens"],
                         "provider_reasoning_tokens": usage["reasoning_tokens"],
@@ -680,11 +789,14 @@ def main() -> None:
         "invalid_record_count": n_invalid_records,
         "inference_configuration_errors": contract_failures,
         "inference_metadata_gaps": contract_gaps,
+        "token_usage": _token_usage_rollup(token_rows),
         # Rollup of whether --temperature was honored, so a reader sees the
         # reproducibility caveat in the report without opening the rows.
         "sampling": {
             "replicates_per_cell": 1,
-            "temperature_requested": args.temperature,
+            "temperature_requested": (
+                None if args.no_temperature else args.temperature
+            ),
             "deterministic": sorted(
                 {str(r["deterministic_sampling"]) for r in sampling_rows}
             ),

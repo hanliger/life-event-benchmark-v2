@@ -132,6 +132,21 @@ def _usage_metadata(usage: Any) -> dict[str, int] | None:
     cached_tokens = _attr_or_key(prompt_details, "cached_tokens")
     if cached_tokens is not None:
         metadata["cached_tokens"] = int(cached_tokens)
+    # OpenAI reports reasoning tokens only under completion_tokens_details.
+    # Without this they never reach the artifacts and a reasoning run looks
+    # indistinguishable from a non-reasoning one -- completion_tokens already
+    # includes them, so the total alone cannot separate the two.
+    completion_details = _attr_or_key(usage, "completion_tokens_details")
+    reasoning_tokens = _attr_or_key(completion_details, "reasoning_tokens")
+    if reasoning_tokens is not None:
+        metadata["reasoning_tokens"] = int(reasoning_tokens)
+    # Anthropic reports thinking tokens under output_tokens_details; the
+    # dedicated reader is used for the gate, but carry it in usage too so the
+    # token accounting has one shape across providers.
+    output_details = _attr_or_key(usage, "output_tokens_details")
+    thinking_tokens = _attr_or_key(output_details, "thinking_tokens")
+    if thinking_tokens is not None:
+        metadata["thinking_tokens"] = int(thinking_tokens)
     return metadata or None
 
 
@@ -164,6 +179,20 @@ def anthropic_thinking_tokens(usage: Any) -> tuple[int | None, str]:
     return int(value), "output_tokens_details"
 
 
+def _stop_after_client_retries(retry_state: Any) -> bool:
+    """Stop condition honouring the client's own ``max_retries``.
+
+    A module-level ``stop_after_attempt(3)`` would silently override an
+    ``automatic_retries: 0`` run configuration. Under a single-replicate
+    protocol that is not a harmless extra attempt: it replaces one unmeasured
+    draw with a different one and reports the second as the measurement.
+    """
+
+    client = retry_state.args[0] if retry_state.args else None
+    allowed = getattr(client, "max_retries", 2)
+    return retry_state.attempt_number >= int(allowed) + 1
+
+
 def _gemini_response_text(response: Any) -> str:
     text = getattr(response, "text", None)
     if text:
@@ -183,18 +212,36 @@ class LLMClient:
         self,
         provider: str,
         model: str,
-        temperature: float = 0.7,
+        temperature: float | None = 0.7,
         max_tokens: int = 8192,
         reasoning_effort: str | None = None,
         response_format: str = "prompt_json",
         response_schema: dict[str, Any] | None = None,
         cache_prompt: bool = False,
         thinking_mode: str | None = None,
+        timeout_seconds: float | None = None,
+        max_retries: int = 2,
+        thinking_level: str | None = None,
+        include_thoughts: bool | None = None,
+        verbosity: str | None = None,
+        store: bool | None = None,
     ):
         self.provider = provider
         self.model = model
         self.temperature = temperature
         self.max_tokens = max_tokens
+        # Request-level knobs. Every one of these is recorded as
+        # requested-vs-applied in last_response_metadata, because a parameter a
+        # provider ignores must not read as a parameter that took effect.
+        self.timeout_seconds = timeout_seconds
+        # Total attempts = max_retries + 1. 0 means a failure is final, which is
+        # what a single-replicate protocol wants: a silent retry would turn one
+        # unmeasured draw into a different unmeasured draw.
+        self.max_retries = max(0, int(max_retries))
+        self.thinking_level = thinking_level
+        self.include_thoughts = include_thoughts
+        self.verbosity = verbosity
+        self.store = store
         # When True, mark the (stable) system prompt with cache_control so a fixed
         # prefix reused across many calls (e.g. a judge rubric) bills at cache-read
         # rates. Anthropic only; no-op for prefixes below the model's cache minimum.
@@ -223,21 +270,36 @@ class LLMClient:
                 raise RuntimeError("OPENAI_API_KEY not set (see .env.example)")
             from openai import OpenAI
 
-            self._client = OpenAI(api_key=key)
+            self._client = OpenAI(
+                api_key=key,
+                max_retries=self.max_retries,
+                **({"timeout": self.timeout_seconds} if self.timeout_seconds else {}),
+            )
         elif provider == "anthropic":
             key = os.environ.get("ANTHROPIC_API_KEY")
             if not key:
                 raise RuntimeError("ANTHROPIC_API_KEY not set (see .env.example)")
             import anthropic
 
-            self._client = anthropic.Anthropic(api_key=key)
+            self._client = anthropic.Anthropic(
+                api_key=key,
+                max_retries=self.max_retries,
+                **({"timeout": self.timeout_seconds} if self.timeout_seconds else {}),
+            )
         elif provider in {"gemini", "google"}:
             key = os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
             if not key:
                 raise RuntimeError("GEMINI_API_KEY or GOOGLE_API_KEY not set (see .env.example)")
             from google import genai
+            from google.genai import types as _gtypes
 
-            self._client = genai.Client(api_key=key)
+            http_options = None
+            if self.timeout_seconds:
+                # google-genai takes milliseconds
+                http_options = _gtypes.HttpOptions(
+                    timeout=int(self.timeout_seconds * 1000)
+                )
+            self._client = genai.Client(api_key=key, http_options=http_options)
         elif provider == "mock":
             pass
         else:
@@ -272,7 +334,7 @@ class LLMClient:
         )
 
     @retry(
-        stop=stop_after_attempt(3),
+        stop=_stop_after_client_retries,
         wait=wait_exponential(multiplier=2, min=2, max=30),
         retry=retry_if_not_exception_type(TruncatedLLMResponseError),
         reraise=True,
@@ -293,7 +355,11 @@ class LLMClient:
                 kwargs["max_tokens"] = self.max_tokens
             temperature_applied: float | None = None
             temperature_omission_reason: str | None = None
-            if _openai_supports_temperature(self.model):
+            if self.temperature is None:
+                # Explicitly unspecified: the provider's own default applies.
+                # Distinct from "we asked and the model refused".
+                temperature_omission_reason = "not_requested_provider_default"
+            elif _openai_supports_temperature(self.model):
                 kwargs["temperature"] = self.temperature
                 temperature_applied = self.temperature
             else:
@@ -305,6 +371,10 @@ class LLMClient:
                 temperature_omission_reason = "model_rejects_temperature"
             if self.reasoning_effort is not None and _openai_supports_reasoning_effort(self.model):
                 kwargs["reasoning_effort"] = self.reasoning_effort
+            if self.verbosity is not None:
+                kwargs["verbosity"] = self.verbosity
+            if self.store is not None:
+                kwargs["store"] = self.store
             if self.response_format == "json_schema":
                 if not self.response_schema:
                     raise ValueError("response_format=json_schema requires response_schema")
@@ -331,6 +401,11 @@ class LLMClient:
                 "temperature_requested": self.temperature,
                 "temperature_applied": temperature_applied,
                 "temperature_omission_reason": temperature_omission_reason,
+                "verbosity_applied": kwargs.get("verbosity"),
+                "store_applied": kwargs.get("store"),
+                "reasoning_effort_applied": kwargs.get("reasoning_effort"),
+                "timeout_seconds_applied": self.timeout_seconds,
+                "max_retries_applied": self.max_retries,
                 "usage": usage,
                 "prompt_tokens": usage.get("prompt_tokens"),
                 "completion_tokens": usage.get("completion_tokens"),
@@ -389,6 +464,8 @@ class LLMClient:
                         effort_transport = "extra_body"
                     effort_sent = True
                 temperature_omission_reason = "adaptive_thinking_provider_contract"
+            elif self.temperature is None:
+                temperature_omission_reason = "not_requested_provider_default"
             elif _anthropic_supports_temperature(self.model):
                 kwargs["temperature"] = self.temperature
                 temperature_applied = self.temperature
@@ -435,6 +512,8 @@ class LLMClient:
                 "temperature_applied": temperature_applied,
                 "temperature_omission_reason": temperature_omission_reason,
                 "streaming_used": streaming_used,
+                "timeout_seconds_applied": self.timeout_seconds,
+                "max_retries_applied": self.max_retries,
                 "truncated": stop_reason == "max_tokens",
                 "response_format": self.response_format,
                 "stop_reason": stop_reason,
@@ -480,8 +559,30 @@ class LLMClient:
                 contents=user,
                 config=types.GenerateContentConfig(
                     system_instruction=system,
-                    temperature=self.temperature,
+                    **(
+                        {"temperature": self.temperature}
+                        if self.temperature is not None
+                        else {}
+                    ),
                     max_output_tokens=self.max_tokens,
+                    **(
+                        {
+                            "thinking_config": types.ThinkingConfig(
+                                **(
+                                    {"thinking_level": str(self.thinking_level).upper()}
+                                    if self.thinking_level
+                                    else {}
+                                ),
+                                **(
+                                    {"include_thoughts": self.include_thoughts}
+                                    if self.include_thoughts is not None
+                                    else {}
+                                ),
+                            )
+                        }
+                        if (self.thinking_level or self.include_thoughts is not None)
+                        else {}
+                    ),
                 ),
             )
             usage = _usage_metadata(getattr(response, "usage_metadata", None)) or {}
@@ -495,7 +596,15 @@ class LLMClient:
                 # the requested value is always the applied one.
                 "temperature_requested": self.temperature,
                 "temperature_applied": self.temperature,
-                "temperature_omission_reason": None,
+                "temperature_omission_reason": (
+                    None
+                    if self.temperature is not None
+                    else "not_requested_provider_default"
+                ),
+                "thinking_level_applied": self.thinking_level,
+                "include_thoughts_applied": self.include_thoughts,
+                "timeout_seconds_applied": self.timeout_seconds,
+                "max_retries_applied": self.max_retries,
                 "usage": usage,
                 "request_duration_ms": duration_ms,
                 "retry_count": self._provider_attempts_since_success - 1,

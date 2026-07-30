@@ -52,11 +52,16 @@ def _hash_tree(
     root: Path, *, exclude_relative_paths: set[str] | None = None
 ) -> dict[str, str]:
     excluded = exclude_relative_paths or set()
+    # huggingface_hub writes `.cache/huggingface/` inside local_dir, holding
+    # per-file .lock/.metadata and a trees json. Those are machine- and
+    # time-local, so hashing them makes the tree hash unreproducible on any
+    # other machine -- an integrity pin computed over them can never validate.
     return {
         str(path.relative_to(root)): sha256_file(path)
         for path in sorted(root.rglob("*"))
         if path.is_file()
         and ".git" not in path.parts
+        and ".cache" not in path.parts
         and str(path.relative_to(root)) not in excluded
     }
 

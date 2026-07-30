@@ -658,18 +658,20 @@ prediction row가 `temperature_applied` / `temperature_omission_reason` /
 
 §5-A의 `make evaluate-stage1`/`make evaluate`는 한 모델을 문항에 그대로
 통과시키는 **배관 확인용**입니다. 논문에 들어가는 Stage 1 / Stage 2 비교는
-별도 패키지 `experiment/`에서 실행합니다. Stage 1은 세 flagship 모델의
-긴-prefix 복원 능력을 비교하고, Stage 2.2는 memory/retrieval method를
-비교합니다.
+별도 패키지 `experiment/`에서 실행합니다. Stage 1은 세 flagship API 모델의
+긴-prefix 복원 능력을 먼저 비교한 뒤, 같은 task·prompt·item으로 독립적인
+9-method grid를 이어서 실행합니다. Stage 2.2도 별도의 9-method grid입니다.
 
 | Stage | Family | Method | 입력 |
 | --- | --- | --- | --- |
-| Stage 1 | Full Context | `fc_gpt_5_6_sol`, `fc_claude_opus_4_8`, `fc_gemini_3_1_pro` | checkpoint까지 전체 세션 |
+| Stage 1 API3 | Full Context | `fc_gpt_5_6_sol`, `fc_claude_opus_4_8`, `fc_gemini_3_1_pro` | checkpoint까지 전체 세션 |
+| Stage 1 Method9 | Full Context / Retrieval / Memory | `experiment/configs/experiment.yaml`의 `method9` profile | method별 frozen context |
 | Stage 2.2 | Full Context / Retrieval / Memory | `experiment/configs/experiment.yaml`의 9-method grid | method별 frozen context |
 
 두 stage 모두 `dialogues_no_prospective` + `gold_no_prospective` 코퍼스에서
-20 trajectory × 20 checkpoint = 400 문항입니다. Stage 1은 3-model 1,200
-prediction, Stage 2.2는 9-method 3,600 prediction이며 코퍼스는 공유합니다.
+20 trajectory × 20 checkpoint = 400 문항입니다. Stage 1 API3는 1,200
+prediction, 후속 Method9는 3,600 prediction이며 Stage 2.2와도 코퍼스를
+공유합니다.
 
 ```bash
 PY=experiment/.venv/bin/python
@@ -683,7 +685,8 @@ PYTHONPATH=.:src:experiment/src $PY -m financial_memory_experiment.cli build-sta
 | Stage | 진입점 | Runbook | 상태 |
 | --- | --- | --- | --- |
 | Stage 2 | `experiment/scripts/paid/run_stage2_2.sh` | [`stage2_2_9_method_runbook.md`](experiment/docs/stage2_2_9_method_runbook.md) | 실행 가능 |
-| Stage 1 | `experiment/scripts/paid/run_stage1.sh` | [`stage1_3_model_runbook.md`](experiment/docs/stage1_3_model_runbook.md) | 실행 가능 |
+| Stage 1 API3 (선행) | `experiment/scripts/paid/run_stage1_api3.sh` | [`stage1_api3_runbook.md`](experiment/docs/stage1_api3_runbook.md) | 독립 실행 가능 |
+| Stage 1 Method9 (후속) | `experiment/scripts/paid/run_stage1.sh` | [`stage1_9_method_runbook.md`](experiment/docs/stage1_9_method_runbook.md) | 독립 실행 가능 |
 
 두 runner는 `run_harness.py`를 공유하므로 provider lock·prompt 감사·resume 절차는 동일합니다.
 
@@ -696,10 +699,13 @@ PYTHONPATH=.:src:experiment/src $PY -m financial_memory_experiment.cli build-sta
 ./experiment/scripts/paid/letta_up.sh --approval I_APPROVE_LETTA_DOCKER
 
 # 3) plan → prompt 감사 → 실행 → 보고
-./experiment/scripts/paid/run_stage1.sh plan --budget-cap-usd 80 --estimated-usd 60
-./experiment/scripts/paid/run_stage1.sh audit-prompt --run-dir experiment/runs/stage1/<run-id>
-./experiment/scripts/paid/run_stage1.sh execute --run-dir experiment/runs/stage1/<run-id> \
+./experiment/scripts/paid/run_stage1_api3.sh plan --budget-cap-usd 80 --estimated-usd 60
+./experiment/scripts/paid/run_stage1_api3.sh audit-prompt --run-dir experiment/runs/stage1_api3/<run-id>
+./experiment/scripts/paid/run_stage1_api3.sh execute --run-dir experiment/runs/stage1_api3/<run-id> \
     --execute-paid --approval I_APPROVE_STAGE1_PAID
+
+# API3가 끝난 뒤 별도 plan으로 9-method grid 실행
+./experiment/scripts/paid/run_stage1.sh plan --budget-cap-usd 200 --estimated-usd 180
 ```
 
 유료 실행을 막는 게이트는 다음과 같습니다.
@@ -769,7 +775,8 @@ python scripts/audit_session_dates.py \
 | `data/runs/<RUN_ID>/benchmark_items/*.jsonl` | 생성 파이프라인 문항 (보고 대상 아님) |
 | `data/runs/<RUN_ID>/quality_reports/*` | 검증·audit 리포트 |
 | `data/runs/<RUN_ID>/eval/report.json` | `make evaluate` 배관 확인 결과 (§5-A, 보고 대상 아님) |
-| `experiment/runs/stage1/<run-id>/` | Stage 1 3-model 비교: plan·prompt·metrics·answer_pairs·figures (§5-E) |
+| `experiment/runs/stage1_api3/<run-id>/` | Stage 1 direct-API 3-model 비교 (§5-E) |
+| `experiment/runs/stage1/<run-id>/` | Stage 1 후속 9-method 비교 (§5-E) |
 | `experiment/runs/stage2_2/<run-id>/` | Stage 2 9-method 비교: plan·prompt·metrics·state_pairs·figures (§5-E) |
 | `data/runs/<RUN_ID>/masking_ladder.json` | lifecycle masking abstention 사다리 (§5-C) |
 | `data/runs/<RUN_ID>/masking_ladder_prefix_gold.jsonl` | counterfactual recipe + 재계산된 complete PrefixGold (§5-C) |
@@ -823,7 +830,8 @@ python scripts/audit_session_dates.py \
 | --- | --- |
 | `experiment/docs/protocol.md` | 연구 질문, 비교 방법, 공정 비교 계약, 지표 |
 | `experiment/docs/stage2_2_reconstruct.md` | Stage 2 상태 복원 과제 설계와 공개 정책 |
-| `experiment/docs/stage1_3_model_runbook.md` | Stage 1 3-model 실행 절차 |
+| `experiment/docs/stage1_api3_runbook.md` | Stage 1 선행 direct-API 3-model 실행 절차 |
+| `experiment/docs/stage1_9_method_runbook.md` | Stage 1 후속 9-method 실행 절차 |
 | `experiment/docs/stage1_traj010_gpt_5_6_sol_cp300_smoke.md` | 수정된 Stage 1 GPT‑5.6 Sol 단일-cell 검증 결과 |
 | `experiment/docs/stage2_2_9_method_runbook.md` | Stage 2 9-method 실행 절차 |
 | `experiment/docs/stage1_prompt_leakage_audit.md` | Stage 1 prompt 노출·누출 감사 기록 |

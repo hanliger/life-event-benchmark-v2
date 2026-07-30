@@ -29,18 +29,21 @@ def test_nine_stage2_methods_and_three_stage1_models():
         "fc_openrouter_qwen_3_6_35b_a3b_fp8",
     ]
     assert cfg["analysis_methods"] == []
-    assert cfg["stage1_occurred_event_evidence_pairs"]["methods"] == [
-        "fc_gpt_5_6_sol",
-        "fc_claude_opus_4_8",
-        "fc_gemini_3_1_pro",
+    profiles = cfg["stage1_occurred_event_evidence_pairs"][
+        "execution_profiles"
     ]
-    assert (
-        cfg["stage1_occurred_event_evidence_pairs"][
-            "request_timeout_seconds"
-        ]
-        == 600
-    )
-    assert cfg["stage1_occurred_event_evidence_pairs"]["parse_retries"] == 0
+    assert profiles["api3"] == {
+        "methods": [
+            "fc_gpt_5_6_sol",
+            "fc_claude_opus_4_8",
+            "fc_gemini_3_1_pro",
+        ],
+        "request_timeout_seconds": 600,
+        "parse_retries": 0,
+    }
+    assert profiles["method9"]["methods"] == method_ids()
+    assert profiles["method9"]["request_timeout_seconds"] == 300
+    assert profiles["method9"]["parse_retries"] == 1
     assert cfg["models"]["claude_opus_4_8"] == "claude-opus-4-8"
     assert cfg["models"]["claude_opus_4_8_request_timeout_seconds"] == 300
     assert cfg["models"]["final_answer_max_tokens"] == 4096

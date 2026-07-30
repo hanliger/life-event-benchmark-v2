@@ -24,8 +24,10 @@ from financial_memory_experiment.prompts import (
 )
 from financial_memory_experiment.stage1 import (
     STAGE1,
+    STAGE1_API3_METHODS,
+    STAGE1_EXECUTION_PROFILES,
     STAGE1_MAX_OUTPUT_TOKENS,
-    STAGE1_METHODS,
+    STAGE1_METHOD9_METHODS,
     STAGE1_TOP_K,
     audit_rendered_prompt,
     generation_item,
@@ -279,9 +281,9 @@ def test_stage1_config_contract_matches_frozen_constants():
     assert contract["checkpoints"] == 400
     assert contract["trajectories"] == 20
     assert contract["headline_metric"] == "strict_occurred_event_evidence_f1"
-    assert contract["methods"] == STAGE1_METHODS
-    assert contract["request_timeout_seconds"] == 600
-    assert contract["parse_retries"] == 0
+    assert contract["execution_profiles"] == STAGE1_EXECUTION_PROFILES
+    assert len(STAGE1_API3_METHODS) == 3
+    assert len(STAGE1_METHOD9_METHODS) == 9
 
 
 def test_stage1_retrieval_query_is_the_question_itself():

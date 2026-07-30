@@ -26,12 +26,29 @@ stage1_occurred_event_evidence_pairs:
   # event selected from the latest window.
   corpus: stage2_2_reconstruct
   headline_metric: strict_occurred_event_evidence_f1
-  methods:
-    - fc_gpt_5_6_sol
-    - fc_claude_opus_4_8
-    - fc_gemini_3_1_pro
-  request_timeout_seconds: 600
-  parse_retries: 0
+  execution_profiles:
+    # Run this direct-API full-context comparison first.
+    api3:
+      methods:
+        - fc_gpt_5_6_sol
+        - fc_claude_opus_4_8
+        - fc_gemini_3_1_pro
+      request_timeout_seconds: 600
+      parse_retries: 0
+    # Then run the independently resumable method/model grid.
+    method9:
+      methods:
+        - fc_claude_opus_4_8
+        - bm25_claude_opus_4_8
+        - dense_ge2_claude_opus_4_8
+        - mem0_claude_opus_4_8
+        - letta_claude_opus_4_8
+        - fc_openrouter_llama_4_maverick
+        - fc_openrouter_gpt_oss_120b
+        - fc_openrouter_qwen_3_5_122b_a10b
+        - fc_openrouter_qwen_3_6_35b_a3b_fp8
+      request_timeout_seconds: 300
+      parse_retries: 1
   retrieval:
     strategy: single_question_query
     top_k: 10

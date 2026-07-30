@@ -27,11 +27,12 @@ Stage 1 life-event 탐지, Stage 2 과거 상태 회상, 5-arm masking ablation�
 - [docs/smoke_test.md](docs/smoke_test.md): 완료된 smoke와 비용 원장
 - [docs/results_template.md](docs/results_template.md): full run 후 채울 결과 문서
 
-Stage 1의 3-model 비교와 Stage 2.2의 9-method 비교는 stage별 전용 runner를
-사용한다. 두 runner는
+Stage 1은 direct-API 3-model profile을 먼저 실행하고 독립적인 9-method profile을
+이어 실행한다. Stage 2.2의 9-method 비교도 별도 runner를 사용한다. 모든 runner는
 `run_harness.py`를 공유하므로 plan·audit·execute·resume·report 절차가 동일하다.
 
-- [docs/stage1_3_model_runbook.md](docs/stage1_3_model_runbook.md) /
+- [docs/stage1_api3_runbook.md](docs/stage1_api3_runbook.md) /
+  [docs/stage1_9_method_runbook.md](docs/stage1_9_method_runbook.md) /
   [docs/stage1_prompt_leakage_audit.md](docs/stage1_prompt_leakage_audit.md)
 - [docs/stage1_traj010_gpt_5_6_sol_cp300_smoke.md](docs/stage1_traj010_gpt_5_6_sol_cp300_smoke.md)
 - [docs/stage2_2_9_method_runbook.md](docs/stage2_2_9_method_runbook.md) /

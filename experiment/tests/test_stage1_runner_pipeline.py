@@ -23,8 +23,9 @@ from financial_memory_experiment.metrics import (
 from financial_memory_experiment.paths import ExperimentPaths
 from financial_memory_experiment.stage1 import (
     STAGE1,
-    STAGE1_METHODS,
+    STAGE1_API3_METHODS,
     STAGE1_MAX_OUTPUT_TOKENS,
+    STAGE1_METHOD9_METHODS,
     audit_rendered_prompt,
 )
 from financial_memory_experiment.util import read_jsonl, write_json
@@ -159,11 +160,18 @@ def stage1_paths(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     return paths
 
 
-def test_stage1_grid_runs_all_three_models_and_reports(stage1_paths, tmp_path):
+@pytest.mark.parametrize(
+    "profile_methods",
+    [STAGE1_API3_METHODS, STAGE1_METHOD9_METHODS],
+    ids=["api3", "method9"],
+)
+def test_stage1_profiles_run_independently_and_report(
+    stage1_paths, tmp_path, profile_methods
+):
     items = stage1_runner._all_items(stage1_paths)
     assert len(items) == len(TRAJECTORIES) * len(CHECKPOINTS)
     outputs = []
-    for method_id in STAGE1_METHODS:
+    for method_id in profile_methods:
         output = stage1_paths.runs / "grid" / f"{method_id}.jsonl"
         outputs.append(output)
         run_method(
@@ -221,7 +229,7 @@ def test_stage1_grid_runs_all_three_models_and_reports(stage1_paths, tmp_path):
             )
 
     report = summarize_predictions(stage1_paths, outputs, allow_partial=True)
-    assert sorted(report["methods"]) == sorted(STAGE1_METHODS)
+    assert sorted(report["methods"]) == sorted(profile_methods)
     for stages in report["methods"].values():
         assert (
             stages[STAGE1]["aggregation"]
@@ -235,7 +243,7 @@ def test_stage1_grid_runs_all_three_models_and_reports(stage1_paths, tmp_path):
     checkpoint_rows = stage1_runner._write_auxiliary_metrics(run_dir, outputs)
     stage1_runner._materialize_answer_pairs(stage1_paths, run_dir, outputs)
 
-    assert len(checkpoint_rows) == len(STAGE1_METHODS) * len(items)
+    assert len(checkpoint_rows) == len(profile_methods) * len(items)
     for name in (
         "checkpoint_metrics.csv",
         "trajectory_metrics.csv",
@@ -249,7 +257,7 @@ def test_stage1_grid_runs_all_three_models_and_reports(stage1_paths, tmp_path):
     trajectory_csv = (
         run_dir / "metrics" / "trajectory_metrics.csv"
     ).read_text(encoding="utf-8").splitlines()
-    assert len(trajectory_csv) - 1 == len(STAGE1_METHODS) * len(TRAJECTORIES)
+    assert len(trajectory_csv) - 1 == len(profile_methods) * len(TRAJECTORIES)
     for figure in (
         "checkpoint_strict_pair_f1.svg",
         "method_trajectory_strict_pair_f1_heatmap.svg",
@@ -278,7 +286,10 @@ def test_stage1_grid_runs_all_three_models_and_reports(stage1_paths, tmp_path):
 def test_stage1_offline_prompt_render_passes_audit_for_all_methods(
     stage1_paths,
 ):
-    for method_id in STAGE1_METHODS:
+    all_profile_methods = tuple(
+        dict.fromkeys(STAGE1_API3_METHODS + STAGE1_METHOD9_METHODS)
+    )
+    for method_id in all_profile_methods:
         for checkpoint in CHECKPOINTS:
             rendered = stage1_runner._render_prompt_offline(
                 stage1_paths,
@@ -293,27 +304,51 @@ def test_stage1_offline_prompt_render_passes_audit_for_all_methods(
                 assert "archival search는 최대 1회" in rendered["prompt"]
 
 
-def test_stage1_plan_audit_report_commands(stage1_paths, capsys):
+@pytest.mark.parametrize(
+    ("profile", "methods", "timeout_seconds", "parse_retries"),
+    [
+        (
+            "api3",
+            "fc_claude_opus_4_8,fc_gpt_5_6_sol",
+            600,
+            0,
+        ),
+        (
+            "method9",
+            "fc_claude_opus_4_8,bm25_claude_opus_4_8",
+            300,
+            1,
+        ),
+    ],
+)
+def test_stage1_plan_audit_report_commands(
+    stage1_paths,
+    capsys,
+    profile,
+    methods,
+    timeout_seconds,
+    parse_retries,
+):
     import argparse
 
-    # Local-only methods keep this offline: no OpenRouter provider lock lookup.
-    methods = "fc_claude_opus_4_8,fc_gpt_5_6_sol"
+    # These selections stay offline: no OpenRouter provider lock lookup.
     stage1_runner.command_plan(
         argparse.Namespace(
+            profile=profile,
             methods=methods,
             trajectories=",".join(TRAJECTORIES),
             checkpoint_start=min(CHECKPOINTS),
             checkpoint_end=max(CHECKPOINTS),
             checkpoint_stride=max(CHECKPOINTS) - min(CHECKPOINTS),
-            model_workers=2,
+            model_workers=None,
             trajectory_workers=2,
             checkpoint_workers=2,
             max_in_flight=8,
             anthropic_max_in_flight=4,
             openrouter_max_in_flight=4,
-            request_timeout_seconds=600,
+            request_timeout_seconds=None,
             provider_retries=0,
-            parse_retries=0,
+            parse_retries=None,
             budget_cap_usd=10.0,
             estimated_usd=1.0,
             provider_lock_file=None,
@@ -327,6 +362,12 @@ def test_stage1_plan_audit_report_commands(stage1_paths, capsys):
         "top_k": 10,
     }
     assert plan["max_output_tokens"] == STAGE1_MAX_OUTPUT_TOKENS
+    assert plan["execution_profile"] == profile
+    assert plan["schema_version"] == stage1_runner.PROFILE_PLAN_SCHEMAS[profile]
+    assert Path(plan["run_dir"]).parent.name == stage1_runner.PROFILE_TASKS[profile]
+    assert plan["concurrency"]["model_workers"] in (3, 9)
+    assert plan["request_timeout_seconds"] == timeout_seconds
+    assert plan["parse_retries"] == parse_retries
     assert plan["provider_lock_status"] == "NOT_APPLICABLE"
     assert plan["plan_sha256"]
     manifest = json.loads(
@@ -334,8 +375,17 @@ def test_stage1_plan_audit_report_commands(stage1_paths, capsys):
     )
     assert manifest["status"] == "PLANNED"
 
+    other_profile = "method9" if profile == "api3" else "api3"
+    with pytest.raises(ValueError, match="run plan belongs"):
+        stage1_runner.command_audit_prompt(
+            argparse.Namespace(
+                run_dir=str(run_dir),
+                profile=other_profile,
+            )
+        )
+
     stage1_runner.command_audit_prompt(
-        argparse.Namespace(run_dir=str(run_dir))
+        argparse.Namespace(run_dir=str(run_dir), profile=profile)
     )
     capsys.readouterr()
     audit = json.loads(
@@ -366,12 +416,14 @@ def test_stage1_plan_audit_report_commands(stage1_paths, capsys):
                 mock=True,
                 top_k=int(plan["retrieval"]["top_k"]),
                 query_concurrency=2,
-                parse_retries=1,
+                parse_retries=int(plan["parse_retries"]),
                 prompt_artifact_root=run_dir / "prompts",
             )
     stage1_runner._validate_complete_grid(run_dir, plan)
 
-    stage1_runner.command_report(argparse.Namespace(run_dir=str(run_dir)))
+    stage1_runner.command_report(
+        argparse.Namespace(run_dir=str(run_dir), profile=profile)
+    )
     capsys.readouterr()
     assert (run_dir / "report" / "report.md").read_text(encoding="utf-8")
     metrics = json.loads(

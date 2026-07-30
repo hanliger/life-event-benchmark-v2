@@ -1,4 +1,4 @@
-"""Stage 1 three-model paid grid runner.
+"""Stage 1 paid runner with independent API3 and nine-method profiles.
 
 Stage 1 asks for every occurred Life Event and its first establishing session
 in each cumulative 15-session checkpoint prefix.
@@ -27,6 +27,7 @@ from .paths import ExperimentPaths
 from .prompts import build_query
 from .run_harness import (
     ALL_TRAJECTORIES,
+    NINE_METHODS,
     OPENROUTER_METHODS,
     complete_prediction_paths,
     cost_latency_row,
@@ -49,7 +50,9 @@ from .run_harness import (
 )
 from .stage1 import (
     STAGE1,
-    STAGE1_METHODS,
+    STAGE1_API3_METHODS,
+    STAGE1_EXECUTION_PROFILES,
+    STAGE1_METHOD9_METHODS,
     STAGE1_MAX_OUTPUT_TOKENS,
     STAGE1_TOP_K,
     audit_rendered_prompt,
@@ -63,10 +66,57 @@ from .stage1_pairs import HEADLINE_METRIC
 from .util import read_jsonl, sha256_json, write_json
 
 
-TASK = "stage1"
+DEFAULT_PROFILE = "method9"
+PROFILE_TASKS = {
+    "api3": "stage1_api3",
+    "method9": "stage1",
+}
+PROFILE_PLAN_SCHEMAS = {
+    "api3": "stage1_api3_plan-v1",
+    "method9": "stage1_nine_method_plan-v1",
+}
 APPROVAL_PHRASE = "I_APPROVE_STAGE1_PAID"
 PROVIDER_LOCK_SCHEMA = "stage1_openrouter_provider_lock-v1"
 LETTA_METHOD = "letta_claude_opus_4_8"
+
+if STAGE1_METHOD9_METHODS != NINE_METHODS:
+    raise RuntimeError("Stage 1 method9 profile must match the frozen grid")
+
+
+def _profile_id(args: argparse.Namespace) -> str:
+    return str(getattr(args, "profile", DEFAULT_PROFILE))
+
+
+def _profile_contract(
+    contract: dict[str, Any], args: argparse.Namespace
+) -> dict[str, Any]:
+    profile_id = _profile_id(args)
+    try:
+        return contract["execution_profiles"][profile_id]
+    except KeyError as exc:
+        raise ValueError(
+            f"unknown Stage 1 execution profile: {profile_id}"
+        ) from exc
+
+
+def _profile_run_dir(
+    paths: ExperimentPaths, args: argparse.Namespace
+) -> Path:
+    return resolve_run_dir(
+        paths, PROFILE_TASKS[_profile_id(args)], getattr(args, "run_dir", None)
+    )
+
+
+def _assert_plan_profile(
+    plan: dict[str, Any], args: argparse.Namespace
+) -> None:
+    # Plans created before profiles were explicit are the original method9 grid.
+    plan_profile = str(plan.get("execution_profile") or "method9")
+    if plan_profile != _profile_id(args):
+        raise ValueError(
+            f"run plan belongs to Stage 1 profile {plan_profile}, not "
+            f"{_profile_id(args)}"
+        )
 
 
 def _all_items(paths: ExperimentPaths) -> list[dict[str, Any]]:
@@ -184,11 +234,15 @@ def _render_prompt_offline(
 def command_plan(args: argparse.Namespace) -> None:
     paths = ExperimentPaths.discover()
     contract = stage1_contract(paths)
+    profile_id = _profile_id(args)
+    profile = _profile_contract(contract, args)
     methods = parse_selection(
-        args.methods, all_values=STAGE1_METHODS, label="methods"
+        args.methods, all_values=profile["methods"], label="methods"
     )
-    if not set(methods) <= set(contract["methods"]):
-        raise ValueError("selected methods are not in the frozen Stage 1 config")
+    if not set(methods) <= set(profile["methods"]):
+        raise ValueError(
+            f"selected methods are not in the frozen Stage 1 {profile_id} profile"
+        )
     trajectories = parse_selection(
         args.trajectories, all_values=ALL_TRAJECTORIES, label="trajectories"
     )
@@ -203,12 +257,29 @@ def command_plan(args: argparse.Namespace) -> None:
         raise ValueError("--budget-cap-usd must be positive")
     if args.provider_retries != 0:
         raise ValueError("provider retries are frozen at 0")
-    if args.request_timeout_seconds != contract["request_timeout_seconds"]:
+    request_timeout_seconds = (
+        int(args.request_timeout_seconds)
+        if args.request_timeout_seconds is not None
+        else int(profile["request_timeout_seconds"])
+    )
+    parse_retries = (
+        int(args.parse_retries)
+        if args.parse_retries is not None
+        else int(profile["parse_retries"])
+    )
+    model_workers = (
+        int(args.model_workers)
+        if args.model_workers is not None
+        else len(profile["methods"])
+    )
+    if request_timeout_seconds != profile["request_timeout_seconds"]:
         raise ValueError(
-            "request timeout must match the frozen Stage 1 config"
+            f"request timeout must match the frozen Stage 1 {profile_id} profile"
         )
-    if args.parse_retries != contract["parse_retries"]:
-        raise ValueError("parse retries must match the frozen Stage 1 config")
+    if parse_retries != profile["parse_retries"]:
+        raise ValueError(
+            f"parse retries must match the frozen Stage 1 {profile_id} profile"
+        )
     estimated = (
         args.estimated_usd
         if args.estimated_usd is not None
@@ -258,10 +329,11 @@ def command_plan(args: argparse.Namespace) -> None:
                 "provider context precheck failed for "
                 f"{sorted(failures)}: estimated total={estimated_total}"
             )
-    run_dir = new_run_dir(paths, TASK)
+    run_dir = new_run_dir(paths, PROFILE_TASKS[profile_id])
     plan_body = {
-        "schema_version": "stage1_three_model_plan-v1",
+        "schema_version": PROFILE_PLAN_SCHEMAS[profile_id],
         "task_id": STAGE1,
+        "execution_profile": profile_id,
         "run_id": run_dir.name,
         "created_at_kst": datetime.now(ZoneInfo("Asia/Seoul")).isoformat(),
         "methods": methods,
@@ -275,7 +347,7 @@ def command_plan(args: argparse.Namespace) -> None:
         "budget_cap_usd": round(args.budget_cap_usd, 6),
         "estimated_usd": round(estimated, 6),
         "concurrency": {
-            "model_workers": args.model_workers,
+            "model_workers": model_workers,
             "trajectory_workers": args.trajectory_workers,
             "checkpoint_workers": args.checkpoint_workers,
             "max_in_flight": args.max_in_flight,
@@ -286,9 +358,9 @@ def command_plan(args: argparse.Namespace) -> None:
             "strategy": contract["retrieval_strategy"],
             "top_k": contract["retrieval_top_k"],
         },
-        "request_timeout_seconds": args.request_timeout_seconds,
+        "request_timeout_seconds": request_timeout_seconds,
         "provider_retries": args.provider_retries,
-        "parse_retries": args.parse_retries,
+        "parse_retries": parse_retries,
         "provider_lock_status": provider_lock["status"],
         "context_precheck": context_precheck,
         "prompt_audit_required": True,
@@ -310,6 +382,11 @@ def command_plan(args: argparse.Namespace) -> None:
 
 def command_show_prompt(args: argparse.Namespace) -> None:
     paths = ExperimentPaths.discover()
+    profile = _profile_contract(stage1_contract(paths), args)
+    if args.method not in profile["methods"]:
+        raise ValueError(
+            f"{args.method} is not in the Stage 1 {_profile_id(args)} profile"
+        )
     rendered = _render_prompt_offline(
         paths,
         method_id=args.method,
@@ -324,10 +401,11 @@ def command_show_prompt(args: argparse.Namespace) -> None:
 
 def command_audit_prompt(args: argparse.Namespace) -> None:
     paths = ExperimentPaths.discover()
-    run_dir = resolve_run_dir(paths, TASK, args.run_dir)
+    run_dir = _profile_run_dir(paths, args)
     plan = json.loads(
         (run_dir / "immutable_plan.json").read_text(encoding="utf-8")
     )
+    _assert_plan_profile(plan, args)
     checks = []
     for method in plan["methods"]:
         for checkpoint in (
@@ -569,7 +647,11 @@ def _write_figures(
 
 def command_report(args: argparse.Namespace) -> None:
     paths = ExperimentPaths.discover()
-    run_dir = resolve_run_dir(paths, TASK, args.run_dir)
+    run_dir = _profile_run_dir(paths, args)
+    plan = json.loads(
+        (run_dir / "immutable_plan.json").read_text(encoding="utf-8")
+    )
+    _assert_plan_profile(plan, args)
     prediction_paths = complete_prediction_paths(run_dir)
     if not prediction_paths:
         raise RuntimeError("no complete prediction artifacts to report")
@@ -579,14 +661,24 @@ def command_report(args: argparse.Namespace) -> None:
     write_tables(report, run_dir / "metrics")
     _write_auxiliary_metrics(run_dir, prediction_paths)
     _materialize_answer_pairs(paths, run_dir, prediction_paths)
+    if _profile_id(args) == "api3":
+        title = "3 Direct-API Full-Context Models"
+        comparison = (
+            "GPT-5.6 Sol, Claude Opus 4.8, and Gemini 3.1 Pro each receive "
+            "the same Full Context prefix up to the checkpoint."
+        )
+    else:
+        title = "9-Method Comparison"
+        comparison = (
+            "Retrieval and memory arms share one question query at top_k=10; "
+            "Full Context receives every session up to the checkpoint."
+        )
     lines = [
-        "# Stage 1 Occurred-Event/Evidence Pairs — 3-Model Comparison",
+        f"# Stage 1 Occurred-Event/Evidence Pairs — {title}",
         "",
         f"Primary metric is `{HEADLINE_METRIC}`: each cumulative 15-session "
         "checkpoint scores the exact multiset of all occurred-event/evidence "
-        "pairs, then checkpoints are equally weighted. GPT-5.6 Sol, Claude "
-        "Opus 4.8, and Gemini 3.1 Pro each receive the same Full Context "
-        "prefix up to the checkpoint.",
+        f"pairs, then checkpoints are equally weighted. {comparison}",
         "",
         "## Result artifacts",
         "",
@@ -617,8 +709,9 @@ def command_report(args: argparse.Namespace) -> None:
 
 def command_execute(args: argparse.Namespace) -> None:
     paths = ExperimentPaths.discover()
-    run_dir = resolve_run_dir(paths, TASK, args.run_dir)
+    run_dir = _profile_run_dir(paths, args)
     plan = load_verified_plan(run_dir, args, approval_phrase=APPROVAL_PHRASE)
+    _assert_plan_profile(plan, args)
     load_approved_environment(paths)
     preflight_paid(plan)
     os.environ["FIN_MEMORY_DISABLE_PAID_APIS"] = "0"
@@ -664,11 +757,22 @@ def command_execute(args: argparse.Namespace) -> None:
         }
     )
     write_json(manifest_path, manifest)
-    command_report(argparse.Namespace(run_dir=str(run_dir)))
+    command_report(
+        argparse.Namespace(run_dir=str(run_dir), profile=_profile_id(args))
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--profile",
+        choices=tuple(STAGE1_EXECUTION_PROFILES),
+        default=DEFAULT_PROFILE,
+        help=(
+            "api3 runs the three direct-API full-context models; method9 "
+            "runs the independently resumable nine-method grid"
+        ),
+    )
     commands = parser.add_subparsers(dest="command", required=True)
     plan = commands.add_parser("plan")
     plan.add_argument("--methods", default="all")
@@ -676,22 +780,26 @@ def build_parser() -> argparse.ArgumentParser:
     plan.add_argument("--checkpoint-start", type=int, default=15)
     plan.add_argument("--checkpoint-end", type=int, default=300)
     plan.add_argument("--checkpoint-stride", type=int, default=15)
-    plan.add_argument("--model-workers", type=int, default=3)
+    plan.add_argument("--model-workers", type=int)
     plan.add_argument("--trajectory-workers", type=int, default=20)
     plan.add_argument("--checkpoint-workers", type=int, default=20)
     plan.add_argument("--max-in-flight", type=int, default=60)
     plan.add_argument("--anthropic-max-in-flight", type=int, default=20)
     plan.add_argument("--openrouter-max-in-flight", type=int, default=40)
-    plan.add_argument("--request-timeout-seconds", type=int, default=600)
+    plan.add_argument("--request-timeout-seconds", type=int)
     plan.add_argument("--provider-retries", type=int, default=0)
-    plan.add_argument("--parse-retries", type=int, default=0)
+    plan.add_argument("--parse-retries", type=int)
     plan.add_argument("--budget-cap-usd", type=float, required=True)
     plan.add_argument("--estimated-usd", type=float)
     plan.add_argument("--provider-lock-file")
     plan.set_defaults(handler=command_plan)
 
     show = commands.add_parser("show-prompt")
-    show.add_argument("--method", required=True, choices=STAGE1_METHODS)
+    show.add_argument(
+        "--method",
+        required=True,
+        choices=tuple(dict.fromkeys(STAGE1_API3_METHODS + NINE_METHODS)),
+    )
     show.add_argument("--trajectory", required=True)
     show.add_argument("--checkpoint", type=int, required=True)
     show.set_defaults(handler=command_show_prompt)

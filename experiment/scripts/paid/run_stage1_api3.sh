@@ -14,4 +14,4 @@ fi
 
 export PYTHONPATH="${REPO_DIR}:${REPO_DIR}/src:${EXPERIMENT_DIR}/src${PYTHONPATH:+:${PYTHONPATH}}"
 exec "${PYTHON_BIN}" -m financial_memory_experiment.stage1_runner \
-  --profile method9 "$@"
+  --profile api3 "$@"

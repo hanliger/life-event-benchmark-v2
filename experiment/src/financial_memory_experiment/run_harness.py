@@ -1,9 +1,9 @@
-"""Stage-agnostic pieces of the nine-method paid grid runners.
+"""Stage-agnostic pieces of the paid grid runners.
 
-Stage 2.2 and Stage 1 share the same comparison surface: nine frozen methods,
-an immutable plan, an OpenRouter provider lock, per-method/trajectory attempt
-artifacts, and a resumable grid. Only item selection, prompt auditing, and
-reporting differ, so those stay in the stage runners.
+Stage 2.2 and both Stage 1 execution profiles share immutable plans, provider
+locks where applicable, per-method/trajectory attempt artifacts, and a
+resumable grid. Only item selection, prompt auditing, and reporting differ, so
+those stay in the stage runners.
 """
 
 from __future__ import annotations

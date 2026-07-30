@@ -2,9 +2,9 @@
 
 Run date: 2026-07-31 (KST)
 
-This smoke verifies the corrected Stage 1 comparison surface after removing
-the accidental Stage 2.2 nine-method coupling. It is one sampled cell and is
-not a model-ranking result.
+This smoke verifies the corrected Stage 1 direct-API profile independently of
+the preserved nine-method profile that follows it. It is one sampled cell and
+is not a model-ranking result.
 
 ## Frozen cell
 

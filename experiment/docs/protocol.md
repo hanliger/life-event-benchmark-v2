@@ -24,42 +24,47 @@ S016–S030에 새봄금융으로 바뀌었다면, 이후에도 첫 target 질�
 
 ## 비교 방법
 
-| Family | Method ID | 입력 또는 memory | Final answer |
+| Profile | Family | Method ID 또는 범위 | Final answer |
 |---|---|---|---|
-| Full Context | `fc_claude_opus_5` | S001…checkpoint 전체 | Claude |
-| Full Context | `fc_gemini_3_1_pro` | S001…checkpoint 전체 | Gemini |
-| Full Context | `fc_gpt_5_6_sol` | S001…checkpoint 전체 | OpenAI |
-| Retrieval | `bm25_gemini_3_1_pro` | BM25 session top-k | 공통 Gemini reader |
-| Retrieval | `dense_ge2_gemini_3_1_pro` | GE2 session top-k | 공통 Gemini reader |
-| Memory | `mem0_gemini_3_1_pro` | Mem0 search top-k | 공통 Gemini reader |
-| Memory | `letta_gemini_3_1_pro` | Letta archival memory | Letta agent |
+| API3 | Full Context | `fc_gpt_5_6_sol` | GPT‑5.6 Sol |
+| API3 | Full Context | `fc_claude_opus_4_8` | Claude Opus 4.8 |
+| API3 | Full Context | `fc_gemini_3_1_pro` | Gemini 3.1 Pro |
+| Method9 | Full Context | `fc_claude_opus_4_8` | Claude Opus 4.8 |
+| Method9 | Retrieval | `bm25_claude_opus_4_8`, `dense_ge2_claude_opus_4_8` | 공통 Claude Opus 4.8 reader |
+| Method9 | Memory | `mem0_claude_opus_4_8`, `letta_claude_opus_4_8` | Claude Opus 4.8 / Letta agent |
+| Method9 | Full Context | `fc_openrouter_*` 4개 | 각 OpenRouter model |
 
 Main `top_k=10`, sensitivity `top_k=5`, reranker 없음이다. Sensitivity는 frozen
 문항과 다른 설정을 바꾸지 않고 별도 run으로 실행한다.
 
 ## Stage별 비교 surface
 
-Stage 1은 `stage1_occurred_event_evidence_pairs.methods`에 고정된 GPT‑5.6 Sol,
-Claude Opus 4.8, Gemini 3.1 Pro의 Full Context 3-model 비교다.
-`configs/experiment.yaml`의 전역 `methods` 9개는 Stage 2.2 전용이다.
+Stage 1은 같은 task·prompt·item에 두 execution profile을 순서대로 실행한다.
+`api3`는 GPT‑5.6 Sol, Claude Opus 4.8, Gemini 3.1 Pro의 Full Context
+비교이고, `method9`는 기존 Full Context/Retrieval/Memory 9-method grid다.
+두 profile은 plan과 run directory가 분리되어 독립 실행·resume할 수 있다.
 
 | Stage | Runner | Grid | Retrieval |
 |---|---|---|---|
-| Stage 1 | `scripts/paid/run_stage1.sh` | 20 traj × 20 prefix checkpoint × 3 models | Full Context |
+| Stage 1 API3 (선행) | `scripts/paid/run_stage1_api3.sh` | 20 traj × 20 prefix checkpoint × 3 models | Full Context |
+| Stage 1 Method9 (후속) | `scripts/paid/run_stage1.sh` | 20 traj × 20 prefix checkpoint × 9 methods | 질문 단일 query, `top_k=10` |
 | Stage 2.2 | `scripts/paid/run_stage2_2.sh` | 20 traj × 20 checkpoint | 4개 state group, group별 `top_k=5`, 최대 20 evidence |
 
 두 stage는 같은 코퍼스 `dialogues_no_prospective` + `gold_no_prospective`를 쓰며, `prepare-stage2-2`가 만든 prepared tree를 공유한다. 다른 코퍼스로 실행하는 경로는 없다.
 
-Stage 1의 세 모델은 모두 동일한 전체 누적 prefix를 받는다. checkpoint query는
-서로 독립적이고 이전 응답은 다음 checkpoint에 전달되지 않는다. 출력 상한은
-20,000 token이며 timeout 600초, provider retry 0, parse retry 0으로 고정한다.
+Stage 1 API3의 세 모델은 동일한 전체 누적 prefix를 받으며 timeout 600초,
+provider retry 0, parse retry 0이다. Method9는 Full Context와 질문 단일-query
+retrieval/memory arm을 비교하며 timeout 300초, provider retry 0, parse retry
+1이다. 두 profile 모두 출력 상한은 20,000 token이고 checkpoint query는
+독립적이며 이전 응답을 다음 checkpoint에 전달하지 않는다.
 
 ## 공정 비교 계약
 
 - 모든 방법에 같은 checkpoint, 질문, 보기 순서, answer-free sessions를 제공한다.
 - S000은 최초 record로 한 번만 ingest하며 query에 재첨부하지 않는다.
 - checkpoint 이후 session은 context, index, memory 어디에도 존재하지 않는다.
-- BM25, Dense, Mem0는 동일 Gemini reader와 prompt/parser를 사용한다.
+- Method9의 BM25, Dense, Mem0는 동일 Claude Opus 4.8 reader와
+  prompt/parser를 사용한다.
 - Letta는 end-to-end search-and-answer agent이므로 retriever-only 비교로 해석하지
   않고 Memory family로 분리한다.
 - Invalid format은 오답이며 의미를 복구하는 repair call은 없다.
@@ -102,7 +107,7 @@ Lifecycle 질문과 memory 질문은 별도 stage로 보고한다.
 | Masking | stage × arm accuracy |
 | Retrieval | latest-state recall@k, complete-evidence recall@k |
 | 불확실성 | trajectory bootstrap 95% CI, 10,000 samples |
-| 방법 차이 | 모든 21개 method pair의 paired trajectory bootstrap delta |
+| 방법 차이 | profile 내부 모든 method pair의 paired trajectory bootstrap delta |
 | 신뢰성 | parse error, failed request, COMPLETE 비율 |
 | 효율 | build/query token, operation, latency, estimated cost |
 
@@ -113,7 +118,7 @@ trajectory를 동일 가중한다. 이 방식은 일찍 등장한 target의 과�
 
 다음을 모두 만족해야 한다.
 
-- 7개 방법이 동일한 frozen item set을 평가
+- API3의 3개 모델 또는 Method9의 9개 방법이 동일한 frozen item set을 평가
 - 모든 prediction manifest가 `COMPLETE`
 - prediction output SHA 일치
 - `--expected-scope all` strict 집계 통과

@@ -1,5 +1,13 @@
 # Stage 1 Nine-Method Runbook
 
+> **이 runbook은 아직 실행하지 마십시오.** `stage1_runner`는
+> `stage1_event_identification`(15세션 window에서 사건 하나 선택)을 평가하도록
+> 배선돼 있으나, 보고 대상 Stage 1은
+> `stage1_occurred_event_evidence_pairs`(prefix 전체의 occurred 사건과 각 사건의
+> 확정 근거 세션 짝, `strict_occurred_event_evidence_f1`)이다. 과제 전환이
+>끝나기 전에 실행하면 잘못된 과제를 측정한다. 아래 절차와 게이트 자체는 전환
+> 후에도 그대로 쓰인다.
+
 Stage 1은 각 15-session target window 안에서 가장 최근에 `occurred`가 된 event의
 `event_id`를 맞힌다. Grid는 20 trajectory × 20 window checkpoint = 400 item이며
 9개 method로 3,600 prediction이다. Plan·audit·execute·resume·report 단계와

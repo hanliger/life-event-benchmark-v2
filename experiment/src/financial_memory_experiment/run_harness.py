@@ -139,24 +139,26 @@ def _openrouter_json(url: str, api_key: str) -> dict[str, Any]:
     return payload
 
 
-def _nested_numeric(value: Any, key_fragment: str) -> float | None:
-    candidates: list[float] = []
-    if isinstance(value, dict):
-        for key, child in value.items():
-            if key_fragment in str(key).lower():
-                try:
-                    candidates.append(float(child))
-                except (TypeError, ValueError):
-                    pass
-            nested = _nested_numeric(child, key_fragment)
-            if nested is not None:
-                candidates.append(nested)
-    elif isinstance(value, list):
-        for child in value:
-            nested = _nested_numeric(child, key_fragment)
-            if nested is not None:
-                candidates.append(nested)
-    return max(candidates) if candidates else None
+# OpenRouter reports endpoint throughput as a percentile object
+# (`throughput_last_30m: {p50, p75, p90, p99}`), not a scalar. Rank on the
+# median: p99 is a tail-optimistic number and would pick bursty providers.
+THROUGHPUT_PERCENTILE = "p50"
+
+
+def _reported_throughput(endpoint: dict[str, Any]) -> float | None:
+    for key, value in endpoint.items():
+        if "throughput" not in str(key).lower():
+            continue
+        if isinstance(value, dict):
+            percentile = value.get(THROUGHPUT_PERCENTILE)
+            if percentile is not None:
+                return float(percentile)
+            continue
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            continue
+    return None
 
 
 def _endpoint_provider(endpoint: dict[str, Any]) -> str:
@@ -228,10 +230,14 @@ def auto_provider_lock(
             endpoint_id = str(
                 endpoint.get("id") or endpoint.get("endpoint_id") or ""
             )
+            # OpenRouter's endpoint payloads carry no id, so `endpoint_id` is ""
+            # and an unguarded membership test matched every endpoint against
+            # the {""} id set -- silently passing non-ZDR providers. Require a
+            # real id before trusting the id-based match.
             is_zdr = bool(
                 endpoint.get("zdr")
                 or endpoint.get("is_zdr")
-                or endpoint_id in zdr_ids
+                or (endpoint_id and endpoint_id in zdr_ids)
                 or (model, provider) in zdr_pairs
             )
             if not is_zdr or not provider:
@@ -245,7 +251,7 @@ def auto_provider_lock(
                 quantization != "fp8"
             ):
                 continue
-            throughput = _nested_numeric(endpoint, "throughput")
+            throughput = _reported_throughput(endpoint)
             if throughput is None:
                 continue
             context_window = int(
@@ -265,6 +271,9 @@ def auto_provider_lock(
                 {
                     "provider": provider,
                     "throughput_tokens_per_second": throughput,
+                    "throughput_percentile": THROUGHPUT_PERCENTILE,
+                    "endpoint_status": endpoint.get("status"),
+                    "uptime_last_30m": endpoint.get("uptime_last_30m"),
                     "price": {
                         "prompt_usd_per_token": pricing.get("prompt"),
                         "completion_usd_per_token": pricing.get(
@@ -293,7 +302,8 @@ def auto_provider_lock(
         "schema_version": schema_version,
         "status": "LOCKED",
         "selection_policy": (
-            "highest reported throughput among ZDR-compatible endpoints; "
+            "highest reported throughput among ZDR-compatible endpoints, "
+            f"ranked on throughput_last_30m.{THROUGHPUT_PERCENTILE}; "
             "Qwen3.6 additionally requires FP8"
         ),
         "resolved_at_kst": datetime.now(

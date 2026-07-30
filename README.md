@@ -21,25 +21,18 @@ persona ─▶ 초기 금융 상태 ─▶ 생애사건 trajectory ─▶ 상담
 
 | Stage | task_id | 질문 | 정답 |
 | --- | --- | --- | --- |
-| **Stage 1** | `stage1_event_identification` | 지정된 15세션 window 안에서 **마지막으로 실제 발생한** 생애 사건은? | 공개된 후보 목록 중 `event_id` 하나 |
+| **Stage 1** | `stage1_occurred_event_evidence_pairs` | 이 prefix에서 **실제로 일어난 모든** 생애 사건과, 그 발생을 처음 확정하는 세션의 짝은? | `{"pairs": [{"event_id", "evidence_session_id"}]}` |
 | **Stage 2** | `stage2_2_reconstruct` | checkpoint 시점의 **금융 상태 전체**를 복원하면? | 34개 memory path별 값·status·근거 세션 (JSON) |
 
-Stage 2는 원래 객관식/단답형(`stage2_memory_value`)이었으나 **상태 전체를 복원하는 형태로 바뀌었습니다.** 값 후보를 주지 않고 대화에서 직접 복원하게 하며, 채점은 path별 값·status 비교입니다. 출력 문법(34개 path 이름·타입·허용 status)은 정답이 아니므로 모델에 공개하지만, 회사명·주소·금액 같은 open value의 후보는 주지 않습니다. 설계와 공개 정책은 [`experiment/docs/stage2_2_reconstruct.md`](experiment/docs/stage2_2_reconstruct.md)에 있습니다.
+두 stage 모두 **전체 trajectory를 누적으로 복원**하는 과제입니다. 한 window나 한 항목만 묻지 않습니다. Stage 1은 사건 수를 알려주지 않은 채 prefix 전체의 occurred 사건 집합과 각 사건의 확정 근거 세션을 전부 복원하게 하고, 15세션 checkpoint(15, 30, …, 300)마다 이를 반복해 **사다리**로 읽습니다.
+
+Stage 1 채점은 `strict_occurred_event_evidence_f1` 하나입니다. `Counter` 기반 exact multiset P/R/F1이라 부분점수가 없고, 형제 라벨·잘못된 근거 세션·중복 예측·무효 레코드는 모두 precision을 깎고 놓친 짝은 recall을 깎습니다. checkpoint별 trajectory macro를 낸 뒤 checkpoint를 동일 가중으로 평균하며, checkpoint를 가로질러 짝을 pooling하지 않습니다. 설계·지표·**알려진 한계**는 [`docs/rq1_pair_protocol.md`](docs/rq1_pair_protocol.md)에 있습니다.
+
+Stage 2는 값 후보를 주지 않고 대화에서 직접 복원하게 하며, 채점은 path별 값·status 비교입니다. 출력 문법(34개 path 이름·타입·허용 status)은 정답이 아니므로 모델에 공개하지만, 회사명·주소·금액 같은 open value의 후보는 주지 않습니다. 설계와 공개 정책은 [`experiment/docs/stage2_2_reconstruct.md`](experiment/docs/stage2_2_reconstruct.md)에 있습니다.
 
 두 stage는 **같은 코퍼스**를 씁니다: HuggingFace의 `dialogues_no_prospective` + `gold_no_prospective`. 전망 근거(`weak_signal_evidence`, `upcoming_evidence`)를 중립 filler로 치환해 세션 수·공개 id·위치·날짜를 보존한 코퍼스이며, 다른 코퍼스로 돌리는 경로는 없습니다.
 
-**Stage 3(multi-hop)은 벤치마크에서 제거되었습니다.**
-
 핵심 난이도는 **간접성**입니다. 대화는 상태를 직접 말해 주지 않습니다. 사용자는 업무를 요청하며 단서만 흘리고, 모델은 여러 세션에 흩어진 단서를 모아 상태를 역추론해야 합니다. 평가 대상 모델에게는 정답 계획(plan)·주석(cue)·구조화 문맥은 주지 않고, **보이는 발화와 초기 메모리만** 줍니다.
-
-legacy MCQ 과제 `stage2_memory_value`는 다음 원칙으로 만듭니다.
-
-- 15세션 checkpoint에서 `occurred` event가 갱신한 memory path/selector로 문항을 만들고, 이후 더 긴 prefix에서도 event 시점의 기준일·정답을 고정한 채 같은 문항을 재사용
-- 문항의 `checkpoint_date`는 정답 기준일이며, `evaluation_checkpoint_date`는 모델에게 제공한 prefix의 마지막 날짜
-- 질문에는 event 이름이나 ID를 노출하지 않고 `session_date` 기반의 기준일만 제시
-- `update/create`와 의미 있는 동일값 재확인(no-op)은 포함하되, `archive`·`mark_stale`·`set_not_applicable` 같은 상태 전용 operation은 최종값 문항에서 제외
-- 고용 상태·주거 유형처럼 사전에 닫힌 값 집합은 객관식, 회사명·주소·금액·인원 수·목록은 단답형
-- 경로별 질문/selector/선지 정책은 `configs/registries/stage2_memory_questions.yaml`에서 관리
 
 ---
 
@@ -456,7 +449,7 @@ python scripts/publish_counterfactual_fillers_to_hf.py \
 
 ### D. RQ1: progressive life-event trajectory reconstruction
 
-RQ1은 "긴 상담 이력에서 암묵적 생애 사건 인스턴스의 **종류·lifecycle 상태·시간 순서·근거 세션**을 복원할 수 있는가"를 측정하는 새 Stage 1 과제(`stage1_event_trajectory`)입니다. 기존 `stage1_event_identification` 문항과 Stage 2는 그대로 유지됩니다.
+RQ1은 "긴 상담 이력에서 암묵적 생애 사건 인스턴스를 복원할 수 있는가"라는 질문의 계보입니다. 보고 대상 Stage 1은 이 계보에서 나온 `stage1_occurred_event_evidence_pairs`(→ §5-D.4)이고, 아래 `stage1_event_trajectory`는 **종류·lifecycle 상태·시간 순서·근거 세션**을 모두 요구하는 더 넓은 변형으로 같은 item을 공유합니다.
 
 #### D.1 Natural progressive 실험
 
@@ -536,12 +529,12 @@ data/runs/<RUN_ID>/rq1/
 
 프롬프트는 `prompts/benchmark/rq1_event_trajectory_ko.md`에 버전 관리되며 내용 SHA-256이 run metadata와 모든 report에 기록됩니다. item/prediction 파일은 `data/runs/` 아래 생성물이므로 git에 커밋하지 않습니다.
 
-#### D.4 (임시) occurred-event 근거 짝 파일럿
+#### D.4 Stage 1 — occurred-event 근거 짝
 
-RQ1 재설계 판단 전에 돌리는 **최소·임시** 프로토콜입니다
+**보고 대상 Stage 1 과제**입니다
 (`stage1_occurred_event_evidence_pairs`, `rq1-occurred-event-pairs-temp-v1`).
-위 `stage1_event_trajectory`는 그대로 남아 있고, 이 파일럿은 같은
-`natural/progressive_items.jsonl`을 재사용하면서 딱 한 가지만 묻습니다:
+§5-D.1의 `natural/progressive_items.jsonl`을 그대로 재사용하면서 한 가지를
+묻습니다:
 
 > 이 prefix에서 **실제로 일어난** 생애 사건과, 그 발생을 처음 확정하는 세션의
 > 짝을 모두 복원할 수 있는가?
@@ -567,7 +560,7 @@ make evaluate-rq1-pairs-dev EXECUTE=1 RQ1_PROVIDER=anthropic RQ1_MODEL=claude-op
 산출물은 기존 파일럿을 덮지 않도록 `data/runs/<RUN_ID>/rq1_pair_temp/`
 (`protocol_manifest.json`, `predictions/`, `reports/`, `audit/`)에 씁니다.
 
-##### (임시) no-prospective 진단
+##### no-prospective 조건 (기본값)
 
 전망 근거(`weak_signal_evidence`, `upcoming_evidence`)**만** 제거하고 나머지는
 전부 남긴 채 같은 질문을 묻는 진단입니다. distractor(routine, hard_negative),
@@ -680,12 +673,14 @@ PYTHONPATH=.:src:experiment/src $PY -m financial_memory_experiment.cli build-sta
 
 실행 절차·산출물·selection 문법은 stage별 runbook에 있습니다.
 
-| Stage | 진입점 | Runbook |
-| --- | --- | --- |
-| Stage 1 | `experiment/scripts/paid/run_stage1.sh` | [`stage1_9_method_runbook.md`](experiment/docs/stage1_9_method_runbook.md) |
-| Stage 2 | `experiment/scripts/paid/run_stage2_2.sh` | [`stage2_2_9_method_runbook.md`](experiment/docs/stage2_2_9_method_runbook.md) |
+| Stage | 진입점 | Runbook | 상태 |
+| --- | --- | --- | --- |
+| Stage 2 | `experiment/scripts/paid/run_stage2_2.sh` | [`stage2_2_9_method_runbook.md`](experiment/docs/stage2_2_9_method_runbook.md) | 실행 가능 |
+| Stage 1 | `experiment/scripts/paid/run_stage1.sh` | [`stage1_9_method_runbook.md`](experiment/docs/stage1_9_method_runbook.md) | **사용 금지 — 마이그레이션 중** |
 
-두 runner는 `run_harness.py`를 공유하므로 절차가 동일합니다.
+> **Stage 1 runner는 아직 쓰지 마세요.** 현재 `stage1_event_identification`(15세션 window에서 사건 하나 선택)을 평가하도록 배선돼 있는데, 보고 대상 Stage 1은 §5-D.4의 `stage1_occurred_event_evidence_pairs`(prefix 전체의 occurred 사건 + 근거 세션 짝)입니다. 채점 지표도 accuracy가 아니라 `strict_occurred_event_evidence_f1`입니다. 그때까지 Stage 1은 `scripts/evaluate_rq1_pairs.py`로 돌리되, 그 경로에는 RAG·Memory Agent arm과 유료 실행 게이트가 없습니다.
+
+두 runner는 `run_harness.py`를 공유하므로 provider lock·prompt 감사·resume 절차는 동일합니다.
 
 ```bash
 # 1) 하네스 전용 환경 (생성 파이프라인 venv와 분리)
@@ -812,7 +807,7 @@ python scripts/audit_session_dates.py \
 | `docs/failure_modes.md` | 주요 실패 유형 |
 | `docs/coverage_generation.md` | 희귀 사건 커버리지 생성 |
 | `docs/rq1_pilot_report.md` | RQ1 파일럿 결과(traj_001 dev)와 지표 개선 과제 |
-| `docs/rq1_pair_protocol.md` | RQ1 임시 짝 파일럿의 설계·지표·알려진 한계 |
+| `docs/rq1_pair_protocol.md` | **Stage 1** 짝 과제의 설계·지표·알려진 한계 |
 | `docs/memory_agents/memory_agent_benchmarks.md` | 참고한 memory agent 벤치마크 정리 |
 | `docs/huggingface_dataset_card.md` | HF 데이터셋 카드 |
 | `docs/locale_extension_guide.md` | 로케일 추가 가이드 |

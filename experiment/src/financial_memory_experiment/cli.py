@@ -7,6 +7,7 @@ import os
 import subprocess
 import sys
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
 
@@ -30,7 +31,7 @@ from .masking import build_masking_items, validate_masking_items
 from .methods import method_ids
 from .methods.full_context import FullContextMethod
 from .methods.mem0_adapter import InMemoryMem0Double, Mem0Method
-from .methods.readers import MockReader
+from .methods.readers import MockReader, configure_generation_limits
 from .methods.retrieval import BM25Method, DenseMethod, HashEmbedder, regex_tokenize
 from .metrics import summarize_predictions, write_tables
 from .paths import ExperimentPaths
@@ -42,6 +43,14 @@ from .safety import (
     load_verified_full_plan,
     load_verified_smoke_plan,
     reserve_smoke_budget,
+)
+from .stage2_2 import (
+    download_stage2_2_data,
+    prepare_stage2_2_data,
+    stage2_2_item_path,
+    validate_stage2_2_prepared,
+    validate_stage2_2_raw_data,
+    write_stage2_2_initial_copy_report,
 )
 from .util import read_jsonl, sha256_file, sha256_json, write_json
 
@@ -56,9 +65,14 @@ def _canonical_item_paths(paths: ExperimentPaths) -> list[Path]:
 
 def _all_item_paths(paths: ExperimentPaths) -> list[Path]:
     root = Path(active_prepared_manifest(paths)["root"])
-    return _canonical_item_paths(paths) + [
+    result = _canonical_item_paths(paths) + [
         root / "masking_items" / "masking_questions.jsonl"
     ]
+    try:
+        result.append(stage2_2_item_path(paths))
+    except FileNotFoundError:
+        pass
+    return result
 
 
 def _selected_items(paths: ExperimentPaths, item_ids: list[str]) -> list[dict[str, Any]]:
@@ -162,9 +176,32 @@ def _load_approved_environment(paths: ExperimentPaths) -> None:
 
 def _preflight_paid(methods: list[str]) -> None:
     missing_keys: list[str] = []
-    if "fc_claude_opus_5" in methods and not os.environ.get("ANTHROPIC_API_KEY"):
+    anthropic_methods = {
+        "fc_claude_opus_5",
+        "fc_claude_opus_4_8",
+        "bm25_claude_opus_4_8",
+        "dense_ge2_claude_opus_4_8",
+        "mem0_claude_opus_4_8",
+        "letta_claude_opus_4_8",
+    }
+    if anthropic_methods & set(methods) and not os.environ.get(
+        "ANTHROPIC_API_KEY"
+    ):
         missing_keys.append("ANTHROPIC_API_KEY")
-    if "fc_gpt_5_6_sol" in methods and not os.environ.get("OPENAI_API_KEY"):
+    openrouter_methods = {
+        "fc_openrouter_llama_4_maverick",
+        "fc_openrouter_gpt_oss_120b",
+        "fc_openrouter_qwen_3_5_122b_a10b",
+        "fc_openrouter_qwen_3_6_35b_a3b_fp8",
+    }
+    if openrouter_methods & set(methods) and not os.environ.get(
+        "OPENROUTER_API_KEY"
+    ):
+        missing_keys.append("OPENROUTER_API_KEY")
+    if {
+        "fc_gpt_5_6_sol",
+        "oracle_rel_gpt_5_6_sol",
+    } & set(methods) and not os.environ.get("OPENAI_API_KEY"):
         missing_keys.append("OPENAI_API_KEY")
     google_methods = {
         "fc_gemini_3_1_pro",
@@ -172,6 +209,9 @@ def _preflight_paid(methods: list[str]) -> None:
         "dense_ge2_gemini_3_1_pro",
         "mem0_gemini_3_1_pro",
         "letta_gemini_3_1_pro",
+        "dense_ge2_claude_opus_4_8",
+        "mem0_claude_opus_4_8",
+        "letta_claude_opus_4_8",
     }
     if google_methods & set(methods) and not (
         os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
@@ -185,7 +225,17 @@ def _preflight_paid(methods: list[str]) -> None:
 
     required_modules = {
         "fc_claude_opus_5": "anthropic",
+        "fc_claude_opus_4_8": "anthropic",
+        "bm25_claude_opus_4_8": "kiwipiepy",
+        "dense_ge2_claude_opus_4_8": "google.genai",
+        "mem0_claude_opus_4_8": "mem0",
+        "letta_claude_opus_4_8": "letta_client",
+        "fc_openrouter_llama_4_maverick": "openai",
+        "fc_openrouter_gpt_oss_120b": "openai",
+        "fc_openrouter_qwen_3_5_122b_a10b": "openai",
+        "fc_openrouter_qwen_3_6_35b_a3b_fp8": "openai",
         "fc_gpt_5_6_sol": "openai",
+        "oracle_rel_gpt_5_6_sol": "openai",
         "fc_gemini_3_1_pro": "google.genai",
         "bm25_gemini_3_1_pro": "kiwipiepy",
         "dense_ge2_gemini_3_1_pro": "google.genai",
@@ -210,7 +260,7 @@ def _preflight_paid(methods: list[str]) -> None:
             + ", ".join(missing_modules)
         )
 
-    if "letta_gemini_3_1_pro" in methods:
+    if {"letta_gemini_3_1_pro", "letta_claude_opus_4_8"} & set(methods):
         try:
             with urllib.request.urlopen(
                 "http://localhost:8283/v1/health", timeout=3
@@ -316,8 +366,10 @@ def _dry_run(paths: ExperimentPaths) -> dict[str, Any]:
             "read_only": before == method.state_fingerprint(),
         }
     configured = method_ids(paths)
-    if len(configured) != 7 or len(set(configured)) != 7:
-        raise ValueError("exactly seven unique methods must be configured")
+    if len(configured) != 9 or len(set(configured)) != 9:
+        raise ValueError(
+            "exactly nine unique core-plus-analysis methods must be configured"
+        )
     return {
         "decision": "PASS",
         "configured_methods": configured,
@@ -337,9 +389,15 @@ def build_parser() -> argparse.ArgumentParser:
     download = sub.add_parser("download-data")
     download.add_argument("--source-dir", type=Path)
     download.add_argument("--revision")
+    download_stage2_2 = sub.add_parser("download-stage2-2-data")
+    download_stage2_2.add_argument("--revision")
     for name in (
         "validate-raw-data",
         "prepare-data",
+        "validate-stage2-2-raw",
+        "prepare-stage2-2",
+        "validate-stage2-2-prepared",
+        "stage2-2-initial-copy",
         "build-prefix-gold",
         "build-canonical-items",
         "build-masking-items",
@@ -365,6 +423,7 @@ def build_parser() -> argparse.ArgumentParser:
     plan.add_argument("--method", action="append", required=True)
     plan.add_argument("--item-id", action="append", required=True)
     plan.add_argument("--estimated-usd", type=float, required=True)
+    plan.add_argument("--reasoning-policy")
     execute = sub.add_parser("execute-paid-smoke")
     execute.add_argument("--plan-sha", required=True)
     execute.add_argument("--approval", required=True)
@@ -387,10 +446,20 @@ def main() -> int:
     paths = ExperimentPaths.discover()
     if args.command == "download-data":
         result: Any = download_data(paths, source_dir=args.source_dir, revision=args.revision)
+    elif args.command == "download-stage2-2-data":
+        result = download_stage2_2_data(paths, revision=args.revision)
     elif args.command == "validate-raw-data":
         result = validate_raw_data(paths)
+    elif args.command == "validate-stage2-2-raw":
+        result = validate_stage2_2_raw_data(paths)
     elif args.command == "prepare-data":
         result = prepare_data(paths)
+    elif args.command == "prepare-stage2-2":
+        result = prepare_stage2_2_data(paths)
+    elif args.command == "validate-stage2-2-prepared":
+        result = validate_stage2_2_prepared(paths)
+    elif args.command == "stage2-2-initial-copy":
+        result = write_stage2_2_initial_copy_report(paths)
     elif args.command == "build-prefix-gold":
         result = build_prefix_gold_artifact(paths)
     elif args.command == "build-canonical-items":
@@ -444,6 +513,7 @@ def main() -> int:
             estimated_usd=args.estimated_usd,
             operation_limits=_operation_limits(selected, args.method),
             input_items_sha256=sha256_json(selected),
+            reasoning_policy=args.reasoning_policy,
         )
     elif args.command == "execute-paid-smoke":
         plan = load_verified_smoke_plan(
@@ -466,6 +536,17 @@ def main() -> int:
         )
         reserve_smoke_budget(paths, plan)
         os.environ["FIN_MEMORY_DISABLE_PAID_APIS"] = "0"
+        configure_generation_limits(
+            max_in_flight=int(plan.get("max_in_flight", 60)),
+            provider_limits={
+                "anthropic": int(
+                    plan.get("anthropic_max_in_flight", 20)
+                ),
+                "openrouter": int(
+                    plan.get("openrouter_max_in_flight", 40)
+                ),
+            },
+        )
         canonical = [
             item
             for item in selected
@@ -474,7 +555,7 @@ def main() -> int:
         masking = [
             item for item in selected if str(item["stage"]).startswith("masking_")
         ]
-        outputs = []
+        jobs: list[tuple[str, str, list[dict[str, Any]], Path]] = []
         for method_id in plan["method_ids"]:
             for label, subset in (("canonical", canonical), ("masking", masking)):
                 if not subset:
@@ -485,14 +566,52 @@ def main() -> int:
                     / plan["plan_sha256"]
                     / f"{method_id}__{label}.jsonl"
                 )
-                run_method(
-                    paths,
-                    method_id=method_id,
-                    items=subset,
-                    output=output,
-                    mock=False,
-                )
-                outputs.append(str(output))
+                jobs.append((method_id, label, subset, output))
+
+        def run_paid_job(
+            job: tuple[str, str, list[dict[str, Any]], Path],
+        ) -> str:
+            method_id, label, subset, output = job
+            run_method(
+                paths,
+                method_id=method_id,
+                items=subset,
+                output=output,
+                mock=False,
+                reasoning_policy=str(plan["reasoning_policy"]),
+                query_concurrency=(
+                    int(plan.get("checkpoint_concurrency", 1))
+                    if label == "canonical"
+                    and method_id
+                    in {
+                        "fc_claude_opus_5",
+                        "fc_claude_opus_4_8",
+                        "fc_gemini_3_1_pro",
+                        "fc_gpt_5_6_sol",
+                        "bm25_claude_opus_4_8",
+                        "dense_ge2_claude_opus_4_8",
+                        "mem0_claude_opus_4_8",
+                        "letta_claude_opus_4_8",
+                        "fc_openrouter_llama_4_maverick",
+                        "fc_openrouter_gpt_oss_120b",
+                        "fc_openrouter_qwen_3_5_122b_a10b",
+                        "fc_openrouter_qwen_3_6_35b_a3b_fp8",
+                    }
+                    and all(
+                        item.get("stage") == "stage2_2_reconstruct"
+                        for item in subset
+                    )
+                    else 1
+                ),
+                parse_retries=int(plan.get("parse_retries", 0)),
+            )
+            return str(output)
+
+        with ThreadPoolExecutor(
+            max_workers=int(plan.get("concurrency", 1))
+        ) as executor:
+            # map preserves the frozen plan order in the returned artifact list.
+            outputs = list(executor.map(run_paid_job, jobs))
         result = {"plan_sha256": plan["plan_sha256"], "outputs": outputs}
     elif args.command == "plan-paid-full":
         unknown = set(args.method) - set(method_ids(paths))

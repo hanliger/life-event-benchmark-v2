@@ -45,7 +45,10 @@ Main `top_k=10`, sensitivity `top_k=5`, reranker 없음이다. Sensitivity는 fr
 - Letta는 end-to-end search-and-answer agent이므로 retriever-only 비교로 해석하지
   않고 Memory family로 분리한다.
 - Invalid format은 오답이며 의미를 복구하는 repair call은 없다.
-- concurrency 1, automatic retry 0, first-error stop이다.
+- Stage 2.2 checkpoint별 prediction은 새 method/client에서 독립적으로 생성한다.
+  다른 checkpoint의 prediction이나 response는 다음 요청의 context로 전달하지 않는다.
+  Full-context smoke는 세 model과 model별 다섯 checkpoint를 병렬 실행하되,
+  automatic retry 0, first-error stop을 유지한다.
 - Dense/Mem0/Letta는 모두 `gemini-embedding-2`, 768차원, `top_k=10`을 사용한다.
   Framework-native memory 표현과 검색 제어 방식의 차이는 결과 해석에 명시한다.
 

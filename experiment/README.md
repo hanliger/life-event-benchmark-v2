@@ -242,9 +242,21 @@ sed -n '1,20p' data/prepared/*/masking_items/masking_questions.jsonl
   --execute-paid
 ```
 
-현재 standing approval은 보수적 누적 smoke 비용이 엄격히 `$5` 미만일 때만
-유효하다. 단일 smoke plan 상한은 `$3`, concurrency 1, automatic retry 0,
-first-error stop이다. timeout 또는 비용 귀속 불명 상태에서는 자동 재실행하지 않는다.
+기본 reasoning policy는 `deployment_realistic_low`다. Medium sensitivity
+smoke가 필요할 때만 plan 생성 시 profile을 명시한다.
+
+```bash
+./scripts/pipeline.sh plan-paid-smoke \
+  --reasoning-policy deployment_realistic_medium \
+  ...
+```
+
+현재 standing approval은 보수적 누적 smoke 비용이 엄격히 `$20` 미만일 때만
+유효하다. 단일 smoke plan 상한은 `$7.50`이다. Stage 2.2 full-context smoke는
+model concurrency 3, checkpoint concurrency 5를 사용하며 automatic retry 0,
+first-error stop이다. 각 checkpoint는 새 method/client에서 `S000 + 해당
+checkpoint까지의 dialogue`만 독립적으로 ingest한다. timeout 또는 비용 귀속 불명
+상태에서는 자동 재실행하지 않는다.
 누적 금액은 `configs/paid_cost_ledger.json`에 기록되며, 실행 직전에 plan estimate
 전액을 원자적으로 예약한다. 따라서 실패나 timeout 뒤 같은 plan은 자동 재실행되지
 않으며 실제 청구 내역을 확인한 뒤에만 원장을 수동 조정한다.

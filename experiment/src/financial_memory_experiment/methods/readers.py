@@ -1,9 +1,51 @@
 from __future__ import annotations
 
+from copy import deepcopy
+from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass
+from threading import BoundedSemaphore
+from time import perf_counter
 from typing import Any, Protocol
 
 from ..safety import assert_provider_construction_allowed
+
+
+_GLOBAL_GENERATION_SEMAPHORE: BoundedSemaphore | None = None
+_PROVIDER_GENERATION_SEMAPHORES: dict[str, BoundedSemaphore] = {}
+
+
+def configure_generation_limits(
+    *,
+    max_in_flight: int | None,
+    provider_limits: dict[str, int] | None = None,
+) -> None:
+    global _GLOBAL_GENERATION_SEMAPHORE
+    global _PROVIDER_GENERATION_SEMAPHORES
+    if max_in_flight is not None and max_in_flight <= 0:
+        raise ValueError("max_in_flight must be positive")
+    _GLOBAL_GENERATION_SEMAPHORE = (
+        BoundedSemaphore(max_in_flight)
+        if max_in_flight is not None
+        else None
+    )
+    limits = provider_limits or {}
+    if any(value <= 0 for value in limits.values()):
+        raise ValueError("provider generation limits must be positive")
+    _PROVIDER_GENERATION_SEMAPHORES = {
+        provider: BoundedSemaphore(value)
+        for provider, value in limits.items()
+    }
+
+
+@contextmanager
+def generation_slot(provider: str):
+    with ExitStack() as stack:
+        if _GLOBAL_GENERATION_SEMAPHORE is not None:
+            stack.enter_context(_GLOBAL_GENERATION_SEMAPHORE)
+        provider_limit = _PROVIDER_GENERATION_SEMAPHORES.get(provider)
+        if provider_limit is not None:
+            stack.enter_context(provider_limit)
+        yield
 
 
 def _usage_dict(usage: Any) -> dict[str, int] | None:
@@ -31,14 +73,18 @@ def _usage_dict(usage: Any) -> dict[str, int] | None:
 
 
 class Reader(Protocol):
-    def generate(self, *, system: str, user: str) -> tuple[str, dict[str, Any]]: ...
+    def generate(
+        self, *, system: str, user: str, max_tokens: int | None = None
+    ) -> tuple[str, dict[str, Any]]: ...
 
 
 @dataclass
 class MockReader:
     answer: str = "<answer>A</answer>"
 
-    def generate(self, *, system: str, user: str) -> tuple[str, dict[str, Any]]:
+    def generate(
+        self, *, system: str, user: str, max_tokens: int | None = None
+    ) -> tuple[str, dict[str, Any]]:
         return self.answer, {"provider": "mock", "model": "mock", "paid": False}
 
 
@@ -52,12 +98,27 @@ class ProviderReader:
         *,
         max_tokens: int = 4096,
         timeout_seconds: float = 120,
+        generation_settings: dict[str, Any] | None = None,
     ):
-        assert_provider_construction_allowed()
         self.provider = provider
         self.model = model
         self.max_tokens = max_tokens
         self.timeout_seconds = timeout_seconds
+        self.generation_settings = deepcopy(generation_settings or {})
+        reserved = {
+            "anthropic": {"model", "max_tokens", "messages", "system"},
+            "openai": {"model", "instructions", "input", "max_output_tokens"},
+            "google": {"model", "contents", "system_instruction", "max_output_tokens"},
+            "gemini": {"model", "contents", "system_instruction", "max_output_tokens"},
+            "openrouter": {"model", "messages", "max_tokens"},
+        }
+        overlap = reserved.get(provider, set()) & self.generation_settings.keys()
+        if overlap:
+            raise ValueError(
+                "generation_settings cannot override required request fields: "
+                f"{sorted(overlap)}"
+            )
+        assert_provider_construction_allowed()
         if provider == "anthropic":
             import anthropic
 
@@ -82,42 +143,117 @@ class ProviderReader:
                     retry_options=types.HttpRetryOptions(attempts=1),
                 )
             )
+        elif provider == "openrouter":
+            import os
+
+            from openai import OpenAI
+
+            api_key = os.environ.get("OPENROUTER_API_KEY")
+            if not api_key:
+                raise RuntimeError("OPENROUTER_API_KEY is required")
+            self.client = OpenAI(
+                api_key=api_key,
+                base_url="https://openrouter.ai/api/v1",
+                max_retries=0,
+                timeout=timeout_seconds,
+            )
         else:
             raise ValueError(f"unsupported provider: {provider}")
 
-    def generate(self, *, system: str, user: str) -> tuple[str, dict[str, Any]]:
-        if self.provider == "anthropic":
-            response = self.client.messages.create(
-                model=self.model,
-                max_tokens=self.max_tokens,
-                messages=[{"role": "user", "content": user}],
+    def generate(
+        self, *, system: str, user: str, max_tokens: int | None = None
+    ) -> tuple[str, dict[str, Any]]:
+        with generation_slot(self.provider):
+            return self._generate_unlimited(
                 system=system,
+                user=user,
+                max_tokens=max_tokens,
             )
+
+    def _generate_unlimited(
+        self, *, system: str, user: str, max_tokens: int | None = None
+    ) -> tuple[str, dict[str, Any]]:
+        output_tokens = int(max_tokens or self.max_tokens)
+        started = perf_counter()
+        if self.provider == "anthropic":
+            request = {
+                "model": self.model,
+                "max_tokens": output_tokens,
+                "messages": [{"role": "user", "content": user}],
+                "system": system,
+                **deepcopy(self.generation_settings),
+            }
+            response = self.client.messages.create(**request)
             text = "".join(getattr(block, "text", "") for block in response.content)
             usage = getattr(response, "usage", None)
         elif self.provider == "openai":
-            response = self.client.responses.create(
-                model=self.model,
-                instructions=system,
-                input=user,
-                max_output_tokens=self.max_tokens,
-            )
+            request = {
+                "model": self.model,
+                "instructions": system,
+                "input": user,
+                "max_output_tokens": output_tokens,
+                **deepcopy(self.generation_settings),
+            }
+            response = self.client.responses.create(**request)
             text = response.output_text
             usage = getattr(response, "usage", None)
-        else:
+        elif self.provider in {"google", "gemini"}:
+            config = {
+                "system_instruction": system,
+                "max_output_tokens": output_tokens,
+                **deepcopy(self.generation_settings),
+            }
             response = self.client.models.generate_content(
                 model=self.model,
                 contents=user,
-                config={"system_instruction": system, "max_output_tokens": self.max_tokens},
+                config=config,
             )
             text = response.text
             usage = getattr(response, "usage_metadata", None)
+        else:
+            request = {
+                "model": self.model,
+                "messages": [
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user},
+                ],
+                "max_tokens": output_tokens,
+                "extra_body": deepcopy(self.generation_settings),
+            }
+            response = self.client.chat.completions.create(**request)
+            choice = response.choices[0]
+            content = getattr(choice.message, "content", "")
+            if isinstance(content, list):
+                text = "".join(
+                    str(
+                        block.get("text", "")
+                        if isinstance(block, dict)
+                        else getattr(block, "text", "")
+                    )
+                    for block in content
+                )
+            else:
+                text = str(content or "")
+            usage = getattr(response, "usage", None)
+        latency_seconds = perf_counter() - started
         if not str(text).strip():
             raise RuntimeError(f"empty response from {self.provider}/{self.model}")
-        return str(text), {
+        result = {
             "provider": self.provider,
             "model": self.model,
             "usage": _usage_dict(usage),
             "automatic_retries": 0,
             "request_timeout_seconds": self.timeout_seconds,
+            "max_output_tokens": output_tokens,
+            "generation_settings": deepcopy(self.generation_settings),
+            "latency_seconds": round(latency_seconds, 6),
         }
+        if self.provider == "openrouter":
+            result.update(
+                {
+                    "response_model": getattr(response, "model", None),
+                    "response_id": getattr(response, "id", None),
+                    "routed_provider": getattr(response, "provider", None),
+                }
+            )
+        return str(text), result

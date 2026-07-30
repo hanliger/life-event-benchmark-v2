@@ -1,0 +1,5 @@
+trajectory_id,method_id,final_state_accuracy_pct,dynamic_path_final_state_accuracy_pct,correct_change_f1_pct,path_macro_correct_change_f1_pct,event_macro_update_accuracy_pct,retention_after_update_pct,first_attempt_parse_errors,final_parse_errors,evidence_validation_warning_rows
+macro_average,fc_claude_opus_5,80.000000,82.933333,68.922207,72.728767,76.351852,75.559083,0,0,0
+macro_average,fc_gemini_3_1_pro,79.019608,78.400000,65.250635,68.427820,66.570106,68.302138,1,0,0
+macro_average,fc_gpt_5_6_sol,73.725490,75.733333,59.008706,60.627403,72.497024,65.530423,0,0,0
+macro_average,fc_claude_opus_4_8,75.098039,74.133333,60.654643,63.441298,68.771495,63.866953,0,0,2

@@ -8,7 +8,11 @@ from fcntl import LOCK_EX, LOCK_UN, flock
 from pathlib import Path
 from typing import Any, Iterator
 
-from .config import load_paid_cost_ledger, load_paid_safety_config
+from .config import (
+    load_experiment_config,
+    load_paid_cost_ledger,
+    load_paid_safety_config,
+)
 from .paths import ExperimentPaths
 from .util import sha256_file, sha256_json, write_json
 
@@ -170,6 +174,7 @@ def build_smoke_plan(
     estimated_usd: float,
     operation_limits: dict[str, int] | None = None,
     input_items_sha256: str,
+    reasoning_policy: str | None = None,
 ) -> dict[str, Any]:
     config = load_paid_safety_config(paths)
     cap = float(config["smoke"]["usd_cap"])
@@ -180,6 +185,14 @@ def build_smoke_plan(
     spent, standing_limit, after = _assert_cumulative_allowance(
         ledger, float(estimated_usd)
     )
+    models = load_experiment_config(paths)["models"]
+    selected_policy = reasoning_policy or str(models["reasoning_policy"])
+    available_policies = {
+        str(models["reasoning_policy"]),
+        *map(str, (models.get("generation_profiles") or {}).keys()),
+    }
+    if selected_policy not in available_policies:
+        raise ValueError(f"unknown reasoning policy: {selected_policy}")
     body = {
         "schema_version": "paid-smoke-plan-v2",
         "kind": "smoke",
@@ -191,12 +204,24 @@ def build_smoke_plan(
         "conservative_spent_before_usd": spent,
         "conservative_spent_after_reservation_usd": after,
         "cost_ledger_sha256": sha256_file(ledger_path),
-        "concurrency": 1,
-        "automatic_retries": 0,
-        "stop_on_first_error": True,
+        "concurrency": int(config["smoke"]["concurrency"]),
+        "checkpoint_concurrency": int(
+            config["smoke"].get("checkpoint_concurrency", 1)
+        ),
+        "max_in_flight": int(config["smoke"].get("max_in_flight", 1)),
+        "anthropic_max_in_flight": int(
+            config["smoke"].get("anthropic_max_in_flight", 1)
+        ),
+        "openrouter_max_in_flight": int(
+            config["smoke"].get("openrouter_max_in_flight", 1)
+        ),
+        "automatic_retries": int(config["smoke"]["automatic_retries"]),
+        "parse_retries": int(config["smoke"].get("parse_retries", 0)),
+        "stop_on_first_error": bool(config["smoke"]["stop_on_first_error"]),
         "timeout_policy": "unknown_billing_state_stop_no_auto_resume",
         "operation_limits": operation_limits or {},
         "input_items_sha256": input_items_sha256,
+        "reasoning_policy": selected_policy,
         "execution_provenance": _execution_provenance(paths),
         "config": config,
     }

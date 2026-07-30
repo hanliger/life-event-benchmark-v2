@@ -1,0 +1,16 @@
+model,plan_sha256,input_condition,trajectory_id,checkpoint,dynamic_path_final_state_accuracy_pct,correct_change_f1_pct
+Claude Opus 5,f84f98315cc1fd165734bc601808e2d10bf3ad959ef36d51ec76c9ccdfef18cd,Full Context,traj_010,60,88.000000,78.571429
+Claude Opus 5,f84f98315cc1fd165734bc601808e2d10bf3ad959ef36d51ec76c9ccdfef18cd,Full Context,traj_010,120,100.000000,95.652174
+Claude Opus 5,f84f98315cc1fd165734bc601808e2d10bf3ad959ef36d51ec76c9ccdfef18cd,Full Context,traj_010,180,96.000000,88.888889
+Claude Opus 5,f84f98315cc1fd165734bc601808e2d10bf3ad959ef36d51ec76c9ccdfef18cd,Full Context,traj_010,240,84.000000,72.222222
+Claude Opus 5,f84f98315cc1fd165734bc601808e2d10bf3ad959ef36d51ec76c9ccdfef18cd,Full Context,traj_010,300,88.000000,80.000000
+Gemini 3.1 Pro Preview,f84f98315cc1fd165734bc601808e2d10bf3ad959ef36d51ec76c9ccdfef18cd,Full Context,traj_010,60,84.000000,73.333333
+Gemini 3.1 Pro Preview,f84f98315cc1fd165734bc601808e2d10bf3ad959ef36d51ec76c9ccdfef18cd,Full Context,traj_010,120,96.000000,86.956522
+Gemini 3.1 Pro Preview,f84f98315cc1fd165734bc601808e2d10bf3ad959ef36d51ec76c9ccdfef18cd,Full Context,traj_010,180,84.000000,71.428571
+Gemini 3.1 Pro Preview,f84f98315cc1fd165734bc601808e2d10bf3ad959ef36d51ec76c9ccdfef18cd,Full Context,traj_010,240,68.000000,55.555556
+Gemini 3.1 Pro Preview,f84f98315cc1fd165734bc601808e2d10bf3ad959ef36d51ec76c9ccdfef18cd,Full Context,traj_010,300,76.000000,58.064516
+GPT-5.6 Sol,f84f98315cc1fd165734bc601808e2d10bf3ad959ef36d51ec76c9ccdfef18cd,Full Context,traj_010,60,80.000000,68.965517
+GPT-5.6 Sol,f84f98315cc1fd165734bc601808e2d10bf3ad959ef36d51ec76c9ccdfef18cd,Full Context,traj_010,120,96.000000,84.615385
+GPT-5.6 Sol,f84f98315cc1fd165734bc601808e2d10bf3ad959ef36d51ec76c9ccdfef18cd,Full Context,traj_010,180,84.000000,68.965517
+GPT-5.6 Sol,f84f98315cc1fd165734bc601808e2d10bf3ad959ef36d51ec76c9ccdfef18cd,Full Context,traj_010,240,60.000000,46.153846
+GPT-5.6 Sol,f84f98315cc1fd165734bc601808e2d10bf3ad959ef36d51ec76c9ccdfef18cd,Full Context,traj_010,300,68.000000,45.161290

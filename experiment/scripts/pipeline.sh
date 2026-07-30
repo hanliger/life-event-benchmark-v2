@@ -35,7 +35,7 @@ case "$COMMAND" in
   test)
     "$PYTHON_BIN" -m pytest "$EXP_ROOT/tests" "$@"
     ;;
-  download-data|validate-raw-data|prepare-data|build-prefix-gold|build-canonical-items|build-masking-items|validate-prepared-data|dry-run|plan-paid-smoke|plan-paid-full|evaluate|aggregate)
+  download-data|download-stage2-2-data|validate-raw-data|validate-stage2-2-raw|prepare-data|prepare-stage2-2|validate-stage2-2-prepared|stage2-2-initial-copy|build-prefix-gold|build-canonical-items|build-masking-items|validate-prepared-data|dry-run|plan-paid-smoke|plan-paid-full|evaluate|aggregate)
     "$PYTHON_BIN" -m financial_memory_experiment.cli "$COMMAND" "$@"
     ;;
   help|-h|--help)

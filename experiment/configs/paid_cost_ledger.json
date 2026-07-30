@@ -1,13 +1,247 @@
 {
-  "conservative_spent_usd": 1.98,
+  "conservative_spent_usd": 19.038,
   "entries": [
     {
       "amount_usd": 1.98,
       "kind": "historical_reserve",
       "note": "Conservative cumulative reserve for approved paid smoke work before the versioned ledger was introduced.",
       "recorded_at": "2026-07-26"
+    },
+    {
+      "amount_usd": 7.5,
+      "kind": "plan_reservation",
+      "note": "Reconciled to a rounded-up usage-based upper bound: 81,838 input tokens at $5/M plus 6,366 output tokens at $30/M = $0.60017, rounded up to $0.601. Provider billing remains the final authority.",
+      "plan_sha256": "14e17c83bc5ae689450e497a47408d6ec6030cbd2c1a4d22ace344b0c6aeb9f5",
+      "reconciled_amount_usd": 0.601,
+      "status": "reconciled_usage_upper_bound",
+      "usage": {
+        "input_tokens": 81838,
+        "output_tokens": 6366
+      }
+    },
+    {
+      "amount_usd": 3.5,
+      "kind": "plan_reservation",
+      "note": "Reconciled to a rounded-up usage-based upper bound: 215,916 input tokens at $5/M plus 16,490 output tokens at $30/M = $1.57428, rounded up to $1.575. Provider billing remains the final authority.",
+      "plan_sha256": "04ef9b5d3459a4732fdf859c1e59f692fc9f251228bf26373a93c6035fbfcfac",
+      "reconciled_amount_usd": 1.575,
+      "status": "reconciled_usage_upper_bound",
+      "usage": {
+        "input_tokens": 215916,
+        "output_tokens": 16490
+      }
+    },
+    {
+      "amount_usd": 3.5,
+      "kind": "plan_reservation",
+      "note": "Reconciled to a rounded-up usage-based upper bound: 215,720 input tokens at $5/M plus 17,461 output tokens at $30/M = $1.60243, rounded up to $1.603. Provider billing remains the final authority.",
+      "plan_sha256": "d0c01022ed52aa00589f542045b2b6841979e3a650c8f91d46c99493f2a9f1ca",
+      "reconciled_amount_usd": 1.603,
+      "status": "reconciled_usage_upper_bound",
+      "usage": {
+        "input_tokens": 215720,
+        "output_tokens": 17461
+      }
+    },
+    {
+      "amount_usd": 7.0,
+      "kind": "plan_reservation",
+      "note": "Reconciled to a rounded-up usage-based upper bound across standard API rates: Claude Opus 5 $2.725845, Gemini 3.1 Pro Preview $1.023502, GPT-5.6 Sol full-context $1.589890, and GPT-5.6 Sol oracle-relevant $0.560480; $5.899717 total rounded up to $5.900. Provider billing remains the final authority.",
+      "plan_sha256": "f84f98315cc1fd165734bc601808e2d10bf3ad959ef36d51ec76c9ccdfef18cd",
+      "reconciled_amount_usd": 5.9,
+      "status": "reconciled_usage_upper_bound",
+      "usage": {
+        "fc_claude_opus_5": {
+          "input_tokens": 370404,
+          "output_tokens": 34953
+        },
+        "fc_gemini_3_1_pro": {
+          "input_tokens": 211511,
+          "output_tokens_including_thoughts": 50040
+        },
+        "fc_gpt_5_6_sol": {
+          "input_tokens": 215720,
+          "output_tokens": 17043
+        },
+        "oracle_rel_gpt_5_6_sol": {
+          "input_tokens": 18160,
+          "output_tokens": 15656
+        }
+      }
+    },
+    {
+      "amount_usd": 0.5,
+      "kind": "plan_reservation",
+      "note": "Reconciled to a rounded-up usage-based upper bound: Gemini 3.1 Pro Preview used 68,579 input tokens at $2/M and 11,996 output tokens including thoughts at $12/M = $0.281110, rounded up to $0.282. The retry again reached the 12,000-token output limit and produced truncated JSON. Provider billing remains the final authority.",
+      "plan_sha256": "a293adc54394c010fc5ac8de1013bdb4910d428ac76dd45d90b3a1d171e3dc34",
+      "reconciled_amount_usd": 0.282,
+      "status": "reconciled_usage_upper_bound",
+      "usage": {
+        "input_tokens": 68579,
+        "output_tokens_including_thoughts": 11996
+      }
+    },
+    {
+      "amount_usd": 0.5,
+      "kind": "plan_reservation",
+      "note": "Reconciled to a rounded-up usage-based upper bound after raising the Stage 2.2 output limit to 20,000 tokens: Gemini 3.1 Pro Preview used 68,579 input tokens at $2/M and 14,402 output tokens including thoughts at $12/M = $0.309982, rounded up to $0.310. The response completed with valid JSON. Provider billing remains the final authority.",
+      "plan_sha256": "feac9e9cf1e1b7a53c8339b517db8f16618295bde1516dcbe04108cea8d23667",
+      "reconciled_amount_usd": 0.31,
+      "status": "reconciled_usage_upper_bound",
+      "usage": {
+        "input_tokens": 68579,
+        "output_tokens_including_thoughts": 14402
+      }
+    },
+    {
+      "amount_usd": 0.0,
+      "kind": "budget_reset",
+      "note": "User explicitly reset the paid smoke allowance to a fresh $20.00 for the deployment-realistic medium-reasoning three-model Stage 2.2 smoke.",
+      "previous_conservative_spent_usd": 12.251,
+      "recorded_at": "2026-07-30",
+      "standing_limit_usd": 20.0
+    },
+    {
+      "amount_usd": 7.0,
+      "kind": "plan_reservation",
+      "note": "Reconciled to a rounded-up usage-based upper bound across standard API rates: Claude Opus 5 $2.347495, Gemini 3.1 Pro Preview $0.792886, and GPT-5.6 Sol $1.638160; $4.778541 total rounded up to $4.779. Provider billing remains the final authority.",
+      "plan_sha256": "9469ed3620c32e102b4eb97f6831d291cc0f9095798c91e9fc10b140fa474b68",
+      "reconciled_amount_usd": 4.779,
+      "status": "reconciled_usage_upper_bound",
+      "usage": {
+        "fc_claude_opus_5": {
+          "input_tokens": 370404,
+          "output_tokens": 19819
+        },
+        "fc_gemini_3_1_pro": {
+          "input_tokens": 211511,
+          "output_tokens_including_thoughts": 30822
+        },
+        "fc_gpt_5_6_sol": {
+          "input_tokens": 215720,
+          "output_tokens": 18652
+        }
+      }
+    },
+    {
+      "amount_usd": 6.0,
+      "kind": "plan_reservation",
+      "note": "Reconciled to a rounded-up usage-based upper bound for the low-reasoning run: Claude Opus 5 $2.183370, Gemini 3.1 Pro Preview $0.611890, and GPT-5.6 Sol $1.360390; $4.155650 total rounded up to $4.156. Provider billing remains the final authority.",
+      "plan_sha256": "460647a3a1bcc38382800ba2e2be6114439c4d2b7f9c09e21d79296f51542bfd",
+      "reconciled_amount_usd": 4.156,
+      "status": "reconciled_usage_upper_bound",
+      "usage": {
+        "fc_claude_opus_5": {
+          "input_tokens": 370404,
+          "output_tokens": 13254
+        },
+        "fc_gemini_3_1_pro": {
+          "input_tokens": 211511,
+          "output_tokens_including_thoughts": 15739
+        },
+        "fc_gpt_5_6_sol": {
+          "input_tokens": 215720,
+          "output_tokens": 9393
+        }
+      }
+    },
+    {
+      "amount_usd": 5.0,
+      "kind": "plan_reservation",
+      "note": "Reconciled to a rounded-up usage-based upper bound for the traj_002 low-reasoning run: Claude Opus 5 $2.167620, Gemini 3.1 Pro Preview $0.587100, and GPT-5.6 Sol $1.366730; $4.121450 total rounded up to $4.122. Gemini checkpoint 240 returned invalid JSON and was retained as a parse failure without retry. Provider billing remains the final authority.",
+      "plan_sha256": "71ea1d01981a06ed6906fdc930d36a1cdcfa5b17efce04385d0619057ab3949a",
+      "reconciled_amount_usd": 4.122,
+      "status": "reconciled_usage_upper_bound",
+      "usage": {
+        "fc_claude_opus_5": {
+          "input_tokens": 383114,
+          "output_tokens": 10082
+        },
+        "fc_gemini_3_1_pro": {
+          "input_tokens": 216978,
+          "output_tokens_including_thoughts": 12762
+        },
+        "fc_gpt_5_6_sol": {
+          "input_tokens": 221962,
+          "output_tokens": 8564
+        }
+      }
+    },
+    {
+      "amount_usd": 5.0,
+      "kind": "plan_reservation",
+      "note": "Reconciled to a rounded-up usage-based upper bound for the traj_003 low-reasoning run: Claude Opus 5 $2.173285, Gemini 3.1 Pro Preview $0.701902, and GPT-5.6 Sol $1.368240; $4.243427 total rounded up to $4.244. Provider billing remains the final authority.",
+      "plan_sha256": "9bb8ed9ee53cbc54a4d9e3ead07204675c07cc784ab2558d75c9cd10b6e7c515",
+      "reconciled_amount_usd": 4.244,
+      "status": "reconciled_usage_upper_bound",
+      "usage": {
+        "fc_claude_opus_5": {
+          "input_tokens": 380812,
+          "output_tokens": 10769
+        },
+        "fc_gemini_3_1_pro": {
+          "input_tokens": 216023,
+          "output_tokens_including_thoughts": 22488
+        },
+        "fc_gpt_5_6_sol": {
+          "input_tokens": 221112,
+          "output_tokens": 8756
+        }
+      }
+    },
+    {
+      "amount_usd": 0.5,
+      "kind": "plan_reservation",
+      "note": "Reconciled to a rounded-up usage-based upper bound for the successful Gemini traj_002 checkpoint-240 Low retry: 57,037 input tokens at $2/M and 2,003 output tokens at $12/M = $0.138110, rounded up to $0.139. This retry replaces the malformed response only in the versioned retry analysis; the original run remains immutable. Provider billing remains the final authority.",
+      "plan_sha256": "48fb421665a697fdd3f05fd7303d9fb88cdcd2b893ced82bfaaa3d75ca4a7b67",
+      "reconciled_amount_usd": 0.139,
+      "status": "reconciled_usage_upper_bound",
+      "usage": {
+        "fc_gemini_3_1_pro": {
+          "input_tokens": 57037,
+          "output_tokens_including_thoughts": 2003
+        }
+      }
+    },
+    {
+      "amount_usd": 0.0,
+      "kind": "allowance_reset",
+      "new_allowance_usd": 20.0,
+      "note": "User explicitly reset the paid experiment allowance to a fresh $20.00 before the Claude Opus 4.8 Low three-trajectory run. Prior entries remain immutable audit history and are excluded from conservative_spent_usd after this marker.",
+      "prior_conservative_spent_usd": 17.44,
+      "status": "active"
+    },
+    {
+      "amount_usd": 7.0,
+      "kind": "plan_reservation",
+      "note": "The 120-second run stopped after a read timeout with unknown provider billing state. Three persisted responses used 157,163 input and 11,916 output tokens ($1.083715). The other 12 requests are conservatively treated as sent and billed at their known 977,167 input tokens plus the full 20,000-token output cap each: $10.885835. The $11.969550 combined upper bound is rounded up to $11.970. This exceeds the original $7 estimate and remains reserved because provider billing is unknown.",
+      "plan_sha256": "e46206e6bd6553002c81e89d2daf2af03c80a87efad40bcd3222ad851243c272",
+      "reconciled_amount_usd": 11.97,
+      "status": "unknown_billing_upper_bound",
+      "usage": {
+        "fc_claude_opus_4_8": {
+          "confirmed_input_tokens": 157163,
+          "confirmed_output_tokens": 11916,
+          "unknown_request_input_tokens": 977167,
+          "unknown_request_max_output_tokens": 240000
+        }
+      }
+    },
+    {
+      "amount_usd": 6.0,
+      "kind": "plan_reservation",
+      "note": "Reconciled to a rounded-up usage-based upper bound for the successful 300-second Opus 4.8 continuation: 977,167 input tokens at $5/M and 87,256 output tokens at $25/M = $7.067235, rounded up to $7.068. The actual cost exceeded the original $6 estimate but the fresh $20 standing allowance was not exceeded after conservative timeout accounting. Provider billing remains the final authority.",
+      "plan_sha256": "da155ec4dae9a04cb249411abef075d40af046414fc3245674e9fbfa3ae26dca",
+      "reconciled_amount_usd": 7.068,
+      "status": "reconciled_usage_upper_bound",
+      "usage": {
+        "fc_claude_opus_4_8": {
+          "input_tokens": 977167,
+          "output_tokens": 87256
+        }
+      }
     }
   ],
   "schema_version": "paid-smoke-ledger-v1",
-  "standing_limit_usd": 5.0
+  "standing_limit_usd": 20.0
 }

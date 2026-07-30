@@ -1,9 +1,10 @@
-"""Tests for the cp300 no-prospective-evidence RQ1 diagnostic.
+"""Tests for the no-prospective-evidence RQ1 diagnostic.
 
-Covers session-type filtering -- weak-signal and upcoming sessions out, every
-other type in -- the invariant that gold is the unchanged full-prefix gold, the
-false-positive decomposition, the stored-baseline comparison, and the offline
-evaluator + audit end to end. No network access.
+The diagnostic has one arm: prospective evidence is removed by *substitution*,
+so the session count is held constant and only the content changes. Covers the
+substituted-corpus guard, the invariant that gold is the unchanged full-prefix
+gold, the false-positive decomposition, the stored-baseline comparison, and the
+offline evaluator + audit end to end. No network access.
 """
 
 from __future__ import annotations
@@ -36,7 +37,6 @@ from fin_life_benchmark.benchmark.rq1_pair_no_prospective import (
     compare_with_baseline,
     find_baseline_row,
     session_type_counts,
-    no_prospective_visible_ids,
     surviving_prospective_sessions,
 )
 from fin_life_benchmark.gold.prefix_gold_exporter import export_prefix_gold
@@ -92,6 +92,50 @@ PROSPECTIVE_IDS = ["S003", "S007", "S018", "S020", "S028"]
 RETAINED_30 = [sid for sid in PREFIX_30 if sid not in PROSPECTIVE_IDS]
 
 
+def _substituted_sessions() -> list[dict]:
+    """The fixture corpus with each prospective session neutralized in place.
+
+    Mirrors what build_no_prospective_corpus.py produces: same ids, same
+    positions, same count -- the type *and the turns* change. Swapping the
+    turns matters: a record that keeps its original dialogue still carries the
+    prospective evidence however it is labelled, and the audit rejects exactly
+    that.
+    """
+
+    out = []
+    for record in SESSIONS:
+        if record["session_id"] not in PROSPECTIVE_IDS:
+            out.append(record)
+            continue
+        out.append({
+            **record,
+            "session_type": "routine_financial",
+            "cue_annotations": [],
+            "linked_event_instance_id": None,
+            "event_status_after_session": "no_event",
+            "turns": [
+                {"speaker": "user", "text": "계좌 잔액만 확인하려고 합니다."},
+                {"speaker": "agent", "text": "네, 잔액 조회 도와드리겠습니다."},
+            ],
+        })
+    return out
+
+
+SUBSTITUTED_BY_ID = {
+    s["session_id"]: s for s in _substituted_sessions()
+}
+
+
+def _write_substituted_dir(tmp_path, sessions=None):
+    """Write a substituted corpus dir; defaults to the correct substitution."""
+
+    d = tmp_path / "substituted"
+    write_jsonl(
+        d / f"sessions_{TRAJ_ID}.jsonl", sessions or _substituted_sessions()
+    )
+    return d
+
+
 def test_prospective_set_is_the_shared_canonical_definition():
     assert PROSPECTIVE_EVIDENCE_SESSION_TYPES == set(WEAK_TYPES | UPCOMING_TYPES)
     assert PROSPECTIVE_EVIDENCE_SESSION_TYPES == {
@@ -109,9 +153,14 @@ def test_prospective_set_is_the_shared_canonical_definition():
         ("S028", "upcoming_evidence"),
     ],
 )
-def test_filter_removes_prospective_evidence(session_id, session_type):
+def test_substitution_neutralizes_every_prospective_session(
+    session_id, session_type
+):
     assert BY_ID[session_id]["session_type"] == session_type
-    assert session_id not in no_prospective_visible_ids(PREFIX_30, BY_ID)
+    # still present -- that is the difference from a subtraction -- but no
+    # longer prospective
+    assert session_id in SUBSTITUTED_BY_ID
+    assert SUBSTITUTED_BY_ID[session_id]["session_type"] == "routine_financial"
 
 
 @pytest.mark.parametrize(
@@ -123,60 +172,60 @@ def test_filter_removes_prospective_evidence(session_id, session_type):
         ("S002", "routine_financial"),
     ],
 )
-def test_filter_retains_every_other_type(session_id, session_type):
+def test_substitution_leaves_every_other_type_untouched(session_id, session_type):
     """The distractors and the downstream sessions stay -- that is the point."""
 
     assert BY_ID[session_id]["session_type"] == session_type
-    assert session_id in no_prospective_visible_ids(PREFIX_30, BY_ID)
+    assert SUBSTITUTED_BY_ID[session_id] == BY_ID[session_id]
 
 
-def test_filter_retains_cancellation_evidence():
-    sessions = _with_cancellation()
-    assert "S029" in no_prospective_visible_ids(PREFIX_30, sessions)
+def test_substitution_holds_the_session_count_constant():
+    """The defining property: nothing is dropped, so length is unchanged."""
+
+    assert len(SUBSTITUTED_BY_ID) == len(BY_ID)
+    assert set(SUBSTITUTED_BY_ID) == set(BY_ID)
 
 
-def test_filter_retains_stale_recall_sessions():
-    sessions = {sid: dict(record) for sid, record in BY_ID.items()}
-    sessions["S016"] = {**sessions["S016"], "session_type": "stale_recall_session"}
-    assert "S016" in no_prospective_visible_ids(PREFIX_30, sessions)
+def test_surviving_prospective_sessions_finds_exactly_the_prospective_slots():
+    assert surviving_prospective_sessions(PREFIX_30, BY_ID) == PROSPECTIVE_IDS
+    assert surviving_prospective_sessions(PREFIX_30, SUBSTITUTED_BY_ID) == []
 
 
-def test_retained_set_is_exactly_the_prefix_minus_prospective_evidence():
-    assert no_prospective_visible_ids(PREFIX_30, BY_ID) == RETAINED_30
-    assert len(RETAINED_30) == 25
-
-
-def test_filter_preserves_original_public_ids_without_renumbering():
+def test_substitution_preserves_original_public_ids_without_renumbering():
     item = ITEMS[1]
     id_map = dict(item.gold.session_id_map)
-    retained = no_prospective_visible_ids(list(item.visible_sessions), BY_ID)
-    # D### values are the ones the full prefix already used, not 1..n, so the
-    # removed sessions leave gaps rather than shifting everything down
-    public = [id_map[sid] for sid in retained]
-    assert public[:4] == ["D001", "D002", "D004", "D005"]
-    assert "D003" not in public and "D028" not in public
+    public = [id_map[sid] for sid in item.visible_sessions]
+    # every D### the full prefix used is still rendered, with no gaps
+    assert public[:4] == ["D001", "D002", "D003", "D004"]
     assert public[-1] == "D030"
-
-
-def test_filter_is_chronological_even_from_unordered_input():
-    shuffled = list(reversed(PREFIX_30))
-    assert no_prospective_visible_ids(shuffled, BY_ID) == RETAINED_30
+    assert len(public) == 30
 
 
 def test_session_type_counts_reports_the_visible_histogram():
-    sessions = _with_cancellation()
-    retained = no_prospective_visible_ids(PREFIX_30, sessions)
-    assert session_type_counts(retained, sessions) == {
+    """Substitution converts the five prospective slots into routine fillers."""
+
+    sessions = {
+        sid: (
+            {**record, "session_type": "routine_financial", "cue_annotations": []}
+            if sid in PROSPECTIVE_IDS
+            else record
+        )
+        for sid, record in _with_cancellation().items()
+    }
+    assert session_type_counts(PREFIX_30, sessions) == {
         "cancellation_evidence": 1,
         "consequence_session": 1,
         "hard_negative": 1,
         "occurred_evidence": 2,
-        "routine_financial": 20,
+        "routine_financial": 25,
     }
 
 
-def test_no_prospective_is_an_evaluator_condition():
-    assert "no_prospective" in RQ1_PAIR_CONDITIONS
+def test_substituted_is_the_only_ablation_condition():
+    assert RQ1_PAIR_CONDITIONS == ("full_prefix", "no_prospective_substituted")
+
+
+def test_full_prefix_is_still_available_as_the_baseline():
     assert "full_prefix" in RQ1_PAIR_CONDITIONS
 
 
@@ -184,22 +233,25 @@ def test_no_prospective_is_an_evaluator_condition():
 # gold
 
 
-def test_no_prospective_gold_equals_full_prefix_gold():
+def test_substituted_gold_equals_full_prefix_gold():
+    """Substitution must not move a single pair -- gold anchors are occurred
+    sessions, which the filler never touches."""
+
     item = ITEMS[1]
     id_map = dict(item.gold.session_id_map)
     prefix_ids = list(item.visible_sessions)
-    retained = no_prospective_visible_ids(prefix_ids, BY_ID)
+    prefix_map = {sid: id_map[sid] for sid in prefix_ids}
 
     full = gold_pairs_from_occurred_trajectory(
         item.gold.occurred_trajectory,
-        session_id_map={sid: id_map[sid] for sid in prefix_ids},
+        session_id_map=prefix_map,
         sessions=BY_ID,
         taxonomy_event_ids=TAXONOMY_IDS,
     )
     ablated = gold_pairs_from_occurred_trajectory(
         item.gold.occurred_trajectory,
-        session_id_map={sid: id_map[sid] for sid in retained},
-        sessions=BY_ID,
+        session_id_map=prefix_map,
+        sessions=SUBSTITUTED_BY_ID,
         taxonomy_event_ids=TAXONOMY_IDS,
     )
     assert ablated == full
@@ -216,24 +268,23 @@ def test_every_occurrence_anchor_remains_visible():
         sessions=BY_ID,
         taxonomy_event_ids=TAXONOMY_IDS,
     )
-    retained_public = {
-        id_map[sid] for sid in no_prospective_visible_ids(prefix_ids, BY_ID)
-    }
-    assert {public for _, public in full} <= retained_public
+    # the whole prefix renders, so every anchor is trivially still visible
+    visible_public = {id_map[sid] for sid in prefix_ids}
+    assert {public for _, public in full} <= visible_public
 
 
 def test_cancellation_sessions_create_no_gold_pair():
     sessions = _with_cancellation()
     item = ITEMS[1]
     id_map = dict(item.gold.session_id_map)
-    retained = no_prospective_visible_ids(list(item.visible_sessions), sessions)
+    visible = list(item.visible_sessions)
     pairs = gold_pairs_from_occurred_trajectory(
         item.gold.occurred_trajectory,
-        session_id_map={sid: id_map[sid] for sid in retained},
+        session_id_map={sid: id_map[sid] for sid in visible},
         sessions=sessions,
         taxonomy_event_ids=TAXONOMY_IDS,
     )
-    assert "S029" in retained  # visible on purpose
+    assert "S029" in visible  # visible on purpose
     assert id_map["S029"] not in {public for _, public in pairs}
 
 
@@ -416,8 +467,8 @@ def test_comparison_deltas_are_ablated_minus_full():
     baseline = _baseline_row(("career_employment", "D012"), ("housing_move", "D026"))
     comparison = _comparison(baseline, _prediction(("career_employment", "D012")))
     # no_prospective: 1 TP of 1 predicted, 2 gold -> P 1.0, R 0.5, F1 2/3
-    assert comparison["no_prospective"]["precision"] == 1.0
-    assert comparison["no_prospective"]["recall"] == 0.5
+    assert comparison["no_prospective_substituted"]["precision"] == 1.0
+    assert comparison["no_prospective_substituted"]["recall"] == 0.5
     assert comparison["delta"]["precision"] == 0.0
     assert comparison["delta"]["recall"] == -0.5
     assert comparison["delta"]["f1"] == pytest.approx(2 / 3 - 1.0, abs=1e-6)
@@ -534,7 +585,7 @@ def _run_evaluator(monkeypatch, argv: list[str]) -> None:
     evaluate_rq1_pairs.main()
 
 
-def test_no_prospective_mock_evaluation_drops_only_prospective_sessions(
+def test_substituted_mock_evaluation_keeps_every_session(
     fixture_run, tmp_path, monkeypatch
 ):
     sessions_dir, items_path, taxonomy_path = fixture_run
@@ -544,11 +595,11 @@ def test_no_prospective_mock_evaluation_drops_only_prospective_sessions(
         monkeypatch,
         [
             "--items", str(items_path),
-            "--sessions-dir", str(sessions_dir),
+            "--sessions-dir", str(_write_substituted_dir(tmp_path)),
             "--taxonomy", str(taxonomy_path),
             "--trajectory-id", TRAJ_ID,
             "--checkpoint", "30",
-            "--condition", "no_prospective",
+            "--condition", "no_prospective_substituted",
             "--output", str(out),
             "--report", str(report),
         ],
@@ -557,15 +608,15 @@ def test_no_prospective_mock_evaluation_drops_only_prospective_sessions(
     rows = [json.loads(line) for line in out.read_text(encoding="utf-8").splitlines()]
     assert len(rows) == 1
     row = rows[0]
-    assert row["condition"] == "no_prospective"
-    # still a cp30 item, five sessions shorter
+    assert row["condition"] == "no_prospective_substituted"
+    # a cp30 item rendering all 30 sessions -- length matches full_prefix
     assert row["checkpoint_session_count"] == 30
-    assert row["visible_session_count"] == 25
+    assert row["visible_session_count"] == 30
     assert row["visible_session_type_counts"] == {
         "consequence_session": 1,
         "hard_negative": 1,
         "occurred_evidence": 2,
-        "routine_financial": 21,
+        "routine_financial": 26,
     }
     # gold is the unchanged full-prefix gold
     assert row["gold_pairs"] == [
@@ -573,10 +624,10 @@ def test_no_prospective_mock_evaluation_drops_only_prospective_sessions(
         {"event_id": "career_employment", "evidence_session_id": "D026"},
     ]
     payload = json.loads(report.read_text(encoding="utf-8"))
-    assert len(payload["no_prospective"]) == 1
-    rung = payload["no_prospective"][0]
-    assert rung["visible_session_count"] == 25
-    assert rung["removed_session_count"] == 5
+    assert len(payload["no_prospective_substituted"]) == 1
+    rung = payload["no_prospective_substituted"][0]
+    assert rung["visible_session_count"] == 30
+    assert rung["removed_session_count"] == 0
     assert rung["metrics"]["gold_pair_count"] == 2
 
 
@@ -603,11 +654,11 @@ def test_no_prospective_gold_matches_the_full_prefix_run(
         monkeypatch,
         [
             "--items", str(items_path),
-            "--sessions-dir", str(sessions_dir),
+            "--sessions-dir", str(_write_substituted_dir(tmp_path)),
             "--taxonomy", str(taxonomy_path),
             "--trajectory-id", TRAJ_ID,
             "--checkpoint", "30",
-            "--condition", "no_prospective",
+            "--condition", "no_prospective_substituted",
             "--baseline-predictions", str(full),
             "--output", str(ablated),
             "--report", str(tmp_path / "ablated_report.json"),
@@ -617,8 +668,9 @@ def test_no_prospective_gold_matches_the_full_prefix_run(
     full_row = json.loads(full.read_text(encoding="utf-8").splitlines()[0])
     ablated_row = json.loads(ablated.read_text(encoding="utf-8").splitlines()[0])
     assert ablated_row["gold_pairs"] == full_row["gold_pairs"]
+    # both sides render 30 sessions; only the content of five differs
     assert full_row["visible_session_count"] == 30
-    assert ablated_row["visible_session_count"] == 25
+    assert ablated_row["visible_session_count"] == 30
     comparison = ablated_row["baseline_comparison"]
     assert comparison["gold_identical_to_full"] is True
     # both sides are the empty mock prediction
@@ -636,7 +688,7 @@ def test_no_prospective_requires_an_explicit_checkpoint(
                 "--items", str(items_path),
                 "--sessions-dir", str(sessions_dir),
                 "--taxonomy", str(taxonomy_path),
-                "--condition", "no_prospective",
+                "--condition", "no_prospective_substituted",
                 "--output", str(tmp_path / "x.jsonl"),
                 "--report", str(tmp_path / "x.json"),
             ],
@@ -653,12 +705,12 @@ def test_no_prospective_runs_a_checkpoint_ladder(fixture_run, tmp_path, monkeypa
         monkeypatch,
         [
             "--items", str(items_path),
-            "--sessions-dir", str(sessions_dir),
+            "--sessions-dir", str(_write_substituted_dir(tmp_path)),
             "--taxonomy", str(taxonomy_path),
             "--trajectory-id", TRAJ_ID,
             "--checkpoint", "15",
             "--checkpoint", "30",
-            "--condition", "no_prospective",
+            "--condition", "no_prospective_substituted",
             "--output", str(out),
             "--report", str(report),
         ],
@@ -666,28 +718,13 @@ def test_no_prospective_runs_a_checkpoint_ladder(fixture_run, tmp_path, monkeypa
 
     rows = [json.loads(line) for line in out.read_text(encoding="utf-8").splitlines()]
     assert [row["checkpoint_session_count"] for row in rows] == [15, 30]
-    # each rung is shorter than its own prefix, and the ladder still grows
-    assert [row["visible_session_count"] for row in rows] == [13, 25]
+    # every rung renders its whole prefix -- nothing is dropped at any rung
+    assert [row["visible_session_count"] for row in rows] == [15, 30]
     payload = json.loads(report.read_text(encoding="utf-8"))
-    assert [r["checkpoint_session_count"] for r in payload["no_prospective"]] == [15, 30]
+    assert [r["checkpoint_session_count"] for r in payload["no_prospective_substituted"]] == [15, 30]
     # the standard per-checkpoint aggregate covers the ladder, so the trend is
     # readable from the report without re-deriving it from the prediction rows
     assert sorted(payload["per_checkpoint"]) == ["15", "30"]
-
-
-def _substituted_sessions() -> list[dict]:
-    """The fixture corpus with each prospective session neutralized in place.
-
-    Mirrors what build_no_prospective_corpus.py produces: same ids, same
-    positions, same count -- only the type and the content change.
-    """
-
-    return [
-        {**record, "session_type": "routine_financial", "cue_annotations": []}
-        if record["session_id"] in PROSPECTIVE_IDS
-        else record
-        for record in SESSIONS
-    ]
 
 
 def test_substituted_arm_renders_every_session_in_the_prefix(
@@ -728,7 +765,7 @@ def test_substituted_arm_renders_every_session_in_the_prefix(
         {"event_id": "career_employment", "evidence_session_id": "D012"},
         {"event_id": "career_employment", "evidence_session_id": "D026"},
     ]
-    rung = json.loads(report.read_text(encoding="utf-8"))["no_prospective"][0]
+    rung = json.loads(report.read_text(encoding="utf-8"))["no_prospective_substituted"][0]
     assert rung["condition"] == "no_prospective_substituted"
     assert rung["removed_session_count"] == 0
 
@@ -780,7 +817,7 @@ def test_no_prospective_refuses_duplicate_items_for_one_checkpoint(
                 "--sessions-dir", str(sessions_dir),
                 "--taxonomy", str(taxonomy_path),
                 "--checkpoint", "30",
-                "--condition", "no_prospective",
+                "--condition", "no_prospective_substituted",
                 "--output", str(tmp_path / "x.jsonl"),
                 "--report", str(tmp_path / "x.json"),
             ],
@@ -798,6 +835,7 @@ def test_full_prefix_condition_is_unaffected(fixture_run, tmp_path, monkeypatch)
             "--items", str(items_path),
             "--sessions-dir", str(sessions_dir),
             "--taxonomy", str(taxonomy_path),
+            "--condition", "full_prefix",
             "--output", str(out),
             "--report", str(tmp_path / "full_report.json"),
         ],
@@ -834,14 +872,15 @@ def test_no_prospective_audit_passes_on_the_fixture_corpus(
 
     audit_rq1_pair_protocol.main()
 
-    audit_dir = pair_root / "no_prospective" / "audit"
+    audit_dir = pair_root / "no_prospective_substituted" / "audit"
     monkeypatch.setattr(
         sys,
         "argv",
         [
             "audit_rq1_pair_no_prospective.py",
             "--items", str(items_path),
-            "--sessions-dir", str(sessions_dir),
+            "--sessions-dir", str(_write_substituted_dir(tmp_path)),
+            "--original-sessions-dir", str(sessions_dir),
             "--taxonomy", str(taxonomy_path),
             "--prompt", RQ1_PAIR_PROMPT_FILE,
             "--trajectory-id", TRAJ_ID,
@@ -858,8 +897,9 @@ def test_no_prospective_audit_passes_on_the_fixture_corpus(
     )
     assert decision["decision"] == "PASS"
     assert decision["n_violations"] == 0
-    assert decision["visible_session_count"] == 25
-    assert decision["removed_session_count"] == 5
+    # the whole point: length matches full_prefix, nothing removed
+    assert decision["visible_session_count"] == 30
+    assert decision["removed_session_count"] == 0
     assert decision["gold_pair_count"] == 2
 
     report = json.loads(
@@ -869,13 +909,9 @@ def test_no_prospective_audit_passes_on_the_fixture_corpus(
         "consequence_session": 1,
         "hard_negative": 1,
         "occurred_evidence": 2,
-        "routine_financial": 21,
+        "routine_financial": 26,
     }
-    # only the two prospective types are removed, and all of them are
-    assert report["stats"]["removed_session_type_counts"] == {
-        "upcoming_evidence": 2,
-        "weak_signal_evidence": 3,
-    }
+    assert report["stats"]["substituted_session_count"] == 5
     assert (audit_dir / "no_prospective_audit.md").read_text(encoding="utf-8")
 
 
@@ -895,7 +931,8 @@ def test_no_prospective_audit_fails_on_a_hash_mismatch(
         [
             "audit_rq1_pair_no_prospective.py",
             "--items", str(items_path),
-            "--sessions-dir", str(sessions_dir),
+            "--sessions-dir", str(_write_substituted_dir(tmp_path)),
+            "--original-sessions-dir", str(sessions_dir),
             "--taxonomy", str(taxonomy_path),
             "--prompt", RQ1_PAIR_PROMPT_FILE,
             "--trajectory-id", TRAJ_ID,
@@ -917,37 +954,34 @@ def test_no_prospective_audit_fails_on_a_hash_mismatch(
     assert "taxonomy_hash_differs_from_protocol" in codes
 
 
-def test_no_prospective_audit_fails_when_a_distractor_is_also_removed(
+def test_audit_fails_when_a_non_prospective_session_was_also_rewritten(
     fixture_run, tmp_path, monkeypatch
 ):
-    """The distinguishing invariant: subtract prospective evidence and nothing else.
+    """The distinguishing invariant: substitute prospective slots and nothing else.
 
-    Over-removal is exactly the defect this condition was redesigned to avoid,
-    so the audit must catch it rather than report a smaller context as a pass.
+    A filler landing in a distractor changes the evidence the model reads while
+    every session-type count still looks correct, so only the turn-level
+    comparison against the source corpus can catch it.
     """
 
     sessions_dir, items_path, taxonomy_path = fixture_run
-    from scripts import audit_rq1_pair_no_prospective as audit_module
+    tampered = []
+    for record in _substituted_sessions():
+        if record["session_id"] == "S010":  # a hard negative, not prospective
+            record = {**record, "turns": [{"speaker": "user", "text": "다른 내용"}]}
+        tampered.append(record)
 
-    real_filter = audit_module.no_prospective_visible_ids
-
-    def _over_remove(prefix_ids, sessions):
-        return [
-            sid
-            for sid in real_filter(prefix_ids, sessions)
-            if sessions[sid].get("session_type") != "hard_negative"
-        ]
-
-    monkeypatch.setattr(audit_module, "no_prospective_visible_ids", _over_remove)
-
-    audit_dir = tmp_path / "over_removed"
+    audit_dir = tmp_path / "tampered"
     monkeypatch.setattr(
         sys,
         "argv",
         [
             "audit_rq1_pair_no_prospective.py",
             "--items", str(items_path),
-            "--sessions-dir", str(sessions_dir),
+            "--sessions-dir", str(
+                _write_substituted_dir(tmp_path / "bad", tampered)
+            ),
+            "--original-sessions-dir", str(sessions_dir),
             "--taxonomy", str(taxonomy_path),
             "--prompt", RQ1_PAIR_PROMPT_FILE,
             "--trajectory-id", TRAJ_ID,
@@ -955,6 +989,8 @@ def test_no_prospective_audit_fails_when_a_distractor_is_also_removed(
             "--output-dir", str(audit_dir),
         ],
     )
+    from scripts import audit_rq1_pair_no_prospective as audit_module
+
     with pytest.raises(SystemExit) as excinfo:
         audit_module.main()
     assert excinfo.value.code == 1
@@ -962,8 +998,51 @@ def test_no_prospective_audit_fails_when_a_distractor_is_also_removed(
         (audit_dir / "no_prospective_audit.json").read_text(encoding="utf-8")
     )
     codes = {violation["code"] for violation in report["violations"]}
-    assert "hard_negative_not_preserved" in codes
-    assert "retained_set_is_not_the_complement" in codes
+    assert "non_prospective_session_content_changed" in codes
+
+
+def test_audit_fails_when_a_prospective_session_was_left_alone(
+    fixture_run, tmp_path, monkeypatch
+):
+    """A missed slot means the ablation did not actually happen there."""
+
+    sessions_dir, items_path, taxonomy_path = fixture_run
+    partial = [
+        record
+        for record in _substituted_sessions()
+    ]
+    # restore S003 (a weak signal) to its original, unsubstituted form
+    partial = [BY_ID["S003"] if r["session_id"] == "S003" else r for r in partial]
+
+    audit_dir = tmp_path / "partial"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "audit_rq1_pair_no_prospective.py",
+            "--items", str(items_path),
+            "--sessions-dir", str(
+                _write_substituted_dir(tmp_path / "part", partial)
+            ),
+            "--original-sessions-dir", str(sessions_dir),
+            "--taxonomy", str(taxonomy_path),
+            "--prompt", RQ1_PAIR_PROMPT_FILE,
+            "--trajectory-id", TRAJ_ID,
+            "--checkpoint", "30",
+            "--output-dir", str(audit_dir),
+        ],
+    )
+    from scripts import audit_rq1_pair_no_prospective as audit_module
+
+    with pytest.raises(SystemExit) as excinfo:
+        audit_module.main()
+    assert excinfo.value.code == 1
+    report = json.loads(
+        (audit_dir / "no_prospective_audit.json").read_text(encoding="utf-8")
+    )
+    codes = {violation["code"] for violation in report["violations"]}
+    assert "weak_signal_evidence_still_visible" in codes
+    assert "prospective_session_content_unchanged" in codes
 
 
 # ---------------------------------------------------------------------------
@@ -1103,11 +1182,11 @@ def test_failed_gate_excludes_the_item_and_exits_non_zero(
             monkeypatch,
             [
                 "--items", str(items_path),
-                "--sessions-dir", str(sessions_dir),
+                "--sessions-dir", str(_write_substituted_dir(tmp_path)),
                 "--taxonomy", str(taxonomy_path),
                 "--trajectory-id", TRAJ_ID,
                 "--checkpoint", "30",
-                "--condition", "no_prospective",
+                "--condition", "no_prospective_substituted",
                 "--require-thinking-tokens",
                 "--output", str(out),
                 "--report", str(report),
@@ -1224,11 +1303,11 @@ def test_report_records_the_single_replicate_design(
         monkeypatch,
         [
             "--items", str(items_path),
-            "--sessions-dir", str(sessions_dir),
+            "--sessions-dir", str(_write_substituted_dir(tmp_path)),
             "--taxonomy", str(taxonomy_path),
             "--trajectory-id", TRAJ_ID,
             "--checkpoint", "30",
-            "--condition", "no_prospective",
+            "--condition", "no_prospective_substituted",
             "--output", str(tmp_path / "s.jsonl"),
             "--report", str(report),
         ],

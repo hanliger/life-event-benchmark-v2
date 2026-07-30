@@ -555,44 +555,42 @@ make evaluate-rq1-pairs-dev EXECUTE=1 RQ1_PROVIDER=anthropic RQ1_MODEL=claude-op
 산출물은 기존 파일럿을 덮지 않도록 `data/runs/<RUN_ID>/rq1_pair_temp/`
 (`protocol_manifest.json`, `predictions/`, `reports/`, `audit/`)에 씁니다.
 
-##### (임시) no-prospective 진단 (2개 arm)
+##### (임시) no-prospective 진단
 
 전망 근거(`weak_signal_evidence`, `upcoming_evidence`)**만** 제거하고 나머지는
 전부 남긴 채 같은 질문을 묻는 진단입니다. distractor(routine, hard_negative),
-종결 세션, 후속 세션, cancellation 세션이 모두 그대로 보입니다. 제거 방식이
-다른 두 arm이 있습니다.
+종결 세션, 후속 세션, cancellation 세션이 모두 그대로 보입니다.
 
-| condition | cp300 가시 세션 | 방식 |
+제거 방식은 **치환**입니다. 해당 세션을 삭제하지 않고 중립 routine filler로
+그 자리에서 바꾸므로 세션 수·공개 id·위치·날짜가 모두 보존되고 전망 *내용*만
+사라집니다. cp300에서도 모델이 보는 세션은 그대로 300개입니다. 삭제 방식은
+컨텍스트를 12% 짧게 만들어 "근거가 사라져서"와 "프롬프트가 짧아져서"를 섞기
+때문에 쓰지 않습니다.
+
+| condition | cp300 가시 세션 | 설명 |
 | --- | --- | --- |
-| `no_prospective` | 264 | 해당 세션을 **삭제** (컨텍스트도 짧아짐) |
-| `no_prospective_substituted` | **300** | 중립 routine filler로 **치환** (길이 동일) |
+| `no_prospective_substituted` (**기본값**) | **300** | 전망 세션을 filler로 치환 |
+| `full_prefix` | 300 | 손대지 않은 baseline |
 
-치환 arm이 length-matched 대조군입니다. 세션 수·공개 id·위치·날짜가 모두
-보존되고 전망 *내용*만 사라지므로, 점수 차이를 "프롬프트가 짧아져서"로 돌릴 수
-없습니다. 코퍼스는 `scripts/build_no_prospective_corpus.py`로 만들며,
-`--sessions-dir`가 치환 코퍼스가 맞는지 evaluator가 **검증**합니다 — 원본
-코퍼스를 가리키면 조용히 full_prefix 실행이 되는 대신 거부합니다.
+`evaluate_rq1_pairs.py`의 `--condition` **기본값이 ablation**입니다. baseline을
+돌리려면 `--condition full_prefix`를 명시하세요.
 
-gold는 두 arm 모두 **full prefix 투영 그대로**입니다. 조건이 바꾸는 것은 모델이
-보는 입력뿐이고 정답은 변하지 않으므로 같은 item의 full-prefix 점수와 직접
-비교할 수 있습니다. cancellation 세션은 보이지만 gold 짝을 만들지 않는 음성
-예시로 남습니다.
+코퍼스는 `scripts/build_no_prospective_corpus.py`로 만듭니다. 이 arm은 prefix
+전체를 렌더링하므로 `--sessions-dir`를 원본 코퍼스로 잘못 지정해도 렌더 경로만
+봐서는 알 수 없습니다 — 그러면 조용히 full_prefix 실행이 되므로, evaluator가
+치환 코퍼스가 맞는지 **검증**하고 아니면 거부합니다.
 
-두 arm 모두 items 파일에 있는 **아무 checkpoint에서나** 돌릴 수 있어 사다리
-(cp30, cp60, … cp300)로 읽을 수 있습니다. 단 `--checkpoint`는 항상 명시해야
-합니다.
+gold는 **full prefix 투영 그대로**입니다. 조건이 바꾸는 것은 모델이 보는
+입력뿐이고 정답은 변하지 않으므로 같은 item의 full-prefix 점수와 직접 비교할 수
+있습니다. cancellation 세션은 보이지만 gold 짝을 만들지 않는 음성 예시로
+남습니다.
+
+items 파일에 있는 **아무 checkpoint에서나** 돌릴 수 있어 사다리(cp30, cp60, …
+cp300)로 읽을 수 있습니다. 단 `--checkpoint`는 항상 명시해야 합니다.
 
 ```bash
-# 삭제 arm
+# 감사 — 원본 코퍼스도 함께 줘야 "전망 슬롯만 바뀌었는지"를 turn 단위로 검증
 python scripts/audit_rq1_pair_no_prospective.py \
-    --items data/runs/$RUN_ID/rq1/natural/progressive_items.jsonl \
-    --sessions-dir data/runs/hf_full/final_sessions \
-    --taxonomy data/runs/$RUN_ID/rq1/taxonomy.json \
-    --trajectory-id traj_001 --checkpoint 300 \
-    --output-dir data/runs/$RUN_ID/rq1_pair_temp/no_prospective/audit
-
-# 치환 arm — 원본 코퍼스도 함께 줘야 "전망 슬롯만 바뀌었는지"를 turn 단위로 검증
-python scripts/audit_rq1_pair_no_prospective.py --substituted \
     --items data/runs/$RUN_ID/rq1/natural/progressive_items.jsonl \
     --sessions-dir data/runs/hf_full/no_prospective/final_sessions \
     --original-sessions-dir data/runs/hf_full/final_sessions \
@@ -600,11 +598,12 @@ python scripts/audit_rq1_pair_no_prospective.py --substituted \
     --trajectory-id traj_001 --checkpoint 300 \
     --output-dir data/runs/$RUN_ID/rq1_pair_temp/no_prospective_substituted/audit/cp300
 
+# 사다리 실행 (--condition 생략 시 ablation이 기본값)
 python scripts/evaluate_rq1_pairs.py \
     --items data/runs/$RUN_ID/rq1/natural/progressive_items.jsonl \
     --sessions-dir data/runs/hf_full/no_prospective/final_sessions \
     --taxonomy data/runs/$RUN_ID/rq1/taxonomy.json \
-    --trajectory-id traj_001 --condition no_prospective_substituted --execute \
+    --trajectory-id traj_001 --execute \
     --checkpoint 30 --checkpoint 60 --checkpoint 90 --checkpoint 120 \
     --checkpoint 150 --checkpoint 180 --checkpoint 210 --checkpoint 240 \
     --checkpoint 270 --checkpoint 300 \

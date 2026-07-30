@@ -2,13 +2,16 @@
 """Deterministic audit of the no-prospective-evidence RQ1 diagnostic.
 
 Audits one checkpoint per invocation; run it once per rung of a ladder.
+``--sessions-dir`` is the substituted corpus and ``--original-sessions-dir``
+the corpus it was built from; both are required, because the arm's central
+claim is a comparison between them.
 
 Input checks: exactly one diagnostic item (traj_001 at cp300 by default); no
-``weak_signal_evidence`` or ``upcoming_evidence`` session survives; **every
-other** prefix session does -- the retained set must equal the prefix minus
-exactly those two types, so nothing else is silently dropped; retained public
-ids keep their original ``D###`` values and stay chronologically ordered;
-nothing is renumbered.
+``weak_signal_evidence`` or ``upcoming_evidence`` session survives; **nothing
+is dropped** -- the visible set must equal the whole prefix, so the context
+length matches full_prefix exactly; every non-prospective session is identical
+to the source corpus turn for turn; public ids keep their original ``D###``
+values and stay chronologically ordered; nothing is renumbered.
 
 Gold checks: the no-prospective gold is the *same* multiset as the full-prefix
 gold, every occurrence anchor is still visible, every anchor is an
@@ -56,11 +59,9 @@ from fin_life_benchmark.benchmark.rq1_pair_models import (
 )
 from fin_life_benchmark.benchmark.rq1_pair_no_prospective import (
     CANCELLATION_SESSION_TYPE,
-    NO_PROSPECTIVE_CONDITION,
     NO_PROSPECTIVE_DEFAULT_CHECKPOINT,
     NO_PROSPECTIVE_SUBSTITUTED_CONDITION,
     PROSPECTIVE_EVIDENCE_SESSION_TYPES,
-    no_prospective_visible_ids,
     public_ids_are_chronological,
     session_type_counts,
 )
@@ -109,36 +110,28 @@ def audit_no_prospective(
     taxonomy_event_ids: set[str],
     *,
     checkpoint: int,
-    substituted: bool = False,
-    original_sessions: dict[str, dict[str, Any]] | None = None,
+    original_sessions: dict[str, dict[str, Any]],
 ) -> dict[str, Any]:
     """Audit the one diagnostic item; returns the rendered-prompt facts.
 
-    ``substituted`` audits the length-matched arm instead: ``sessions`` is the
-    substituted corpus, the whole prefix stays visible, and the checks that
-    assert a shorter context are replaced by ones asserting the opposite --
-    nothing dropped, no prospective session left, and (given
-    ``original_sessions``) every non-prospective session identical to the
-    source corpus.
+    ``sessions`` is the substituted corpus and ``original_sessions`` the corpus
+    it was built from. The whole prefix stays visible: the checks assert that
+    nothing was dropped, that no prospective session survives, and that every
+    non-prospective session is identical to the source.
     """
 
     scope = "no_prospective"
     prefix_ids = visible_ids_for_condition(item, "full_prefix")
     id_map = dict(item.gold.session_id_map)
     prefix_map = {sid: id_map[sid] for sid in prefix_ids}
-    retained = (
-        sorted(prefix_ids, key=session_number)
-        if substituted
-        else no_prospective_visible_ids(prefix_ids, sessions)
-    )
+    retained = sorted(prefix_ids, key=session_number)
     retained_map = {sid: id_map[sid] for sid in retained}
     retained_public = [retained_map[sid] for sid in retained]
     # Under substitution the prefix's own types are gone from `sessions` -- every
     # prospective slot already reads routine_financial there -- so the "what was
     # the prefix made of" baseline has to come from the source corpus, or the
     # arm would verify itself against its own output.
-    prefix_source = original_sessions if (substituted and original_sessions) else sessions
-    prefix_types = session_type_counts(prefix_ids, prefix_source)
+    prefix_types = session_type_counts(prefix_ids, original_sessions)
     retained_types = session_type_counts(retained, sessions)
 
     auditor.note("no_prospective_checkpoint")
@@ -172,7 +165,7 @@ def audit_no_prospective(
         # Substitution does not delete the prospective slots, it converts them:
         # every donor lands as routine_financial, so that one type is expected to
         # grow by exactly the number substituted and no other type may move.
-        if substituted and stype == "routine_financial":
+        if stype == "routine_financial":
             expected += n_prospective
         actual = retained_types.get(stype, 0)
         if actual != expected:
@@ -182,32 +175,14 @@ def audit_no_prospective(
                 f"{actual} retained of {expected} expected",
             )
 
-    if substituted:
-        auditor.note("substituted_retained_set_is_the_whole_prefix")
-        if sorted(retained) != sorted(prefix_ids):
-            missing = sorted(set(prefix_ids) - set(retained))
-            auditor.flag(
-                scope,
-                "substituted_context_is_not_the_full_prefix",
-                f"{item.item_id}: missing {missing[:6]}",
-            )
-    else:
-        auditor.note("no_prospective_retained_set_is_exactly_the_complement")
-        expected_ids = [
-            sid
-            for sid in sorted(prefix_ids)
-            if sessions[sid].get("session_type")
-            not in PROSPECTIVE_EVIDENCE_SESSION_TYPES
-        ]
-        if sorted(retained) != expected_ids:
-            dropped = sorted(set(expected_ids) - set(retained))
-            added = sorted(set(retained) - set(expected_ids))
-            auditor.flag(
-                scope,
-                "retained_set_is_not_the_complement",
-                f"{item.item_id}: unexpectedly dropped {dropped[:6]}, "
-                f"added {added[:6]}",
-            )
+    auditor.note("substituted_retained_set_is_the_whole_prefix")
+    if sorted(retained) != sorted(prefix_ids):
+        missing = sorted(set(prefix_ids) - set(retained))
+        auditor.flag(
+            scope,
+            "substituted_context_is_not_the_full_prefix",
+            f"{item.item_id}: missing {missing[:6]}",
+        )
 
     auditor.note("no_prospective_public_ids_preserved")
     for sid in retained:
@@ -222,68 +197,58 @@ def audit_no_prospective(
     if not public_ids_are_chronological(retained_public):
         auditor.flag(scope, "non_chronological_retained_sessions", item.item_id)
 
-    if substituted:
-        # The defining property of this arm, and the reason it exists: the
-        # context length is *identical* to full_prefix, so a score difference
-        # cannot be attributed to a shorter prompt.
-        auditor.note("substituted_length_matches_prefix")
-        if len(retained) != len(prefix_ids):
-            auditor.flag(
-                scope,
-                "length_not_matched",
-                f"{len(retained)} visible of {len(prefix_ids)} prefix sessions",
-            )
-        auditor.note("substituted_at_least_one_slot_changed")
-        if n_prospective == 0:
-            auditor.flag(
-                scope,
-                "nothing_substituted",
-                f"{item.item_id}: the prefix holds no prospective session",
-            )
-    else:
-        auditor.note("no_prospective_shorter_than_prefix")
-        if len(retained) >= len(prefix_ids):
-            auditor.flag(
-                scope,
-                "nothing_removed",
-                f"{len(retained)} retained of {len(prefix_ids)} prefix sessions",
-            )
+    # The defining property of this arm, and the reason it exists: the context
+    # length is *identical* to full_prefix, so a score difference cannot be
+    # attributed to a shorter prompt.
+    auditor.note("substituted_length_matches_prefix")
+    if len(retained) != len(prefix_ids):
+        auditor.flag(
+            scope,
+            "length_not_matched",
+            f"{len(retained)} visible of {len(prefix_ids)} prefix sessions",
+        )
+    auditor.note("substituted_at_least_one_slot_changed")
+    if n_prospective == 0:
+        auditor.flag(
+            scope,
+            "nothing_substituted",
+            f"{item.item_id}: the prefix holds no prospective session",
+        )
 
     # The validity claim of the substituted arm: only the prospective slots were
     # touched. Compared against the source corpus turn by turn, because a filler
     # accidentally landing in a distractor or occurred slot would change the
     # evidence the model reads while every count above still looked right.
-    if substituted and original_sessions is not None:
-        auditor.note("substituted_only_prospective_slots_changed")
-        changed_elsewhere: list[str] = []
-        unchanged_prospective: list[str] = []
-        for sid in prefix_ids:
-            source = original_sessions.get(sid) or {}
-            was_prospective = (
-                source.get("session_type") in PROSPECTIVE_EVIDENCE_SESSION_TYPES
-            )
-            same_turns = (sessions[sid].get("turns") or []) == (
-                source.get("turns") or []
-            )
-            if was_prospective and same_turns:
-                unchanged_prospective.append(sid)
-            elif not was_prospective and not same_turns:
-                changed_elsewhere.append(sid)
-        if changed_elsewhere:
-            auditor.flag(
-                scope,
-                "non_prospective_session_content_changed",
-                f"{item.item_id}: {len(changed_elsewhere)} session(s), "
-                f"e.g. {changed_elsewhere[:6]}",
-            )
-        if unchanged_prospective:
-            auditor.flag(
-                scope,
-                "prospective_session_content_unchanged",
-                f"{item.item_id}: {len(unchanged_prospective)} session(s), "
-                f"e.g. {unchanged_prospective[:6]}",
-            )
-        auditor.stats["substituted_session_count"] = n_prospective
+    auditor.note("substituted_only_prospective_slots_changed")
+    changed_elsewhere: list[str] = []
+    unchanged_prospective: list[str] = []
+    for sid in prefix_ids:
+        source = original_sessions.get(sid) or {}
+        was_prospective = (
+            source.get("session_type") in PROSPECTIVE_EVIDENCE_SESSION_TYPES
+        )
+        same_turns = (sessions[sid].get("turns") or []) == (
+            source.get("turns") or []
+        )
+        if was_prospective and same_turns:
+            unchanged_prospective.append(sid)
+        elif not was_prospective and not same_turns:
+            changed_elsewhere.append(sid)
+    if changed_elsewhere:
+        auditor.flag(
+            scope,
+            "non_prospective_session_content_changed",
+            f"{item.item_id}: {len(changed_elsewhere)} session(s), "
+            f"e.g. {changed_elsewhere[:6]}",
+        )
+    if unchanged_prospective:
+        auditor.flag(
+            scope,
+            "prospective_session_content_unchanged",
+            f"{item.item_id}: {len(unchanged_prospective)} session(s), "
+            f"e.g. {unchanged_prospective[:6]}",
+        )
+    auditor.stats["substituted_session_count"] = n_prospective
 
     # --- gold ---------------------------------------------------------------
     auditor.note("gold_projected_over_full_prefix")
@@ -454,19 +419,11 @@ def main() -> None:
         "--checkpoint", type=int, default=NO_PROSPECTIVE_DEFAULT_CHECKPOINT
     )
     parser.add_argument(
-        "--substituted",
-        action="store_true",
-        help=(
-            "audit the length-matched arm: --sessions-dir is the substituted "
-            "corpus, the full prefix stays visible, and nothing may be dropped"
-        ),
-    )
-    parser.add_argument(
         "--original-sessions-dir",
-        default=None,
+        required=True,
         help=(
-            "source corpus the substitution was built from; with --substituted, "
-            "enables the turn-level check that only prospective slots changed"
+            "source corpus the substitution was built from; the turn-level "
+            "check that only prospective slots changed compares against it"
         ),
     )
     parser.add_argument(
@@ -502,20 +459,10 @@ def main() -> None:
         prompt_path = RepoPaths.default().root / args.prompt
     prompt_hash = _sha256_text(prompt_path.read_text(encoding="utf-8"))
 
-    if args.substituted and not args.original_sessions_dir:
-        # Without the source corpus there is no baseline for what the prefix was
-        # made of, and the arm's central claim -- only prospective slots changed
-        # -- becomes uncheckable. Refuse rather than emit a weaker PASS.
-        raise SystemExit("--substituted requires --original-sessions-dir")
-
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    condition = (
-        NO_PROSPECTIVE_SUBSTITUTED_CONDITION
-        if args.substituted
-        else NO_PROSPECTIVE_CONDITION
-    )
+    condition = NO_PROSPECTIVE_SUBSTITUTED_CONDITION
 
     auditor = Auditor()
     auditor.note("no_prospective_single_item")
@@ -533,18 +480,15 @@ def main() -> None:
         sessions_by_traj = load_session_records(
             Path(args.sessions_dir), [item.trajectory_id]
         )
-        original_sessions = None
-        if args.original_sessions_dir:
-            original_sessions = load_session_records(
-                Path(args.original_sessions_dir), [item.trajectory_id]
-            )[item.trajectory_id]
+        original_sessions = load_session_records(
+            Path(args.original_sessions_dir), [item.trajectory_id]
+        )[item.trajectory_id]
         facts = audit_no_prospective(
             auditor,
             item,
             sessions_by_traj[item.trajectory_id],
             taxonomy_event_ids,
             checkpoint=args.checkpoint,
-            substituted=args.substituted,
             original_sessions=original_sessions,
         )
         gold_pairs = facts["gold_pairs"]

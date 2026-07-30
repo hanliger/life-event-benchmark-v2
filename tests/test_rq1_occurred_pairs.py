@@ -643,6 +643,8 @@ def test_mock_evaluation_completes_offline(tmp_path, monkeypatch):
             "--items", str(items_path),
             "--sessions-dir", str(sessions_dir),
             "--taxonomy", str(taxonomy_path),
+            # the evaluator defaults to the ablation; this is the baseline
+            "--condition", "full_prefix",
             "--output", str(out),
             "--report", str(report),
         ],
@@ -692,6 +694,7 @@ def test_checkpoint_filter_selects_one_item(tmp_path, monkeypatch):
             "--items", str(items_path),
             "--sessions-dir", str(sessions_dir),
             "--taxonomy", str(taxonomy_path),
+            "--condition", "full_prefix",
             "--checkpoint", "15",
             "--output", str(out),
             "--report", str(tmp_path / "cp15_report.json"),

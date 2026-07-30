@@ -40,18 +40,13 @@ RQ1_PAIR_METRICS_VERSION = "rq1-exact-occurred-pair-metrics-v1"
 RQ1_PAIR_PROMPT_CONTRACT = "rq1_occurred_event_pairs_ko"
 RQ1_PAIR_PROMPT_FILE = "prompts/benchmark/rq1_occurred_event_pairs_ko.md"
 
-# full_prefix is the protocol condition. The two no_prospective arms are
-# temporary diagnostics that take away only the weak-signal and upcoming
-# sessions -- every distractor, terminal and downstream session stays -- and
-# reuse this gold unchanged (see rq1_pair_no_prospective). They differ in how:
-# no_prospective drops those sessions, so the context also gets shorter;
-# no_prospective_substituted replaces each with a neutral routine filler, so the
-# session count is held constant and only the content changes.
-RQ1_PAIR_CONDITIONS = (
-    "full_prefix",
-    "no_prospective",
-    "no_prospective_substituted",
-)
+# full_prefix is the protocol baseline. no_prospective_substituted is the
+# temporary diagnostic and the evaluator's default: it takes away only the
+# weak-signal and upcoming sessions -- every distractor, terminal and downstream
+# session stays -- by replacing each with a neutral routine filler, so the
+# session count is held constant and only the content changes. It reuses this
+# gold unchanged (see rq1_pair_no_prospective).
+RQ1_PAIR_CONDITIONS = ("full_prefix", "no_prospective_substituted")
 
 PAIR_CHECKPOINT_STRIDE = 15
 PAIR_CHECKPOINT_GRID = tuple(range(15, 301, 15))

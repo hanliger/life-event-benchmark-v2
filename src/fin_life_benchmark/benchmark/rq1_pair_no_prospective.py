@@ -8,30 +8,25 @@ One question, one call per model per checkpoint:
     sessions, the downstream sessions and the full distractor mass all left
     exactly as they were?
 
-Two arms remove that evidence in different ways:
+The evidence is removed by **substitution**, not subtraction: each prospective
+session is replaced in place by a neutral routine filler, so the session count,
+the public ids, the positions and the dates are all held constant and only the
+prospective *content* changes. At cp300 the model still sees 300 sessions. The
+corpus is built by ``scripts/build_no_prospective_corpus.py``.
 
-``no_prospective``
-    A subtraction: the sessions are dropped and not replaced, so the context
-    also gets shorter (264 of 300 sessions survive at cp300).
-``no_prospective_substituted``
-    A counterfactual: each prospective session is replaced in place by a
-    neutral routine filler, so the session count, the public ids, the
-    positions and the dates are all held constant and *only* the prospective
-    content changes. The corpus is built by
-    ``scripts/build_no_prospective_corpus.py``.
+That is the whole point of the design. An earlier arm simply dropped the
+sessions, which shortened the context by 12% and so confounded "the evidence is
+gone" with "the prompt is shorter". Substitution removes that confound, and
+because it is the only arm, ``no_prospective_substituted`` is the evaluator's
+default condition.
 
-The substituted arm is the length-matched control: it is the one whose score
-difference cannot be attributed to a shorter prompt. The subtraction arm is
-kept as the contrast that shows how much of any effect the 12% length
-reduction accounts for.
+Every distractor -- routine and hard-negative alike -- stays visible, and so do
+the cancellation sessions, which must remain negatives: a cancelled plan never
+earns a gold pair.
 
-In both arms every distractor -- routine and hard-negative alike -- stays
-visible, and so do the cancellation sessions, which must remain negatives: a
-cancelled plan never earns a gold pair.
-
-Gold is **not** recomputed from the filtered context. It stays the full-prefix
-projection at that checkpoint, which is what makes this score directly
-comparable with the full-prefix score recorded for the same item.
+Gold is **not** recomputed from the substituted context. It stays the
+full-prefix projection at that checkpoint, which is what makes this score
+directly comparable with the full-prefix score recorded for the same item.
 """
 
 from __future__ import annotations
@@ -40,7 +35,7 @@ from collections import Counter
 from typing import Any, Iterable, Sequence
 
 from .lifecycle_masking import UPCOMING_TYPES, WEAK_TYPES
-from .rq1_models import public_session_number, session_number
+from .rq1_models import public_session_number
 from .rq1_pair_models import (
     OCCURRED_ANCHOR_SESSION_TYPE,
     PairAtom,
@@ -48,15 +43,10 @@ from .rq1_pair_models import (
     sort_atoms,
 )
 
-NO_PROSPECTIVE_CONDITION = "no_prospective"
-
-# The length-matched arm. Instead of dropping the prospective sessions it reads
-# a corpus in which each was replaced in place by a neutral routine filler
-# (scripts/build_no_prospective_corpus.py), so the model sees the full
-# checkpoint count -- 300 sessions at cp300, not 264 -- and the only thing that
-# changed is the prospective *content*. Context length, session ids, positions
-# and dates are all held constant, which removes the length confound the
-# subtraction arm still carries.
+# The one ablation condition. It reads a corpus in which every prospective
+# session was replaced in place by a neutral routine filler, so the model sees
+# the full checkpoint count -- 300 sessions at cp300, not 264 -- and the only
+# thing that changed is the prospective *content*.
 NO_PROSPECTIVE_SUBSTITUTED_CONDITION = "no_prospective_substituted"
 
 # The checkpoint the diagnostic was first run at, and the audit's default. It is
@@ -86,32 +76,6 @@ FP_ERROR_CATEGORIES = (
     "invalid_record",
     "other",
 )
-
-
-def no_prospective_visible_ids(
-    prefix_session_ids: Iterable[str],
-    sessions: dict[str, dict[str, Any]],
-) -> list[str]:
-    """Canonical ids of a prefix with its prospective evidence removed.
-
-    Drops only sessions whose ``session_type`` is ``weak_signal_evidence`` or
-    ``upcoming_evidence``; occurred, cancellation, consequence, stale-recall,
-    hard-negative and routine sessions are all retained, in chronological
-    order. Ordering is enforced here rather than inherited from the caller so
-    that "chronological" is a property of the filter itself.
-
-    Session ids are canonical (``S###``); the caller maps them to public
-    ``D###`` ids through the item's existing map, which is what preserves the
-    original public numbering -- nothing is renumbered.
-    """
-
-    retained = [
-        sid
-        for sid in prefix_session_ids
-        if (sessions.get(sid) or {}).get("session_type")
-        not in PROSPECTIVE_EVIDENCE_SESSION_TYPES
-    ]
-    return sorted(retained, key=session_number)
 
 
 def surviving_prospective_sessions(
@@ -313,7 +277,7 @@ def compare_with_baseline(
             (baseline_gold - gold) + (gold - baseline_gold)
         ),
         "full_prefix": full,
-        "no_prospective": term,
+        "no_prospective_substituted": term,
         "delta": delta,
         "pairs_retained_from_full": _atom_list(correct_full & correct_ablated),
         "full_correct_pairs_lost": _atom_list(correct_full - correct_ablated),

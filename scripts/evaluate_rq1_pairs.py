@@ -3,28 +3,26 @@
 
 Stage ``stage1_occurred_event_evidence_pairs``. Two conditions:
 
-    full_prefix      sessions D001..D(15k) at checkpoint k
-    no_prospective   the same prefix with its prospective evidence *dropped*
-                     (weak-signal and upcoming sessions only); occurred,
-                     cancellation, consequence, stale-recall, hard-negative
-                     and routine sessions all stay, so the context is also
-                     shorter.
-    no_prospective_substituted
-                     the same evidence removed by *substitution* instead:
-                     --sessions-dir must point at a corpus where each
-                     prospective session was replaced in place by a neutral
-                     routine filler, so all k sessions still render and only
-                     the content changed. The evaluator verifies the corpus
-                     really is substituted and refuses to run otherwise.
+    no_prospective_substituted   (default) the prefix with its prospective
+                     evidence removed by substitution: --sessions-dir must
+                     point at a corpus where each weak-signal and upcoming
+                     session was replaced in place by a neutral routine
+                     filler, so all k sessions still render and only the
+                     content changed. Occurred, cancellation, consequence,
+                     stale-recall, hard-negative and routine sessions all
+                     stay. The evaluator verifies the corpus really is
+                     substituted and refuses to run otherwise.
+    full_prefix      the untouched baseline: sessions D001..D(15k) at
+                     checkpoint k.
 
-Both ablation arms run at any checkpoint the items file carries, so they can be
-read as a ladder; --checkpoint must be named explicitly.
+The ablation runs at any checkpoint the items file carries, so it can be read
+as a ladder; --checkpoint must be named explicitly.
 
 The model sees only public session ids (D###), dialogue turns and the public
 taxonomy. Gold -- one pair per occurred event instance, anchored on the earliest
 visible establishing ``occurred_evidence`` session -- is derived from the
 existing item's private PrefixGold payload and never rendered. Gold always comes
-from the *full* prefix, so no_prospective changes what the model sees and
+from the *full* prefix, so the ablation changes what the model sees and
 nothing about what is correct.
 
 Without --execute the run is offline: a mock prediction ({"pairs": []})
@@ -70,13 +68,11 @@ from fin_life_benchmark.benchmark.rq1_pair_models import (
 )
 from fin_life_benchmark.benchmark.rq1_pair_parser import parse_pair_prediction
 from fin_life_benchmark.benchmark.rq1_pair_no_prospective import (
-    NO_PROSPECTIVE_CONDITION,
     NO_PROSPECTIVE_DEFAULT_CHECKPOINT,
     NO_PROSPECTIVE_SUBSTITUTED_CONDITION,
     classify_pair_errors,
     compare_with_baseline,
     find_baseline_row,
-    no_prospective_visible_ids,
     session_type_counts,
     surviving_prospective_sessions,
 )
@@ -223,7 +219,13 @@ def main() -> None:
     parser.add_argument("--items", required=True, help="progressive_items.jsonl")
     parser.add_argument("--sessions-dir", required=True)
     parser.add_argument(
-        "--condition", default="full_prefix", choices=list(RQ1_PAIR_CONDITIONS)
+        "--condition",
+        default=NO_PROSPECTIVE_SUBSTITUTED_CONDITION,
+        choices=list(RQ1_PAIR_CONDITIONS),
+        help=(
+            "default is the ablation; pass --condition full_prefix for the "
+            "untouched baseline"
+        ),
     )
     parser.add_argument(
         "--taxonomy", default=None, help="taxonomy.json (default: sibling of items)"
@@ -280,10 +282,7 @@ def main() -> None:
     args = parser.parse_args()
 
     substituted = args.condition == NO_PROSPECTIVE_SUBSTITUTED_CONDITION
-    # Both arms remove the same evidence and share the reporting path; only the
-    # way the context is built differs.
-    no_prospective = args.condition == NO_PROSPECTIVE_CONDITION or substituted
-    if no_prospective and not args.checkpoint:
+    if substituted and not args.checkpoint:
         # Any checkpoint (or ladder of them) is allowed, but each has to be named
         # explicitly: an unqualified run over every item in the file is never
         # what this diagnostic is for, and at ~1 long-context call per item it is
@@ -339,7 +338,7 @@ def main() -> None:
         records = records[: args.max_items]
     if not records:
         raise SystemExit("no items left after filtering")
-    if no_prospective:
+    if substituted:
         # One item per (trajectory, checkpoint). More than one means the items
         # file holds duplicates, which would put two rows under the same rung of
         # the ladder and make the trend ambiguous.
@@ -441,7 +440,7 @@ def main() -> None:
             sessions = sessions_by_traj[item.trajectory_id]
             id_map = dict(item.gold.session_id_map)
             # Gold is projected over the *full* prefix in every condition, so
-            # no_prospective can only shrink the model's context -- it can never
+            # the ablation can only change what the model reads -- it can never
             # relabel an event or move an occurrence anchor.
             prefix_ids = visible_ids_for_condition(item, "full_prefix")
             prefix_map = {sid: id_map[sid] for sid in prefix_ids}
@@ -468,13 +467,11 @@ def main() -> None:
                         f"(e.g. {survivors[:5]}); point --sessions-dir at the "
                         "output of scripts/build_no_prospective_corpus.py"
                     )
-            elif no_prospective:
-                visible_ids = no_prospective_visible_ids(prefix_ids, sessions)
             else:
                 visible_ids = visible_ids_for_condition(item, args.condition)
             visible_map = {sid: id_map[sid] for sid in visible_ids}
 
-            if no_prospective:
+            if substituted:
                 rendered_public = set(visible_map.values())
                 orphaned = [
                     f"{event_id}@{public}"
@@ -572,7 +569,7 @@ def main() -> None:
                     session_type_by_public_id=session_type_by_public_id,
                 )
 
-            if no_prospective:
+            if substituted:
                 no_prospective_rungs.append({
                     "item_id": item.item_id,
                     "trajectory_id": item.trajectory_id,
@@ -700,7 +697,7 @@ def main() -> None:
             ),
         },
         # one entry per evaluated checkpoint, in ladder order
-        "no_prospective": no_prospective_rungs or None,
+        "no_prospective_substituted": no_prospective_rungs or None,
         "checkpoints": aggregate["checkpoints"],
         "per_checkpoint": aggregate["per_checkpoint"],
         "checkpoint_macro_auc": aggregate["checkpoint_macro_auc"],

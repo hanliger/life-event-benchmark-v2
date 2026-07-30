@@ -49,6 +49,11 @@ REVIEW_DECISION ?= $(DIALOGUE_JUDGE_ROOT)/judge_review_decision.json
 RQ1_ROOT := $(RUN_DIR)/rq1
 RQ1_PAIR_ROOT := $(RUN_DIR)/rq1_pair_temp
 RQ1_CONDITION ?= full_prefix
+# evaluate_rq1_pairs.py now defaults to the ablation, so the baseline plumbing
+# check has to name full_prefix explicitly. Override to run the ablation --
+# it also needs RQ1_PAIR_CHECKPOINTS, which the ablation requires.
+RQ1_PAIR_CONDITION ?= full_prefix
+RQ1_PAIR_CHECKPOINTS ?=
 RQ1_MODEL_TAG ?= $(if $(filter 1,$(EXECUTE)),live,mock__mock)
 
 .PHONY: setup inventory normalize-personas initial-states simulate-smoke plan-dialogues audit-dialogue-plans \
@@ -424,6 +429,8 @@ evaluate-rq1-pairs-dev:
 	$(PYTHON) scripts/evaluate_rq1_pairs.py \
 		--items $(RQ1_ROOT)/natural/progressive_items.jsonl \
 		--sessions-dir $(SESS_DIR) --taxonomy $(RQ1_ROOT)/taxonomy.json \
+		--condition $(RQ1_PAIR_CONDITION) \
+		$(foreach cp,$(RQ1_PAIR_CHECKPOINTS),--checkpoint $(cp)) \
 		--split dev \
 		$(if $(RQ1_PROVIDER),--provider $(RQ1_PROVIDER),) \
 		$(if $(RQ1_MODEL),--model $(RQ1_MODEL),) \

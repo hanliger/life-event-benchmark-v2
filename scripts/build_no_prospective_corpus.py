@@ -1,12 +1,13 @@
 #!/usr/bin/env python
-"""Build the ``no_prospective`` dialogue corpus by filler substitution.
+"""Build the ``no_prospective_substituted`` dialogue corpus by filler substitution.
 
 Every ``weak_signal_evidence`` and ``upcoming_evidence`` session is replaced
 in place by a timeless neutral filler drawn from the same persona's reserve
-bank. Unlike the ``no_prospective`` *evaluation* condition -- which simply drops
-those sessions -- this produces a genuine length-matched counterfactual: the
-corpus keeps its session count, its ids, its positions and its dates, and only
-the prospective *content* is gone.
+bank. That is what makes the arm a length-matched counterfactual rather than a
+subtraction: the corpus keeps its session count, its ids, its positions and its
+dates, and only the prospective *content* is gone. This corpus is what
+``--condition no_prospective_substituted`` reads, and the evaluator refuses to
+run against a corpus that is not this one.
 
 The substitution reuses :mod:`fin_life_benchmark.benchmark.lifecycle_masking`
 (``pick_filler`` / ``neutralize``) rather than reimplementing donor selection,

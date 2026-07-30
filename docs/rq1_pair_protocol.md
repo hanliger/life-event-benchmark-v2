@@ -3,7 +3,8 @@
 Design reference for `stage1_occurred_event_evidence_pairs`
 (`rq1-occurred-event-pairs-temp-v1`). Temporary pilot protocol; it runs beside
 `stage1_event_trajectory` and reuses that stage's items, gold and public
-aliasing. Written 2026-07-30, before the `no_prospective_substituted` ladder.
+aliasing. Written 2026-07-30, before the `no_prospective_substituted` ladder
+run.
 
 ## 1. The question
 
@@ -52,31 +53,36 @@ instances contribute nothing.
 Gold is a multiset — two occurrences of the same `event_id` contribute two pairs
 through two distinct anchors, and multiplicity is never collapsed.
 
-**Gold is always projected over the full prefix, in every condition.** An
-ablation changes what the model sees and never what counts as correct. Both
-ablation arms assert this: the evaluator refuses to run if a gold anchor is
-missing from the rendered context, and the audit recomputes gold over the
-ablated context and fails if a single pair moves.
+**Gold is always projected over the full prefix, in every condition.** The
+ablation changes what the model sees and never what counts as correct. This is
+verified, not assumed: the audit recomputes gold over the substituted context
+and fails if a single pair moves. Substitution never touches an
+`occurred_evidence` session, so in practice every anchor survives untouched.
 
 ## 4. Conditions
 
 | condition | visible at cp300 | mechanism |
 | --- | --- | --- |
-| `full_prefix` | 300 | protocol baseline |
-| `no_prospective` | 264 | **drops** the 36 weak/upcoming sessions |
-| `no_prospective_substituted` | **300** | **replaces** each with a neutral routine filler |
+| `no_prospective_substituted` (**default**) | **300** | each weak/upcoming session **replaced** by a neutral routine filler |
+| `full_prefix` | 300 | untouched baseline |
 
-The two ablation arms remove the same evidence and differ only in whether the
-context also gets shorter. The subtraction arm confounds evidence removal with a
-12% length reduction; the substituted arm holds session count, ids, positions
-and dates constant, so only the prospective *content* changes. The substituted
-corpus is built by `scripts/build_no_prospective_corpus.py` and the evaluator
-verifies the corpus really is substituted before rendering — pointing
-`--sessions-dir` at the original corpus is refused rather than silently scored
-as a `full_prefix` run under the ablation's name.
+The ablation is the evaluator's default condition; the baseline must be named
+explicitly with `--condition full_prefix`.
 
-Both arms accept any checkpoint the items file carries, so they can be read as a
-ladder, but `--checkpoint` must always be named explicitly.
+Removal is by substitution, never by subtraction. An earlier arm dropped the 36
+prospective sessions outright, which shortened the context by 12% and so
+confounded "the evidence is gone" with "the prompt is shorter". Substituting in
+place holds session count, ids, positions and dates constant, so only the
+prospective *content* differs from `full_prefix`.
+
+The substituted corpus is built by `scripts/build_no_prospective_corpus.py`.
+Because the arm renders the whole prefix, nothing in the render path would
+reveal a wrong `--sessions-dir` — the run would simply be a `full_prefix` run
+wearing the ablation's name. The evaluator therefore verifies the corpus really
+is substituted and refuses to run otherwise.
+
+The ablation accepts any checkpoint the items file carries, so it can be read as
+a ladder, but `--checkpoint` must always be named explicitly.
 
 ## 5. Metric
 
@@ -182,7 +188,7 @@ F1 while agreeing on only part of their true positives.
 | --- | --- |
 | models, gold projection | `src/fin_life_benchmark/benchmark/rq1_pair_models.py` |
 | metrics | `src/fin_life_benchmark/benchmark/rq1_pair_metrics.py` |
-| ablation arms | `src/fin_life_benchmark/benchmark/rq1_pair_no_prospective.py` |
+| ablation | `src/fin_life_benchmark/benchmark/rq1_pair_no_prospective.py` |
 | evaluator | `scripts/evaluate_rq1_pairs.py` |
 | protocol audit | `scripts/audit_rq1_pair_protocol.py` |
 | ablation audit | `scripts/audit_rq1_pair_no_prospective.py` |

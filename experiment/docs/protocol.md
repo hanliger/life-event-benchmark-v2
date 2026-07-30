@@ -36,6 +36,24 @@ S016–S030에 새봄금융으로 바뀌었다면, 이후에도 첫 target 질�
 Main `top_k=10`, sensitivity `top_k=5`, reranker 없음이다. Sensitivity는 frozen
 문항과 다른 설정을 바꾸지 않고 별도 run으로 실행한다.
 
+## 9-method 비교 확장
+
+`configs/experiment.yaml`의 `methods`는 Claude Opus 4.8 reader를 공유하는 Full
+Context, BM25, Dense, Mem0, Letta와 네 OpenRouter Full Context model로 구성된
+9개 method다. Stage 1과 Stage 2.2는 각각 전용 runner로 이 grid를 실행한다.
+
+| Stage | Runner | Grid | Retrieval |
+|---|---|---|---|
+| Stage 1 | `scripts/paid/run_stage1.sh` | 20 traj × 20 window checkpoint | 질문 단일 query, `top_k=10` |
+| Stage 2.2 | `scripts/paid/run_stage2_2.sh` | 20 traj × 20 checkpoint | 4개 state group, group별 `top_k=5`, 최대 20 evidence |
+
+Stage 1은 대상 기간이 질문 본문에 이미 포함되므로 Stage 2.2의 group 분해 없이
+질문 문장을 그대로 검색 query로 사용한다. 두 stage 모두 checkpoint query는 서로
+독립적이며 Full Context는 독립 prefix, BM25/Dense/Mem0/Letta는 immutable snapshot
+clone으로 병렬 질의한다. 출력 상한은 두 stage 모두 20,000 token이다. Anthropic은
+thinking token이 `max_tokens`에 포함되므로 Stage 1의 한 줄 답에도 같은 예산을
+준다.
+
 ## 공정 비교 계약
 
 - 모든 방법에 같은 checkpoint, 질문, 보기 순서, answer-free sessions를 제공한다.

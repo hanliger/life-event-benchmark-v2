@@ -19,6 +19,17 @@ dataset:
     masking_arms: 5
     masking_cases: 2255
     masking_questions: 4510
+stage1_event_identification:
+  task_id: stage1_event_identification
+  # The 15-session window end is the query checkpoint, so the frozen grid is
+  # 20 trajectories × 20 checkpoints = 400 items, one per Stage 1 item.
+  retrieval:
+    strategy: single_question_query
+    top_k: 10
+  max_output_tokens: 20000
+  expected:
+    trajectories: 20
+    checkpoints: 400
 stage2_2_reconstruct:
   task_id: stage2_2_reconstruct
   revision: 716a1ae9cddcfeeb2638ab61b5a3c25cd724b3bf

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from copy import deepcopy
 from dataclasses import dataclass
 from time import perf_counter
 from typing import Any, Protocol
@@ -57,12 +58,26 @@ class ProviderReader:
         *,
         max_tokens: int = 4096,
         timeout_seconds: float = 120,
+        generation_settings: dict[str, Any] | None = None,
     ):
-        assert_provider_construction_allowed()
         self.provider = provider
         self.model = model
         self.max_tokens = max_tokens
         self.timeout_seconds = timeout_seconds
+        self.generation_settings = deepcopy(generation_settings or {})
+        reserved = {
+            "anthropic": {"model", "max_tokens", "messages", "system"},
+            "openai": {"model", "instructions", "input", "max_output_tokens"},
+            "google": {"model", "contents", "system_instruction", "max_output_tokens"},
+            "gemini": {"model", "contents", "system_instruction", "max_output_tokens"},
+        }
+        overlap = reserved.get(provider, set()) & self.generation_settings.keys()
+        if overlap:
+            raise ValueError(
+                "generation_settings cannot override required request fields: "
+                f"{sorted(overlap)}"
+            )
+        assert_provider_construction_allowed()
         if provider == "anthropic":
             import anthropic
 
@@ -96,28 +111,37 @@ class ProviderReader:
         output_tokens = int(max_tokens or self.max_tokens)
         started = perf_counter()
         if self.provider == "anthropic":
-            response = self.client.messages.create(
-                model=self.model,
-                max_tokens=output_tokens,
-                messages=[{"role": "user", "content": user}],
-                system=system,
-            )
+            request = {
+                "model": self.model,
+                "max_tokens": output_tokens,
+                "messages": [{"role": "user", "content": user}],
+                "system": system,
+                **deepcopy(self.generation_settings),
+            }
+            response = self.client.messages.create(**request)
             text = "".join(getattr(block, "text", "") for block in response.content)
             usage = getattr(response, "usage", None)
         elif self.provider == "openai":
-            response = self.client.responses.create(
-                model=self.model,
-                instructions=system,
-                input=user,
-                max_output_tokens=output_tokens,
-            )
+            request = {
+                "model": self.model,
+                "instructions": system,
+                "input": user,
+                "max_output_tokens": output_tokens,
+                **deepcopy(self.generation_settings),
+            }
+            response = self.client.responses.create(**request)
             text = response.output_text
             usage = getattr(response, "usage", None)
         else:
+            config = {
+                "system_instruction": system,
+                "max_output_tokens": output_tokens,
+                **deepcopy(self.generation_settings),
+            }
             response = self.client.models.generate_content(
                 model=self.model,
                 contents=user,
-                config={"system_instruction": system, "max_output_tokens": output_tokens},
+                config=config,
             )
             text = response.text
             usage = getattr(response, "usage_metadata", None)
@@ -131,5 +155,6 @@ class ProviderReader:
             "automatic_retries": 0,
             "request_timeout_seconds": self.timeout_seconds,
             "max_output_tokens": output_tokens,
+            "generation_settings": deepcopy(self.generation_settings),
             "latency_seconds": round(latency_seconds, 6),
         }

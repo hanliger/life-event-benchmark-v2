@@ -56,6 +56,7 @@ def _reader(
     mock: bool,
     max_tokens: int,
     timeout_seconds: float,
+    generation_settings: dict[str, Any],
 ) -> Reader:
     return (
         MockReader()
@@ -65,6 +66,7 @@ def _reader(
             model,
             max_tokens=max_tokens,
             timeout_seconds=timeout_seconds,
+            generation_settings=generation_settings,
         )
     )
 
@@ -85,6 +87,7 @@ def create_method(
     k = int(top_k or cfg["benchmark"]["top_k_main"])
     max_tokens = int(cfg["models"]["final_answer_max_tokens"])
     timeout_seconds = float(cfg["models"]["request_timeout_seconds"])
+    generation_settings = models["generation_settings"]
     system = _system(paths)
     gemini = _reader(
         "google",
@@ -92,6 +95,7 @@ def create_method(
         mock,
         max_tokens,
         timeout_seconds,
+        dict(generation_settings["google"]),
     )
     if method_id == "fc_claude_opus_5":
         return FullContextMethod(
@@ -102,6 +106,7 @@ def create_method(
                 mock,
                 max_tokens,
                 timeout_seconds,
+                dict(generation_settings["anthropic"]),
             ),
             system,
         )
@@ -116,6 +121,7 @@ def create_method(
                 mock,
                 max_tokens,
                 timeout_seconds,
+                dict(generation_settings["openai"]),
             ),
             system,
         )
@@ -128,6 +134,7 @@ def create_method(
                 mock,
                 max_tokens,
                 timeout_seconds,
+                dict(generation_settings["openai"]),
             ),
             system,
         )

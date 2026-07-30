@@ -17,7 +17,30 @@ def test_exactly_eight_methods_and_short_output_cap():
     assert cfg["analysis_methods"] == ["oracle_rel_gpt_5_6_sol"]
     assert cfg["models"]["final_answer_max_tokens"] == 4096
     assert cfg["stage2_2_reconstruct"]["smoke"]["max_output_tokens"] == 20000
-    assert cfg["models"]["reasoning_policy"] == "vendor_default"
+    assert cfg["models"]["reasoning_policy"] == "deployment_realistic_medium"
+    assert cfg["models"]["generation_settings"] == {
+        "anthropic": {
+            "thinking": {"type": "adaptive", "display": "omitted"},
+            "output_config": {"effort": "medium"},
+        },
+        "google": {
+            "thinking_config": {
+                "thinking_level": "medium",
+                "include_thoughts": False,
+            },
+            "temperature": 1.0,
+        },
+        "openai": {
+            "reasoning": {
+                "effort": "medium",
+                "mode": "standard",
+                "context": "current_turn",
+            },
+            "text": {"verbosity": "medium"},
+            "store": False,
+            "truncation": "disabled",
+        },
+    }
     assert cfg["dataset"]["expected"]["stage3_items"] == 123
     assert comparison_contract() == {
         "embedding_model": "gemini-embedding-2",

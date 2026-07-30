@@ -34,6 +34,15 @@ Correct-change F1에서도 Gemini macro-average checkpoint-240 값은 41.28%에�
 quality score에도 영향을 주므로, first-attempt와 retry-adjusted 결과를 구분해야
 함을 보여준다.
 
+### 모델별 Macro-average 직접 비교
+
+아래 compact figure는 앞의 모델별 panel에서 검은색이었던 3-trajectory average만
+모아 모델별 색상으로 겹친 것이다. 위 panel은 Dynamic-path Final State Accuracy,
+아래 panel은 Correct-change F1이다. Claude가 모든 checkpoint에서 항상 1위인 것은
+아니지만, 두 metric의 다섯-checkpoint 평균에서는 가장 높다.
+
+![Three-model Macro-average Comparison](figures/stage2_2_low_3traj/low_3traj_retry_v2__71ea1d01981a__9bb8ed9ee53c__460647a3a1bc__48fb421665a6/macro_average_model_comparison.png)
+
 모든 값은 checkpoints 60, 120, 180, 240, 300의 평균이며 백분율이다.
 Average는 trajectory 내부 checkpoint 평균을 먼저 계산한 뒤 세 trajectories를
 동일 가중한다.

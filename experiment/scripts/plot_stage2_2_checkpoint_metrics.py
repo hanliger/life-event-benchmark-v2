@@ -335,7 +335,12 @@ def write_source_csv(
     return path
 
 
-def render(svg_path: Path, output_format: str) -> Path:
+def render(
+    svg_path: Path,
+    output_format: str,
+    *,
+    png_width: int = 2000,
+) -> Path:
     converter = shutil.which("rsvg-convert")
     if converter is None:
         raise RuntimeError(
@@ -344,7 +349,7 @@ def render(svg_path: Path, output_format: str) -> Path:
     output_path = svg_path.with_suffix(f".{output_format}")
     command = [converter, "--format", output_format]
     if output_format == "png":
-        command.extend(["--width", "2000"])
+        command.extend(["--width", str(png_width)])
     command.extend(["--output", str(output_path), str(svg_path)])
     subprocess.run(command, check=True)
     return output_path

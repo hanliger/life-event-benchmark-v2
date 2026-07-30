@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="880" viewBox="0 0 900 880" role="img" aria-label="Three-model macro-average comparison">
+<style>
+text { font-family: Arial, 'DejaVu Sans', sans-serif; fill: #17202A; }
+.title { font-size: 25px; font-weight: 700; }
+.subtitle { font-size: 14px; fill: #5B6573; }
+.panel-title { font-size: 17px; font-weight: 700; }
+.axis-label { font-size: 15px; font-weight: 600; }
+.tick { font-size: 12px; fill: #4B5563; }
+.legend { font-size: 13px; font-weight: 600; }
+</style>
+<rect width="900" height="880" fill="#FFFFFF"/>
+<text x="450" y="38" text-anchor="middle" class="title">Three-model Macro-average Comparison</text>
+<text x="450" y="66" text-anchor="middle" class="subtitle">3-trajectory macro average · Low reasoning · 5 checkpoints</text>
+<line x1="95" y1="108" x2="137" y2="108" stroke="#2672B8" stroke-width="3"/>
+<circle cx="116.0" cy="108.0" r="5" fill="#FFFFFF" stroke="#2672B8" stroke-width="2.5"/>
+<text x="145" y="113" class="legend">Claude Opus 5</text>
+<line x1="340" y1="108" x2="382" y2="108" stroke="#D97706" stroke-width="3" stroke-dasharray="10 6"/>
+<rect x="356.0" y="103.0" width="10.0" height="10.0" rx="1" fill="#FFFFFF" stroke="#D97706" stroke-width="2.5"/>
+<text x="390" y="113" class="legend">Gemini 3.1 Pro Preview</text>
+<line x1="660" y1="108" x2="702" y2="108" stroke="#4D7C0F" stroke-width="3" stroke-dasharray="12 5 3 5"/>
+<polygon points="681.0,102.0 675.0,113.0 687.0,113.0" fill="#FFFFFF" stroke="#4D7C0F" stroke-width="2.5"/>
+<text x="710" y="113" class="legend">GPT-5.6 Sol</text>
+<text x="105" y="168" class="panel-title">Dynamic-path Final State Accuracy</text>
+<line x1="105" y1="410.0" x2="845" y2="410.0" stroke="#DDE3EA" stroke-width="1"/>
+<text x="93" y="414.0" text-anchor="end" class="tick">0%</text>
+<line x1="105" y1="366.0" x2="845" y2="366.0" stroke="#DDE3EA" stroke-width="1"/>
+<text x="93" y="370.0" text-anchor="end" class="tick">20%</text>
+<line x1="105" y1="322.0" x2="845" y2="322.0" stroke="#DDE3EA" stroke-width="1"/>
+<text x="93" y="326.0" text-anchor="end" class="tick">40%</text>
+<line x1="105" y1="278.0" x2="845" y2="278.0" stroke="#DDE3EA" stroke-width="1"/>
+<text x="93" y="282.0" text-anchor="end" class="tick">60%</text>
+<line x1="105" y1="234.0" x2="845" y2="234.0" stroke="#DDE3EA" stroke-width="1"/>
+<text x="93" y="238.0" text-anchor="end" class="tick">80%</text>
+<line x1="105" y1="190.0" x2="845" y2="190.0" stroke="#DDE3EA" stroke-width="1"/>
+<text x="93" y="194.0" text-anchor="end" class="tick">100%</text>
+<line x1="105" y1="190" x2="105" y2="410" stroke="#7B8794" stroke-width="1.2"/>
+<line x1="105" y1="410" x2="845" y2="410" stroke="#7B8794" stroke-width="1.2"/>
+<line x1="105.0" y1="410" x2="105.0" y2="415" stroke="#7B8794" stroke-width="1"/>
+<text x="105.0" y="432" text-anchor="middle" class="tick">60</text>
+<line x1="290.0" y1="410" x2="290.0" y2="415" stroke="#7B8794" stroke-width="1"/>
+<text x="290.0" y="432" text-anchor="middle" class="tick">120</text>
+<line x1="475.0" y1="410" x2="475.0" y2="415" stroke="#7B8794" stroke-width="1"/>
+<text x="475.0" y="432" text-anchor="middle" class="tick">180</text>
+<line x1="660.0" y1="410" x2="660.0" y2="415" stroke="#7B8794" stroke-width="1"/>
+<text x="660.0" y="432" text-anchor="middle" class="tick">240</text>
+<line x1="845.0" y1="410" x2="845.0" y2="415" stroke="#7B8794" stroke-width="1"/>
+<text x="845.0" y="432" text-anchor="middle" class="tick">300</text>
+<polyline points="105.0,213.5 290.0,195.9 475.0,239.9 660.0,248.7 845.0,239.9" fill="none" stroke="#2672B8" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="105.0" cy="213.5" r="5" fill="#FFFFFF" stroke="#2672B8" stroke-width="2.5"/>
+<circle cx="290.0" cy="195.9" r="5" fill="#FFFFFF" stroke="#2672B8" stroke-width="2.5"/>
+<circle cx="475.0" cy="239.9" r="5" fill="#FFFFFF" stroke="#2672B8" stroke-width="2.5"/>
+<circle cx="660.0" cy="248.7" r="5" fill="#FFFFFF" stroke="#2672B8" stroke-width="2.5"/>
+<circle cx="845.0" cy="239.9" r="5" fill="#FFFFFF" stroke="#2672B8" stroke-width="2.5"/>
+<polyline points="105.0,222.3 290.0,207.6 475.0,242.8 660.0,263.3 845.0,251.6" fill="none" stroke="#D97706" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="10 6"/>
+<rect x="100.0" y="217.3" width="10.0" height="10.0" rx="1" fill="#FFFFFF" stroke="#D97706" stroke-width="2.5"/>
+<rect x="285.0" y="202.6" width="10.0" height="10.0" rx="1" fill="#FFFFFF" stroke="#D97706" stroke-width="2.5"/>
+<rect x="470.0" y="237.8" width="10.0" height="10.0" rx="1" fill="#FFFFFF" stroke="#D97706" stroke-width="2.5"/>
+<rect x="655.0" y="258.3" width="10.0" height="10.0" rx="1" fill="#FFFFFF" stroke="#D97706" stroke-width="2.5"/>
+<rect x="840.0" y="246.6" width="10.0" height="10.0" rx="1" fill="#FFFFFF" stroke="#D97706" stroke-width="2.5"/>
+<polyline points="105.0,225.2 290.0,204.7 475.0,257.5 660.0,266.3 845.0,263.3" fill="none" stroke="#4D7C0F" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="12 5 3 5"/>
+<polygon points="105.0,219.2 99.0,230.2 111.0,230.2" fill="#FFFFFF" stroke="#4D7C0F" stroke-width="2.5"/>
+<polygon points="290.0,198.7 284.0,209.7 296.0,209.7" fill="#FFFFFF" stroke="#4D7C0F" stroke-width="2.5"/>
+<polygon points="475.0,251.5 469.0,262.5 481.0,262.5" fill="#FFFFFF" stroke="#4D7C0F" stroke-width="2.5"/>
+<polygon points="660.0,260.3 654.0,271.3 666.0,271.3" fill="#FFFFFF" stroke="#4D7C0F" stroke-width="2.5"/>
+<polygon points="845.0,257.3 839.0,268.3 851.0,268.3" fill="#FFFFFF" stroke="#4D7C0F" stroke-width="2.5"/>
+<text x="105" y="513" class="panel-title">Correct-change F1</text>
+<line x1="105" y1="755.0" x2="845" y2="755.0" stroke="#DDE3EA" stroke-width="1"/>
+<text x="93" y="759.0" text-anchor="end" class="tick">0%</text>
+<line x1="105" y1="711.0" x2="845" y2="711.0" stroke="#DDE3EA" stroke-width="1"/>
+<text x="93" y="715.0" text-anchor="end" class="tick">20%</text>
+<line x1="105" y1="667.0" x2="845" y2="667.0" stroke="#DDE3EA" stroke-width="1"/>
+<text x="93" y="671.0" text-anchor="end" class="tick">40%</text>
+<line x1="105" y1="623.0" x2="845" y2="623.0" stroke="#DDE3EA" stroke-width="1"/>
+<text x="93" y="627.0" text-anchor="end" class="tick">60%</text>
+<line x1="105" y1="579.0" x2="845" y2="579.0" stroke="#DDE3EA" stroke-width="1"/>
+<text x="93" y="583.0" text-anchor="end" class="tick">80%</text>
+<line x1="105" y1="535.0" x2="845" y2="535.0" stroke="#DDE3EA" stroke-width="1"/>
+<text x="93" y="539.0" text-anchor="end" class="tick">100%</text>
+<line x1="105" y1="535" x2="105" y2="755" stroke="#7B8794" stroke-width="1.2"/>
+<line x1="105" y1="755" x2="845" y2="755" stroke="#7B8794" stroke-width="1.2"/>
+<line x1="105.0" y1="755" x2="105.0" y2="760" stroke="#7B8794" stroke-width="1"/>
+<text x="105.0" y="777" text-anchor="middle" class="tick">60</text>
+<line x1="290.0" y1="755" x2="290.0" y2="760" stroke="#7B8794" stroke-width="1"/>
+<text x="290.0" y="777" text-anchor="middle" class="tick">120</text>
+<line x1="475.0" y1="755" x2="475.0" y2="760" stroke="#7B8794" stroke-width="1"/>
+<text x="475.0" y="777" text-anchor="middle" class="tick">180</text>
+<line x1="660.0" y1="755" x2="660.0" y2="760" stroke="#7B8794" stroke-width="1"/>
+<text x="660.0" y="777" text-anchor="middle" class="tick">240</text>
+<line x1="845.0" y1="755" x2="845.0" y2="760" stroke="#7B8794" stroke-width="1"/>
+<text x="845.0" y="777" text-anchor="middle" class="tick">300</text>
+<polyline points="105.0,604.9 290.0,562.9 475.0,614.6 660.0,627.5 845.0,607.0" fill="none" stroke="#2672B8" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="105.0" cy="604.9" r="5" fill="#FFFFFF" stroke="#2672B8" stroke-width="2.5"/>
+<circle cx="290.0" cy="562.9" r="5" fill="#FFFFFF" stroke="#2672B8" stroke-width="2.5"/>
+<circle cx="475.0" cy="614.6" r="5" fill="#FFFFFF" stroke="#2672B8" stroke-width="2.5"/>
+<circle cx="660.0" cy="627.5" r="5" fill="#FFFFFF" stroke="#2672B8" stroke-width="2.5"/>
+<circle cx="845.0" cy="607.0" r="5" fill="#FFFFFF" stroke="#2672B8" stroke-width="2.5"/>
+<polyline points="105.0,613.6 290.0,577.5 475.0,607.8 660.0,634.8 845.0,623.5" fill="none" stroke="#D97706" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="10 6"/>
+<rect x="100.0" y="608.6" width="10.0" height="10.0" rx="1" fill="#FFFFFF" stroke="#D97706" stroke-width="2.5"/>
+<rect x="285.0" y="572.5" width="10.0" height="10.0" rx="1" fill="#FFFFFF" stroke="#D97706" stroke-width="2.5"/>
+<rect x="470.0" y="602.8" width="10.0" height="10.0" rx="1" fill="#FFFFFF" stroke="#D97706" stroke-width="2.5"/>
+<rect x="655.0" y="629.8" width="10.0" height="10.0" rx="1" fill="#FFFFFF" stroke="#D97706" stroke-width="2.5"/>
+<rect x="840.0" y="618.5" width="10.0" height="10.0" rx="1" fill="#FFFFFF" stroke="#D97706" stroke-width="2.5"/>
+<polyline points="105.0,613.9 290.0,580.7 475.0,636.5 660.0,649.0 845.0,645.8" fill="none" stroke="#4D7C0F" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="12 5 3 5"/>
+<polygon points="105.0,607.9 99.0,618.9 111.0,618.9" fill="#FFFFFF" stroke="#4D7C0F" stroke-width="2.5"/>
+<polygon points="290.0,574.7 284.0,585.7 296.0,585.7" fill="#FFFFFF" stroke="#4D7C0F" stroke-width="2.5"/>
+<polygon points="475.0,630.5 469.0,641.5 481.0,641.5" fill="#FFFFFF" stroke="#4D7C0F" stroke-width="2.5"/>
+<polygon points="660.0,643.0 654.0,654.0 666.0,654.0" fill="#FFFFFF" stroke="#4D7C0F" stroke-width="2.5"/>
+<polygon points="845.0,639.8 839.0,650.8 851.0,650.8" fill="#FFFFFF" stroke="#4D7C0F" stroke-width="2.5"/>
+<text x="450" y="835" text-anchor="middle" class="axis-label">Dialogue checkpoint (sessions)</text>
+<text x="27" y="470" text-anchor="middle" class="axis-label" transform="rotate(-90 27 470)">Score (%)</text>
+</svg>

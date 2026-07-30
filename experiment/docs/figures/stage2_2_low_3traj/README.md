@@ -23,3 +23,8 @@ parse failure로 표시한다.
 Retry v2는 first-attempt parse error 1건과 final parse error 0건을 구분해
 기록한다. 정식 실험에서는 같은 retry rule을 모든 모델과 trajectory에 일관되게
 적용해야 한다.
+
+`macro_average_model_comparison.{svg,png,pdf}`는 각 모델의
+3-trajectory macro-average만 겹쳐 보여주는 compact two-panel figure다.
+Dynamic-path Final State Accuracy와 Correct-change F1을 세로로 배치해 가로폭을
+줄였으며, model identity는 색상·marker·line style로 중복 인코딩한다.

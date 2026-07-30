@@ -384,6 +384,174 @@ def build_svg(
     return "\n".join(parts) + "\n"
 
 
+def build_macro_model_comparison_svg(
+    scores: dict[str, dict[str, dict[int, dict[str, float]]]],
+) -> str:
+    """Render a compact two-panel comparison of model macro averages."""
+    width, height = 900, 880
+    left, right = 105, 845
+    panel_bounds = ((190, 410), (535, 755))
+
+    def x_pos(index: int) -> float:
+        return left + index * (right - left) / (len(CHECKPOINTS) - 1)
+
+    parts = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        (
+            f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" '
+            f'height="{height}" viewBox="0 0 {width} {height}" role="img" '
+            'aria-label="Three-model macro-average comparison">'
+        ),
+        "<style>",
+        "text { font-family: Arial, 'DejaVu Sans', sans-serif; fill: #17202A; }",
+        ".title { font-size: 25px; font-weight: 700; }",
+        ".subtitle { font-size: 14px; fill: #5B6573; }",
+        ".panel-title { font-size: 17px; font-weight: 700; }",
+        ".axis-label { font-size: 15px; font-weight: 600; }",
+        ".tick { font-size: 12px; fill: #4B5563; }",
+        ".legend { font-size: 13px; font-weight: 600; }",
+        "</style>",
+        '<rect width="900" height="880" fill="#FFFFFF"/>',
+        (
+            '<text x="450" y="38" text-anchor="middle" class="title">'
+            "Three-model Macro-average Comparison</text>"
+        ),
+        (
+            '<text x="450" y="66" text-anchor="middle" class="subtitle">'
+            "3-trajectory macro average · Low reasoning · 5 checkpoints"
+            "</text>"
+        ),
+    ]
+
+    legend_x = (95, 340, 660)
+    for x, model in zip(legend_x, MODEL_SPECS, strict=True):
+        dash = (
+            f' stroke-dasharray="{model["dash"]}"'
+            if model["dash"]
+            else ""
+        )
+        parts.append(
+            f'<line x1="{x}" y1="108" x2="{x + 42}" y2="108" '
+            f'stroke="{model["color"]}" stroke-width="3"{dash}/>'
+        )
+        parts.append(
+            _marker_svg(
+                str(model["marker"]),
+                x + 21,
+                108,
+                str(model["color"]),
+                size=5,
+            )
+        )
+        parts.append(
+            f'<text x="{x + 50}" y="113" class="legend">'
+            f'{html.escape(str(model["label"]))}</text>'
+        )
+
+    for panel_index, (metric_key, title, _) in enumerate(METRICS):
+        top, bottom = panel_bounds[panel_index]
+
+        def y_pos(score: float) -> float:
+            return bottom - score / 100.0 * (bottom - top)
+
+        parts.append(
+            f'<text x="{left}" y="{top - 22}" class="panel-title">'
+            f"{html.escape(title.removesuffix(' by Checkpoint'))}</text>"
+        )
+        for tick in range(0, 101, 20):
+            y = y_pos(float(tick))
+            parts.extend(
+                [
+                    (
+                        f'<line x1="{left}" y1="{y:.1f}" x2="{right}" '
+                        f'y2="{y:.1f}" stroke="#DDE3EA" stroke-width="1"/>'
+                    ),
+                    (
+                        f'<text x="{left - 12}" y="{y + 4:.1f}" '
+                        f'text-anchor="end" class="tick">{tick}%</text>'
+                    ),
+                ]
+            )
+        parts.extend(
+            [
+                (
+                    f'<line x1="{left}" y1="{top}" x2="{left}" '
+                    f'y2="{bottom}" stroke="#7B8794" stroke-width="1.2"/>'
+                ),
+                (
+                    f'<line x1="{left}" y1="{bottom}" x2="{right}" '
+                    f'y2="{bottom}" stroke="#7B8794" stroke-width="1.2"/>'
+                ),
+            ]
+        )
+        for index, checkpoint in enumerate(CHECKPOINTS):
+            x = x_pos(index)
+            parts.extend(
+                [
+                    (
+                        f'<line x1="{x:.1f}" y1="{bottom}" x2="{x:.1f}" '
+                        f'y2="{bottom + 5}" stroke="#7B8794" '
+                        'stroke-width="1"/>'
+                    ),
+                    (
+                        f'<text x="{x:.1f}" y="{bottom + 22}" '
+                        f'text-anchor="middle" class="tick">{checkpoint}</text>'
+                    ),
+                ]
+            )
+        for model in MODEL_SPECS:
+            method_id = str(model["method_id"])
+            points = [
+                (
+                    x_pos(index),
+                    y_pos(
+                        scores["macro_average"][method_id][checkpoint][
+                            metric_key
+                        ]
+                    ),
+                )
+                for index, checkpoint in enumerate(CHECKPOINTS)
+            ]
+            dash = (
+                f' stroke-dasharray="{model["dash"]}"'
+                if model["dash"]
+                else ""
+            )
+            parts.append(
+                '<polyline points="'
+                + " ".join(f"{x:.1f},{y:.1f}" for x, y in points)
+                + f'" fill="none" stroke="{model["color"]}" '
+                f'stroke-width="3" stroke-linejoin="round" '
+                f'stroke-linecap="round"{dash}/>'
+            )
+            for x, y in points:
+                parts.append(
+                    _marker_svg(
+                        str(model["marker"]),
+                        x,
+                        y,
+                        str(model["color"]),
+                        size=5,
+                    )
+                )
+
+    parts.extend(
+        [
+            (
+                '<text x="450" y="835" text-anchor="middle" '
+                'class="axis-label">Dialogue checkpoint (sessions)</text>'
+            ),
+            (
+                '<text x="27" y="470" text-anchor="middle" '
+                'class="axis-label" transform="rotate(-90 27 470)">'
+                "Score (%)</text>"
+            ),
+            "</svg>",
+        ]
+    )
+    return "\n".join(parts) + "\n"
+
+
 def write_source_csv(
     scores: dict[str, dict[str, dict[int, dict[str, float]]]],
     parse_failures: set[tuple[str, str, int]],
@@ -507,6 +675,18 @@ def main() -> None:
                 render(svg_path, "pdf"),
             ]
         )
+    comparison_svg = output_dir / "macro_average_model_comparison.svg"
+    comparison_svg.write_text(
+        build_macro_model_comparison_svg(scores),
+        encoding="utf-8",
+    )
+    generated.extend(
+        [
+            comparison_svg,
+            render(comparison_svg, "png", png_width=1000),
+            render(comparison_svg, "pdf"),
+        ]
+    )
     for path in generated:
         try:
             display_path = path.relative_to(repo_root)

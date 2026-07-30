@@ -27,4 +27,5 @@ Retry v2는 first-attempt parse error 1건과 final parse error 0건을 구분�
 `macro_average_model_comparison.{svg,png,pdf}`는 각 모델의
 3-trajectory macro-average만 겹쳐 보여주는 compact two-panel figure다.
 Dynamic-path Final State Accuracy와 Correct-change F1을 세로로 배치해 가로폭을
-줄였으며, model identity는 색상·marker·line style로 중복 인코딩한다.
+줄였으며, model identity는 색상·marker·line style로 중복 인코딩한다. SVG
+가로폭은 720px, PNG는 800px이고 y축은 40–100%의 focused scale이다.

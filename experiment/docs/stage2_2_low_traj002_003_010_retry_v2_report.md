@@ -39,7 +39,9 @@ quality score에도 영향을 주므로, first-attempt와 retry-adjusted 결과�
 아래 compact figure는 앞의 모델별 panel에서 검은색이었던 3-trajectory average만
 모아 모델별 색상으로 겹친 것이다. 위 panel은 Dynamic-path Final State Accuracy,
 아래 panel은 Correct-change F1이다. Claude가 모든 checkpoint에서 항상 1위인 것은
-아니지만, 두 metric의 다섯-checkpoint 평균에서는 가장 높다.
+아니지만, 두 metric의 다섯-checkpoint 평균에서는 가장 높다. 모델 간 차이를
+읽기 쉽도록 y축은 40%에서 시작하며, 절대 크기 비교에는 앞의 0–100% figure를
+사용해야 한다.
 
 ![Three-model Macro-average Comparison](figures/stage2_2_low_3traj/low_3traj_retry_v2__71ea1d01981a__9bb8ed9ee53c__460647a3a1bc__48fb421665a6/macro_average_model_comparison.png)
 

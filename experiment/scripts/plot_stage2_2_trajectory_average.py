@@ -388,9 +388,10 @@ def build_macro_model_comparison_svg(
     scores: dict[str, dict[str, dict[int, dict[str, float]]]],
 ) -> str:
     """Render a compact two-panel comparison of model macro averages."""
-    width, height = 900, 880
-    left, right = 105, 845
-    panel_bounds = ((190, 410), (535, 755))
+    width, height = 720, 780
+    left, right = 80, 690
+    panel_bounds = ((165, 345), (455, 635))
+    y_min = 40.0
 
     def x_pos(index: int) -> float:
         return left + index * (right - left) / (len(CHECKPOINTS) - 1)
@@ -404,26 +405,26 @@ def build_macro_model_comparison_svg(
         ),
         "<style>",
         "text { font-family: Arial, 'DejaVu Sans', sans-serif; fill: #17202A; }",
-        ".title { font-size: 25px; font-weight: 700; }",
-        ".subtitle { font-size: 14px; fill: #5B6573; }",
-        ".panel-title { font-size: 17px; font-weight: 700; }",
-        ".axis-label { font-size: 15px; font-weight: 600; }",
-        ".tick { font-size: 12px; fill: #4B5563; }",
-        ".legend { font-size: 13px; font-weight: 600; }",
+        ".title { font-size: 22px; font-weight: 700; }",
+        ".subtitle { font-size: 12px; fill: #5B6573; }",
+        ".panel-title { font-size: 15px; font-weight: 700; }",
+        ".axis-label { font-size: 13px; font-weight: 600; }",
+        ".tick { font-size: 11px; fill: #4B5563; }",
+        ".legend { font-size: 11px; font-weight: 600; }",
         "</style>",
-        '<rect width="900" height="880" fill="#FFFFFF"/>',
+        '<rect width="720" height="780" fill="#FFFFFF"/>',
         (
-            '<text x="450" y="38" text-anchor="middle" class="title">'
+            '<text x="360" y="35" text-anchor="middle" class="title">'
             "Three-model Macro-average Comparison</text>"
         ),
         (
-            '<text x="450" y="66" text-anchor="middle" class="subtitle">'
-            "3-trajectory macro average · Low reasoning · 5 checkpoints"
+            '<text x="360" y="60" text-anchor="middle" class="subtitle">'
+            "3-trajectory macro average · y-axis starts at 40%"
             "</text>"
         ),
     ]
 
-    legend_x = (95, 340, 660)
+    legend_x = (35, 255, 515)
     for x, model in zip(legend_x, MODEL_SPECS, strict=True):
         dash = (
             f' stroke-dasharray="{model["dash"]}"'
@@ -431,20 +432,20 @@ def build_macro_model_comparison_svg(
             else ""
         )
         parts.append(
-            f'<line x1="{x}" y1="108" x2="{x + 42}" y2="108" '
+            f'<line x1="{x}" y1="100" x2="{x + 36}" y2="100" '
             f'stroke="{model["color"]}" stroke-width="3"{dash}/>'
         )
         parts.append(
             _marker_svg(
                 str(model["marker"]),
-                x + 21,
-                108,
+                x + 18,
+                100,
                 str(model["color"]),
-                size=5,
+                size=4.5,
             )
         )
         parts.append(
-            f'<text x="{x + 50}" y="113" class="legend">'
+            f'<text x="{x + 43}" y="104" class="legend">'
             f'{html.escape(str(model["label"]))}</text>'
         )
 
@@ -452,13 +453,15 @@ def build_macro_model_comparison_svg(
         top, bottom = panel_bounds[panel_index]
 
         def y_pos(score: float) -> float:
-            return bottom - score / 100.0 * (bottom - top)
+            return bottom - (score - y_min) / (100.0 - y_min) * (
+                bottom - top
+            )
 
         parts.append(
             f'<text x="{left}" y="{top - 22}" class="panel-title">'
             f"{html.escape(title.removesuffix(' by Checkpoint'))}</text>"
         )
-        for tick in range(0, 101, 20):
+        for tick in range(40, 101, 20):
             y = y_pos(float(tick))
             parts.extend(
                 [
@@ -538,12 +541,12 @@ def build_macro_model_comparison_svg(
     parts.extend(
         [
             (
-                '<text x="450" y="835" text-anchor="middle" '
+                '<text x="360" y="735" text-anchor="middle" '
                 'class="axis-label">Dialogue checkpoint (sessions)</text>'
             ),
             (
-                '<text x="27" y="470" text-anchor="middle" '
-                'class="axis-label" transform="rotate(-90 27 470)">'
+                '<text x="20" y="400" text-anchor="middle" '
+                'class="axis-label" transform="rotate(-90 20 400)">'
                 "Score (%)</text>"
             ),
             "</svg>",
@@ -683,7 +686,7 @@ def main() -> None:
     generated.extend(
         [
             comparison_svg,
-            render(comparison_svg, "png", png_width=1000),
+            render(comparison_svg, "png", png_width=800),
             render(comparison_svg, "pdf"),
         ]
     )

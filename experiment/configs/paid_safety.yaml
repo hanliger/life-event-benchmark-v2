@@ -1,0 +1,22 @@
+schema_version: paid-safety-v1
+smoke:
+  # Per-plan ceiling. The stricter cumulative standing limit is enforced by
+  # configs/paid_cost_ledger.json and must remain strictly below $5.00.
+  usd_cap: 3.0
+  concurrency: 1
+  automatic_retries: 0
+  stop_on_first_error: true
+full:
+  usd_cap: null
+  concurrency: 1
+  automatic_retries: 0
+  stop_on_first_error: true
+limits:
+  letta_max_steps: 4
+  letta_search_calls_per_query: 1
+  timeout_is_unknown_billing_state: true
+  unknown_billing_state_auto_resume: false
+approval:
+  require_execute_paid_flag: true
+  require_exact_plan_sha: true
+  load_dotenv_only_after_approval: true

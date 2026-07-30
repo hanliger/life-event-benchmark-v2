@@ -1,6 +1,8 @@
 PYTHON ?= python
 LIMIT ?= 20
 SEED ?= 42
+SHUFFLE_OPTIONS ?= 0
+SHUFFLE_OPTIONS_FLAG := $(if $(filter 1,$(SHUFFLE_OPTIONS)),--shuffle-options,)
 HORIZON ?= 10
 NUM_TRAJ ?= 5
 MAX_SESSIONS ?=
@@ -55,7 +57,7 @@ RQ1_MODEL_TAG ?= $(if $(filter 1,$(EXECUTE)),live,mock__mock)
 	audit-dialogue-canary-v2 review-dialogue-canary-v2 score-dialogue-canary-v2 dialogue-judge-gate \
 	coverage-trajectories fetch-dialogues fetch-counterfactual-fillers restore-frozen-run counterfactual-ablation \
 	dialogue-smoke-dry dialogue-smoke validate-dialogues \
-	export-gold build-items evaluate history-filter audit pipeline-smoke test clean-generated \
+	export-gold build-stage1-items build-items build-stage3-multi-hop evaluate evaluate-stage3 history-filter audit audit-stage3-multi-hop pipeline-smoke test clean-generated \
 	export-gold-controlled build-items-controlled audit-controlled export-public \
 	build-rq1 build-rq1-distractor audit-rq1 evaluate-rq1 rq1-controlled \
 	audit-rq1-pairs evaluate-rq1-pairs-dev
@@ -293,16 +295,42 @@ export-gold-controlled:
 		--trajectories-dir $(TRAJ_DIR) --sessions-dir $(SESS_DIR) \
 		--output $(GOLD_CHECKPOINTS) --checkpoint-stride 15
 
-build-items:
+build-stage1-items:
+	$(PYTHON) scripts/build_stage1_event_items.py \
+		--sessions-dir $(SESS_DIR) --trajectories-dir $(TRAJ_DIR) \
+		--output $(ITEMS_DIR)/stage1_event_status.jsonl
+
+build-items: build-stage1-items
 	$(PYTHON) scripts/build_benchmark_items.py \
 		--prefix-gold $(GOLD) --sessions-dir $(SESS_DIR) --trajectories-dir $(TRAJ_DIR) \
-		--output-dir $(ITEMS_DIR) --seed $(SEED)
+		--output-dir $(ITEMS_DIR) --seed $(SEED) $(SHUFFLE_OPTIONS_FLAG)
 
-build-items-controlled:
+build-items-controlled: build-stage1-items
 	$(PYTHON) scripts/build_benchmark_items.py \
 		--prefix-gold $(GOLD_CHECKPOINTS) --sessions-dir $(SESS_DIR) \
 		--trajectories-dir $(TRAJ_DIR) \
-		--output-dir $(ITEMS_DIR) --seed $(SEED)
+		--output-dir $(ITEMS_DIR) --seed $(SEED) $(SHUFFLE_OPTIONS_FLAG)
+
+build-stage3-multi-hop:
+	$(PYTHON) scripts/build_stage3_multihop_items.py \
+		--prefix-gold $(GOLD_CHECKPOINTS) --sessions-dir $(SESS_DIR) \
+		--trajectories-dir $(TRAJ_DIR) --output-dir $(ITEMS_DIR) \
+		--seed $(SEED) $(SHUFFLE_OPTIONS_FLAG)
+
+audit-stage3-multi-hop:
+	$(PYTHON) scripts/audit_stage3_multihop_items.py \
+		--items $(ITEMS_DIR)/stage3_multi_hop_mcq.jsonl \
+		--prefix-gold $(GOLD_CHECKPOINTS) --sessions-dir $(SESS_DIR) \
+		--trajectories-dir $(TRAJ_DIR) \
+		--output $(QUALITY)/stage3_multi_hop_audit.json
+
+evaluate-stage3:
+	$(PYTHON) scripts/evaluate_stage3_multihop_items.py \
+		--items $(ITEMS_DIR)/stage3_multi_hop_mcq.jsonl \
+		--sessions-dir $(SESS_DIR) \
+		--output $(EVAL_DIR)/stage3_predictions.jsonl \
+		--report $(EVAL_DIR)/stage3_report.json \
+		$(if $(filter 1,$(EXECUTE)),--execute,)
 
 export-public:
 	$(PYTHON) scripts/export_public_benchmark.py \

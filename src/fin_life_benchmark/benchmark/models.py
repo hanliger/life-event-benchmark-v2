@@ -6,7 +6,6 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-
 class CounterfactualOption(BaseModel):
     option_id: str  # A/B/C/...
     text: str
@@ -16,7 +15,7 @@ class CounterfactualOption(BaseModel):
 
 class BenchmarkItem(BaseModel):
     item_id: str
-    stage: str  # stage1_event_status|stage2_memory_value
+    stage: str  # stage1_event_status|stage2_memory_value|stage3_multi_hop_mcq
     trajectory_id: str
     prefix_id: str
     visible_sessions: list[str]

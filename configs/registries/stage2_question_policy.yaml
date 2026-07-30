@@ -1,0 +1,166 @@
+# Stage 2 uses one representative value per occurred event instance.
+# Every target is rendered as a four-option multiple-choice question.
+# An option_pool with exactly four values is authoritative and fixed.
+# Larger pools are candidate values from which four options are selected.
+
+career_employment:
+  target_memory_path: employment.employer
+  question_label: 현재 직장
+  option_pool_type: entity
+  option_pool: [미래정보시스템, 신영유통, 두레헬스케어, 한빛물류, 청람교육, 서연식품, 온새미로디자인, 대성엔지니어링]
+
+career_employment_end:
+  target_memory_path: employment.employment_status
+  question_label: 고용 상태
+  option_pool_type: categorical
+  option_pool: [employed, self_employed, unemployed, retired]
+
+career_job_change:
+  target_memory_path: employment.employer
+  question_label: 현재 직장
+  question_scope: latest_window
+  question_template: 제공된 전체 상담 이력을 참고하여, {window_range}에서 새로 반영된 현재 직장은 무엇인가?
+  option_pool_type: entity
+  option_pool: [미래정보시스템, 신영유통, 두레헬스케어, 한빛물류, 청람교육, 서연식품, 온새미로디자인, 대성엔지니어링]
+
+career_leave_of_absence:
+  target_memory_path: employment.income_stability
+  question_label: 소득 안정성
+  option_pool_type: categorical
+  option_pool: [stable, variable, reduced, unstable]
+
+career_reinstatement:
+  target_memory_path: employment.income_stability
+  question_label: 소득 안정성
+  option_pool_type: categorical
+  option_pool: [stable, variable, reduced, unstable]
+
+career_self_employment:
+  target_memory_path: employment.income_stability
+  question_label: 소득 안정성
+  option_pool_type: categorical
+  option_pool: [stable, variable, reduced, unstable]
+
+crisis_accident_or_disaster:
+  target_memory_path: cashflow.recent_one_off_expense
+  value_selector: amount_krw
+  question_label: 일회성 지출 금액
+  question_scope: latest_window
+  option_pool_type: numeric
+  option_pool: [500000, 1000000, 1500000, 2000000, 3000000, 4000000, 5000000, 7000000]
+
+crisis_financial_fraud:
+  target_memory_path: cashflow.recent_one_off_expense
+  value_selector: amount_krw
+  question_label: 일회성 지출 금액
+  question_scope: latest_window
+  option_pool_type: numeric
+  option_pool: [500000, 1000000, 1500000, 2000000, 3000000, 4000000, 5000000, 7000000]
+
+crisis_health_event:
+  target_memory_path: cashflow.recent_one_off_expense
+  value_selector: amount_krw
+  question_label: 일회성 지출 금액
+  question_scope: latest_window
+  option_pool_type: numeric
+  option_pool: [500000, 1000000, 1500000, 2000000, 3000000, 4000000, 5000000, 7000000]
+
+education_child_stage_entry:
+  target_memory_path: education.child_education_stage
+  value_selector: stage_transition
+  question_template: 제공된 전체 상담 이력을 참고하여, {window_range}에서 자녀 교육 단계에 반영된 변화는 무엇인가?
+  question_label: 자녀 교육 단계 변화
+  allow_noop_current_value: true
+  option_pool_type: categorical
+  option_pool: [primary, middle, high, no_change]
+
+education_self_program_start:
+  target_memory_path: education.self_education_status
+  question_label: 본인 교육 상태
+  option_pool_type: categorical
+  option_pool: [none, enrolled, study_abroad, completed]
+
+education_study_abroad:
+  target_memory_path: education.self_education_status
+  question_label: 본인 교육 상태
+  option_pool_type: categorical
+  option_pool: [none, enrolled, study_abroad, completed]
+
+housing_home_purchase:
+  target_memory_path: housing.properties
+  value_selector: property_loan_type
+  question_template: 해당 부동산에 연결된 대출 유형은 무엇인가?
+  question_label: 해당 부동산의 대출 유형
+  option_pool_type: categorical
+  option_pool: [none, credit_loan, jeonse_loan, mortgage]
+
+housing_home_sale:
+  target_memory_path: housing.properties
+  value_selector: property_ownership_status
+  question_template: 담보대출 상환과 관련된 부동산의 현재 소유 상태는 무엇인가?
+  question_label: 담보대출 상환과 관련된 부동산의 현재 소유 상태
+  option_pool_type: categorical
+  option_pool: [owned, sold, pending_sale, unknown]
+
+housing_move:
+  target_memory_path: housing.contract_type
+  question_label: 주거 유형
+  allow_noop_current_value: true
+  option_pool_type: categorical
+  option_pool: [jeonse, wolse, family_home, other]
+
+relationship_adoption:
+  target_memory_path: household.dependents
+  question_label: 부양가족 수
+  option_pool_type: count
+  option_pool: [1, 2, 3, 4]
+
+relationship_childbirth:
+  target_memory_path: household.dependents
+  question_label: 부양가족 수
+  option_pool_type: count
+  option_pool: [1, 2, 3, 4]
+
+relationship_dependent_addition:
+  target_memory_path: household.dependents
+  question_label: 부양가족 수
+  option_pool_type: count
+  option_pool: [1, 2, 3, 4]
+
+relationship_dependent_end:
+  target_memory_path: household.dependents
+  question_label: 부양가족 수
+  option_pool_type: count
+  option_pool: [0, 1, 2, 3]
+
+relationship_divorce_or_separation:
+  target_memory_path: household.marital_status
+  question_label: 혼인 상태
+  option_pool_type: categorical
+  option_pool: [single, married, separated, divorced]
+
+relationship_family_death:
+  target_memory_path: cashflow.recent_one_off_expense
+  value_selector: amount_krw
+  question_label: 일회성 지출 금액
+  question_scope: latest_window
+  option_pool_type: numeric
+  option_pool: [3000000, 4000000, 5000000, 7000000]
+
+relationship_marriage:
+  target_memory_path: household.marital_status
+  question_label: 혼인 상태
+  option_pool_type: categorical
+  option_pool: [single, married, separated, divorced]
+
+retirement_pension_start:
+  target_memory_path: financial_products.pension_or_irp
+  question_label: 연금·IRP 상태
+  option_pool_type: categorical
+  option_pool: [none, irp, receiving, both]
+
+retirement_start:
+  target_memory_path: employment.employment_status
+  question_label: 고용 상태
+  option_pool_type: categorical
+  option_pool: [employed, self_employed, unemployed, retired]

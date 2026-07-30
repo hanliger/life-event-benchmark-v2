@@ -16,11 +16,11 @@ Claude Opus 5, Gemini 3.1 Pro Preview, GPT-5.6 Sol reader에 적용된다. 검�
 
 ## 2. 선택한 설정
 
-| Model | Reasoning / Thinking | Visibility | Other generation settings |
+| Model | Medium profile | Low profile | Visibility / Other settings |
 |---|---|---|---|
-| Claude Opus 5 | Adaptive thinking, `effort=medium` | `display=omitted` | Sampling parameter 미지정 |
-| Gemini 3.1 Pro Preview | `thinking_level=medium` | `include_thoughts=false` | Temperature 미지정 |
-| GPT-5.6 Sol | `effort=medium`, `mode=standard`, `context=current_turn` | Reasoning summary 미요청 | `text.verbosity=medium`, `store=false`, `truncation=disabled` |
+| Claude Opus 5 | Adaptive thinking, `effort=medium` | Adaptive thinking, `effort=low` | `display=omitted`, sampling parameter 미지정 |
+| Gemini 3.1 Pro Preview | `thinking_level=medium` | `thinking_level=low` | `include_thoughts=false`, temperature 미지정 |
+| GPT-5.6 Sol | `effort=medium` | `effort=low` | `mode=standard`, `context=current_turn`, reasoning summary 미요청, `text.verbosity=medium`, `store=false`, `truncation=disabled` |
 
 공통 `max_output_tokens`는 Stage 2.2에서 20,000이다. 이는 모델이 20,000 tokens를
 반드시 사용하게 하는 reasoning budget이 아니라, thinking과 최종 JSON이 사용할
@@ -146,8 +146,11 @@ truncation="disabled"
 ## 6. 재현성과 provenance
 
 선택값은 `experiment/configs/experiment.yaml`의
-`models.generation_settings`에 고정한다. 각 provider request에 실제로 적용한
-설정은 실행 결과의 `response_metadata.generation_settings`에도 기록한다.
+`models.generation_settings`와 `models.generation_profiles`에 고정한다. Medium은
+기본 profile이고 low 실험은 paid plan의
+`reasoning_policy=deployment_realistic_low`로 동결한다. 각 provider request에
+실제로 적용한 설정은 실행 결과의 `response_metadata.generation_settings`에도
+기록한다.
 Temperature는 세 provider 모두 request에서 생략하고 provider default를 사용한다.
 
 Checkpoint 요청은 서로의 prediction을 보지 않는다. 각 요청마다 새 provider

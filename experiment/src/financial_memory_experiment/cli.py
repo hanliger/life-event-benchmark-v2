@@ -392,6 +392,7 @@ def build_parser() -> argparse.ArgumentParser:
     plan.add_argument("--method", action="append", required=True)
     plan.add_argument("--item-id", action="append", required=True)
     plan.add_argument("--estimated-usd", type=float, required=True)
+    plan.add_argument("--reasoning-policy")
     execute = sub.add_parser("execute-paid-smoke")
     execute.add_argument("--plan-sha", required=True)
     execute.add_argument("--approval", required=True)
@@ -481,6 +482,7 @@ def main() -> int:
             estimated_usd=args.estimated_usd,
             operation_limits=_operation_limits(selected, args.method),
             input_items_sha256=sha256_json(selected),
+            reasoning_policy=args.reasoning_policy,
         )
     elif args.command == "execute-paid-smoke":
         plan = load_verified_smoke_plan(
@@ -534,6 +536,7 @@ def main() -> int:
                 items=subset,
                 output=output,
                 mock=False,
+                reasoning_policy=str(plan["reasoning_policy"]),
                 query_concurrency=(
                     int(plan.get("checkpoint_concurrency", 1))
                     if label == "canonical"

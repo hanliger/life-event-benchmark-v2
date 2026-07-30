@@ -71,6 +71,21 @@ def _reader(
     )
 
 
+def generation_settings_for_policy(
+    models: dict[str, Any],
+    reasoning_policy: str | None,
+) -> dict[str, Any]:
+    default_policy = str(models["reasoning_policy"])
+    selected = reasoning_policy or default_policy
+    if selected == default_policy:
+        return dict(models["generation_settings"])
+    profiles = models.get("generation_profiles") or {}
+    settings = profiles.get(selected)
+    if not isinstance(settings, dict):
+        raise ValueError(f"unknown reasoning policy: {selected}")
+    return dict(settings)
+
+
 def create_method(
     method_id: str,
     *,
@@ -78,6 +93,7 @@ def create_method(
     paths: ExperimentPaths | None = None,
     mock: bool = False,
     top_k: int | None = None,
+    reasoning_policy: str | None = None,
 ) -> MemoryMethod:
     paths = paths or ExperimentPaths.discover()
     cfg = load_experiment_config(paths)
@@ -87,7 +103,9 @@ def create_method(
     k = int(top_k or cfg["benchmark"]["top_k_main"])
     max_tokens = int(cfg["models"]["final_answer_max_tokens"])
     timeout_seconds = float(cfg["models"]["request_timeout_seconds"])
-    generation_settings = models["generation_settings"]
+    generation_settings = generation_settings_for_policy(
+        models, reasoning_policy
+    )
     system = _system(paths)
     gemini = _reader(
         "google",

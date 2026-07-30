@@ -258,6 +258,14 @@ sed -n '1,20p' data/prepared/*/masking_items/masking_questions.jsonl
   --execute-paid
 ```
 
+Reasoning sensitivity smoke는 plan 생성 시 profile을 명시한다.
+
+```bash
+./scripts/pipeline.sh plan-paid-smoke \
+  --reasoning-policy deployment_realistic_low \
+  ...
+```
+
 현재 standing approval은 보수적 누적 smoke 비용이 엄격히 `$20` 미만일 때만
 유효하다. 단일 smoke plan 상한은 `$7.50`이다. Stage 2.2 full-context smoke는
 model concurrency 3, checkpoint concurrency 5를 사용하며 automatic retry 0,

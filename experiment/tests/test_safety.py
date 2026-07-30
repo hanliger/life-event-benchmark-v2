@@ -42,6 +42,15 @@ smoke:
         ),
         encoding="utf-8",
     )
+    (root / "configs" / "experiment.yaml").write_text(
+        """
+models:
+  reasoning_policy: deployment_realistic_medium
+  generation_profiles:
+    deployment_realistic_low: {}
+""",
+        encoding="utf-8",
+    )
     return ExperimentPaths(root=root, repo_root=tmp_path)
 
 
@@ -76,6 +85,7 @@ def test_paid_plan_requires_exact_hash_and_approval(tmp_path):
     assert verified["plan_sha256"] == plan["plan_sha256"]
     assert verified["concurrency"] == 3
     assert verified["checkpoint_concurrency"] == 5
+    assert verified["reasoning_policy"] == "deployment_realistic_medium"
     assert len(verified["execution_provenance"]["execution_tree_sha256"]) == 64
 
     path = paths.runs / "paid_plans" / f"{plan['plan_sha256']}.json"
@@ -89,6 +99,19 @@ def test_paid_plan_requires_exact_hash_and_approval(tmp_path):
             approval=APPROVAL_PHRASE,
             execute_paid=True,
         )
+
+
+def test_paid_plan_freezes_low_reasoning_policy(tmp_path):
+    paths = _paths(tmp_path)
+    plan = build_smoke_plan(
+        paths,
+        method_ids=["fc_gemini_3_1_pro"],
+        item_ids=["q1"],
+        estimated_usd=0.5,
+        input_items_sha256="items",
+        reasoning_policy="deployment_realistic_low",
+    )
+    assert plan["reasoning_policy"] == "deployment_realistic_low"
 
 
 def test_cumulative_smoke_limit_is_strictly_enforced(tmp_path):

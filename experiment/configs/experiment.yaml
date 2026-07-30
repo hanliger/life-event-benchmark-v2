@@ -79,6 +79,27 @@ models:
         verbosity: medium
       store: false
       truncation: disabled
+  generation_profiles:
+    deployment_realistic_low:
+      anthropic:
+        thinking:
+          type: adaptive
+          display: omitted
+        output_config:
+          effort: low
+      google:
+        thinking_config:
+          thinking_level: low
+          include_thoughts: false
+      openai:
+        reasoning:
+          effort: low
+          mode: standard
+          context: current_turn
+        text:
+          verbosity: medium
+        store: false
+        truncation: disabled
   final_answer_max_tokens: 4096
   request_timeout_seconds: 120
 methods:

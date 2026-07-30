@@ -76,6 +76,7 @@ class _RunRecorder:
         items: list[dict[str, Any]],
         mock: bool,
         top_k: int | None,
+        reasoning_policy: str | None = None,
     ):
         self.output = output
         self.manifest_path = output.with_suffix(".manifest.json")
@@ -98,6 +99,7 @@ class _RunRecorder:
             "method_id": method_id,
             "mock": mock,
             "top_k": top_k,
+            "reasoning_policy": reasoning_policy,
             "expected_items": len(item_ids),
             "completed_items": 0,
             "input_item_ids_sha256": sha256_json(item_ids),
@@ -197,6 +199,7 @@ def run_method(
     mock: bool,
     top_k: int | None = None,
     query_concurrency: int = 1,
+    reasoning_policy: str | None = None,
 ) -> Path:
     if query_concurrency <= 0:
         raise ValueError("query_concurrency must be positive")
@@ -219,6 +222,7 @@ def run_method(
         items=items,
         mock=mock,
         top_k=top_k,
+        reasoning_policy=reasoning_policy,
     )
     is_stage2_2 = [item.get("stage") == STAGE2_2 for item in items]
     if any(is_stage2_2) and not all(is_stage2_2):
@@ -276,6 +280,7 @@ def run_method(
                     paths=paths,
                     mock=mock,
                     top_k=top_k,
+                    reasoning_policy=reasoning_policy,
                 )
                 try:
                     method.ingest_initial(s000)
@@ -313,6 +318,7 @@ def run_method(
                 paths=paths,
                 mock=mock,
                 top_k=top_k,
+                reasoning_policy=reasoning_policy,
             )
             try:
                 method.ingest_initial(_load_s000(root, trajectory_id))

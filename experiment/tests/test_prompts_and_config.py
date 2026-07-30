@@ -4,7 +4,10 @@ import pytest
 
 from financial_memory_experiment.config import load_experiment_config
 from financial_memory_experiment.methods import method_ids
-from financial_memory_experiment.methods.registry import comparison_contract
+from financial_memory_experiment.methods.registry import (
+    comparison_contract,
+    generation_settings_for_policy,
+)
 from financial_memory_experiment.paths import ExperimentPaths
 from financial_memory_experiment.prompts import build_query, gold_answer, parse_answer
 
@@ -41,6 +44,17 @@ def test_exactly_eight_methods_and_short_output_cap():
             "truncation": "disabled",
         },
     }
+    low = cfg["models"]["generation_profiles"]["deployment_realistic_low"]
+    assert generation_settings_for_policy(
+        cfg["models"], "deployment_realistic_low"
+    ) == low
+    assert low["anthropic"]["output_config"]["effort"] == "low"
+    assert low["google"]["thinking_config"]["thinking_level"] == "low"
+    assert low["openai"]["reasoning"]["effort"] == "low"
+    assert all(
+        "temperature" not in provider_settings
+        for provider_settings in low.values()
+    )
     assert cfg["dataset"]["expected"]["stage3_items"] == 123
     assert comparison_contract() == {
         "embedding_model": "gemini-embedding-2",
@@ -94,3 +108,9 @@ models:
     paths = ExperimentPaths(root=root, repo_root=tmp_path)
     with pytest.raises(ValueError, match="768-dimensional"):
         comparison_contract(paths)
+
+
+def test_unknown_reasoning_policy_is_rejected():
+    cfg = load_experiment_config()
+    with pytest.raises(ValueError, match="unknown reasoning policy"):
+        generation_settings_for_policy(cfg["models"], "maximum_magic")

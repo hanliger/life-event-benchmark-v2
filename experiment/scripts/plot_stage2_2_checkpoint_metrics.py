@@ -90,16 +90,21 @@ def _validated_rows(rows: list[dict[str, Any]], method_id: str) -> dict[int, dic
     return selected
 
 
-def load_scores(repo_root: Path) -> dict[str, dict[int, dict[str, float]]]:
+def load_scores(
+    repo_root: Path,
+    *,
+    plan_id: str,
+    gemini_retry_plan_id: str | None,
+) -> dict[str, dict[int, dict[str, float]]]:
     run_root = repo_root / "experiment" / "runs" / "paid_smoke"
-    base = run_root / BASE_PLAN_ID
-    retry = run_root / GEMINI_RETRY_PLAN_ID
+    base = run_root / plan_id
+    retry = run_root / gemini_retry_plan_id if gemini_retry_plan_id else None
     scores: dict[str, dict[int, dict[str, float]]] = {}
 
     for spec in MODEL_SPECS:
         method_id = str(spec["method_id"])
         base_path = base / f"{method_id}__canonical.jsonl"
-        if method_id == "fc_gemini_3_1_pro":
+        if method_id == "fc_gemini_3_1_pro" and retry is not None:
             # The original checkpoint-300 response was truncated at 12k output
             # tokens. Keep checkpoints 60--240 and replace only checkpoint 300
             # with the successful 20k-token confirmation run.
@@ -153,6 +158,7 @@ def build_svg(
     scores: dict[str, dict[int, dict[str, float]]],
     metric_key: str,
     title: str,
+    subtitle: str,
 ) -> str:
     width, height = 1000, 650
     left, right, top, bottom = 105, 955, 160, 545
@@ -183,7 +189,7 @@ def build_svg(
         f'<text x="500" y="42" text-anchor="middle" class="title">{html.escape(title)}</text>',
         (
             '<text x="500" y="70" text-anchor="middle" class="subtitle">'
-            "Full Context - traj_010 smoke test - n = 1 trajectory"
+            f"{html.escape(subtitle)}"
             "</text>"
         ),
     ]
@@ -293,7 +299,10 @@ def build_svg(
 
 
 def write_source_csv(
-    scores: dict[str, dict[int, dict[str, float]]], output_dir: Path
+    scores: dict[str, dict[int, dict[str, float]]],
+    output_dir: Path,
+    *,
+    plan_id: str,
 ) -> Path:
     path = output_dir / "checkpoint_metric_values.csv"
     with path.open("w", encoding="utf-8", newline="") as handle:
@@ -301,6 +310,7 @@ def write_source_csv(
         writer.writerow(
             [
                 "model",
+                "plan_sha256",
                 "input_condition",
                 "trajectory_id",
                 "checkpoint",
@@ -314,6 +324,7 @@ def write_source_csv(
                 writer.writerow(
                     [
                         spec["label"],
+                        plan_id,
                         "Full Context",
                         "traj_010",
                         checkpoint,
@@ -356,6 +367,22 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--plan-id",
+        default=BASE_PLAN_ID,
+        help="Paid-smoke plan SHA used as the figure source.",
+    )
+    parser.add_argument(
+        "--gemini-retry-plan-id",
+        help=(
+            "Optional plan SHA supplying only Gemini checkpoint 300. "
+            "The historical default run uses its recorded retry automatically."
+        ),
+    )
+    parser.add_argument(
+        "--version-label",
+        help="Reader-facing version label included in chart subtitles.",
+    )
+    parser.add_argument(
         "--formats",
         default="svg,png,pdf",
         help="Comma-separated output formats: svg,png,pdf",
@@ -381,12 +408,26 @@ def main() -> None:
         raise ValueError(f"Unsupported formats: {sorted(unsupported)}")
 
     output_dir.mkdir(parents=True, exist_ok=True)
-    scores = load_scores(repo_root)
-    generated: list[Path] = [write_source_csv(scores, output_dir)]
+    gemini_retry_plan_id = args.gemini_retry_plan_id
+    if args.plan_id == BASE_PLAN_ID and gemini_retry_plan_id is None:
+        gemini_retry_plan_id = GEMINI_RETRY_PLAN_ID
+    version_label = args.version_label or f"plan {args.plan_id[:12]}"
+    subtitle = (
+        f"Full Context · traj_010 · {version_label} · "
+        "5 anchor checkpoints · n = 1 trajectory"
+    )
+    scores = load_scores(
+        repo_root,
+        plan_id=args.plan_id,
+        gemini_retry_plan_id=gemini_retry_plan_id,
+    )
+    generated: list[Path] = [
+        write_source_csv(scores, output_dir, plan_id=args.plan_id)
+    ]
     for metric_key, title, stem in METRICS:
         svg_path = output_dir / f"{stem}.svg"
         svg_path.write_text(
-            build_svg(scores, metric_key, title), encoding="utf-8"
+            build_svg(scores, metric_key, title, subtitle), encoding="utf-8"
         )
         generated.append(svg_path)
         for output_format in ("png", "pdf"):

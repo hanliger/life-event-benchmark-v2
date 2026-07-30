@@ -316,12 +316,13 @@ $$
 trajectory smoke test이므로 신뢰구간은 표시하지 않았으며, 선 사이 구간을
 관측하지 않았다는 점에 유의해야 한다.
 
-![Dynamic-path Final State Accuracy by Checkpoint](figures/stage2_2_traj010/dynamic_path_final_state_accuracy_by_checkpoint.png)
+![Dynamic-path Final State Accuracy by Checkpoint](figures/stage2_2_traj010/vendor_default__f84f98315cc1/dynamic_path_final_state_accuracy_by_checkpoint.png)
 
-![Correct-change F1 by Checkpoint](figures/stage2_2_traj010/correct_change_f1_by_checkpoint.png)
+![Correct-change F1 by Checkpoint](figures/stage2_2_traj010/vendor_default__f84f98315cc1/correct_change_f1_by_checkpoint.png)
 
-논문용 vector 원본은 같은 디렉터리의 PDF와 SVG로 제공하며, 그래프의 정확한
-입력값은 `checkpoint_metric_values.csv`에 보존했다.
+논문용 vector 원본은 같은 versioned 디렉터리의 PDF와 SVG로 제공하며, 그래프의
+정확한 입력값과 plan SHA는 `checkpoint_metric_values.csv`에 보존했다. 과거
+무버전 경로의 파일은 기존 참조 호환성을 위해 유지한다.
 
 ### 4.2 Claude Opus 5, 전체 대화
 

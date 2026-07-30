@@ -47,6 +47,18 @@ context는 오직 `S000 + 해당 checkpoint까지의 answer-free dialogue`로 �
 
 ## 4. Checkpoint Metrics
 
+이번 실행의 그래프는 이전 `vendor_default` 그래프를 교체하지 않고 다음 versioned
+경로에 별도로 저장한다.
+
+`figures/stage2_2_traj010/medium_provider_default_parallel__9469ed3620c3/`
+
+![Dynamic-path Final State Accuracy by Checkpoint](figures/stage2_2_traj010/medium_provider_default_parallel__9469ed3620c3/dynamic_path_final_state_accuracy_by_checkpoint.png)
+
+![Correct-change F1 by Checkpoint](figures/stage2_2_traj010/medium_provider_default_parallel__9469ed3620c3/correct_change_f1_by_checkpoint.png)
+
+각 디렉터리의 `checkpoint_metric_values.csv`가 해당 그림의 정확한 입력값과
+full plan SHA를 보존한다.
+
 ### 4.1 Dynamic-path Final State Accuracy
 
 | Checkpoint | Claude Opus 5 | Gemini 3.1 Pro Preview | GPT-5.6 Sol |

@@ -1,5 +1,5 @@
 {
-  "conservative_spent_usd": 8.935,
+  "conservative_spent_usd": 17.301,
   "entries": [
     {
       "amount_usd": 1.98,
@@ -142,6 +142,50 @@
         "fc_gpt_5_6_sol": {
           "input_tokens": 215720,
           "output_tokens": 9393
+        }
+      }
+    },
+    {
+      "amount_usd": 5.0,
+      "kind": "plan_reservation",
+      "note": "Reconciled to a rounded-up usage-based upper bound for the traj_002 low-reasoning run: Claude Opus 5 $2.167620, Gemini 3.1 Pro Preview $0.587100, and GPT-5.6 Sol $1.366730; $4.121450 total rounded up to $4.122. Gemini checkpoint 240 returned invalid JSON and was retained as a parse failure without retry. Provider billing remains the final authority.",
+      "plan_sha256": "71ea1d01981a06ed6906fdc930d36a1cdcfa5b17efce04385d0619057ab3949a",
+      "reconciled_amount_usd": 4.122,
+      "status": "reconciled_usage_upper_bound",
+      "usage": {
+        "fc_claude_opus_5": {
+          "input_tokens": 383114,
+          "output_tokens": 10082
+        },
+        "fc_gemini_3_1_pro": {
+          "input_tokens": 216978,
+          "output_tokens_including_thoughts": 12762
+        },
+        "fc_gpt_5_6_sol": {
+          "input_tokens": 221962,
+          "output_tokens": 8564
+        }
+      }
+    },
+    {
+      "amount_usd": 5.0,
+      "kind": "plan_reservation",
+      "note": "Reconciled to a rounded-up usage-based upper bound for the traj_003 low-reasoning run: Claude Opus 5 $2.173285, Gemini 3.1 Pro Preview $0.701902, and GPT-5.6 Sol $1.368240; $4.243427 total rounded up to $4.244. Provider billing remains the final authority.",
+      "plan_sha256": "9bb8ed9ee53cbc54a4d9e3ead07204675c07cc784ab2558d75c9cd10b6e7c515",
+      "reconciled_amount_usd": 4.244,
+      "status": "reconciled_usage_upper_bound",
+      "usage": {
+        "fc_claude_opus_5": {
+          "input_tokens": 380812,
+          "output_tokens": 10769
+        },
+        "fc_gemini_3_1_pro": {
+          "input_tokens": 216023,
+          "output_tokens_including_thoughts": 22488
+        },
+        "fc_gpt_5_6_sol": {
+          "input_tokens": 221112,
+          "output_tokens": 8756
         }
       }
     }

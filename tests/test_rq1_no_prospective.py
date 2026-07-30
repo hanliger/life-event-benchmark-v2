@@ -1315,3 +1315,53 @@ def test_report_records_the_single_replicate_design(
     payload = json.loads(report.read_text(encoding="utf-8"))
     assert payload["sampling"]["replicates_per_cell"] == 1
     assert payload["run_config"]["replicates_per_cell"] == 1
+
+
+# ---------------------------------------------------------------------------
+# a failed call is missing data, not a zero
+
+
+def test_a_call_error_is_excluded_from_scoring(fixture_run, tmp_path, monkeypatch):
+    """A timeout scores 0.0 against non-empty gold, which in the aggregate is
+    indistinguishable from a model that answered and got everything wrong.
+
+    Averaging it in turns an infrastructure failure into apparent poor
+    performance -- three timeouts once dragged an Opus ladder mean to 0.3126.
+    """
+
+    from scripts import evaluate_rq1_pairs
+
+    sessions_dir, items_path, taxonomy_path = fixture_run
+    out, report = tmp_path / "err.jsonl", tmp_path / "err.json"
+
+    class _Boom:
+        last_response_metadata: dict = {}
+
+        def generate(self, system, user):
+            raise TimeoutError("Request timed out")
+
+    monkeypatch.setattr(evaluate_rq1_pairs, "LLMClient", lambda **kw: _Boom())
+    monkeypatch.setattr(
+        sys, "argv",
+        ["evaluate_rq1_pairs.py",
+         "--items", str(items_path),
+         "--sessions-dir", str(_write_substituted_dir(tmp_path)),
+         "--taxonomy", str(taxonomy_path),
+         "--trajectory-id", TRAJ_ID,
+         "--checkpoint", "30",
+         "--condition", "no_prospective_substituted",
+         "--execute", "--provider", "anthropic", "--model", "claude-opus-4-8",
+         "--output", str(out), "--report", str(report)],
+    )
+    evaluate_rq1_pairs.main()
+
+    payload = json.loads(report.read_text(encoding="utf-8"))
+    assert payload["call_error_count"] == 1
+    # the failed item is not scored at all
+    assert payload["item_count"] == 0
+    assert payload["checkpoints"] == []
+    assert len(payload["unscored_call_errors"]) == 1
+    assert "TimeoutError" in payload["unscored_call_errors"][0]["call_error"]
+    # but the row survives for inspection
+    row = json.loads(out.read_text(encoding="utf-8").splitlines()[0])
+    assert row["call_error"]

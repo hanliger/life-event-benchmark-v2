@@ -524,6 +524,7 @@ def main() -> None:
     results: list[dict[str, Any]] = []
     n_parse_errors = 0
     n_call_errors = 0
+    unscored_calls: list[dict[str, Any]] = []
     n_invalid_records = 0
     contract_failures: list[dict[str, Any]] = []
     contract_gaps: list[dict[str, Any]] = []
@@ -768,6 +769,22 @@ def main() -> None:
                 # A call that did not honor the requested inference config is not
                 # a measurement of the model; it is excluded from scoring.
                 continue
+            if call_error:
+                # Neither is a call that never returned. A timeout or a dropped
+                # connection scores 0.0 against non-empty gold, which is
+                # indistinguishable in the aggregate from a model that answered
+                # and got everything wrong -- so an infrastructure failure would
+                # read as poor performance. Excluded and counted instead; the row
+                # is still written with its error text.
+                unscored_calls.append(
+                    {
+                        "item_id": item.item_id,
+                        "checkpoint_session_count": item.checkpoint_session_count,
+                        "call_error": call_error,
+                        "request_duration_ms": usage["request_duration_ms"],
+                    }
+                )
+                continue
             results.append(
                 {
                     "trajectory_id": item.trajectory_id,
@@ -786,6 +803,8 @@ def main() -> None:
         "trajectory_count": len(trajectory_ids),
         "parse_error_count": n_parse_errors,
         "call_error_count": n_call_errors,
+        # excluded from item_count and from every aggregate above
+        "unscored_call_errors": unscored_calls,
         "invalid_record_count": n_invalid_records,
         "inference_configuration_errors": contract_failures,
         "inference_metadata_gaps": contract_gaps,
@@ -854,6 +873,18 @@ def main() -> None:
                 f"{len(comparison['full_correct_pairs_lost'])} full-correct pairs "
                 f"lost, "
                 f"{len(comparison['new_no_prospective_true_positives'])} new TPs"
+            )
+    if unscored_calls:
+        # Loud, because a quiet partial run is the failure mode this guards:
+        # the report would otherwise look complete with a lower mean.
+        print(
+            f"WARNING: {len(unscored_calls)} call(s) failed and are EXCLUDED "
+            f"from every score; the ladder is incomplete:"
+        )
+        for row in unscored_calls:
+            print(
+                f"  cp{row['checkpoint_session_count']}: {row['call_error']} "
+                f"({row['request_duration_ms']} ms)"
             )
     print(f"predictions -> {output_path}")
     print(f"report -> {report_path}")

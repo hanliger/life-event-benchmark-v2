@@ -34,6 +34,266 @@ trajectory가 하나뿐이므로 bootstrap 신뢰구간도 통계적 추론에 �
 - **Retention-after-update**: 한 번 반영한 갱신을 이후 checkpoint에서도 계속
   정확히 유지하는지를 관측 가능한 지연 구간에 걸쳐 평균한 값
 
+### 2.1 공통 기호와 cell 정답
+
+- \(t\): trajectory
+- \(k\): checkpoint
+- \(p\): state path
+- \(P\): 전체 34개 path의 집합
+- \(D\): 전체 20개 trajectory 중 한 번이라도 Gold가 바뀌는 25개 dynamic path의 집합
+- \(I_{t,p}\): initial-state cell
+- \(G_{t,k,p}\): checkpoint \(k\)의 Gold cell
+- \(\hat{G}_{t,k,p}\): 모델이 예측한 cell
+
+각 cell은 `value`와 `status`의 쌍으로 비교한다. 문자열과 list는 scorer의
+정규화를 거친다. `evidence_session_ids`는 별도 evidence metric에 사용되며 아래
+headline metric의 cell 정답 여부에는 포함되지 않는다.
+
+$$
+C_{t,k,p}
+=
+\mathbf{1}
+\left[
+\hat{G}_{t,k,p}.value = G_{t,k,p}.value
+\;\land\;
+\hat{G}_{t,k,p}.status = G_{t,k,p}.status
+\right]
+$$
+
+즉 \(C_{t,k,p}=1\)이면 해당 path의 최종 값과 status가 모두 맞은 것이고,
+둘 중 하나라도 다르거나 cell이 누락되면 0이다.
+
+Gold와 prediction이 initial state에서 달라졌는지는 다음처럼 정의한다.
+
+$$
+Z_{t,k,p}=\mathbf{1}[G_{t,k,p}\neq I_{t,p}],
+\qquad
+\hat{Z}_{t,k,p}=\mathbf{1}[\hat{G}_{t,k,p}\neq I_{t,p}]
+$$
+
+이 두 change indicator와 cell 정답을 조합하면 confusion category가 된다.
+
+| Category | Condition | Meaning |
+|---|---|---|
+| \(TP_{correct}\) | \(Z=1,\ \hat Z=1,\ C=1\) | 변경 탐지와 새 cell이 모두 정확함 |
+| \(TP_{wrong}\) | \(Z=1,\ \hat Z=1,\ C=0\) | 변경은 탐지했지만 새 value 또는 status가 틀림 |
+| \(FN\) | \(Z=1,\ \hat Z=0\) | 실제 변경을 놓침 |
+| \(FP\) | \(Z=0,\ \hat Z=1\) | 없는 변경을 만들어냄 |
+| \(TN\) | \(Z=0,\ \hat Z=0\) | 미변경 상태를 유지함 |
+
+### 2.2 Final State Accuracy 계열
+
+한 checkpoint의 **Final State Accuracy**는 34개 전체 path 중 맞은 cell의
+비율이다.
+
+$$
+FSA_{t,k}
+=
+\frac{1}{|P|}
+\sum_{p\in P} C_{t,k,p}
+$$
+
+**Dynamic-path Final State Accuracy**는 initial-copy baseline이 쉽게 맞히는
+항상 고정된 path를 빼고, 전역 dynamic path 25개만 평가한다.
+
+$$
+DFSA_{t,k}
+=
+\frac{1}{|D|}
+\sum_{p\in D} C_{t,k,p}
+$$
+
+두 metric 모두 “변경을 맞혔는가”만 보는 것이 아니라 checkpoint 시점의 최종
+cell 자체가 맞는지를 본다. 차이는 분모가 전체 34개인지, dynamic path 25개인지다.
+
+### 2.3 Correct-change F1
+
+한 checkpoint에서 **Correct-change Precision**은 모델이 변경했다고 예측한
+path 중 새 cell까지 정확한 비율이다.
+
+$$
+Precision^{CC}_{t,k}
+=
+\frac{TP_{correct}}
+{TP_{correct}+TP_{wrong}+FP}
+$$
+
+**Correct-change Recall**은 실제로 변경된 path 중 새 cell까지 정확히 복원한
+비율이다.
+
+$$
+Recall^{CC}_{t,k}
+=
+\frac{TP_{correct}}
+{TP_{correct}+TP_{wrong}+FN}
+$$
+
+$$
+CorrectChangeF1_{t,k}
+=
+\frac{
+2\cdot Precision^{CC}_{t,k}\cdot Recall^{CC}_{t,k}
+}{
+Precision^{CC}_{t,k}+Recall^{CC}_{t,k}
+}
+$$
+
+여기서 \(TP_{wrong}\)은 precision과 recall 양쪽 분모에 모두 들어간다. 즉 단순히
+“이 path가 바뀌었다”는 것만 맞혀서는 점수를 얻지 못하고, 최종 `value`와
+`status`까지 맞혀야 \(TP_{correct}\)가 된다.
+
+표에 보고하는 Final State Accuracy, Dynamic-path Final State Accuracy,
+Correct-change F1 등의 checkpoint-level metric은 먼저 trajectory 안에서
+checkpoint 평균을 내고, 그다음 trajectory 평균을 낸다.
+
+$$
+Metric
+=
+\frac{1}{|T|}
+\sum_{t\in T}
+\left(
+\frac{1}{|K_t|}
+\sum_{k\in K_t} Metric_{t,k}
+\right)
+$$
+
+현재 smoke는 trajectory가 `traj_010` 하나이므로 바깥 평균은 사라지고,
+60/120/180/240/300의 다섯 checkpoint 점수를 단순 평균한 값이 표에 나온다.
+
+### 2.4 Path-macro Correct-change F1
+
+먼저 각 path \(p\)에 대해 모든 평가 row의 confusion count를 모아
+\(F1^{CC}_p\)를 계산한다. 평가된 row 중 Gold change가 한 번이라도 있는
+eligible path의 집합을 \(P_{\mathrm{eligible}}\)이라고 하면:
+
+$$
+PathMacroF1
+=
+\frac{1}{|P_{\mathrm{eligible}}|}
+\sum_{p\in P_{\mathrm{eligible}}} F1^{CC}_p
+$$
+
+따라서 많이 바뀌는 path와 한 번만 바뀌는 path가 최종 평균에서 같은 가중치를
+갖는다. 전역 dynamic path \(D\)는 25개지만, 이번 `traj_010`의 다섯 checkpoint
+안에서 실제 Gold change가 관측된 eligible path는 23개이므로 이 smoke의
+Path-macro Correct-change F1 분모는 23이다.
+
+### 2.5 Event-macro Update Accuracy
+
+Gold update event \(e\)가 바꾼 path 집합을 \(P_{t,e,k}\), 그 event를 처음
+평가할 수 있는 checkpoint를 \(k^*_{t,e}\)라고 한다. 먼저 event별 첫 평가
+정확도를 계산한다.
+
+$$
+UpdateScore_{t,e}
+=
+\frac{1}{|P_{t,e,k^*}|}
+\sum_{p\in P_{t,e,k^*}} C_{t,k^*,p}
+$$
+
+trajectory \(t\)에서 관측된 Gold update event의 집합을
+\(\mathcal{E}_t\)라고 한다. trajectory 안에서 event를 동일 가중 평균하고,
+마지막으로 trajectory를 동일 가중 평균한다.
+
+$$
+EventMacroUpdateAccuracy
+=
+\frac{1}{|T|}
+\sum_{t\in T}
+\left(
+\frac{1}{|\mathcal{E}_t|}
+\sum_{e\in \mathcal{E}_t} UpdateScore_{t,e}
+\right)
+$$
+
+예를 들어 한 event가 4개 path를 바꿨고 첫 평가 checkpoint에서 3개를 맞혔다면
+그 event의 `UpdateScore`는 \(3/4=0.75\)다. 다른 event가 몇 개의 path를
+바꾸었는지와 관계없이 event-level 평균에서는 동일한 한 표를 갖는다.
+
+### 2.6 Retention-after-update
+
+event \(e\)가 관측되는 각 후속 checkpoint에서 해당 event 관련 path의 정확도를
+먼저 구한다.
+
+$$
+RetentionScore_{t,e,k}
+=
+\frac{1}{|P_{t,e,k}|}
+\sum_{p\in P_{t,e,k}} C_{t,k,p}
+$$
+
+그다음 event별로 관측 가능한 checkpoint의 평균을 내고, event 평균,
+trajectory 평균 순서로 집계한다.
+
+$$
+Retention_{t,e}
+=
+\frac{1}{|K_{t,e}|}
+\sum_{k\in K_{t,e}} RetentionScore_{t,e,k}
+$$
+
+$$
+RetentionAfterUpdate
+=
+\frac{1}{|T|}
+\sum_{t\in T}
+\left(
+\frac{1}{|\mathcal{E}_t|}
+\sum_{e\in \mathcal{E}_t} Retention_{t,e}
+\right)
+$$
+
+즉 Event-macro Update Accuracy가 “처음 제대로 반영했는가”를 본다면,
+Retention-after-update는 “처음과 그 이후에도 계속 맞게 유지했는가”를 본다.
+
+### 2.7 실제 숫자로 보는 예시
+
+Claude Opus 5의 checkpoint 300 confusion count는 다음과 같다.
+
+| Count | Value |
+|---|---:|
+| \(TP_{correct}\) | 12 |
+| \(TP_{wrong}\) | 1 |
+| \(FN\) | 2 |
+| \(FP\) | 2 |
+| \(TN\) | 17 |
+
+따라서 맞은 전체 cell은 \(TP_{correct}+TN=12+17=29\)개다.
+
+$$
+FSA_{300}=\frac{29}{34}=0.8529
+$$
+
+dynamic path에서는 25개 중 22개를 맞혔다.
+
+$$
+DFSA_{300}=\frac{22}{25}=0.88
+$$
+
+Correct-change Precision과 Recall은 모두 다음과 같다.
+
+$$
+Precision^{CC}_{300}
+=
+\frac{12}{12+1+2}
+=0.8
+$$
+
+$$
+Recall^{CC}_{300}
+=
+\frac{12}{12+1+2}
+=0.8
+$$
+
+$$
+CorrectChangeF1_{300}=0.8
+$$
+
+이 값들이 checkpoint 표의 Claude 300행에 표시된 `85.3`, `88.0`, `80.0`과
+각각 대응한다. 최종 aggregate의 Claude Correct-change F1 `83.07`은 이 80.0을
+포함한 다섯 checkpoint F1의 평균이다.
+
 ## 3. 최종 집계 결과
 
 모든 값은 백분율이다. Gemini의 checkpoint 300은 20,000-token 상한에서 성공한

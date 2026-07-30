@@ -21,8 +21,10 @@ dataset:
     masking_questions: 4510
 stage1_event_identification:
   task_id: stage1_event_identification
+  # Built from the same no_prospective corpus as stage2_2_reconstruct below.
   # The 15-session window end is the query checkpoint, so the frozen grid is
-  # 20 trajectories × 20 checkpoints = 400 items, one per Stage 1 item.
+  # 20 trajectories × 20 checkpoints = 400 items.
+  corpus: stage2_2_reconstruct
   retrieval:
     strategy: single_question_query
     top_k: 10
@@ -30,6 +32,8 @@ stage1_event_identification:
   expected:
     trajectories: 20
     checkpoints: 400
+# The single corpus both reported stages evaluate on. The key name predates
+# Stage 1 moving onto it; see src/financial_memory_experiment/corpus.py.
 stage2_2_reconstruct:
   task_id: stage2_2_reconstruct
   revision: 716a1ae9cddcfeeb2638ab61b5a3c25cd724b3bf

@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from .data_pipeline import active_prepared_manifest
+from .corpus import corpus_manifest_path, corpus_root
 from .evaluator import _load_s000, _load_sessions
 from .methods import create_method, method_ids
 from .metrics import summarize_predictions, write_tables
@@ -125,7 +125,7 @@ def _render_prompt_offline(
         )
     item = items[0]
     generation = generation_item(item)
-    root = Path(active_prepared_manifest(paths)["root"])
+    root = corpus_root(paths)
     system_prompt = (
         paths.prompts / "system_ko.txt"
     ).read_text(encoding="utf-8").strip()
@@ -296,7 +296,7 @@ def command_plan(args: argparse.Namespace) -> None:
         schema_version="stage1_run_manifest-v1",
         plan=plan,
         provider_lock=provider_lock,
-        prepared_manifest_path=paths.prepared / "active_manifest.json",
+        prepared_manifest_path=corpus_manifest_path(paths),
     )
     print(json.dumps({"run_dir": str(run_dir), **plan}, ensure_ascii=False))
 
@@ -424,6 +424,8 @@ def _materialize_answer_pairs(
                     "gold_event_label": (item.get("gold") or {}).get(
                         "event_label"
                     ),
+                    # Gold-shaped prediction plus its field-level diff.
+                    "answer_record": row.get("answer_record"),
                     "correct": bool(row["correct"]),
                     "parse_error": bool(row.get("parse_error")),
                     "retrieval_evidence": {
@@ -461,6 +463,7 @@ def _write_auxiliary_metrics(
     retrieval_rows: list[dict[str, Any]] = []
     for row in raw_rows:
         item_metadata = row.get("item_metadata") or {}
+        record = row.get("answer_record") or {}
         checkpoint_rows.append(
             {
                 "method_id": row["method_id"],
@@ -470,6 +473,16 @@ def _write_auxiliary_metrics(
                 "correct": int(bool(row["correct"])),
                 "prediction_event_id": row["prediction"],
                 "gold_event_id": row["gold"],
+                # Labels make the row readable without joining the item file.
+                "prediction_event_label": (record.get("prediction") or {}).get(
+                    "event_label"
+                ),
+                "gold_event_label": (record.get("gold") or {}).get(
+                    "event_label"
+                ),
+                "prediction_in_candidate_set": record.get(
+                    "prediction_in_candidate_set"
+                ),
                 "parse_error": int(bool(row.get("parse_error"))),
             }
         )

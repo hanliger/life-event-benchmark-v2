@@ -302,7 +302,7 @@ def test_stage2_2_parallel_checkpoints_use_fresh_independent_methods(
 
     monkeypatch.setattr(
         evaluator,
-        "active_stage2_2_prepared_manifest",
+        "corpus_manifest",
         lambda _paths: {"root": str(prepared)},
     )
     monkeypatch.setattr(

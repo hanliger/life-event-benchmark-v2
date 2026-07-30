@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from .config import load_experiment_config
-from .data_pipeline import active_prepared_manifest
+from .corpus import corpus_root
 from .paths import ExperimentPaths
 from .util import read_jsonl
 
@@ -75,12 +75,45 @@ def stage1_contract(paths: ExperimentPaths | None = None) -> dict[str, Any]:
 
 
 def stage1_item_path(paths: ExperimentPaths) -> Path:
-    root = Path(active_prepared_manifest(paths)["root"])
-    return root / "canonical_items" / f"{STAGE1}.jsonl"
+    return corpus_root(paths) / "canonical_items" / f"{STAGE1}.jsonl"
 
 
 def stage1_items(paths: ExperimentPaths) -> list[dict[str, Any]]:
     return list(read_jsonl(stage1_item_path(paths)))
+
+
+def build_stage1_items(paths: ExperimentPaths) -> dict[str, Any]:
+    """Materialize Stage 1 items from the no_prospective corpus."""
+
+    from .items import build_stage1_rows
+    from .util import sha256_file, write_jsonl
+
+    contract = stage1_contract(paths)
+    cfg = load_experiment_config(paths)
+    rows = build_stage1_rows(
+        paths,
+        corpus_root(paths),
+        stride=int(cfg["benchmark"]["checkpoint_stride"]),
+    )
+    if len(rows) != contract["checkpoints"]:
+        raise ValueError(
+            f"expected {contract['checkpoints']} Stage 1 items, got {len(rows)}"
+        )
+    trajectories = {str(row["trajectory_id"]) for row in rows}
+    if len(trajectories) != contract["trajectories"]:
+        raise ValueError(
+            f"expected {contract['trajectories']} trajectories, "
+            f"got {len(trajectories)}"
+        )
+    path = stage1_item_path(paths)
+    write_jsonl(path, rows)
+    return {
+        "path": str(path),
+        "items": len(rows),
+        "trajectories": len(trajectories),
+        "sha256": sha256_file(path),
+        "corpus": "dialogues_no_prospective + gold_no_prospective",
+    }
 
 
 def query_checkpoint(item: dict[str, Any]) -> int:

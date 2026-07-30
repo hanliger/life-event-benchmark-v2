@@ -6,9 +6,21 @@ Stage 1은 각 15-session target window 안에서 가장 최근에 `occurred`가
 provider lock, attempt 보존, resume 규칙은 Stage 2.2와 동일한
 `run_harness`를 공유한다.
 
-전제 조건은 `download-data`와 `prepare-data`, `build-prefix-gold`,
-`build-canonical-items`가 끝나 `canonical_items/stage1_event_identification.jsonl`이
-존재하는 상태다.
+Stage 1은 Stage 2.2와 **같은 코퍼스**(`dialogues_no_prospective` +
+`gold_no_prospective`)를 쓴다. 코퍼스는 한 번만 준비하면 두 stage가 공유한다.
+
+```bash
+PY=experiment/.venv/bin/python
+export PYTHONPATH=.:src:experiment/src
+$PY -m financial_memory_experiment.cli download-stage2-2-data
+$PY -m financial_memory_experiment.cli prepare-stage2-2
+$PY -m financial_memory_experiment.cli build-stage1-items
+```
+
+`build-stage1-items`는 그 prepared tree에
+`canonical_items/stage1_event_identification.jsonl`(400 item)을 만들고 개수와
+trajectory 수를 검증한다. 생성 파이프라인의 `prepare-data`/`build-canonical-items`는
+Stage 1 실행에 필요하지 않다.
 
 ## 1. Plan
 

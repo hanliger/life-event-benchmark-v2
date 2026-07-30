@@ -47,6 +47,8 @@ Context, BM25, Dense, Mem0, Letta와 네 OpenRouter Full Context model로 구성
 | Stage 1 | `scripts/paid/run_stage1.sh` | 20 traj × 20 window checkpoint | 질문 단일 query, `top_k=10` |
 | Stage 2.2 | `scripts/paid/run_stage2_2.sh` | 20 traj × 20 checkpoint | 4개 state group, group별 `top_k=5`, 최대 20 evidence |
 
+두 stage는 같은 코퍼스 `dialogues_no_prospective` + `gold_no_prospective`를 쓰며, `prepare-stage2-2`가 만든 prepared tree를 공유한다. 다른 코퍼스로 실행하는 경로는 없다.
+
 Stage 1은 대상 기간이 질문 본문에 이미 포함되므로 Stage 2.2의 group 분해 없이
 질문 문장을 그대로 검색 query로 사용한다. 두 stage 모두 checkpoint query는 서로
 독립적이며 Full Context는 독립 prefix, BM25/Dense/Mem0/Letta는 immutable snapshot

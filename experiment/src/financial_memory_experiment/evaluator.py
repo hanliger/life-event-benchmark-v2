@@ -10,6 +10,8 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any, Iterable
 
+from .answer_record import build_answer_record
+from .corpus import corpus_manifest
 from .data_pipeline import active_prepared_manifest, assert_answer_free_record
 from .methods import create_method
 from .methods.base import CloneEquivalenceError
@@ -19,7 +21,6 @@ from .stage1 import STAGE1
 from .stage1 import generation_item as stage1_generation_item
 from .stage2_2 import (
     STAGE2_2,
-    active_stage2_2_prepared_manifest,
     parse_stage2_2_prediction,
     score_stage2_2,
 )
@@ -90,9 +91,11 @@ class _RunRecorder:
         output.parent.mkdir(parents=True, exist_ok=True)
         output.touch(exist_ok=False)
         item_ids = sorted(str(item["item_id"]) for item in items)
+        reported_stages = {STAGE2_2, STAGE1}
         prepared = (
-            active_stage2_2_prepared_manifest(paths)
-            if items and all(item.get("stage") == STAGE2_2 for item in items)
+            corpus_manifest(paths)
+            if items
+            and all(item.get("stage") in reported_stages for item in items)
             else active_prepared_manifest(paths)
         )
         self.manifest: dict[str, Any] = {
@@ -237,10 +240,12 @@ def run_method(
     is_stage1 = [item.get("stage") == STAGE1 for item in items]
     if any(is_stage1) and not all(is_stage1):
         raise ValueError("Stage 1 items must run in a separate invocation")
+    # Stage 1 and Stage 2.2 are both evaluated on the no_prospective corpus;
+    # only masking still reads the plain prepared tree.
     root = Path(
         (
-            active_stage2_2_prepared_manifest(paths)
-            if all(is_stage2_2)
+            corpus_manifest(paths)
+            if all(is_stage2_2) or all(is_stage1)
             else active_prepared_manifest(paths)
         )["root"]
     )
@@ -521,7 +526,15 @@ def _prediction(
     gold = gold_answer(item)
     _assert_no_future_evidence(answer.evidence_session_ids, checkpoint)
     return {
-        "schema_version": "financial-memory-prediction-v1",
+        # Independent lineage from the Stage 2.2 row above: -v3 is that row's
+        # shape, not a successor to this one. v2 adds answer_record, the parsed
+        # answer lifted into the item's Gold schema with a field-level diff. It
+        # is null for stages without a mapping (masking), and every scored field
+        # below is unchanged from v1.
+        "schema_version": "financial-memory-prediction-v2",
+        "answer_record": build_answer_record(
+            item, prediction=prediction, raw_answer=answer.raw_answer
+        ),
         "method_id": method_id,
         "item_id": item["item_id"],
         "stage": item["stage"],

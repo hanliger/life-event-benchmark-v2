@@ -44,6 +44,7 @@ from .safety import (
     load_verified_smoke_plan,
     reserve_smoke_budget,
 )
+from .stage1 import build_stage1_items, stage1_item_path
 from .stage2_2 import (
     download_stage2_2_data,
     prepare_stage2_2_data,
@@ -56,11 +57,10 @@ from .util import read_jsonl, sha256_file, sha256_json, write_json
 
 
 def _canonical_item_paths(paths: ExperimentPaths) -> list[Path]:
+    """Legacy baseline items. Reported Stage 1/2 items live on the corpus."""
+
     root = Path(active_prepared_manifest(paths)["root"])
-    return [
-        root / "canonical_items" / "stage1_event_identification.jsonl",
-        root / "canonical_items" / "stage2_memory_value.jsonl",
-    ]
+    return [root / "canonical_items" / "stage2_memory_value.jsonl"]
 
 
 def _all_item_paths(paths: ExperimentPaths) -> list[Path]:
@@ -68,10 +68,11 @@ def _all_item_paths(paths: ExperimentPaths) -> list[Path]:
     result = _canonical_item_paths(paths) + [
         root / "masking_items" / "masking_questions.jsonl"
     ]
-    try:
-        result.append(stage2_2_item_path(paths))
-    except FileNotFoundError:
-        pass
+    for resolve in (stage1_item_path, stage2_2_item_path):
+        try:
+            result.append(resolve(paths))
+        except FileNotFoundError:
+            pass
     return result
 
 
@@ -398,6 +399,7 @@ def build_parser() -> argparse.ArgumentParser:
         "prepare-stage2-2",
         "validate-stage2-2-prepared",
         "stage2-2-initial-copy",
+        "build-stage1-items",
         "build-prefix-gold",
         "build-canonical-items",
         "build-masking-items",
@@ -460,6 +462,8 @@ def main() -> int:
         result = validate_stage2_2_prepared(paths)
     elif args.command == "stage2-2-initial-copy":
         result = write_stage2_2_initial_copy_report(paths)
+    elif args.command == "build-stage1-items":
+        result = build_stage1_items(paths)
     elif args.command == "build-prefix-gold":
         result = build_prefix_gold_artifact(paths)
     elif args.command == "build-canonical-items":

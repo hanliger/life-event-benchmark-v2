@@ -59,7 +59,7 @@ def stage1_paths(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
         real.root / "docs" / "stage1_prompt_leakage_audit.md",
         root / "docs" / "stage1_prompt_leakage_audit.md",
     )
-    prepared = root / "data" / "prepared" / "synthetic"
+    prepared = root / "data" / "stage2_2_reconstruct" / "prepared" / "synthetic"
     for trajectory in TRAJECTORIES:
         write_json(
             prepared / "initial_state_s000" / f"{trajectory}.json",
@@ -141,7 +141,7 @@ def stage1_paths(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
         encoding="utf-8",
     )
     write_json(
-        root / "data" / "prepared" / "active_manifest.json",
+        root / "data" / "stage2_2_reconstruct" / "prepared" / "active_manifest.json",
         {"root": str(prepared), "schema_version": "synthetic-prepared-v1"},
     )
     paths = ExperimentPaths(root=root, repo_root=real.repo_root)

@@ -15,16 +15,24 @@ persona ─▶ 초기 금융 상태 ─▶ 생애사건 trajectory ─▶ 상담
 
 ## 1. 벤치마크가 측정하는 것
 
-각 문항은 "한 사용자의 상담 세션 이력(일부 또는 전체)"을 입력으로 주고, 그 시점까지의 숨은 상태를 묻습니다. 세 종류의 문항이 있습니다.
+각 문항은 "한 사용자의 상담 세션 이력(일부 또는 전체)"을 입력으로 주고, 그 시점까지의 숨은 상태를 묻습니다.
 
-| Stage | 문항 | 입력 | 정답 |
+**보고 대상 과제는 두 개입니다.**
+
+| Stage | task_id | 질문 | 정답 |
 | --- | --- | --- | --- |
-| **Stage 1** `stage1_event_status` | 지금까지 감지되는 생애 사건과 그 진행 단계는? | 보이는 세션 발화들 | life event label + status(`weak_signal`/`upcoming`/`occurred`/`cancelled`/`no_event`) |
-| **Stage 2** `stage2_memory_value` | 특정 날짜의 금융 메모리 최종값은? | 날짜가 표시된 세션 발화 + 초기 금융 메모리 | 닫힌 값 집합은 객관식, 그 외는 단답형 |
+| **Stage 1** | `stage1_event_identification` | 지정된 15세션 window 안에서 **마지막으로 실제 발생한** 생애 사건은? | 공개된 후보 목록 중 `event_id` 하나 |
+| **Stage 2** | `stage2_2_reconstruct` | checkpoint 시점의 **금융 상태 전체**를 복원하면? | 34개 memory path별 값·status·근거 세션 (JSON) |
+
+Stage 2는 원래 객관식/단답형(`stage2_memory_value`)이었으나 **상태 전체를 복원하는 형태로 바뀌었습니다.** 값 후보를 주지 않고 대화에서 직접 복원하게 하며, 채점은 path별 값·status 비교입니다. 출력 문법(34개 path 이름·타입·허용 status)은 정답이 아니므로 모델에 공개하지만, 회사명·주소·금액 같은 open value의 후보는 주지 않습니다. 설계와 공개 정책은 [`experiment/docs/stage2_2_reconstruct.md`](experiment/docs/stage2_2_reconstruct.md)에 있습니다.
+
+두 stage는 **같은 코퍼스**를 씁니다: HuggingFace의 `dialogues_no_prospective` + `gold_no_prospective`. 전망 근거(`weak_signal_evidence`, `upcoming_evidence`)를 중립 filler로 치환해 세션 수·공개 id·위치·날짜를 보존한 코퍼스이며, 다른 코퍼스로 돌리는 경로는 없습니다.
+
+**Stage 3(multi-hop)은 벤치마크에서 제거되었습니다.**
 
 핵심 난이도는 **간접성**입니다. 대화는 상태를 직접 말해 주지 않습니다. 사용자는 업무를 요청하며 단서만 흘리고, 모델은 여러 세션에 흩어진 단서를 모아 상태를 역추론해야 합니다. 평가 대상 모델에게는 정답 계획(plan)·주석(cue)·구조화 문맥은 주지 않고, **보이는 발화와 초기 메모리만** 줍니다.
 
-Stage 2는 다음 원칙으로 만듭니다.
+legacy MCQ 과제 `stage2_memory_value`는 다음 원칙으로 만듭니다.
 
 - 15세션 checkpoint에서 `occurred` event가 갱신한 memory path/selector로 문항을 만들고, 이후 더 긴 prefix에서도 event 시점의 기준일·정답을 고정한 채 같은 문항을 재사용
 - 문항의 `checkpoint_date`는 정답 기준일이며, `evaluation_checkpoint_date`는 모델에게 제공한 prefix의 마지막 날짜
@@ -103,8 +111,11 @@ prompts/                  모든 LLM 프롬프트 (코드에 embed하지 않음)
 docs/                     세부 설계 문서
 tests/                    테스트 + tests/fixtures/ (freeze된 20개 trajectory)
 data/samples/             포맷 참고용 샘플 (dialogues-only) 1건
-Makefile                  모든 단계를 감싼 make 타깃
+experiment/               모델 비교 하네스 — 자체 venv·설정·문서·테스트를 가진 별도 패키지 (→ §5-E)
+Makefile                  생성 파이프라인 단계를 감싼 make 타깃 (experiment/는 포함하지 않음)
 ```
+
+`experiment/`는 이 저장소에서 유일하게 **유료 API를 호출하는 곳**이며 생성 파이프라인과 의존성·실행 경로가 분리되어 있습니다. `make` 타깃은 `experiment/`를 건드리지 않고, `make test`도 `tests/`만 돌립니다 (`experiment/tests/`는 별도 실행).
 
 이 저장소는 **코드 전용**입니다. 생성된 대량 데이터(`data/runs/`)는 git에 넣지 않고, 필요할 때 재생성하거나 HuggingFace에서 받아옵니다 (→ §6).
 
@@ -136,6 +147,8 @@ HF_TOKEN=                        # 데이터셋이 gated일 때만 필요
 - `DEFAULT_LLM_PROVIDER`는 API 회사, `DEFAULT_GENERATION_MODEL`은 그 안의 모델명입니다.
 - API 키 없이도 offline(mock) 모드로 파이프라인 배관을 점검할 수 있습니다 (→ §5.B).
 - persona 생성에는 Nemotron 원본 parquet가 `Nemotron-Personas-Korea/data/*.parquet`에 있어야 합니다 (다른 경로는 `PERSONA_INPUT`로 지정).
+
+여기까지는 **생성 파이프라인** 환경입니다. 모델 비교 하네스는 의존성이 분리되어 있어 `experiment/scripts/setup.sh`로 따로 설치합니다(→ §5-E). 하네스는 `experiment/.env`를 먼저 보고 없으면 저장소 루트 `.env`를 읽으며, `ANTHROPIC_API_KEY`·`GOOGLE_API_KEY`(또는 `GEMINI_API_KEY`)·`OPENROUTER_API_KEY`를 method 구성에 따라 요구합니다.
 
 모든 파이프라인 산출물은 하나의 **`RUN_ID`** 디렉터리(`data/runs/<RUN_ID>/`) 아래에 모입니다. 아래 예시는 `RUN_ID=exp1`을 씁니다.
 
@@ -643,6 +656,65 @@ Anthropic adaptive thinking을 쓰려면 `--thinking-mode adaptive
 prediction row가 `temperature_applied` / `temperature_omission_reason` /
 `deterministic_sampling`을, report가 `sampling` 요약을 함께 기록합니다.
 
+### E. 모델 비교 하네스 (`experiment/`)
+
+§5-A의 `make evaluate`는 한 모델을 문항에 그대로 통과시키는 **배관 확인용**입니다. 논문에 들어가는 Stage 1 / Stage 2 비교는 별도 패키지 `experiment/`에서 실행합니다. 여기서는 "긴 이력을 어떻게 모델에 넣을지"가 비교 대상입니다.
+
+| Family | Method | 입력 |
+| --- | --- | --- |
+| Full Context | `fc_claude_opus_4_8` | checkpoint까지 전체 세션 |
+| Retrieval (RAG) | `bm25_claude_opus_4_8`, `dense_ge2_claude_opus_4_8` | BM25 / `gemini-embedding-2` top-k 세션 |
+| Memory Agent | `mem0_claude_opus_4_8`, `letta_claude_opus_4_8` | 공식 Mem0 검색 / Letta archival memory |
+| Full Context (OpenRouter) | `fc_openrouter_llama_4_maverick`, `fc_openrouter_gpt_oss_120b`, `fc_openrouter_qwen_3_5_122b_a10b`, `fc_openrouter_qwen_3_6_35b_a3b_fp8` | checkpoint까지 전체 세션 |
+
+Retrieval/Memory arm은 동일한 reader와 prompt/parser를 공유하므로 차이는 **무엇을 검색해 넣었는지**뿐입니다. Letta는 end-to-end search-and-answer agent라 retriever-only 비교로 해석하지 않고 Memory family로 분리합니다.
+
+두 stage 모두 `dialogues_no_prospective` + `gold_no_prospective` 코퍼스에서 20 trajectory × 20 checkpoint = 400 문항이고, 9개 method로 3,600 prediction입니다. 코퍼스는 한 번만 준비하면 두 stage가 공유합니다.
+
+```bash
+PY=experiment/.venv/bin/python
+PYTHONPATH=.:src:experiment/src $PY -m financial_memory_experiment.cli download-stage2-2-data
+PYTHONPATH=.:src:experiment/src $PY -m financial_memory_experiment.cli prepare-stage2-2
+PYTHONPATH=.:src:experiment/src $PY -m financial_memory_experiment.cli build-stage1-items
+```
+
+실행 절차·산출물·selection 문법은 stage별 runbook에 있습니다.
+
+| Stage | 진입점 | Runbook |
+| --- | --- | --- |
+| Stage 1 | `experiment/scripts/paid/run_stage1.sh` | [`stage1_9_method_runbook.md`](experiment/docs/stage1_9_method_runbook.md) |
+| Stage 2 | `experiment/scripts/paid/run_stage2_2.sh` | [`stage2_2_9_method_runbook.md`](experiment/docs/stage2_2_9_method_runbook.md) |
+
+두 runner는 `run_harness.py`를 공유하므로 절차가 동일합니다.
+
+```bash
+# 1) 하네스 전용 환경 (생성 파이프라인 venv와 분리)
+./experiment/scripts/setup.sh          # offline 기본 환경
+./experiment/scripts/install_all.sh    # provider 어댑터 (kiwipiepy/mem0/letta-client/qdrant)
+
+# 2) Memory Agent arm에 Letta를 쓸 때만
+./experiment/scripts/paid/letta_up.sh --approval I_APPROVE_LETTA_DOCKER
+
+# 3) plan → prompt 감사 → 실행 → 보고
+./experiment/scripts/paid/run_stage1.sh plan --budget-cap-usd 200 --estimated-usd 180
+./experiment/scripts/paid/run_stage1.sh audit-prompt --run-dir experiment/runs/stage1/<run-id>
+./experiment/scripts/paid/run_stage1.sh execute --run-dir experiment/runs/stage1/<run-id> \
+    --execute-paid --approval I_APPROVE_STAGE1_PAID
+```
+
+유료 실행을 막는 게이트는 다음과 같습니다.
+
+- `plan`이 문항 grid·method·concurrency·예산을 `immutable_plan.json`에 고정하고 SHA를 남깁니다. 실행 시 SHA가 다르면 거부합니다.
+- `src/`·`configs/`·`prompts/`·`scripts/` 전체 해시(`execution_tree_sha256`)를 plan에 기록합니다. **코드나 설정을 고치면 기존 plan은 무효가 되고 새로 planning해야 합니다.**
+- `audit-prompt`가 통과하지 않으면 실행이 차단됩니다. checkpoint 이후 세션, Gold 필드, (Stage 1은) 후보 목록 축소를 검사합니다 → [`stage1_prompt_leakage_audit.md`](experiment/docs/stage1_prompt_leakage_audit.md), [`stage2_2_prompt_leakage_audit.md`](experiment/docs/stage2_2_prompt_leakage_audit.md)
+- OpenRouter method는 ZDR endpoint를 `provider_lock.json`에 고정하고 provider/model fallback을 금지합니다. `OPENROUTER_API_KEY`가 필요합니다.
+- API 키는 approval 검증 **후에** `experiment/.env`(없으면 저장소 루트 `.env`)에서 읽습니다. provider SDK 재시도는 0이고, parse/schema 실패에만 1회 재시도하며 모든 attempt를 보존합니다.
+- `resume`은 COMPLETE 산출물을 건너뛰고 실패분만 다음 `attempt_XX.jsonl`에 이어 씁니다.
+
+산출물은 `experiment/runs/<stage>/<run-id>/` 아래에 모입니다: `metrics/*.csv`(정확도·parse 신뢰도·retrieval recall·token/latency/비용), 문항별 대조 파일(Stage 1 `answer_pairs/`, Stage 2 `state_pairs/` — 모델 출력을 Gold 스키마로 정교화한 diff와 원문), gzip으로 보존된 prompt, `report/figures/*.svg`.
+
+전체 설계와 공정 비교 계약은 [`experiment/README.md`](experiment/README.md)와 [`experiment/docs/protocol.md`](experiment/docs/protocol.md)에 있습니다.
+
 ---
 
 ## 6. 데이터 정책
@@ -694,9 +766,11 @@ python scripts/audit_session_dates.py \
 | `data/runs/<RUN_ID>/trajectories/traj_*.json` | 생애사건 trajectory |
 | `data/runs/<RUN_ID>/dialogues/sessions/sessions_traj_*.jsonl` | 대화 세션 (분석·평가 입력) |
 | `data/runs/<RUN_ID>/gold/prefix_gold_*.jsonl` | prefix별 정답 상태 |
-| `data/runs/<RUN_ID>/benchmark_items/*.jsonl` | Stage 1 및 `stage2_memory_value` 문항 |
+| `data/runs/<RUN_ID>/benchmark_items/*.jsonl` | 생성 파이프라인 문항 (보고 대상 아님) |
 | `data/runs/<RUN_ID>/quality_reports/*` | 검증·audit 리포트 |
-| `data/runs/<RUN_ID>/eval/report.json` | 모델 평가 결과 |
+| `data/runs/<RUN_ID>/eval/report.json` | `make evaluate` 배관 확인 결과 (§5-A, 보고 대상 아님) |
+| `experiment/runs/stage1/<run-id>/` | Stage 1 9-method 비교: plan·prompt·metrics·answer_pairs·figures (§5-E) |
+| `experiment/runs/stage2_2/<run-id>/` | Stage 2 9-method 비교: plan·prompt·metrics·state_pairs·figures (§5-E) |
 | `data/runs/<RUN_ID>/masking_ladder.json` | lifecycle masking abstention 사다리 (§5-C) |
 | `data/runs/<RUN_ID>/masking_ladder_prefix_gold.jsonl` | counterfactual recipe + 재계산된 complete PrefixGold (§5-C) |
 | `data/runs/<RUN_ID>/counterfactual_fillers/` | persona별 timeless filler plan/session/audit/log (§5-C) |
@@ -738,7 +812,23 @@ python scripts/audit_session_dates.py \
 | `docs/failure_modes.md` | 주요 실패 유형 |
 | `docs/coverage_generation.md` | 희귀 사건 커버리지 생성 |
 | `docs/rq1_pilot_report.md` | RQ1 파일럿 결과(traj_001 dev)와 지표 개선 과제 |
+| `docs/rq1_pair_protocol.md` | RQ1 임시 짝 파일럿의 설계·지표·알려진 한계 |
+| `docs/memory_agents/memory_agent_benchmarks.md` | 참고한 memory agent 벤치마크 정리 |
+| `docs/huggingface_dataset_card.md` | HF 데이터셋 카드 |
 | `docs/locale_extension_guide.md` | 로케일 추가 가이드 |
+
+모델 비교 하네스(§5-E) 문서는 `experiment/docs/`에 있습니다.
+
+| 문서 | 내용 |
+| --- | --- |
+| `experiment/docs/protocol.md` | 연구 질문, 비교 방법, 공정 비교 계약, 지표 |
+| `experiment/docs/stage2_2_reconstruct.md` | Stage 2 상태 복원 과제 설계와 공개 정책 |
+| `experiment/docs/stage1_9_method_runbook.md` | Stage 1 9-method 실행 절차 |
+| `experiment/docs/stage2_2_9_method_runbook.md` | Stage 2 9-method 실행 절차 |
+| `experiment/docs/stage1_prompt_leakage_audit.md` | Stage 1 prompt 노출·누출 감사 기록 |
+| `experiment/docs/stage2_2_prompt_leakage_audit.md` | Stage 2 prompt 노출·누출 감사 기록 |
+| `experiment/docs/architecture.md` | 하네스 데이터·실행 흐름 |
+| `experiment/docs/model_inference_settings.md` | provider별 추론 설정 |
 
 ---
 
@@ -752,3 +842,14 @@ python scripts/audit_session_dates.py \
 | 세션이 0개 생성됨 | 모델 출력이 검증을 통과하지 못한 것입니다. `dialogues/sessions/errors_*.jsonl`에서 이유를 확인하고, 가능하면 `--model-profile sonnet5`로 시도하세요. |
 | HF 세션을 못 받음 | `HF_DIALOGUE_REPO`(및 gated면 `HF_TOKEN`)를 확인하세요. |
 | HF filler를 못 받음 | dataset revision에 `counterfactual_fillers/v1/`이 있는지 확인하고, 고정한 `HF_DIALOGUE_REVISION`이 너무 오래된 commit은 아닌지 확인하세요. |
+
+모델 비교 하네스(§5-E):
+
+| 증상 | 해결 |
+| --- | --- |
+| `code/config/prompt changed after planning` | plan 이후 `experiment/` 아래 코드·설정·프롬프트가 바뀌었습니다. `plan`을 다시 만드세요. 기존 plan은 재사용할 수 없습니다. |
+| `run audit-prompt before paid execution` | `execute` 전에 `audit-prompt`를 돌려야 합니다. audit가 실패하면 그 원인을 먼저 해결하세요. |
+| `Letta server is not healthy at localhost:8283` | `./experiment/scripts/paid/letta_up.sh --approval I_APPROVE_LETTA_DOCKER`로 기동하고, 컨테이너가 ready 상태가 될 때까지 기다리세요. |
+| `missing runtime modules: kiwipiepy \| mem0 \| letta_client` | `./experiment/scripts/install_all.sh`를 실행하세요. `setup.sh`만으로는 provider 어댑터가 설치되지 않습니다. |
+| `OPENROUTER_API_KEY is required to resolve and freeze providers` | OpenRouter method를 뺀 `--methods`로 planning하거나, 검토한 provider를 `--provider-lock-file`로 직접 고정하세요. |
+| `Stage 2.2 prepared data is absent` | 하네스 데이터가 준비되지 않았습니다. `download-stage2-2-data` → `prepare-stage2-2` 순서로 실행하세요. |

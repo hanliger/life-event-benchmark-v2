@@ -138,33 +138,26 @@ def _build_stage1_event_identification(
     return items
 
 
-def build_canonical_items(paths: ExperimentPaths) -> dict[str, Path]:
-    cfg = load_experiment_config(paths)
-    expected = cfg["dataset"]["expected"]
-    stride = int(cfg["benchmark"]["checkpoint_stride"])
-    seed = int(cfg["benchmark"]["option_seed"])
-    root = _prepared_root(paths)
-    prefix_path = root / "prefix_gold" / "prefix_gold_checkpoints_15.jsonl"
-    if not prefix_path.exists():
-        raise FileNotFoundError("prefix gold is absent; run build-prefix-gold")
+def build_stage1_rows(
+    paths: ExperimentPaths, root: Path, *, stride: int
+) -> list[dict[str, Any]]:
+    """Derive Stage 1 items from whichever prepared corpus `root` points at."""
 
     trajectories_dir = root / "trajectories_fixed"
     sessions_dir = root / "sessions_joined"
-    trajectories = _load_trajectories(trajectories_dir)
     sessions = _load_sessions(sessions_dir)
-
     windows = load_mcq_windows(
         sessions_dir,
         None,
         trajectories_dir,
         window_size=stride,
     )
-    stage1 = _build_stage1_event_identification(
+    items = _build_stage1_event_identification(
         windows,
         load_life_event_templates(RepoPaths(root=paths.repo_root)),
     )
-    stage1_rows: list[dict[str, Any]] = []
-    for item in stage1:
+    rows: list[dict[str, Any]] = []
+    for item in items:
         row = item.model_dump(mode="json")
         checkpoint = int(str(item.metadata["target_session_end"]).removeprefix("S"))
         row["visible_sessions"] = [
@@ -180,7 +173,26 @@ def build_canonical_items(paths: ExperimentPaths) -> dict[str, Path]:
             "retention_lag_windows": 0,
             "initial_state_protocol": "S000_ingest_once",
         }
-        stage1_rows.append(row)
+        rows.append(row)
+    return rows
+
+
+def build_canonical_items(paths: ExperimentPaths) -> dict[str, Path]:
+    cfg = load_experiment_config(paths)
+    expected = cfg["dataset"]["expected"]
+    stride = int(cfg["benchmark"]["checkpoint_stride"])
+    seed = int(cfg["benchmark"]["option_seed"])
+    root = _prepared_root(paths)
+    prefix_path = root / "prefix_gold" / "prefix_gold_checkpoints_15.jsonl"
+    if not prefix_path.exists():
+        raise FileNotFoundError("prefix gold is absent; run build-prefix-gold")
+
+    trajectories_dir = root / "trajectories_fixed"
+    sessions_dir = root / "sessions_joined"
+    trajectories = _load_trajectories(trajectories_dir)
+    sessions = _load_sessions(sessions_dir)
+
+    stage1_rows = build_stage1_rows(paths, root, stride=stride)
 
     prefixes = list(read_prefix_gold(prefix_path))
     stage2 = ItemBuilder(seed=seed).build_stage2(

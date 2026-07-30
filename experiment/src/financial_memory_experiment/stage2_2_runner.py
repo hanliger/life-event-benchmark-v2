@@ -17,6 +17,7 @@ from .methods import create_method, method_ids
 from .methods.stage2_2_retrieval import stage2_2_retrieval_queries
 from .metrics import summarize_predictions, write_tables
 from .paths import ExperimentPaths
+from .corpus import corpus_manifest_path, corpus_root
 from .prompts import build_query, s000_as_session
 from .run_harness import (
     ALL_TRAJECTORIES,
@@ -44,7 +45,6 @@ from .run_harness import (
 )
 from .stage2_2 import (
     STAGE2_2,
-    active_stage2_2_prepared_manifest,
     stage2_2_item_path,
 )
 from .util import (
@@ -130,7 +130,7 @@ def _render_prompt_offline(
         if key
         not in {"dynamic_paths", "evidence_sessions", "gold_evidence"}
     }
-    root = Path(active_stage2_2_prepared_manifest(paths)["root"])
+    root = corpus_root(paths)
     system_prompt = (
         paths.prompts / "system_ko.txt"
     ).read_text(encoding="utf-8").strip()
@@ -346,9 +346,7 @@ def command_plan(args: argparse.Namespace) -> None:
         schema_version="stage2_2_run_manifest-v1",
         plan=plan,
         provider_lock=provider_lock,
-        prepared_manifest_path=(
-            paths.stage2_2_prepared / "active_manifest.json"
-        ),
+        prepared_manifest_path=corpus_manifest_path(paths),
     )
     print(json.dumps({"run_dir": str(run_dir), **plan}, ensure_ascii=False))
 
@@ -553,6 +551,10 @@ def _materialize_state_pairs(
                     metadata.get("prompt_sha256")
                     or (sha256_json(complete_prompt) if prompt else None)
                 ),
+                # attempts[] already carries each attempt's text, but the
+                # scored response was only recoverable by reasoning about which
+                # attempt broke the retry loop. Record it directly.
+                "raw_answer": row["raw_answer"],
                 "raw_response_sha256": sha256_json(row["raw_answer"]),
                 "retrieval_evidence": {
                     "session_ids": row.get("evidence_session_ids") or [],
@@ -861,9 +863,7 @@ def command_report(args: argparse.Namespace) -> None:
         paths, prediction_paths, allow_partial=True
     )
     write_json(run_dir / "metrics" / "metrics.json", report)
-    prepared_root = Path(
-        active_stage2_2_prepared_manifest(paths)["root"]
-    )
+    prepared_root = corpus_root(paths)
     baseline_path = prepared_root / "baselines" / "initial_copy.json"
     baseline = (
         json.loads(baseline_path.read_text(encoding="utf-8"))

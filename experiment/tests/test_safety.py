@@ -24,7 +24,8 @@ def _paths(tmp_path) -> ExperimentPaths:
 schema_version: paid-safety-v1
 smoke:
   usd_cap: 3
-  concurrency: 1
+  concurrency: 3
+  checkpoint_concurrency: 5
   automatic_retries: 0
   stop_on_first_error: true
 """,
@@ -73,6 +74,8 @@ def test_paid_plan_requires_exact_hash_and_approval(tmp_path):
         execute_paid=True,
     )
     assert verified["plan_sha256"] == plan["plan_sha256"]
+    assert verified["concurrency"] == 3
+    assert verified["checkpoint_concurrency"] == 5
     assert len(verified["execution_provenance"]["execution_tree_sha256"]) == 64
 
     path = paths.runs / "paid_plans" / f"{plan['plan_sha256']}.json"

@@ -1,8 +1,15 @@
 from __future__ import annotations
 
+import json
+import threading
 from types import SimpleNamespace
 
-from financial_memory_experiment.evaluator import _answer_with_query_isolation
+from financial_memory_experiment import evaluator
+from financial_memory_experiment.evaluator import (
+    _answer_with_query_isolation,
+    run_method,
+)
+from financial_memory_experiment.methods.base import MethodAnswer
 from financial_memory_experiment.methods.full_context import (
     FullContextMethod,
     OracleRelevantContextMethod,
@@ -16,6 +23,7 @@ from financial_memory_experiment.methods.retrieval import (
     HashEmbedder,
     regex_tokenize,
 )
+from financial_memory_experiment.paths import ExperimentPaths
 
 
 S000 = {
@@ -118,6 +126,123 @@ def test_oracle_relevant_context_uses_only_s000_and_gold_support_sessions():
     assert answer.evidence_session_ids == ["S000", "S002"]
     assert answer.metadata["context_arm"] == "oracle_relevant"
     assert answer.metadata["oracle_support_session_count"] == 1
+
+
+def test_stage2_2_parallel_checkpoints_use_fresh_independent_methods(
+    tmp_path, monkeypatch
+):
+    experiment_root = tmp_path / "experiment"
+    for relative in (
+        "configs/experiment.yaml",
+        "configs/methods.yaml",
+        "configs/paid_safety.yaml",
+        "prompts/system_ko.txt",
+    ):
+        path = experiment_root / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("test\n", encoding="utf-8")
+    paths = ExperimentPaths(root=experiment_root, repo_root=tmp_path)
+    prepared = tmp_path / "prepared"
+    barrier = threading.Barrier(5)
+    created = []
+
+    class _IndependentMethod:
+        method_id = "fc_gpt_5_6_sol"
+        query_on_clone = False
+
+        def __init__(self):
+            self.ingested = []
+            created.append(self)
+
+        def ingest_initial(self, s000):
+            self.ingested.append(s000["session_id"])
+
+        def ingest_session(self, session):
+            self.ingested.append(session["session_id"])
+
+        def state_fingerprint(self):
+            return json.dumps(self.ingested)
+
+        def answer(self, item):
+            barrier.wait(timeout=2)
+            return MethodAnswer(raw_answer="{}")
+
+        def close(self):
+            return None
+
+    items = [
+        {
+            "item_id": f"q{checkpoint}",
+            "stage": "stage2_2_reconstruct",
+            "trajectory_id": "traj_test",
+            "gold": {"initial_state": {}, "state": {}},
+            "metadata": {"query_checkpoint": checkpoint},
+        }
+        for checkpoint in range(1, 6)
+    ]
+    sessions = [
+        {"session_id": f"S{checkpoint:03d}"}
+        for checkpoint in range(1, 6)
+    ]
+
+    monkeypatch.setattr(
+        evaluator,
+        "active_stage2_2_prepared_manifest",
+        lambda _paths: {"root": str(prepared)},
+    )
+    monkeypatch.setattr(
+        evaluator,
+        "_load_s000",
+        lambda _root, _trajectory_id: {"session_id": "S000"},
+    )
+    monkeypatch.setattr(
+        evaluator,
+        "_load_sessions",
+        lambda _root, _trajectory_id: sessions,
+    )
+    monkeypatch.setattr(
+        evaluator,
+        "create_method",
+        lambda *_args, **_kwargs: _IndependentMethod(),
+    )
+    monkeypatch.setattr(
+        evaluator,
+        "_prediction",
+        lambda *, method_id, item, checkpoint, answer: {
+            "method_id": method_id,
+            "item_id": item["item_id"],
+            "query_checkpoint": checkpoint,
+        },
+    )
+
+    output = experiment_root / "runs" / "parallel.jsonl"
+    run_method(
+        paths,
+        method_id="fc_gpt_5_6_sol",
+        items=items,
+        output=output,
+        mock=True,
+        query_concurrency=5,
+    )
+
+    rows = [
+        json.loads(line)
+        for line in output.read_text(encoding="utf-8").splitlines()
+    ]
+    manifest = json.loads(
+        output.with_suffix(".manifest.json").read_text(encoding="utf-8")
+    )
+    assert [row["query_checkpoint"] for row in rows] == [1, 2, 3, 4, 5]
+    assert len(created) == 5
+    assert sorted(method.ingested for method in created) == [
+        ["S000", *[f"S{number:03d}" for number in range(1, checkpoint + 1)]]
+        for checkpoint in range(1, 6)
+    ]
+    assert manifest["query_execution"] == {
+        "strategy": "parallel_independent_prefix",
+        "max_workers": 5,
+        "fresh_method_and_client_per_item": True,
+    }
 
 
 class _FakeAgentsMessages:

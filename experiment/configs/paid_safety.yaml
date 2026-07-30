@@ -3,7 +3,10 @@ smoke:
   # Per-plan ceiling. The stricter cumulative standing limit is enforced by
   # configs/paid_cost_ledger.json and must remain strictly below $20.00.
   usd_cap: 7.5
-  concurrency: 1
+  # The three full-context model methods may execute concurrently. Independent
+  # Stage 2.2 checkpoints also use isolated clients and prefixes.
+  concurrency: 3
+  checkpoint_concurrency: 5
   automatic_retries: 0
   stop_on_first_error: true
 full:

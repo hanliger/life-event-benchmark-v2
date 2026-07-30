@@ -7,6 +7,7 @@ import os
 import subprocess
 import sys
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
 
@@ -510,7 +511,7 @@ def main() -> int:
         masking = [
             item for item in selected if str(item["stage"]).startswith("masking_")
         ]
-        outputs = []
+        jobs: list[tuple[str, str, list[dict[str, Any]], Path]] = []
         for method_id in plan["method_ids"]:
             for label, subset in (("canonical", canonical), ("masking", masking)):
                 if not subset:
@@ -521,14 +522,41 @@ def main() -> int:
                     / plan["plan_sha256"]
                     / f"{method_id}__{label}.jsonl"
                 )
-                run_method(
-                    paths,
-                    method_id=method_id,
-                    items=subset,
-                    output=output,
-                    mock=False,
-                )
-                outputs.append(str(output))
+                jobs.append((method_id, label, subset, output))
+
+        def run_paid_job(
+            job: tuple[str, str, list[dict[str, Any]], Path],
+        ) -> str:
+            method_id, label, subset, output = job
+            run_method(
+                paths,
+                method_id=method_id,
+                items=subset,
+                output=output,
+                mock=False,
+                query_concurrency=(
+                    int(plan.get("checkpoint_concurrency", 1))
+                    if label == "canonical"
+                    and method_id
+                    in {
+                        "fc_claude_opus_5",
+                        "fc_gemini_3_1_pro",
+                        "fc_gpt_5_6_sol",
+                    }
+                    and all(
+                        item.get("stage") == "stage2_2_reconstruct"
+                        for item in subset
+                    )
+                    else 1
+                ),
+            )
+            return str(output)
+
+        with ThreadPoolExecutor(
+            max_workers=int(plan.get("concurrency", 1))
+        ) as executor:
+            # map preserves the frozen plan order in the returned artifact list.
+            outputs = list(executor.map(run_paid_job, jobs))
         result = {"plan_sha256": plan["plan_sha256"], "outputs": outputs}
     elif args.command == "plan-paid-full":
         unknown = set(args.method) - set(method_ids(paths))

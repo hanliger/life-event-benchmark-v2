@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from importlib.metadata import PackageNotFoundError, version
 from collections import defaultdict
@@ -195,7 +196,10 @@ def run_method(
     output: Path,
     mock: bool,
     top_k: int | None = None,
+    query_concurrency: int = 1,
 ) -> Path:
+    if query_concurrency <= 0:
+        raise ValueError("query_concurrency must be positive")
     is_masking = [str(item.get("stage", "")).startswith("masking_") for item in items]
     if any(is_masking):
         if not all(is_masking):
@@ -231,6 +235,77 @@ def run_method(
         by_trajectory[str(item["trajectory_id"])].append(item)
 
     try:
+        if query_concurrency > 1:
+            supported = {
+                "fc_claude_opus_5",
+                "fc_gemini_3_1_pro",
+                "fc_gpt_5_6_sol",
+            }
+            if not all(is_stage2_2) or method_id not in supported:
+                raise ValueError(
+                    "parallel queries are limited to Stage 2.2 full-context methods"
+                )
+            tasks: list[tuple[str, dict[str, Any], dict[str, Any], list[dict[str, Any]]]] = []
+            for trajectory_id in sorted(by_trajectory):
+                s000 = _load_s000(root, trajectory_id)
+                sessions = _load_sessions(root, trajectory_id)
+                for item in sorted(
+                    by_trajectory[trajectory_id],
+                    key=lambda row: (_checkpoint(row), str(row["item_id"])),
+                ):
+                    checkpoint = _checkpoint(item)
+                    if checkpoint < 0 or checkpoint > len(sessions):
+                        raise ValueError(
+                            f"invalid checkpoint {trajectory_id}/{checkpoint}; "
+                            f"sessions={len(sessions)}"
+                        )
+                    tasks.append((trajectory_id, item, s000, sessions[:checkpoint]))
+
+            def answer_independent(
+                task: tuple[
+                    str,
+                    dict[str, Any],
+                    dict[str, Any],
+                    list[dict[str, Any]],
+                ]
+            ) -> dict[str, Any]:
+                trajectory_id, item, s000, prefix = task
+                method = create_method(
+                    method_id,
+                    trajectory_id=trajectory_id,
+                    paths=paths,
+                    mock=mock,
+                    top_k=top_k,
+                )
+                try:
+                    method.ingest_initial(s000)
+                    for session in prefix:
+                        method.ingest_session(session)
+                    checkpoint = _checkpoint(item)
+                    answer = _answer_with_query_isolation(method, item)
+                    return _prediction(
+                        method_id=method_id,
+                        item=item,
+                        checkpoint=checkpoint,
+                        answer=answer,
+                    )
+                finally:
+                    method.close()
+
+            with ThreadPoolExecutor(max_workers=query_concurrency) as executor:
+                # executor.map runs requests concurrently but yields results in
+                # frozen task order, keeping the JSONL artifact deterministic.
+                for row in executor.map(answer_independent, tasks):
+                    recorder.append(row)
+            recorder.complete(
+                query_execution={
+                    "strategy": "parallel_independent_prefix",
+                    "max_workers": query_concurrency,
+                    "fresh_method_and_client_per_item": True,
+                }
+            )
+            return output
+
         for trajectory_id in sorted(by_trajectory):
             method = create_method(
                 method_id,

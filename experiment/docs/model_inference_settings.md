@@ -19,7 +19,7 @@ Claude Opus 5, Gemini 3.1 Pro Preview, GPT-5.6 Sol reader에 적용된다. 검�
 | Model | Reasoning / Thinking | Visibility | Other generation settings |
 |---|---|---|---|
 | Claude Opus 5 | Adaptive thinking, `effort=medium` | `display=omitted` | Sampling parameter 미지정 |
-| Gemini 3.1 Pro Preview | `thinking_level=medium` | `include_thoughts=false` | `temperature=1.0` |
+| Gemini 3.1 Pro Preview | `thinking_level=medium` | `include_thoughts=false` | Temperature 미지정 |
 | GPT-5.6 Sol | `effort=medium`, `mode=standard`, `context=current_turn` | Reasoning summary 미요청 | `text.verbosity=medium`, `store=false`, `truncation=disabled` |
 
 공통 `max_output_tokens`는 Stage 2.2에서 20,000이다. 이는 모델이 20,000 tokens를
@@ -66,15 +66,17 @@ sampling knob로 사용하지 않으므로 모두 미지정한다.
 |---|---|---|
 | `thinking_level` | `low`, `medium`, `high` | `medium` |
 | `include_thoughts` | `true`, `false` | `false` |
-| `temperature` | `0.0`–`2.0` | `1.0` |
+| `temperature` | `0.0`–`2.0` | 미지정: provider default |
 | `thinking_budget` | Legacy compatibility parameter | 미사용 |
 
 Gemini 3.1 Pro는 `minimal` thinking과 thinking 완전 비활성화를 지원하지 않는다.
 Gemini 3 계열은 `thinking_budget`보다 `thinking_level` 사용이 권장된다.
 
 `include_thoughts=false`는 thought summary를 반환하지 않는 설정이며 reasoning
-계산량을 줄이지 않는다. Gemini 3 계열은 공식 권장 기본값인
-`temperature=1.0`을 명시적으로 고정한다.
+계산량을 줄이지 않는다. 세 모델에 공통으로 `temperature`를 전달하지 않는
+`provider_default` sampling policy를 사용한다. Gemini 3.1 Pro Preview의 현재
+provider default는 `1.0`이며, Google은 이 값을 유지하고 낮은 temperature를
+제거하도록 권장한다.
 
 적용 payload:
 
@@ -83,7 +85,6 @@ thinking_config={
     "thinking_level": "medium",
     "include_thoughts": False,
 }
-temperature=1.0
 ```
 
 ### 3.3 GPT-5.6 Sol
@@ -147,6 +148,14 @@ truncation="disabled"
 선택값은 `experiment/configs/experiment.yaml`의
 `models.generation_settings`에 고정한다. 각 provider request에 실제로 적용한
 설정은 실행 결과의 `response_metadata.generation_settings`에도 기록한다.
+Temperature는 세 provider 모두 request에서 생략하고 provider default를 사용한다.
+
+Checkpoint 요청은 서로의 prediction을 보지 않는다. 각 요청마다 새 provider
+client와 새 full-context method를 만들고, `S000 + 해당 checkpoint까지의
+answer-free dialogue`를 처음부터 구성한다. 따라서 다섯 checkpoint를 병렬로
+실행해도 뒤 checkpoint가 앞 checkpoint의 모델 출력을 활용하는 오염은 없다.
+세 model도 서로 독립된 output artifact에 병렬 실행한다. 현재 smoke의 최대
+동시 요청 수는 `3 models × 5 checkpoints = 15`이다.
 
 설정 변경은 execution tree hash와 새 paid plan에 반영되어야 한다. 기존 plan을
 재사용하지 말고, 이후 smoke 또는 full experiment 전에 새 plan을 생성하고

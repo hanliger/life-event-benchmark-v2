@@ -58,6 +58,7 @@ models:
   claude_full_context: claude-opus-5
   openai_full_context: gpt-5.6-sol
   reasoning_policy: deployment_realistic_medium
+  sampling_policy: provider_default
   generation_settings:
     anthropic:
       thinking:
@@ -69,7 +70,6 @@ models:
       thinking_config:
         thinking_level: medium
         include_thoughts: false
-      temperature: 1.0
     openai:
       reasoning:
         effort: medium

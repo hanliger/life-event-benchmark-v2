@@ -1,5 +1,5 @@
 {
-  "conservative_spent_usd": 12.251,
+  "conservative_spent_usd": 0.0,
   "entries": [
     {
       "amount_usd": 1.98,
@@ -92,6 +92,14 @@
         "input_tokens": 68579,
         "output_tokens_including_thoughts": 14402
       }
+    },
+    {
+      "amount_usd": 0.0,
+      "kind": "budget_reset",
+      "note": "User explicitly reset the paid smoke allowance to a fresh $20.00 for the deployment-realistic medium-reasoning three-model Stage 2.2 smoke.",
+      "previous_conservative_spent_usd": 12.251,
+      "recorded_at": "2026-07-30",
+      "standing_limit_usd": 20.0
     }
   ],
   "schema_version": "paid-smoke-ledger-v1",

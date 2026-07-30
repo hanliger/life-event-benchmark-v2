@@ -191,9 +191,12 @@ def build_smoke_plan(
         "conservative_spent_before_usd": spent,
         "conservative_spent_after_reservation_usd": after,
         "cost_ledger_sha256": sha256_file(ledger_path),
-        "concurrency": 1,
-        "automatic_retries": 0,
-        "stop_on_first_error": True,
+        "concurrency": int(config["smoke"]["concurrency"]),
+        "checkpoint_concurrency": int(
+            config["smoke"].get("checkpoint_concurrency", 1)
+        ),
+        "automatic_retries": int(config["smoke"]["automatic_retries"]),
+        "stop_on_first_error": bool(config["smoke"]["stop_on_first_error"]),
         "timeout_policy": "unknown_billing_state_stop_no_auto_resume",
         "operation_limits": operation_limits or {},
         "input_items_sha256": input_items_sha256,

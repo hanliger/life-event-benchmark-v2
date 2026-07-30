@@ -79,7 +79,6 @@ def test_gemini_reader_sends_medium_thinking_without_summary():
                 "thinking_level": "medium",
                 "include_thoughts": False,
             },
-            "temperature": 1.0,
         },
     )
 
@@ -95,7 +94,6 @@ def test_gemini_reader_sends_medium_thinking_without_summary():
                 "thinking_level": "medium",
                 "include_thoughts": False,
             },
-            "temperature": 1.0,
         },
     }
 

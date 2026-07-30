@@ -309,7 +309,21 @@ $$
 
 ## 4. checkpoint별 결과
 
-### 4.1 Claude Opus 5, 전체 대화
+### 4.1 통합 성능 곡선
+
+각 선은 동일한 `traj_010`의 Full Context 조건에서 한 모델이 보인 성능이다.
+점은 60, 120, 180, 240, 300의 다섯 anchor checkpoint만 나타낸다. 단일
+trajectory smoke test이므로 신뢰구간은 표시하지 않았으며, 선 사이 구간을
+관측하지 않았다는 점에 유의해야 한다.
+
+![Dynamic-path Final State Accuracy by Checkpoint](figures/stage2_2_traj010/dynamic_path_final_state_accuracy_by_checkpoint.png)
+
+![Correct-change F1 by Checkpoint](figures/stage2_2_traj010/correct_change_f1_by_checkpoint.png)
+
+논문용 vector 원본은 같은 디렉터리의 PDF와 SVG로 제공하며, 그래프의 정확한
+입력값은 `checkpoint_metric_values.csv`에 보존했다.
+
+### 4.2 Claude Opus 5, 전체 대화
 
 | Checkpoint | Parse | Final State Accuracy | Dynamic-path Final State Accuracy | Correct-change F1 | Changed-state Accuracy | Unchanged-state Accuracy |
 |---:|---|---:|---:|---:|---:|---:|
@@ -319,7 +333,7 @@ $$
 | 240 | OK | 79.4 | 84.0 | 72.2 | 76.5 | 82.4 |
 | 300 | OK | 85.3 | 88.0 | 80.0 | 80.0 | 89.5 |
 
-### 4.2 Gemini 3.1 Pro Preview, 전체 대화
+### 4.3 Gemini 3.1 Pro Preview, 전체 대화
 
 | Checkpoint | Parse | Final State Accuracy | Dynamic-path Final State Accuracy | Correct-change F1 | Changed-state Accuracy | Unchanged-state Accuracy |
 |---:|---|---:|---:|---:|---:|---:|
@@ -329,7 +343,7 @@ $$
 | 240 | OK | 70.6 | 68.0 | 55.6 | 58.8 | 82.4 |
 | 300 | OK | 73.5 | 76.0 | 58.1 | 60.0 | 84.2 |
 
-### 4.3 GPT-5.6 Sol, 전체 대화
+### 4.4 GPT-5.6 Sol, 전체 대화
 
 | Checkpoint | Parse | Final State Accuracy | Dynamic-path Final State Accuracy | Correct-change F1 | Changed-state Accuracy | Unchanged-state Accuracy |
 |---:|---|---:|---:|---:|---:|---:|
@@ -339,7 +353,7 @@ $$
 | 240 | OK | 58.8 | 60.0 | 46.2 | 52.9 | 64.7 |
 | 300 | OK | 67.6 | 68.0 | 45.2 | 46.7 | 84.2 |
 
-### 4.4 GPT-5.6 Sol, Oracle Relevant
+### 4.5 GPT-5.6 Sol, Oracle Relevant
 
 | Checkpoint | Parse | Final State Accuracy | Dynamic-path Final State Accuracy | Correct-change F1 | Changed-state Accuracy | Unchanged-state Accuracy |
 |---:|---|---:|---:|---:|---:|---:|

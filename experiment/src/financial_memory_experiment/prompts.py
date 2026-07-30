@@ -7,6 +7,7 @@ from typing import Any
 
 from fin_life_benchmark.benchmark.stage2_memory import normalize_stage2_answer
 
+from .stage1 import STAGE1, STAGE1_MAX_OUTPUT_TOKENS
 from .stage2_2 import (
     ALLOWED_STATUSES,
     SCHEMA_VERSION,
@@ -14,6 +15,25 @@ from .stage2_2 import (
     VALUE_KINDS,
     value_schema_description,
 )
+
+
+# Stages whose reported comparison needs the rendered prompt preserved as an
+# artifact and a reasoning-aware output budget. Stage 2 and masking keep the
+# config default so their existing frozen outputs stay byte-identical.
+_BUDGETED_STAGES = (STAGE1, STAGE2_2)
+
+
+def answer_output_tokens(item: dict[str, Any]) -> int | None:
+    if item.get("stage") not in _BUDGETED_STAGES:
+        return None
+    default = (
+        STAGE1_MAX_OUTPUT_TOKENS if item.get("stage") == STAGE1 else 20_000
+    )
+    return int((item.get("metadata") or {}).get("max_output_tokens", default))
+
+
+def expose_rendered_prompt(item: dict[str, Any]) -> bool:
+    return item.get("stage") in _BUDGETED_STAGES
 
 
 def _date(value: Any) -> str:
@@ -54,7 +74,7 @@ def s000_as_session(record: dict[str, Any]) -> dict[str, Any]:
 def answer_contract(item: dict[str, Any]) -> str:
     if item["stage"] == STAGE2_2:
         return f'{{"schema_version":"{SCHEMA_VERSION}","state":{{...}}}}'
-    if item["stage"] == "stage1_event_identification":
+    if item["stage"] == STAGE1:
         return "<answer>event_id</answer>"
     if (
         item["stage"] == "stage2_memory_value"
@@ -76,7 +96,7 @@ def build_query(item: dict[str, Any], evidence: list[dict[str, Any]]) -> str:
         "",
         f"[질문]\n{item['question']}",
     ]
-    if item["stage"] == "stage1_event_identification":
+    if item["stage"] == STAGE1:
         candidates = (item.get("metadata") or {}).get("candidate_events") or []
         lines.extend(
             ["", "[가능한 event_id]", *(f"- {c['event_id']}: {c['label_ko']}" for c in candidates)]
@@ -150,7 +170,7 @@ _ANSWER = re.compile(r"<answer>\s*([^<]+?)\s*</answer>", re.IGNORECASE)
 def parse_answer(item: dict[str, Any], raw: str) -> str:
     match = _ANSWER.search(raw)
     value = match.group(1).strip() if match else ""
-    if item["stage"] == "stage1_event_identification":
+    if item["stage"] == STAGE1:
         return value
     if item["stage"] == "stage2_memory_value":
         metadata = item.get("metadata") or {}
@@ -164,7 +184,7 @@ def parse_answer(item: dict[str, Any], raw: str) -> str:
 
 
 def gold_answer(item: dict[str, Any]) -> str:
-    if item["stage"] == "stage1_event_identification":
+    if item["stage"] == STAGE1:
         return str((item.get("gold") or {}).get("event_id") or "")
     if item["stage"] == "stage2_memory_value":
         gold = item.get("gold") or {}

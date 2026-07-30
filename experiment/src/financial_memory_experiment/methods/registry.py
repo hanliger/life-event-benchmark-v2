@@ -64,6 +64,30 @@ def _system(paths: ExperimentPaths) -> str:
     return (paths.prompts / "system_ko.txt").read_text(encoding="utf-8").strip()
 
 
+def _env_override(default: Any, *names: str) -> str:
+    """First set environment variable wins; runners set the stage-neutral name.
+
+    The `STAGE2_2_*` spellings stay accepted so a Stage 2.2 run planned before
+    the Stage 1 harness landed still resolves the same values.
+    """
+
+    for name in names:
+        value = os.environ.get(name)
+        if value:
+            return value
+    return str(default)
+
+
+_REQUEST_TIMEOUT_ENV = (
+    "FIN_MEMORY_REQUEST_TIMEOUT_SECONDS",
+    "STAGE2_2_REQUEST_TIMEOUT_SECONDS",
+)
+_PROVIDER_LOCK_ENV = (
+    "FIN_MEMORY_OPENROUTER_PROVIDER_LOCK",
+    "STAGE2_2_OPENROUTER_PROVIDER_LOCK",
+)
+
+
 def _reader(
     provider: str,
     model: str,
@@ -117,15 +141,14 @@ def create_method(
     k = int(top_k or cfg["benchmark"]["top_k_main"])
     max_tokens = int(cfg["models"]["final_answer_max_tokens"])
     timeout_seconds = float(
-        os.environ.get(
-            "STAGE2_2_REQUEST_TIMEOUT_SECONDS",
-            cfg["models"]["request_timeout_seconds"],
+        _env_override(
+            cfg["models"]["request_timeout_seconds"], *_REQUEST_TIMEOUT_ENV
         )
     )
     opus_timeout_seconds = float(
-        os.environ.get(
-            "STAGE2_2_REQUEST_TIMEOUT_SECONDS",
+        _env_override(
             models["claude_opus_4_8_request_timeout_seconds"],
+            *_REQUEST_TIMEOUT_ENV,
         )
     )
     generation_settings = generation_settings_for_policy(
@@ -185,9 +208,9 @@ def create_method(
         )
     openrouter_models = models.get("openrouter") or {}
     openrouter_timeout_seconds = float(
-        os.environ.get(
-            "STAGE2_2_REQUEST_TIMEOUT_SECONDS",
+        _env_override(
             openrouter_models.get("request_timeout_seconds", timeout_seconds),
+            *_REQUEST_TIMEOUT_ENV,
         )
     )
     openrouter_map = {
@@ -213,9 +236,7 @@ def create_method(
         settings: dict[str, Any] = {
             "provider": dict(openrouter_models["provider"]),
         }
-        provider_lock = json.loads(
-            os.environ.get("STAGE2_2_OPENROUTER_PROVIDER_LOCK", "{}")
-        )
+        provider_lock = json.loads(_env_override("{}", *_PROVIDER_LOCK_ENV))
         locked_provider = provider_lock.get(method_id)
         if locked_provider:
             settings["provider"]["order"] = [str(locked_provider)]
@@ -412,7 +433,9 @@ def create_method(
             embedding=f"google_ai/{models['gemini_embedding']}",
             max_steps=int(method_cfg["letta"]["max_steps"]),
             max_tokens=20_000,
-            top_k=group_k,
+            # Stage 2.2 leaves top_k unset and uses the per-group budget; Stage 1
+            # passes its frozen single-query top_k explicitly.
+            top_k=int(top_k) if top_k else group_k,
             method_id=method_id,
             stage2_2_search_calls=int(
                 method_cfg["letta"]["archival_search_calls_per_query"]

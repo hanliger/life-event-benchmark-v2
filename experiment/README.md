@@ -27,6 +27,15 @@ Stage 1 life-event 탐지, Stage 2 과거 상태 회상, 5-arm masking ablation�
 - [docs/smoke_test.md](docs/smoke_test.md): 완료된 smoke와 비용 원장
 - [docs/results_template.md](docs/results_template.md): full run 후 채울 결과 문서
 
+9-method 비교(Claude Opus 4.8 reader의 Full Context/BM25/Dense/Mem0/Letta와 네
+OpenRouter Full Context model)는 stage별 전용 runner를 사용한다. 두 runner는
+`run_harness.py`를 공유하므로 plan·audit·execute·resume·report 절차가 동일하다.
+
+- [docs/stage1_9_method_runbook.md](docs/stage1_9_method_runbook.md) /
+  [docs/stage1_prompt_leakage_audit.md](docs/stage1_prompt_leakage_audit.md)
+- [docs/stage2_2_9_method_runbook.md](docs/stage2_2_9_method_runbook.md) /
+  [docs/stage2_2_prompt_leakage_audit.md](docs/stage2_2_prompt_leakage_audit.md)
+
 아래 순서가 실험의 유일한 실행 runbook이다.
 
 ## 1. 저장소와 환경 준비

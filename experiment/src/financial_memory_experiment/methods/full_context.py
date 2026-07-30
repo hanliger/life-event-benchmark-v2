@@ -2,7 +2,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..prompts import build_query, s000_as_session
+from ..prompts import (
+    answer_output_tokens,
+    build_query,
+    expose_rendered_prompt,
+    s000_as_session,
+)
 from ..stage2_2 import STAGE2_2
 from .base import MemoryMethod, MethodAnswer
 from .readers import Reader
@@ -24,11 +29,7 @@ class FullContextMethod(MemoryMethod):
         self.sessions.append(session)
 
     def answer(self, item: dict[str, Any]) -> MethodAnswer:
-        max_tokens = (
-            int((item.get("metadata") or {}).get("max_output_tokens", 20000))
-            if item.get("stage") == STAGE2_2
-            else None
-        )
+        max_tokens = answer_output_tokens(item)
         query = build_query(item, self.sessions)
         if max_tokens is None:
             raw, metadata = self.reader.generate(system=self.system, user=query)
@@ -44,13 +45,11 @@ class FullContextMethod(MemoryMethod):
             metadata={
                 **metadata,
                 **(
-                    {"rendered_user_prompt": query}
-                    if item.get("stage") == STAGE2_2
-                    else {}
-                ),
-                **(
-                    {"rendered_system_prompt": self.system}
-                    if item.get("stage") == STAGE2_2
+                    {
+                        "rendered_user_prompt": query,
+                        "rendered_system_prompt": self.system,
+                    }
+                    if expose_rendered_prompt(item)
                     else {}
                 ),
             },

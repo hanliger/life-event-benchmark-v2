@@ -6,7 +6,13 @@ import uuid
 from pathlib import Path
 from typing import Any, Callable
 
-from ..prompts import build_query, format_s000, format_session
+from ..prompts import (
+    answer_output_tokens,
+    build_query,
+    expose_rendered_prompt,
+    format_s000,
+    format_session,
+)
 from ..safety import assert_provider_construction_allowed
 from ..stage2_2 import STAGE2_2
 from ..util import sha256_json
@@ -14,7 +20,6 @@ from .base import MemoryMethod, MethodAnswer
 from .readers import Reader, generation_slot
 from .stage2_2_retrieval import (
     pin_initial_state,
-    stage2_2_output_tokens,
     stage2_2_retrieval_queries,
 )
 
@@ -234,8 +239,11 @@ class Mem0Method(MemoryMethod):
             }
             for row in rows[: self.k]
         ]
+        rendered_query = build_query(item, evidence)
         raw, metadata = self.reader.generate(
-            system=self.system, user=build_query(item, evidence)
+            system=self.system,
+            user=rendered_query,
+            max_tokens=answer_output_tokens(item),
         )
         if self.state_fingerprint() != before:
             raise RuntimeError("Mem0 query mutated persistent memory")
@@ -254,6 +262,22 @@ class Mem0Method(MemoryMethod):
                     }
                     for row in rows[: self.k]
                 ],
+                **(
+                    {
+                        "rendered_user_prompt": rendered_query,
+                        "rendered_system_prompt": self.system,
+                        "memory_inference_calls": self.ingestion_calls,
+                        "embedding_document_calls": self.ingestion_calls,
+                        "memory_search_calls": 1,
+                        "memory_inference_usage": copy.deepcopy(
+                            getattr(
+                                self.memory, "_benchmark_inference_usage", []
+                            )
+                        ),
+                    }
+                    if expose_rendered_prompt(item)
+                    else {}
+                ),
             },
         )
 
@@ -332,7 +356,7 @@ class Mem0Method(MemoryMethod):
         raw, metadata = self.reader.generate(
             system=self.system,
             user=rendered_query,
-            max_tokens=stage2_2_output_tokens(item),
+            max_tokens=answer_output_tokens(item),
         )
         if self.state_fingerprint() != before:
             raise RuntimeError("Mem0 Stage 2.2 query mutated persistent memory")

@@ -15,6 +15,8 @@ from .methods import create_method
 from .methods.base import CloneEquivalenceError
 from .paths import ExperimentPaths
 from .prompts import gold_answer, parse_answer
+from .stage1 import STAGE1
+from .stage1 import generation_item as stage1_generation_item
 from .stage2_2 import (
     STAGE2_2,
     active_stage2_2_prepared_manifest,
@@ -232,6 +234,9 @@ def run_method(
     is_stage2_2 = [item.get("stage") == STAGE2_2 for item in items]
     if any(is_stage2_2) and not all(is_stage2_2):
         raise ValueError("Stage 2.2 items must run in a separate invocation")
+    is_stage1 = [item.get("stage") == STAGE1 for item in items]
+    if any(is_stage1) and not all(is_stage1):
+        raise ValueError("Stage 1 items must run in a separate invocation")
     root = Path(
         (
             active_stage2_2_prepared_manifest(paths)
@@ -259,9 +264,10 @@ def run_method(
                 "fc_openrouter_qwen_3_5_122b_a10b",
                 "fc_openrouter_qwen_3_6_35b_a3b_fp8",
             }
-            if not all(is_stage2_2) or method_id not in supported:
+            if not (all(is_stage2_2) or all(is_stage1)) or method_id not in supported:
                 raise ValueError(
-                    "parallel queries are limited to supported Stage 2.2 methods"
+                    "parallel queries are limited to supported Stage 1 and "
+                    "Stage 2.2 methods"
                 )
             snapshot_methods = {
                 "bm25_claude_opus_4_8",
@@ -573,6 +579,8 @@ def _prediction_with_parse_retries(
     attempts: list[dict[str, Any]] = []
     row: dict[str, Any] | None = None
     generation_item = item
+    if item.get("stage") == STAGE1:
+        generation_item = stage1_generation_item(item)
     if (
         item.get("stage") == STAGE2_2
         and not method_id.startswith("oracle_rel_")

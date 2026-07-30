@@ -7,7 +7,13 @@ import json
 import re
 from typing import Any, Callable
 
-from ..prompts import build_query, format_s000, format_session, s000_as_session
+from ..prompts import (
+    build_query,
+    expose_rendered_prompt,
+    format_s000,
+    format_session,
+    s000_as_session,
+)
 from ..safety import assert_provider_construction_allowed
 from ..stage2_2 import STAGE2_2
 from ..util import sha256_json
@@ -639,13 +645,11 @@ class LettaMethod(MemoryMethod):
                 "automatic_retries": 0,
                 "archival_passage_count": len(self._ingested),
                 **(
-                    {"rendered_user_prompt": rendered_query}
-                    if is_stage2_2
-                    else {}
-                ),
-                **(
-                    {"rendered_system_prompt": self.system}
-                    if is_stage2_2
+                    {
+                        "rendered_user_prompt": rendered_query,
+                        "rendered_system_prompt": self.system,
+                    }
+                    if expose_rendered_prompt(item)
                     else {}
                 ),
             },
@@ -703,9 +707,28 @@ class LettaContractDouble(MemoryMethod):
                     "archival_search_limit": 4,
                 },
             )
+        query = build_query(item, [])
         return MethodAnswer(
             raw_answer="<answer>A</answer>",
-            metadata={"provider": "mock", "adapter_contract": "letta", "paid": False},
+            evidence_session_ids=(
+                [str(session["session_id"]) for session in self.sessions[-1:]]
+                if expose_rendered_prompt(item)
+                else []
+            ),
+            metadata={
+                "provider": "mock",
+                "adapter_contract": "letta",
+                "paid": False,
+                **(
+                    {
+                        "rendered_user_prompt": query,
+                        "rendered_system_prompt": "",
+                        "archival_search_limit": 1,
+                    }
+                    if expose_rendered_prompt(item)
+                    else {}
+                ),
+            },
         )
 
     def snapshot(self) -> Any:

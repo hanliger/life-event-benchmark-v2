@@ -8,7 +8,13 @@ from typing import Any, Callable
 
 import numpy as np
 
-from ..prompts import build_query, format_session, s000_as_session
+from ..prompts import (
+    answer_output_tokens,
+    build_query,
+    expose_rendered_prompt,
+    format_session,
+    s000_as_session,
+)
 from ..stage2_2 import STAGE2_2
 from ..safety import assert_provider_construction_allowed
 from .base import MemoryMethod, MethodAnswer
@@ -16,7 +22,6 @@ from .readers import Reader
 from .stage2_2_retrieval import (
     deduplicate_ranked_sessions,
     pin_initial_state,
-    stage2_2_output_tokens,
     stage2_2_retrieval_queries,
 )
 
@@ -156,8 +161,11 @@ class BM25Method(MemoryMethod):
             key=lambda index: (-scores[index], index),
         )[: self.k]
         evidence = [self.sessions[index] for index in sorted(ranked)]
+        query = build_query(item, evidence)
         raw, metadata = self.reader.generate(
-            system=self.system, user=build_query(item, evidence)
+            system=self.system,
+            user=query,
+            max_tokens=answer_output_tokens(item),
         )
         return MethodAnswer(
             raw_answer=raw,
@@ -173,6 +181,14 @@ class BM25Method(MemoryMethod):
                     }
                     for index in ranked
                 ],
+                **(
+                    {
+                        "rendered_user_prompt": query,
+                        "rendered_system_prompt": self.system,
+                    }
+                    if expose_rendered_prompt(item)
+                    else {}
+                ),
             },
         )
 
@@ -216,7 +232,7 @@ class BM25Method(MemoryMethod):
         raw, metadata = self.reader.generate(
             system=self.system,
             user=query,
-            max_tokens=stage2_2_output_tokens(item),
+            max_tokens=answer_output_tokens(item),
         )
         return MethodAnswer(
             raw_answer=raw,
@@ -296,8 +312,11 @@ class DenseMethod(MemoryMethod):
         scores = documents @ query
         ranked = sorted(range(len(scores)), key=lambda i: (-float(scores[i]), i))[: self.k]
         evidence = [self.sessions[index] for index in sorted(ranked)]
+        rendered_query = build_query(item, evidence)
         raw, metadata = self.reader.generate(
-            system=self.system, user=build_query(item, evidence)
+            system=self.system,
+            user=rendered_query,
+            max_tokens=answer_output_tokens(item),
         )
         return MethodAnswer(
             raw_answer=raw,
@@ -313,6 +332,18 @@ class DenseMethod(MemoryMethod):
                     }
                     for index in ranked
                 ],
+                **(
+                    {
+                        "rendered_user_prompt": rendered_query,
+                        "rendered_system_prompt": self.system,
+                        "embedding_document_calls": (
+                            self.embedding_document_calls
+                        ),
+                        "embedding_query_calls": 1,
+                    }
+                    if expose_rendered_prompt(item)
+                    else {}
+                ),
             },
         )
 
@@ -367,7 +398,7 @@ class DenseMethod(MemoryMethod):
         raw, metadata = self.reader.generate(
             system=self.system,
             user=rendered_query,
-            max_tokens=stage2_2_output_tokens(item),
+            max_tokens=answer_output_tokens(item),
         )
         return MethodAnswer(
             raw_answer=raw,

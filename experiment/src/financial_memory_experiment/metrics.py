@@ -68,53 +68,131 @@ def _correct_change_metrics(counts: dict[str, int]) -> dict[str, float | None]:
 
 
 def _stage2_2_path_macro(rows: list[dict[str, Any]]) -> dict[str, Any]:
-    counts_by_path: dict[str, dict[str, int]] = defaultdict(
-        lambda: {
+    by_trajectory_path: dict[
+        tuple[str, str], list[tuple[int, dict[str, Any]]]
+    ] = defaultdict(list)
+    for row in rows:
+        trajectory_id = str(row["trajectory_id"])
+        checkpoint = int(row["query_checkpoint"])
+        for path, outcome in (
+            (row.get("metrics") or {}).get("path_outcomes") or {}
+        ).items():
+            by_trajectory_path[(trajectory_id, str(path))].append(
+                (checkpoint, outcome)
+            )
+
+    trajectory_rows: list[dict[str, Any]] = []
+    for (trajectory_id, path), observations in sorted(
+        by_trajectory_path.items()
+    ):
+        counts = {
             "tn": 0,
             "fp": 0,
             "fn": 0,
             "tp_correct": 0,
             "tp_wrong_value": 0,
         }
-    )
-    changed_trajectories: dict[str, set[str]] = defaultdict(set)
-    update_events: dict[str, set[tuple[str, str]]] = defaultdict(set)
-    for row in rows:
-        trajectory_id = str(row["trajectory_id"])
-        outcomes = (row.get("metrics") or {}).get("path_outcomes") or {}
-        for path, outcome in outcomes.items():
-            classification = str(outcome["classification"])
-            counts_by_path[str(path)][classification] += 1
+        event_observations: dict[str, list[tuple[int, bool]]] = defaultdict(
+            list
+        )
+        cell_scores: list[float] = []
+        for checkpoint, outcome in sorted(observations):
+            counts[str(outcome["classification"])] += 1
+            cell_scores.append(float(bool(outcome.get("cell_correct"))))
             if outcome.get("gold_changed"):
-                changed_trajectories[str(path)].add(trajectory_id)
                 for event_id in outcome.get("gold_event_session_ids") or []:
-                    update_events[str(path)].add(
-                        (trajectory_id, str(event_id))
+                    event_observations[str(event_id)].append(
+                        (checkpoint, bool(outcome.get("cell_correct")))
                     )
+        change_metrics = _correct_change_metrics(counts)
+        event_update_scores = [
+            float(sorted(event_rows)[0][1])
+            for event_rows in event_observations.values()
+        ]
+        retention_scores = [
+            mean(float(correct) for _, correct in event_rows)
+            for event_rows in event_observations.values()
+        ]
+        trajectory_rows.append(
+            {
+                "trajectory_id": trajectory_id,
+                "path": path,
+                "checkpoints": len(observations),
+                "final_state_accuracy": mean(cell_scores),
+                "eligible": bool(event_observations),
+                "update_event_support": len(event_observations),
+                "event_macro_update_accuracy": (
+                    mean(event_update_scores)
+                    if event_update_scores
+                    else None
+                ),
+                "retention_after_update": (
+                    mean(retention_scores) if retention_scores else None
+                ),
+                "change_confusion": counts,
+                **change_metrics,
+            }
+        )
 
     path_metrics: dict[str, dict[str, Any]] = {}
-    eligible_f1: list[float] = []
-    for path, counts in sorted(counts_by_path.items()):
-        metrics = _correct_change_metrics(counts)
-        changed_items = (
-            counts["tp_correct"] + counts["tp_wrong_value"] + counts["fn"]
-        )
-        eligible = changed_items > 0
-        if eligible and metrics["correct_change_f1"] is not None:
-            eligible_f1.append(float(metrics["correct_change_f1"]))
+    all_path_f1: list[float] = []
+    paths = sorted({str(row["path"]) for row in trajectory_rows})
+    for path in paths:
+        path_rows = [
+            row for row in trajectory_rows if row["path"] == path
+        ]
+        eligible_rows = [row for row in path_rows if row["eligible"]]
+        confusion = {
+            key: sum(
+                int(row["change_confusion"][key]) for row in path_rows
+            )
+            for key in ("tn", "fp", "fn", "tp_correct", "tp_wrong_value")
+        }
+
+        def macro(metric: str, source: list[dict[str, Any]]) -> float | None:
+            values = [
+                float(row[metric])
+                for row in source
+                if row.get(metric) is not None
+            ]
+            return mean(values) if values else None
+
+        correct_change_f1 = macro("correct_change_f1", eligible_rows)
+        if correct_change_f1 is not None:
+            all_path_f1.append(correct_change_f1)
         path_metrics[path] = {
-            "eligible": eligible,
-            "changed_items": changed_items,
-            "changed_trajectories": len(changed_trajectories[path]),
-            "update_events": len(update_events[path]),
-            "change_confusion": counts,
-            **metrics,
+            "aggregation": "checkpoint_then_trajectory_macro",
+            "eligible": bool(eligible_rows),
+            "eligible_trajectories": len(eligible_rows),
+            "reported_trajectories": len(path_rows),
+            "update_events": sum(
+                int(row["update_event_support"]) for row in eligible_rows
+            ),
+            "final_state_accuracy": macro(
+                "final_state_accuracy", path_rows
+            ),
+            "correct_change_precision": macro(
+                "correct_change_precision", eligible_rows
+            ),
+            "correct_change_recall": macro(
+                "correct_change_recall", eligible_rows
+            ),
+            "correct_change_f1": correct_change_f1,
+            "event_macro_update_accuracy": macro(
+                "event_macro_update_accuracy", eligible_rows
+            ),
+            "retention_after_update": macro(
+                "retention_after_update", eligible_rows
+            ),
+            "change_confusion": confusion,
         }
     return {
-        "correct_change_f1": mean(eligible_f1) if eligible_f1 else None,
-        "eligible_path_count": len(eligible_f1),
+        "aggregation": "checkpoint_then_trajectory_then_path_macro",
+        "correct_change_f1": mean(all_path_f1) if all_path_f1 else None,
+        "eligible_path_count": len(all_path_f1),
         "reported_path_count": len(path_metrics),
         "path_metrics": path_metrics,
+        "path_trajectory_metrics": trajectory_rows,
     }
 
 
@@ -637,6 +715,58 @@ def summarize_predictions(
                 for row in subset
                 if (row.get("item_metadata") or {}).get("evidence_sessions")
             ]
+            if stage == STAGE2_2:
+                retrieval_by_trajectory: dict[str, list[float]] = defaultdict(
+                    list
+                )
+                complete_by_trajectory: dict[str, list[float]] = defaultdict(
+                    list
+                )
+                support = 0
+                for row in subset:
+                    gold_evidence = {
+                        str(event_id).replace("D", "S", 1)
+                        for cell in (row.get("gold") or {}).values()
+                        for event_id in (
+                            cell.get("evidence_session_ids") or []
+                        )
+                    }
+                    if not gold_evidence:
+                        continue
+                    retrieved = set(
+                        map(str, row.get("evidence_session_ids") or [])
+                    )
+                    support += len(gold_evidence)
+                    trajectory_id = str(row["trajectory_id"])
+                    retrieval_by_trajectory[trajectory_id].append(
+                        len(gold_evidence & retrieved) / len(gold_evidence)
+                    )
+                    complete_by_trajectory[trajectory_id].append(
+                        float(gold_evidence <= retrieved)
+                    )
+                trajectory_recall = {
+                    trajectory: mean(values)
+                    for trajectory, values in retrieval_by_trajectory.items()
+                }
+                trajectory_complete = {
+                    trajectory: mean(values)
+                    for trajectory, values in complete_by_trajectory.items()
+                }
+                stages[stage]["retrieval"] = {
+                    "aggregation": "checkpoint_then_trajectory_macro",
+                    "gold_evidence_recall_at_budget": (
+                        mean(trajectory_recall.values())
+                        if trajectory_recall
+                        else None
+                    ),
+                    "complete_gold_evidence_recall_at_budget": (
+                        mean(trajectory_complete.values())
+                        if trajectory_complete
+                        else None
+                    ),
+                    "gold_evidence_support": support,
+                    "trajectory_recall": trajectory_recall,
+                }
             if retrieval_rows:
                 latest_hits = []
                 complete_hits = []
@@ -767,6 +897,7 @@ def write_tables(report: dict[str, Any], output_dir: Path) -> None:
     stage3_rows: list[dict[str, Any]] = []
     lag_rows: list[dict[str, Any]] = []
     stage2_2_path_rows: list[dict[str, Any]] = []
+    stage2_2_path_trajectory_rows: list[dict[str, Any]] = []
     stage2_2_event_rows: list[dict[str, Any]] = []
     stage2_2_retention_rows: list[dict[str, Any]] = []
     for method_id, stages in report["methods"].items():
@@ -825,6 +956,25 @@ def write_tables(report: dict[str, Any], output_dir: Path) -> None:
                     {
                         "method_id": method_id,
                         "path": path,
+                        **{
+                            key: value
+                            for key, value in path_values.items()
+                            if key != "change_confusion"
+                        },
+                        **{
+                            f"confusion_{key}": value
+                            for key, value in (
+                                path_values.get("change_confusion") or {}
+                            ).items()
+                        },
+                    }
+                )
+            for path_values in (
+                path_macro.get("path_trajectory_metrics") or []
+            ):
+                stage2_2_path_trajectory_rows.append(
+                    {
+                        "method_id": method_id,
                         **{
                             key: value
                             for key, value in path_values.items()
@@ -973,6 +1123,8 @@ def write_tables(report: dict[str, Any], output_dir: Path) -> None:
         ("stage3_by_derivation.csv", stage3_rows),
         ("retention_lag.csv", lag_rows),
         ("stage2_2_path_metrics.csv", stage2_2_path_rows),
+        ("path_trajectory_metrics.csv", stage2_2_path_trajectory_rows),
+        ("path_trajectory_macro.csv", stage2_2_path_rows),
         ("stage2_2_event_metrics.csv", stage2_2_event_rows),
         ("stage2_2_retention_after_update.csv", stage2_2_retention_rows),
     ):

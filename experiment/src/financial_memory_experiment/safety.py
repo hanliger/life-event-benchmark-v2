@@ -208,7 +208,15 @@ def build_smoke_plan(
         "checkpoint_concurrency": int(
             config["smoke"].get("checkpoint_concurrency", 1)
         ),
+        "max_in_flight": int(config["smoke"].get("max_in_flight", 1)),
+        "anthropic_max_in_flight": int(
+            config["smoke"].get("anthropic_max_in_flight", 1)
+        ),
+        "openrouter_max_in_flight": int(
+            config["smoke"].get("openrouter_max_in_flight", 1)
+        ),
         "automatic_retries": int(config["smoke"]["automatic_retries"]),
+        "parse_retries": int(config["smoke"].get("parse_retries", 0)),
         "stop_on_first_error": bool(config["smoke"]["stop_on_first_error"]),
         "timeout_policy": "unknown_billing_state_stop_no_auto_resume",
         "operation_limits": operation_limits or {},

@@ -17,8 +17,18 @@ def test_exactly_nine_methods_and_short_output_cap():
     cfg = load_experiment_config()
     assert len(method_ids()) == 9
     assert len(set(method_ids())) == 9
-    assert len(cfg["methods"]) == 8
-    assert cfg["analysis_methods"] == ["oracle_rel_gpt_5_6_sol"]
+    assert cfg["methods"] == [
+        "fc_claude_opus_4_8",
+        "bm25_claude_opus_4_8",
+        "dense_ge2_claude_opus_4_8",
+        "mem0_claude_opus_4_8",
+        "letta_claude_opus_4_8",
+        "fc_openrouter_llama_4_maverick",
+        "fc_openrouter_gpt_oss_120b",
+        "fc_openrouter_qwen_3_5_122b_a10b",
+        "fc_openrouter_qwen_3_6_35b_a3b_fp8",
+    ]
+    assert cfg["analysis_methods"] == []
     assert cfg["models"]["claude_opus_4_8"] == "claude-opus-4-8"
     assert cfg["models"]["claude_opus_4_8_request_timeout_seconds"] == 300
     assert cfg["models"]["final_answer_max_tokens"] == 4096
@@ -68,11 +78,13 @@ def test_exactly_nine_methods_and_short_output_cap():
     assert comparison_contract() == {
         "embedding_model": "gemini-embedding-2",
         "embedding_dimensions": 768,
-        "top_k": 10,
+        "retrieval_top_k_per_group": 5,
+        "retrieval_max_evidence": 20,
         "methods": [
-            "dense_ge2_gemini_3_1_pro",
-            "mem0_gemini_3_1_pro",
-            "letta_gemini_3_1_pro",
+            "bm25_claude_opus_4_8",
+            "dense_ge2_claude_opus_4_8",
+            "mem0_claude_opus_4_8",
+            "letta_claude_opus_4_8",
         ],
     }
 
@@ -111,6 +123,14 @@ benchmark:
 models:
   gemini_embedding: gemini-embedding-2
   embedding_dimensions: 1536
+""",
+        encoding="utf-8",
+    )
+    (root / "configs" / "methods.yaml").write_text(
+        """
+stage2_2_retrieval:
+  top_k_per_group: 5
+  max_evidence_sessions: 20
 """,
         encoding="utf-8",
     )
@@ -159,3 +179,40 @@ def test_opus_4_8_method_uses_pinned_model_and_low_settings(monkeypatch):
             "output_config": {"effort": "low"},
         },
     )
+
+
+def test_openrouter_qwen_3_6_is_provider_locked_to_fp8(
+    monkeypatch,
+):
+    captured = []
+
+    def fake_reader(
+        provider,
+        model,
+        mock,
+        max_tokens,
+        timeout_seconds,
+        generation_settings,
+    ):
+        captured.append((provider, model, generation_settings))
+        return registry.MockReader()
+
+    monkeypatch.setattr(registry, "_reader", fake_reader)
+    monkeypatch.setenv(
+        "STAGE2_2_OPENROUTER_PROVIDER_LOCK",
+        '{"fc_openrouter_qwen_3_6_35b_a3b_fp8":"Provider X"}',
+    )
+    registry.create_method(
+        "fc_openrouter_qwen_3_6_35b_a3b_fp8",
+        trajectory_id="traj_001",
+        mock=True,
+    )
+    provider, model, settings = captured[-1]
+    assert provider == "openrouter"
+    assert model == "qwen/qwen3.6-35b-a3b"
+    assert settings["provider"]["order"] == ["Provider X"]
+    assert settings["provider"]["only"] == ["Provider X"]
+    assert settings["provider"]["quantizations"] == ["fp8"]
+    assert settings["provider"]["allow_fallbacks"] is False
+    assert settings["provider"]["data_collection"] == "deny"
+    assert settings["provider"]["zdr"] is True

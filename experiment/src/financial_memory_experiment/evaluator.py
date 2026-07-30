@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import gzip
 import json
 import subprocess
 from concurrent.futures import ThreadPoolExecutor
@@ -200,9 +201,13 @@ def run_method(
     top_k: int | None = None,
     query_concurrency: int = 1,
     reasoning_policy: str | None = None,
+    parse_retries: int = 0,
+    prompt_artifact_root: Path | None = None,
 ) -> Path:
     if query_concurrency <= 0:
         raise ValueError("query_concurrency must be positive")
+    if parse_retries < 0:
+        raise ValueError("parse_retries must be non-negative")
     is_masking = [str(item.get("stage", "")).startswith("masking_") for item in items]
     if any(is_masking):
         if not all(is_masking):
@@ -245,11 +250,103 @@ def run_method(
                 "fc_claude_opus_4_8",
                 "fc_gemini_3_1_pro",
                 "fc_gpt_5_6_sol",
+                "bm25_claude_opus_4_8",
+                "dense_ge2_claude_opus_4_8",
+                "mem0_claude_opus_4_8",
+                "letta_claude_opus_4_8",
+                "fc_openrouter_llama_4_maverick",
+                "fc_openrouter_gpt_oss_120b",
+                "fc_openrouter_qwen_3_5_122b_a10b",
+                "fc_openrouter_qwen_3_6_35b_a3b_fp8",
             }
             if not all(is_stage2_2) or method_id not in supported:
                 raise ValueError(
-                    "parallel queries are limited to Stage 2.2 full-context methods"
+                    "parallel queries are limited to supported Stage 2.2 methods"
                 )
+            snapshot_methods = {
+                "bm25_claude_opus_4_8",
+                "dense_ge2_claude_opus_4_8",
+                "mem0_claude_opus_4_8",
+                "letta_claude_opus_4_8",
+            }
+            if method_id in snapshot_methods:
+                snapshot_tasks: list[
+                    tuple[Any, dict[str, Any], int]
+                ] = []
+                for trajectory_id in sorted(by_trajectory):
+                    base = create_method(
+                        method_id,
+                        trajectory_id=trajectory_id,
+                        paths=paths,
+                        mock=mock,
+                        top_k=top_k,
+                        reasoning_policy=reasoning_policy,
+                    )
+                    try:
+                        base.ingest_initial(_load_s000(root, trajectory_id))
+                        sessions = _load_sessions(root, trajectory_id)
+                        cursor = 0
+                        for item in sorted(
+                            by_trajectory[trajectory_id],
+                            key=lambda row: (
+                                _checkpoint(row),
+                                str(row["item_id"]),
+                            ),
+                        ):
+                            checkpoint = _checkpoint(item)
+                            if checkpoint < cursor or checkpoint > len(sessions):
+                                raise ValueError(
+                                    f"invalid checkpoint "
+                                    f"{trajectory_id}/{checkpoint}; cursor={cursor}"
+                                )
+                            while cursor < checkpoint:
+                                base.ingest_session(sessions[cursor])
+                                cursor += 1
+                            branch = base.clone()
+                            if (
+                                branch.state_fingerprint()
+                                != base.state_fingerprint()
+                            ):
+                                branch.close()
+                                raise CloneEquivalenceError(
+                                    f"{method_id}/{trajectory_id}/"
+                                    f"{checkpoint}: snapshot clone differs"
+                                )
+                            snapshot_tasks.append((branch, item, checkpoint))
+                    finally:
+                        base.close()
+
+                def answer_snapshot(
+                    task: tuple[Any, dict[str, Any], int]
+                ) -> dict[str, Any]:
+                    method, item, checkpoint = task
+                    try:
+                        return _prediction_with_parse_retries(
+                            method=method,
+                            method_id=method_id,
+                            item=item,
+                            checkpoint=checkpoint,
+                            parse_retries=parse_retries,
+                            prompt_artifact_root=prompt_artifact_root,
+                        )
+                    finally:
+                        method.close()
+
+                with ThreadPoolExecutor(
+                    max_workers=query_concurrency
+                ) as executor:
+                    for row in executor.map(answer_snapshot, snapshot_tasks):
+                        recorder.append(row)
+                recorder.complete(
+                    query_execution={
+                        "strategy": "parallel_immutable_snapshot_clone",
+                        "max_workers": query_concurrency,
+                        "sequential_ingest": True,
+                        "previous_prediction_in_later_query": False,
+                    }
+                )
+                return output
+
             tasks: list[tuple[str, dict[str, Any], dict[str, Any], list[dict[str, Any]]]] = []
             for trajectory_id in sorted(by_trajectory):
                 s000 = _load_s000(root, trajectory_id)
@@ -288,12 +385,13 @@ def run_method(
                     for session in prefix:
                         method.ingest_session(session)
                     checkpoint = _checkpoint(item)
-                    answer = _answer_with_query_isolation(method, item)
-                    return _prediction(
+                    return _prediction_with_parse_retries(
+                        method=method,
                         method_id=method_id,
                         item=item,
                         checkpoint=checkpoint,
-                        answer=answer,
+                        parse_retries=parse_retries,
+                        prompt_artifact_root=prompt_artifact_root,
                     )
                 finally:
                     method.close()
@@ -339,13 +437,14 @@ def run_method(
                     for item in sorted(
                         grouped[checkpoint], key=lambda row: str(row["item_id"])
                     ):
-                        answer = _answer_with_query_isolation(method, item)
                         recorder.append(
-                            _prediction(
+                            _prediction_with_parse_retries(
+                                method=method,
                                 method_id=method_id,
                                 item=item,
                                 checkpoint=checkpoint,
-                                answer=answer,
+                                parse_retries=parse_retries,
+                                prompt_artifact_root=prompt_artifact_root,
                             )
                         )
             finally:
@@ -460,6 +559,123 @@ def _answer_with_query_isolation(method: Any, item: dict[str, Any]) -> Any:
             f"{method.method_id}/{item['item_id']}: isolated query changed base state"
         )
     return answer
+
+
+def _prediction_with_parse_retries(
+    *,
+    method: Any,
+    method_id: str,
+    item: dict[str, Any],
+    checkpoint: int,
+    parse_retries: int,
+    prompt_artifact_root: Path | None = None,
+) -> dict[str, Any]:
+    attempts: list[dict[str, Any]] = []
+    row: dict[str, Any] | None = None
+    generation_item = item
+    if (
+        item.get("stage") == STAGE2_2
+        and not method_id.startswith("oracle_rel_")
+    ):
+        generation_metadata = {
+            key: value
+            for key, value in (item.get("metadata") or {}).items()
+            if key
+            not in {
+                "dynamic_paths",
+                "evidence_sessions",
+                "gold_evidence",
+            }
+        }
+        generation_item = {
+            key: value for key, value in item.items() if key != "gold"
+        }
+        generation_item["metadata"] = generation_metadata
+    for attempt_index in range(parse_retries + 1):
+        answer = _answer_with_query_isolation(method, generation_item)
+        _externalize_rendered_prompt(
+            answer=answer,
+            method_id=method_id,
+            item=item,
+            checkpoint=checkpoint,
+            prompt_artifact_root=prompt_artifact_root,
+        )
+        row = _prediction(
+            method_id=method_id,
+            item=item,
+            checkpoint=checkpoint,
+            answer=answer,
+        )
+        attempts.append(
+            {
+                "attempt": attempt_index + 1,
+                "parse_error": row.get("parse_error"),
+                "validation_errors": row.get("validation_errors") or [],
+                "schema_failure": bool(
+                    row.get("parse_error")
+                    or row.get("validation_errors")
+                ),
+                "raw_answer": answer.raw_answer,
+                "response_metadata": answer.metadata,
+            }
+        )
+        if not row.get("parse_error") and not row.get(
+            "validation_errors"
+        ):
+            break
+    if row is None:
+        raise AssertionError("prediction loop produced no attempts")
+    row["attempts"] = attempts
+    row["retry_count"] = len(attempts) - 1
+    row["first_attempt_parse_error"] = bool(
+        attempts[0].get("parse_error")
+    )
+    row["first_attempt_schema_failure"] = bool(
+        attempts[0].get("schema_failure")
+    )
+    row["final_schema_failure"] = bool(
+        row.get("parse_error") or row.get("validation_errors")
+    )
+    return row
+
+
+def _externalize_rendered_prompt(
+    *,
+    answer: Any,
+    method_id: str,
+    item: dict[str, Any],
+    checkpoint: int,
+    prompt_artifact_root: Path | None,
+) -> None:
+    if prompt_artifact_root is None:
+        return
+    user_prompt = answer.metadata.pop("rendered_user_prompt", None)
+    system_prompt = answer.metadata.pop("rendered_system_prompt", None)
+    if user_prompt is None:
+        return
+    rendered = (
+        "[SYSTEM]\n"
+        + str(system_prompt or "")
+        + "\n\n[USER]\n"
+        + str(user_prompt)
+    )
+    path = (
+        prompt_artifact_root
+        / method_id
+        / str(item["trajectory_id"])
+        / f"cp_{checkpoint:03d}.txt.gz"
+    )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("wb") as raw_handle:
+        with gzip.GzipFile(
+            filename="",
+            mode="wb",
+            fileobj=raw_handle,
+            mtime=0,
+        ) as gzip_handle:
+            gzip_handle.write(rendered.encode("utf-8"))
+    answer.metadata["prompt_artifact_path"] = str(path)
+    answer.metadata["prompt_sha256"] = sha256_json(rendered)
 
 
 class _TrieNode:

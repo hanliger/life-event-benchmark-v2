@@ -7,6 +7,7 @@ from types import SimpleNamespace
 from financial_memory_experiment import evaluator
 from financial_memory_experiment.evaluator import (
     _answer_with_query_isolation,
+    _prediction_with_parse_retries,
     run_method,
 )
 from financial_memory_experiment.methods.base import MethodAnswer
@@ -22,6 +23,9 @@ from financial_memory_experiment.methods.retrieval import (
     DenseMethod,
     HashEmbedder,
     regex_tokenize,
+)
+from financial_memory_experiment.methods.stage2_2_retrieval import (
+    stage2_2_retrieval_queries,
 )
 from financial_memory_experiment.paths import ExperimentPaths
 
@@ -64,6 +68,18 @@ class _CapturingReader:
         return "{}", {"provider": "capture", "model": "capture", "paid": False}
 
 
+STAGE2_2_ITEM = {
+    "item_id": "reconstruct-15",
+    "stage": "stage2_2_reconstruct",
+    "trajectory_id": "traj_test",
+    "question": "현재 상태를 복원하세요.",
+    "metadata": {
+        "query_checkpoint": 15,
+        "max_output_tokens": 20_000,
+    },
+}
+
+
 def test_local_methods_are_query_read_only_and_cloneable():
     reader = MockReader()
     methods = [
@@ -83,6 +99,105 @@ def test_local_methods_are_query_read_only_and_cloneable():
         clone.ingest_session({**SESSION, "session_id": "S002"})
         assert method.state_fingerprint() == before
         assert clone.state_fingerprint() != before
+
+
+def test_stage2_2_retrieval_queries_are_gold_independent():
+    rendered = json.dumps(
+        stage2_2_retrieval_queries(), ensure_ascii=False
+    )
+    assert len(stage2_2_retrieval_queries()) == 4
+    assert "gold" not in rendered.lower()
+    assert "dynamic_paths" not in rendered
+    for candidate in ("main_checking", "jeonse_loan", "married", "active"):
+        assert candidate not in rendered
+
+
+def test_stage2_2_retrievers_pin_s000_and_share_budget():
+    methods = [
+        BM25Method(
+            _CapturingReader(),
+            "system",
+            k=1,
+            k1=1.5,
+            b=0.75,
+            tokenizer=regex_tokenize,
+            method_id="bm25_claude_opus_4_8",
+        ),
+        DenseMethod(
+            _CapturingReader(),
+            "system",
+            HashEmbedder(),
+            k=1,
+            method_id="dense_ge2_claude_opus_4_8",
+        ),
+        Mem0Method(
+            InMemoryMem0Double,
+            _CapturingReader(),
+            "system",
+            trajectory_id="traj_test",
+            k=1,
+            method_id="mem0_claude_opus_4_8",
+        ),
+    ]
+    for method in methods:
+        method.ingest_initial(S000)
+        for number in range(1, 8):
+            method.ingest_session(
+                {**SESSION, "session_id": f"S{number:03d}"}
+            )
+        answer = method.answer(STAGE2_2_ITEM)
+        assert answer.evidence_session_ids[0] == "S000"
+        assert len(answer.evidence_session_ids) <= 21
+        assert answer.metadata["retrieval_searches"] == 4
+        assert answer.metadata["top_k_per_group"] == 5
+        assert answer.metadata["max_evidence"] == 20
+        assert "[S000" in answer.metadata["rendered_user_prompt"]
+        assert all(
+            int(session_id[1:]) <= 15
+            for session_id in answer.evidence_session_ids
+            if session_id.startswith("S") and session_id != "S000"
+        )
+
+
+def test_stage2_2_generation_never_receives_gold_or_dynamic_paths(
+    monkeypatch,
+):
+    captured = []
+
+    class _Method:
+        method_id = "fc_claude_opus_4_8"
+
+        def state_fingerprint(self):
+            return "stable"
+
+        def answer(self, item):
+            captured.append(item)
+            return MethodAnswer(raw_answer="{}")
+
+    item = {
+        **STAGE2_2_ITEM,
+        "gold": {"initial_state": {}, "state": {}},
+        "metadata": {
+            **STAGE2_2_ITEM["metadata"],
+            "dynamic_paths": ["employment.employer"],
+            "gold_evidence": ["D015"],
+        },
+    }
+    monkeypatch.setattr(
+        evaluator,
+        "_prediction",
+        lambda **_kwargs: {"parse_error": False},
+    )
+    _prediction_with_parse_retries(
+        method=_Method(),
+        method_id="fc_claude_opus_4_8",
+        item=item,
+        checkpoint=15,
+        parse_retries=0,
+    )
+    assert "gold" not in captured[0]
+    assert "dynamic_paths" not in captured[0]["metadata"]
+    assert "gold_evidence" not in captured[0]["metadata"]
 
 
 def test_oracle_relevant_context_uses_only_s000_and_gold_support_sessions():

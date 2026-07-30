@@ -1,0 +1,45 @@
+{
+  "schema_version": "stage2_2_openrouter_provider_lock-v1",
+  "selection_policy": "highest observed throughput among ZDR/data-collection-deny compatible providers",
+  "resolved_at": "YYYY-MM-DDTHH:MM:SS+09:00",
+  "methods": {
+    "fc_openrouter_llama_4_maverick": {
+      "provider": "REPLACE_WITH_PROVIDER",
+      "price": {
+        "prompt_usd_per_token": null,
+        "completion_usd_per_token": null
+      },
+      "context_window": null,
+      "quantizations": null
+    },
+    "fc_openrouter_gpt_oss_120b": {
+      "provider": "REPLACE_WITH_PROVIDER",
+      "price": {
+        "prompt_usd_per_token": null,
+        "completion_usd_per_token": null
+      },
+      "context_window": null,
+      "quantizations": null
+    },
+    "fc_openrouter_qwen_3_5_122b_a10b": {
+      "provider": "REPLACE_WITH_PROVIDER",
+      "price": {
+        "prompt_usd_per_token": null,
+        "completion_usd_per_token": null
+      },
+      "context_window": null,
+      "quantizations": null
+    },
+    "fc_openrouter_qwen_3_6_35b_a3b_fp8": {
+      "provider": "REPLACE_WITH_PROVIDER",
+      "price": {
+        "prompt_usd_per_token": null,
+        "completion_usd_per_token": null
+      },
+      "context_window": null,
+      "quantizations": [
+        "fp8"
+      ]
+    }
+  }
+}

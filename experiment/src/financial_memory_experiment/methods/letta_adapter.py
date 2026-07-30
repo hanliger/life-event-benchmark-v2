@@ -7,16 +7,19 @@ import json
 import re
 from typing import Any, Callable
 
-from ..prompts import build_query, format_s000, format_session
+from ..prompts import build_query, format_s000, format_session, s000_as_session
 from ..safety import assert_provider_construction_allowed
+from ..stage2_2 import STAGE2_2
 from ..util import sha256_json
 from .base import MemoryMethod, MethodAnswer
+from .readers import generation_slot
+from .stage2_2_retrieval import stage2_2_retrieval_queries
 
 
 READ_ONLY_INSTRUCTIONS = """
-질의 시 archival_memory_search를 정확히 한 번만 사용하고 질의에서 지정한 top_k를 지킨다.
+질의에 지정된 archival_memory_search 호출 상한과 top_k를 지킨다.
 질의 중 core memory, archival memory, block, tool, agent 설정을 생성·수정·삭제하지 않는다.
-설명 없이 요청된 <answer>...</answer>만 반환한다.
+요청된 출력 형식만 반환한다.
 """.strip()
 
 
@@ -47,6 +50,9 @@ class LettaMethod(MemoryMethod):
         max_steps: int,
         max_tokens: int,
         top_k: int,
+        method_id: str = "letta_gemini_3_1_pro",
+        stage2_2_search_calls: int = 4,
+        system: str = "",
         timeout_seconds: float = 120,
     ):
         self._client_factory = client_factory
@@ -57,20 +63,31 @@ class LettaMethod(MemoryMethod):
         self.max_steps = max_steps
         self.max_tokens = max_tokens
         self.top_k = top_k
+        self.method_id = method_id
+        self.stage2_2_search_calls = stage2_2_search_calls
+        self.system = system
         self.timeout_seconds = timeout_seconds
         self._delete_on_close = False
-        agent = self.client.agents.create(
-            name=f"financial-memory-{trajectory_id}",
-            model=model,
-            embedding=embedding,
-            max_tokens=max_tokens,
-            memory_blocks=[
-                {"label": "protocol", "value": READ_ONLY_INSTRUCTIONS},
+        self.s000: dict[str, Any] | None = None
+        agent_kwargs: dict[str, Any] = {
+            "name": f"financial-memory-{trajectory_id}",
+            "model": model,
+            "embedding": embedding,
+            "max_tokens": max_tokens,
+            "memory_blocks": [
+                {
+                    "label": "protocol",
+                    "value": "\n\n".join(
+                        value
+                        for value in (system, READ_ONLY_INSTRUCTIONS)
+                        if value
+                    ),
+                },
             ],
-            tools=["archival_memory_search"],
-            include_base_tools=False,
-            include_base_tool_rules=False,
-            tool_rules=[
+            "tools": ["archival_memory_search"],
+            "include_base_tools": False,
+            "include_base_tool_rules": False,
+            "tool_rules": [
                 {
                     "type": "run_first",
                     "tool_name": "archival_memory_search",
@@ -86,7 +103,16 @@ class LettaMethod(MemoryMethod):
                     "tool_name": "archival_memory_search",
                 },
             ],
-            timeout=self.timeout_seconds,
+            "timeout": self.timeout_seconds,
+        }
+        if model.startswith("anthropic/"):
+            agent_kwargs["model_settings"] = {
+                "provider_type": "anthropic",
+                "effort": "low",
+                "max_output_tokens": max_tokens,
+            }
+        agent = self.client.agents.create(
+            **agent_kwargs,
         )
         self.agent_id = str(agent.id)
         self._ingested: list[str] = []
@@ -107,6 +133,7 @@ class LettaMethod(MemoryMethod):
         )
 
     def ingest_initial(self, s000: dict[str, Any]) -> None:
+        self.s000 = copy.deepcopy(s000)
         self._insert_passage(
             text=format_s000(s000),
             session_id="S000",
@@ -126,6 +153,7 @@ class LettaMethod(MemoryMethod):
     @classmethod
     def _response_text(cls, response: Any) -> str:
         tagged: list[str] = []
+        assistant_texts: list[str] = []
 
         def collect(value: Any) -> None:
             if isinstance(value, str):
@@ -157,19 +185,27 @@ class LettaMethod(MemoryMethod):
                 message_type = payload.get("message_type")
                 role = payload.get("role")
                 if message_type == "assistant_message" or role == "assistant":
-                    collect(payload.get("content", payload.get("text")))
+                    content = payload.get("content", payload.get("text"))
+                    collect(content)
+                    if isinstance(content, str) and content.strip():
+                        assistant_texts.append(content.strip())
             elif (
                 getattr(message, "message_type", None) == "assistant_message"
                 or getattr(message, "role", None) == "assistant"
             ):
-                collect(
-                    getattr(
-                        message,
-                        "content",
-                        getattr(message, "text", None),
-                    )
+                content = getattr(
+                    message,
+                    "content",
+                    getattr(message, "text", None),
                 )
-        return tagged[-1].strip() if tagged else ""
+                collect(content)
+                if isinstance(content, str) and content.strip():
+                    assistant_texts.append(content.strip())
+        return (
+            tagged[-1].strip()
+            if tagged
+            else (assistant_texts[-1] if assistant_texts else "")
+        )
 
     @classmethod
     def _tool_calls(cls, response: Any) -> list[dict[str, Any]]:
@@ -403,6 +439,7 @@ class LettaMethod(MemoryMethod):
             "agent_file": self._export_bytes(scrub_messages=True),
             "passages": self._passage_rows(),
             "ingested": list(self._ingested),
+            "s000": copy.deepcopy(self.s000),
         }
 
     def restore(self, snapshot: Any) -> None:
@@ -426,6 +463,7 @@ class LettaMethod(MemoryMethod):
                 timeout=self.timeout_seconds,
             )
         self._ingested = list(snapshot["ingested"])
+        self.s000 = copy.deepcopy(snapshot.get("s000"))
 
     def clone(self) -> "LettaMethod":
         clone = object.__new__(LettaMethod)
@@ -437,8 +475,12 @@ class LettaMethod(MemoryMethod):
         clone.max_steps = self.max_steps
         clone.max_tokens = self.max_tokens
         clone.top_k = self.top_k
+        clone.method_id = self.method_id
+        clone.stage2_2_search_calls = self.stage2_2_search_calls
+        clone.system = self.system
         clone.timeout_seconds = self.timeout_seconds
         clone._delete_on_close = True
+        clone.s000 = None
         clone.restore(self.snapshot())
         if clone.state_fingerprint() != self.state_fingerprint():
             raise RuntimeError("Letta export/import is not clone-equivalent")
@@ -451,30 +493,59 @@ class LettaMethod(MemoryMethod):
                 "logical_export": self._logical_export(snapshot["agent_file"]),
                 "passages": snapshot["passages"],
                 "ingested": snapshot["ingested"],
+                "s000": snapshot["s000"],
             }
         )
 
     def answer(self, item: dict[str, Any]) -> MethodAnswer:
+        is_stage2_2 = item.get("stage") == STAGE2_2
+        search_limit = self.stage2_2_search_calls if is_stage2_2 else 1
+        group_instructions = ""
+        if is_stage2_2:
+            group_instructions = "\n".join(
+                f"{index}. {group['group_id']}: {group['query']}"
+                for index, group in enumerate(
+                    stage2_2_retrieval_queries(), start=1
+                )
+            )
+        rendered_query = (
+            f"archival search는 최대 {search_limit}회, "
+            f"각 결과는 최대 {self.top_k}개만 사용하라.\n"
+            + (
+                "다음 네 Gold-independent state 그룹을 순서대로 "
+                "검색한 뒤 전체 상태를 복원하라.\n"
+                f"{group_instructions}\n\n"
+                if is_stage2_2
+                else "\n"
+            )
+            + build_query(
+                item,
+                [s000_as_session(self.s000)]
+                if is_stage2_2 and self.s000 is not None
+                else [],
+            )
+        )
         conversation = self.client.conversations.create(
             agent_id=self.agent_id,
             timeout=self.timeout_seconds,
         )
-        response = self.client.conversations.messages.create(
-            conversation_id=str(conversation.id),
-            messages=[
-                {
-                    "role": "user",
-                    "content": (
-                        f"archival search는 최대 1회, 결과는 최대 {self.top_k}개만 사용하라.\n\n"
-                        + build_query(item, [])
-                    ),
-                    "otid": f"financial-memory:query:{item['item_id']}",
-                }
-            ],
-            max_steps=self.max_steps,
-            streaming=False,
-            timeout=self.timeout_seconds,
+        provider = (
+            "anthropic" if self.model.startswith("anthropic/") else "google"
         )
+        with generation_slot(provider):
+            response = self.client.conversations.messages.create(
+                conversation_id=str(conversation.id),
+                messages=[
+                    {
+                        "role": "user",
+                        "content": rendered_query,
+                        "otid": f"financial-memory:query:{item['item_id']}",
+                    }
+                ],
+                max_steps=self.max_steps,
+                streaming=False,
+                timeout=self.timeout_seconds,
+            )
         recorded_messages: Any = response
         if hasattr(self.client.conversations.messages, "list"):
             page = self.client.conversations.messages.list(
@@ -486,19 +557,27 @@ class LettaMethod(MemoryMethod):
 
         tool_calls = self._tool_calls(recorded_messages)
         tool_names = [str(call["name"]) for call in tool_calls]
-        if tool_names != ["archival_memory_search"]:
+        if (
+            not tool_names
+            or any(name != "archival_memory_search" for name in tool_names)
+            or len(tool_names) > search_limit
+        ):
             raise RuntimeError(
-                "Letta must use archival_memory_search exactly once; "
-                f"observed={tool_names}"
+                "Letta archival search contract violated; "
+                f"limit={search_limit}, observed={tool_names}"
             )
-        arguments = tool_calls[0].get("arguments")
-        if not isinstance(arguments, dict):
-            raise RuntimeError("Letta archival search arguments were not JSON")
-        effective_top_k = int(arguments.get("top_k", 10))
-        if effective_top_k != self.top_k:
-            raise RuntimeError(
-                f"Letta archival top_k mismatch: {effective_top_k} != {self.top_k}"
-            )
+        for call in tool_calls:
+            arguments = call.get("arguments")
+            if not isinstance(arguments, dict):
+                raise RuntimeError(
+                    "Letta archival search arguments were not JSON"
+                )
+            effective_top_k = int(arguments.get("top_k", 10))
+            if effective_top_k != self.top_k:
+                raise RuntimeError(
+                    "Letta archival top_k mismatch: "
+                    f"{effective_top_k} != {self.top_k}"
+                )
         raw = self._response_text(recorded_messages) or self._response_text(
             response
         )
@@ -509,24 +588,66 @@ class LettaMethod(MemoryMethod):
             raise RuntimeError(
                 "Letta archival search returned no attributable session IDs"
             )
+        if is_stage2_2:
+            evidence_session_ids = [
+                "S000",
+                *sorted(
+                    {
+                        session_id
+                        for session_id in evidence_session_ids
+                        if session_id != "S000"
+                    },
+                    key=lambda session_id: (
+                        int(session_id[1:])
+                        if session_id.startswith("S")
+                        and session_id[1:].isdigit()
+                        else 10**9,
+                        session_id,
+                    ),
+                )[: search_limit * self.top_k],
+            ]
         return MethodAnswer(
             raw_answer=raw,
             evidence_session_ids=evidence_session_ids,
             metadata={
                 "agent": "official_letta",
+                "model": self.model,
+                "model_effort": (
+                    "low"
+                    if self.model.startswith("anthropic/")
+                    else None
+                ),
                 "max_steps": self.max_steps,
-                "archival_search_limit": 1,
+                "archival_search_limit": search_limit,
                 "top_k": self.top_k,
                 "fresh_conversation": True,
                 "conversation_id": str(conversation.id),
                 "query_isolation": "fresh_conversation_passage_fingerprint",
                 "tool_names": tool_names,
-                "observed_search_calls": 1,
+                "tool_calls": tool_calls,
+                "observed_search_calls": len(tool_names),
+                "evidence_session_ids": evidence_session_ids,
+                "retrieval_groups": (
+                    list(stage2_2_retrieval_queries())
+                    if is_stage2_2
+                    else []
+                ),
                 "usage": self._jsonable(getattr(response, "usage", None)),
                 "stop_reason": self._jsonable(
                     getattr(response, "stop_reason", None)
                 ),
                 "automatic_retries": 0,
+                "archival_passage_count": len(self._ingested),
+                **(
+                    {"rendered_user_prompt": rendered_query}
+                    if is_stage2_2
+                    else {}
+                ),
+                **(
+                    {"rendered_system_prompt": self.system}
+                    if is_stage2_2
+                    else {}
+                ),
             },
         )
 
@@ -563,6 +684,25 @@ class LettaContractDouble(MemoryMethod):
         self.sessions.append(copy.deepcopy(session))
 
     def answer(self, item: dict[str, Any]) -> MethodAnswer:
+        if item.get("stage") == STAGE2_2:
+            if self.s000 is None:
+                raise RuntimeError("Letta Stage 2.2 double requires S000")
+            query = build_query(item, [s000_as_session(self.s000)])
+            return MethodAnswer(
+                raw_answer="{}",
+                evidence_session_ids=["S000"],
+                metadata={
+                    "provider": "mock",
+                    "adapter_contract": "letta",
+                    "paid": False,
+                    "rendered_user_prompt": query,
+                    "retrieval_groups": list(
+                        stage2_2_retrieval_queries()
+                    ),
+                    "fresh_conversation": True,
+                    "archival_search_limit": 4,
+                },
+            )
         return MethodAnswer(
             raw_answer="<answer>A</answer>",
             metadata={"provider": "mock", "adapter_contract": "letta", "paid": False},

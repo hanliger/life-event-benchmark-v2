@@ -31,7 +31,7 @@ from .masking import build_masking_items, validate_masking_items
 from .methods import method_ids
 from .methods.full_context import FullContextMethod
 from .methods.mem0_adapter import InMemoryMem0Double, Mem0Method
-from .methods.readers import MockReader
+from .methods.readers import MockReader, configure_generation_limits
 from .methods.retrieval import BM25Method, DenseMethod, HashEmbedder, regex_tokenize
 from .metrics import summarize_predictions, write_tables
 from .paths import ExperimentPaths
@@ -177,11 +177,28 @@ def _load_approved_environment(paths: ExperimentPaths) -> None:
 
 def _preflight_paid(methods: list[str]) -> None:
     missing_keys: list[str] = []
-    if {
+    anthropic_methods = {
         "fc_claude_opus_5",
         "fc_claude_opus_4_8",
-    } & set(methods) and not os.environ.get("ANTHROPIC_API_KEY"):
+        "bm25_claude_opus_4_8",
+        "dense_ge2_claude_opus_4_8",
+        "mem0_claude_opus_4_8",
+        "letta_claude_opus_4_8",
+    }
+    if anthropic_methods & set(methods) and not os.environ.get(
+        "ANTHROPIC_API_KEY"
+    ):
         missing_keys.append("ANTHROPIC_API_KEY")
+    openrouter_methods = {
+        "fc_openrouter_llama_4_maverick",
+        "fc_openrouter_gpt_oss_120b",
+        "fc_openrouter_qwen_3_5_122b_a10b",
+        "fc_openrouter_qwen_3_6_35b_a3b_fp8",
+    }
+    if openrouter_methods & set(methods) and not os.environ.get(
+        "OPENROUTER_API_KEY"
+    ):
+        missing_keys.append("OPENROUTER_API_KEY")
     if {
         "fc_gpt_5_6_sol",
         "oracle_rel_gpt_5_6_sol",
@@ -193,6 +210,9 @@ def _preflight_paid(methods: list[str]) -> None:
         "dense_ge2_gemini_3_1_pro",
         "mem0_gemini_3_1_pro",
         "letta_gemini_3_1_pro",
+        "dense_ge2_claude_opus_4_8",
+        "mem0_claude_opus_4_8",
+        "letta_claude_opus_4_8",
     }
     if google_methods & set(methods) and not (
         os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
@@ -207,6 +227,14 @@ def _preflight_paid(methods: list[str]) -> None:
     required_modules = {
         "fc_claude_opus_5": "anthropic",
         "fc_claude_opus_4_8": "anthropic",
+        "bm25_claude_opus_4_8": "kiwipiepy",
+        "dense_ge2_claude_opus_4_8": "google.genai",
+        "mem0_claude_opus_4_8": "mem0",
+        "letta_claude_opus_4_8": "letta_client",
+        "fc_openrouter_llama_4_maverick": "openai",
+        "fc_openrouter_gpt_oss_120b": "openai",
+        "fc_openrouter_qwen_3_5_122b_a10b": "openai",
+        "fc_openrouter_qwen_3_6_35b_a3b_fp8": "openai",
         "fc_gpt_5_6_sol": "openai",
         "oracle_rel_gpt_5_6_sol": "openai",
         "fc_gemini_3_1_pro": "google.genai",
@@ -233,7 +261,7 @@ def _preflight_paid(methods: list[str]) -> None:
             + ", ".join(missing_modules)
         )
 
-    if "letta_gemini_3_1_pro" in methods:
+    if {"letta_gemini_3_1_pro", "letta_claude_opus_4_8"} & set(methods):
         try:
             with urllib.request.urlopen(
                 "http://localhost:8283/v1/health", timeout=3
@@ -509,6 +537,17 @@ def main() -> int:
         )
         reserve_smoke_budget(paths, plan)
         os.environ["FIN_MEMORY_DISABLE_PAID_APIS"] = "0"
+        configure_generation_limits(
+            max_in_flight=int(plan.get("max_in_flight", 60)),
+            provider_limits={
+                "anthropic": int(
+                    plan.get("anthropic_max_in_flight", 20)
+                ),
+                "openrouter": int(
+                    plan.get("openrouter_max_in_flight", 40)
+                ),
+            },
+        )
         canonical = [
             item
             for item in selected
@@ -550,6 +589,14 @@ def main() -> int:
                         "fc_claude_opus_4_8",
                         "fc_gemini_3_1_pro",
                         "fc_gpt_5_6_sol",
+                        "bm25_claude_opus_4_8",
+                        "dense_ge2_claude_opus_4_8",
+                        "mem0_claude_opus_4_8",
+                        "letta_claude_opus_4_8",
+                        "fc_openrouter_llama_4_maverick",
+                        "fc_openrouter_gpt_oss_120b",
+                        "fc_openrouter_qwen_3_5_122b_a10b",
+                        "fc_openrouter_qwen_3_6_35b_a3b_fp8",
                     }
                     and all(
                         item.get("stage") == "stage2_2_reconstruct"
@@ -557,6 +604,7 @@ def main() -> int:
                     )
                     else 1
                 ),
+                parse_retries=int(plan.get("parse_retries", 0)),
             )
             return str(output)
 

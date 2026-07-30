@@ -17,8 +17,13 @@ letta:
   server: self_hosted_docker
   agent_per_trajectory: 1
   ingestion: archival_passage_insert
-  max_steps: 4
-  archival_search_calls_per_query: 1
+  max_steps: 5
+  archival_search_calls_per_query: 4
   persistent_query_writes: false
   fresh_conversation_per_query: true
   masking_branch_strategy: frozen_variant_replay
+stage2_2_retrieval:
+  groups: 4
+  top_k_per_group: 5
+  max_evidence_sessions: 20
+  pin_initial_state: true

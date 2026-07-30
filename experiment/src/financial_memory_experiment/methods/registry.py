@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -15,15 +17,21 @@ from .retrieval import BM25Method, DenseMethod, GeminiEmbedder, kiwi_tokenize, r
 
 def comparison_contract(paths: ExperimentPaths | None = None) -> dict[str, Any]:
     cfg = load_experiment_config(paths)
+    method_cfg = load_method_config(paths)
     models = cfg["models"]
+    retrieval = method_cfg["stage2_2_retrieval"]
     contract = {
         "embedding_model": str(models["gemini_embedding"]),
         "embedding_dimensions": int(models["embedding_dimensions"]),
-        "top_k": int(cfg["benchmark"]["top_k_main"]),
+        "retrieval_top_k_per_group": int(retrieval["top_k_per_group"]),
+        "retrieval_max_evidence": int(
+            retrieval["max_evidence_sessions"]
+        ),
         "methods": [
-            "dense_ge2_gemini_3_1_pro",
-            "mem0_gemini_3_1_pro",
-            "letta_gemini_3_1_pro",
+            "bm25_claude_opus_4_8",
+            "dense_ge2_claude_opus_4_8",
+            "mem0_claude_opus_4_8",
+            "letta_claude_opus_4_8",
         ],
     }
     if contract["embedding_model"] != "gemini-embedding-2":
@@ -32,8 +40,14 @@ def comparison_contract(paths: ExperimentPaths | None = None) -> dict[str, Any]:
         raise ValueError(
             "Dense/Mem0/Letta comparison contract requires 768-dimensional embeddings"
         )
-    if contract["top_k"] != 10:
-        raise ValueError("Dense/Mem0/Letta comparison contract requires top_k=10")
+    if (
+        contract["retrieval_top_k_per_group"] != 5
+        or contract["retrieval_max_evidence"] != 20
+    ):
+        raise ValueError(
+            "Stage 2.2 comparison contract requires top-5/group and "
+            "max 20 evidence sessions"
+        )
     return contract
 
 
@@ -102,19 +116,54 @@ def create_method(
     models = cfg["models"]
     k = int(top_k or cfg["benchmark"]["top_k_main"])
     max_tokens = int(cfg["models"]["final_answer_max_tokens"])
-    timeout_seconds = float(cfg["models"]["request_timeout_seconds"])
+    timeout_seconds = float(
+        os.environ.get(
+            "STAGE2_2_REQUEST_TIMEOUT_SECONDS",
+            cfg["models"]["request_timeout_seconds"],
+        )
+    )
+    opus_timeout_seconds = float(
+        os.environ.get(
+            "STAGE2_2_REQUEST_TIMEOUT_SECONDS",
+            models["claude_opus_4_8_request_timeout_seconds"],
+        )
+    )
     generation_settings = generation_settings_for_policy(
         models, reasoning_policy
     )
     system = _system(paths)
-    gemini = _reader(
-        "google",
-        str(models["gemini_reader"]),
-        mock,
-        max_tokens,
-        timeout_seconds,
-        dict(generation_settings["google"]),
+    stage2_2_retrieval = method_cfg.get("stage2_2_retrieval") or {}
+    group_k = int(
+        os.environ.get(
+            "STAGE2_2_RETRIEVAL_TOP_K_PER_GROUP",
+            stage2_2_retrieval.get("top_k_per_group", 5),
+        )
     )
+    max_evidence = int(
+        os.environ.get(
+            "STAGE2_2_RETRIEVAL_MAX_EVIDENCE",
+            stage2_2_retrieval.get("max_evidence_sessions", 20),
+        )
+    )
+    def gemini_reader() -> Reader:
+        return _reader(
+            "google",
+            str(models["gemini_reader"]),
+            mock,
+            max_tokens,
+            timeout_seconds,
+            dict(generation_settings["google"]),
+        )
+
+    def opus_4_8_reader() -> Reader:
+        return _reader(
+            "anthropic",
+            str(models["claude_opus_4_8"]),
+            mock,
+            max_tokens,
+            opus_timeout_seconds,
+            dict(generation_settings["anthropic"]),
+        )
     if method_id == "fc_claude_opus_5":
         return FullContextMethod(
             method_id,
@@ -131,18 +180,64 @@ def create_method(
     if method_id == "fc_claude_opus_4_8":
         return FullContextMethod(
             method_id,
+            opus_4_8_reader(),
+            system,
+        )
+    openrouter_models = models.get("openrouter") or {}
+    openrouter_timeout_seconds = float(
+        os.environ.get(
+            "STAGE2_2_REQUEST_TIMEOUT_SECONDS",
+            openrouter_models.get("request_timeout_seconds", timeout_seconds),
+        )
+    )
+    openrouter_map = {
+        "fc_openrouter_llama_4_maverick": (
+            "llama_4_maverick",
+            False,
+            None,
+        ),
+        "fc_openrouter_gpt_oss_120b": ("gpt_oss_120b", True, None),
+        "fc_openrouter_qwen_3_5_122b_a10b": (
+            "qwen_3_5_122b_a10b",
+            True,
+            None,
+        ),
+        "fc_openrouter_qwen_3_6_35b_a3b_fp8": (
+            "qwen_3_6_35b_a3b",
+            True,
+            ["fp8"],
+        ),
+    }
+    if method_id in openrouter_map:
+        model_key, reasoning, quantizations = openrouter_map[method_id]
+        settings: dict[str, Any] = {
+            "provider": dict(openrouter_models["provider"]),
+        }
+        provider_lock = json.loads(
+            os.environ.get("STAGE2_2_OPENROUTER_PROVIDER_LOCK", "{}")
+        )
+        locked_provider = provider_lock.get(method_id)
+        if locked_provider:
+            settings["provider"]["order"] = [str(locked_provider)]
+            settings["provider"]["only"] = [str(locked_provider)]
+        if reasoning:
+            settings["reasoning"] = {"effort": "low", "exclude": True}
+        if quantizations is not None:
+            settings["provider"]["quantizations"] = quantizations
+        return FullContextMethod(
+            method_id,
             _reader(
-                "anthropic",
-                str(models["claude_opus_4_8"]),
+                "openrouter",
+                str(openrouter_models[model_key]),
                 mock,
                 max_tokens,
-                float(models["claude_opus_4_8_request_timeout_seconds"]),
-                dict(generation_settings["anthropic"]),
+                openrouter_timeout_seconds,
+                settings,
             ),
             system,
         )
     if method_id == "fc_gemini_3_1_pro":
-        return FullContextMethod(method_id, gemini, system)
+        return FullContextMethod(method_id, gemini_reader(), system)
     if method_id == "fc_gpt_5_6_sol":
         return FullContextMethod(
             method_id,
@@ -172,12 +267,25 @@ def create_method(
     if method_id == "bm25_gemini_3_1_pro":
         tokenizer = regex_tokenize if mock else kiwi_tokenize
         return BM25Method(
-            gemini,
+            gemini_reader(),
             system,
             k=k,
             k1=float(method_cfg["bm25"]["k1"]),
             b=float(method_cfg["bm25"]["b"]),
             tokenizer=tokenizer,
+        )
+    if method_id == "bm25_claude_opus_4_8":
+        tokenizer = regex_tokenize if mock else kiwi_tokenize
+        return BM25Method(
+            opus_4_8_reader(),
+            system,
+            k=k,
+            k1=float(method_cfg["bm25"]["k1"]),
+            b=float(method_cfg["bm25"]["b"]),
+            tokenizer=tokenizer,
+            method_id=method_id,
+            retrieval_top_k_per_group=group_k,
+            retrieval_max_evidence=max_evidence,
         )
     if method_id == "dense_ge2_gemini_3_1_pro":
         if mock:
@@ -190,7 +298,27 @@ def create_method(
                 int(models["embedding_dimensions"]),
                 timeout_seconds,
             )
-        return DenseMethod(gemini, system, embedder, k=k)
+        return DenseMethod(gemini_reader(), system, embedder, k=k)
+    if method_id == "dense_ge2_claude_opus_4_8":
+        if mock:
+            from .retrieval import HashEmbedder
+
+            opus_embedder: Any = HashEmbedder()
+        else:
+            opus_embedder = GeminiEmbedder(
+                str(models["gemini_embedding"]),
+                int(models["embedding_dimensions"]),
+                timeout_seconds,
+            )
+        return DenseMethod(
+            opus_4_8_reader(),
+            system,
+            opus_embedder,
+            k=k,
+            method_id=method_id,
+            retrieval_top_k_per_group=group_k,
+            retrieval_max_evidence=max_evidence,
+        )
     if method_id == "mem0_gemini_3_1_pro":
         if mock:
             from .mem0_adapter import InMemoryMem0Double
@@ -212,7 +340,47 @@ def create_method(
                     timeout_seconds=timeout_seconds,
                 )
 
-        return Mem0Method(factory, gemini, system, trajectory_id=trajectory_id, k=k)
+        return Mem0Method(
+            factory,
+            gemini_reader(),
+            system,
+            trajectory_id=trajectory_id,
+            k=k,
+        )
+    if method_id == "mem0_claude_opus_4_8":
+        if mock:
+            from .mem0_adapter import InMemoryMem0Double
+
+            opus_memory_factory = InMemoryMem0Double
+        else:
+            import uuid
+
+            store = paths.runs / "state" / "mem0_opus_4_8" / trajectory_id
+
+            def opus_memory_factory() -> Any:
+                instance_id = uuid.uuid4().hex
+                return build_official_mem0(
+                    collection_name=(
+                        f"financial_memory_opus48_{trajectory_id}_{instance_id}"
+                    ),
+                    qdrant_path=store / instance_id,
+                    llm_model=str(models["claude_opus_4_8"]),
+                    llm_provider="anthropic",
+                    embedding_model=str(models["gemini_embedding"]),
+                    embedding_dimensions=int(models["embedding_dimensions"]),
+                    timeout_seconds=opus_timeout_seconds,
+                )
+
+        return Mem0Method(
+            opus_memory_factory,
+            opus_4_8_reader(),
+            system,
+            trajectory_id=trajectory_id,
+            k=k,
+            method_id=method_id,
+            retrieval_top_k_per_group=group_k,
+            retrieval_max_evidence=max_evidence,
+        )
     if method_id == "letta_gemini_3_1_pro":
         if mock:
             return LettaContractDouble()
@@ -226,6 +394,30 @@ def create_method(
             max_steps=int(method_cfg["letta"]["max_steps"]),
             max_tokens=max_tokens,
             top_k=k,
+            system=system,
             timeout_seconds=timeout_seconds,
+        )
+    if method_id == "letta_claude_opus_4_8":
+        if mock:
+            double = LettaContractDouble()
+            double.method_id = method_id
+            return double
+        return LettaMethod(
+            lambda: official_letta_client(
+                "http://localhost:8283",
+                opus_timeout_seconds,
+            ),
+            trajectory_id=trajectory_id,
+            model=f"anthropic/{models['claude_opus_4_8']}",
+            embedding=f"google_ai/{models['gemini_embedding']}",
+            max_steps=int(method_cfg["letta"]["max_steps"]),
+            max_tokens=20_000,
+            top_k=group_k,
+            method_id=method_id,
+            stage2_2_search_calls=int(
+                method_cfg["letta"]["archival_search_calls_per_query"]
+            ),
+            system=system,
+            timeout_seconds=opus_timeout_seconds,
         )
     raise ValueError(f"unknown method_id: {method_id}")

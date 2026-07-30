@@ -41,7 +41,19 @@ class FullContextMethod(MemoryMethod):
         return MethodAnswer(
             raw_answer=raw,
             evidence_session_ids=[str(row["session_id"]) for row in self.sessions],
-            metadata=metadata,
+            metadata={
+                **metadata,
+                **(
+                    {"rendered_user_prompt": query}
+                    if item.get("stage") == STAGE2_2
+                    else {}
+                ),
+                **(
+                    {"rendered_system_prompt": self.system}
+                    if item.get("stage") == STAGE2_2
+                    else {}
+                ),
+            },
         )
 
     def snapshot(self) -> Any:

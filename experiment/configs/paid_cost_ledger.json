@@ -1,5 +1,5 @@
 {
-  "conservative_spent_usd": 17.301,
+  "conservative_spent_usd": 17.44,
   "entries": [
     {
       "amount_usd": 1.98,
@@ -186,6 +186,20 @@
         "fc_gpt_5_6_sol": {
           "input_tokens": 221112,
           "output_tokens": 8756
+        }
+      }
+    },
+    {
+      "amount_usd": 0.5,
+      "kind": "plan_reservation",
+      "note": "Reconciled to a rounded-up usage-based upper bound for the successful Gemini traj_002 checkpoint-240 Low retry: 57,037 input tokens at $2/M and 2,003 output tokens at $12/M = $0.138110, rounded up to $0.139. This retry replaces the malformed response only in the versioned retry analysis; the original run remains immutable. Provider billing remains the final authority.",
+      "plan_sha256": "48fb421665a697fdd3f05fd7303d9fb88cdcd2b893ced82bfaaa3d75ca4a7b67",
+      "reconciled_amount_usd": 0.139,
+      "status": "reconciled_usage_upper_bound",
+      "usage": {
+        "fc_gemini_3_1_pro": {
+          "input_tokens": 57037,
+          "output_tokens_including_thoughts": 2003
         }
       }
     }

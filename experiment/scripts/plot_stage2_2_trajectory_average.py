@@ -58,11 +58,13 @@ def _read_jsonl(path: Path) -> list[dict[str, Any]]:
 def load_scores(
     repo_root: Path,
     plans: dict[str, str],
+    replacements: dict[tuple[str, str, int], str] | None = None,
 ) -> tuple[
     dict[str, dict[str, dict[int, dict[str, float]]]],
     set[tuple[str, str, int]],
 ]:
     run_root = repo_root / "experiment" / "runs" / "paid_smoke"
+    replacements = replacements or {}
     scores: dict[str, dict[str, dict[int, dict[str, float]]]] = {}
     parse_failures: set[tuple[str, str, int]] = set()
     for trajectory_id, plan in plans.items():
@@ -76,6 +78,29 @@ def load_scores(
                 for row in rows
                 if row["trajectory_id"] == trajectory_id
             }
+            for checkpoint in CHECKPOINTS:
+                replacement_plan = replacements.get(
+                    (trajectory_id, method_id, checkpoint)
+                )
+                if replacement_plan is None:
+                    continue
+                replacement_path = (
+                    run_root
+                    / replacement_plan
+                    / f"{method_id}__canonical.jsonl"
+                )
+                replacement_rows = [
+                    row
+                    for row in _read_jsonl(replacement_path)
+                    if row["trajectory_id"] == trajectory_id
+                    and int(row["query_checkpoint"]) == checkpoint
+                ]
+                if len(replacement_rows) != 1:
+                    raise ValueError(
+                        f"{trajectory_id}/{method_id}/{checkpoint}: "
+                        "replacement plan must contain exactly one matching row"
+                    )
+                selected[checkpoint] = replacement_rows[0]
             if set(selected) != set(CHECKPOINTS):
                 raise ValueError(
                     f"{trajectory_id}/{method_id}: incomplete checkpoints"
@@ -363,6 +388,7 @@ def write_source_csv(
     scores: dict[str, dict[str, dict[int, dict[str, float]]]],
     parse_failures: set[tuple[str, str, int]],
     plans: dict[str, str],
+    replacements: dict[tuple[str, str, int], str],
     output_dir: Path,
 ) -> Path:
     path = output_dir / "checkpoint_metric_values.csv"
@@ -383,8 +409,11 @@ def write_source_csv(
             method_id = str(model["method_id"])
             for spec in TRAJECTORY_SPECS:
                 trajectory_id = str(spec["trajectory_id"])
-                plan = plans.get(trajectory_id, "trajectory_macro_average")
                 for checkpoint in CHECKPOINTS:
+                    plan = replacements.get(
+                        (trajectory_id, method_id, checkpoint),
+                        plans.get(trajectory_id, "trajectory_macro_average"),
+                    )
                     values = scores[trajectory_id][method_id][checkpoint]
                     dynamic_accuracy = values[
                         "dynamic_path_final_state_accuracy"
@@ -415,6 +444,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--traj-002-plan", required=True)
     parser.add_argument("--traj-003-plan", required=True)
     parser.add_argument("--traj-010-plan", required=True)
+    parser.add_argument("--replacement-plan")
+    parser.add_argument("--replacement-trajectory")
+    parser.add_argument("--replacement-method")
+    parser.add_argument("--replacement-checkpoint", type=int)
     parser.add_argument("--output-dir", type=Path, required=True)
     return parser.parse_args()
 
@@ -429,12 +462,35 @@ def main() -> None:
         "traj_003": args.traj_003_plan,
         "traj_010": args.traj_010_plan,
     }
-    scores, parse_failures = load_scores(repo_root, plans)
+    replacement_values = (
+        args.replacement_plan,
+        args.replacement_trajectory,
+        args.replacement_method,
+        args.replacement_checkpoint,
+    )
+    if any(value is not None for value in replacement_values) and not all(
+        value is not None for value in replacement_values
+    ):
+        raise ValueError(
+            "replacement plan, trajectory, method, and checkpoint must be "
+            "provided together"
+        )
+    replacements: dict[tuple[str, str, int], str] = {}
+    if args.replacement_plan is not None:
+        replacements[
+            (
+                str(args.replacement_trajectory),
+                str(args.replacement_method),
+                int(args.replacement_checkpoint),
+            )
+        ] = str(args.replacement_plan)
+    scores, parse_failures = load_scores(repo_root, plans, replacements)
     generated = [
         write_source_csv(
             scores,
             parse_failures,
             plans,
+            replacements,
             output_dir,
         )
     ]
@@ -452,7 +508,11 @@ def main() -> None:
             ]
         )
     for path in generated:
-        print(path.relative_to(repo_root))
+        try:
+            display_path = path.relative_to(repo_root)
+        except ValueError:
+            display_path = path
+        print(display_path)
 
 
 if __name__ == "__main__":

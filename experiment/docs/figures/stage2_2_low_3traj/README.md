@@ -11,3 +11,15 @@ macro average를 함께 제공한다.
 각 version directory는 source CSV와 SVG/PNG/PDF를 포함한다. Gemini
 `traj_002`, checkpoint 240의 invalid JSON은 규약대로 0점으로 유지하고 그래프에
 parse failure로 표시한다.
+
+## Retry v2
+
+`low_3traj_retry_v2__71ea1d01981a__9bb8ed9ee53c__460647a3a1bc__48fb421665a6`
+디렉터리는 사용자가 명시적으로 요청한 Gemini `traj_002`, checkpoint 240
+단일 재실행을 반영한다. 최초 응답과 최초 분석은 변경하지 않았으며, retry plan
+`48fb421665a697fdd3f05fd7303d9fb88cdcd2b893ced82bfaaa3d75ca4a7b67`의
+성공 응답만 해당 cell에 대체한 versioned analysis다.
+
+Retry v2는 first-attempt parse error 1건과 final parse error 0건을 구분해
+기록한다. 정식 실험에서는 같은 retry rule을 모든 모델과 trajectory에 일관되게
+적용해야 한다.

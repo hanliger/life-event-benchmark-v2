@@ -28,7 +28,7 @@ reader를 사용한다. Letta는 자체 agent search-and-answer 능력을 평가
 ## 고정 비교 원칙
 
 - 모든 방법에 동일 checkpoint와 frozen 문항 제공
-- Stage 1, Stage 2, Stage 3 분리
+- Stage 1, Stage 2 분리
 - main `top_k=10`, query-only sensitivity `top_k=5`
 - future leakage 금지
 - 동일 item set을 완료한 방법만 논문 표에 포함

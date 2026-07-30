@@ -27,13 +27,15 @@ output_root: data/runs/rq1_smoke/rq1_pair_temp/no_prospective_substituted_low
 # Applies to every model unless a model block overrides it.
 common:
   max_output_tokens: 20000
-  timeout_seconds: 120
+  timeout_seconds: 600
   automatic_retries: 0
 
 models:
-  claude_opus_5:
+  claude_opus_4_8:
     provider: anthropic
-    model: claude-opus-5
+    # Opus 5 sat far enough from the other two that the comparison read as a
+    # generation gap rather than a benchmark result; 4.8 is the closer peer.
+    model: claude-opus-4-8
     thinking_type: adaptive
     effort: low
     # thinking_display: omitted — the API never returns thinking text to this

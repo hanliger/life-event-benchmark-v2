@@ -21,7 +21,6 @@ persona ─▶ 초기 금융 상태 ─▶ 생애사건 trajectory ─▶ 상담
 | --- | --- | --- | --- |
 | **Stage 1** `stage1_event_status` | 지금까지 감지되는 생애 사건과 그 진행 단계는? | 보이는 세션 발화들 | life event label + status(`weak_signal`/`upcoming`/`occurred`/`cancelled`/`no_event`) |
 | **Stage 2** `stage2_memory_value` | 특정 날짜의 금융 메모리 최종값은? | 날짜가 표시된 세션 발화 + 초기 금융 메모리 | 닫힌 값 집합은 객관식, 그 외는 단답형 |
-| **Stage 3** `stage3_multi_hop_mcq` | 서로 다른 두 시점의 금융 상태 순서·합계는? (객관식) | 두 번째 근거까지의 누적 세션 + 초기 금융 메모리 | 정답 선택지 |
 
 핵심 난이도는 **간접성**입니다. 대화는 상태를 직접 말해 주지 않습니다. 사용자는 업무를 요청하며 단서만 흘리고, 모델은 여러 세션에 흩어진 단서를 모아 상태를 역추론해야 합니다. 평가 대상 모델에게는 정답 계획(plan)·주석(cue)·구조화 문맥은 주지 않고, **보이는 발화와 초기 메모리만** 줍니다.
 
@@ -57,7 +56,7 @@ Stage 2는 다음 원칙으로 만듭니다.
 | 대화 계획(plan) | trajectory에서 세션별 계획(어떤 업무·어떤 단서·어떤 정답 delta)을 만듦 | `scripts/build_dialogue_plans.py`, `src/fin_life_benchmark/dialogue/evidence_planner.py` |
 | 대화 생성 | 계획에 따라 LLM으로 상담 세션을 생성 | `scripts/generate_dialogue_sessions.py`, `prompts/dialogue/` |
 | 검증/audit | 정답 누출, 상태 충돌, life-stage 위반, 복원가능성 점검 | `scripts/validate_dialogues.py`, `scripts/audit_*.py` |
-| Gold/문항 | prefix별 정답 상태와 Stage 1/2 문항 생성, Stage 3 Multi-hop 문항 별도 생성 | `scripts/export_prefix_gold.py`, `scripts/build_benchmark_items.py`, `scripts/build_stage3_multihop_items.py` |
+| Gold/문항 | prefix별 정답 상태와 Stage 1/2 문항 생성 | `scripts/export_prefix_gold.py`, `scripts/build_benchmark_items.py` |
 
 ### 2.3 꼭 알아야 할 개념
 

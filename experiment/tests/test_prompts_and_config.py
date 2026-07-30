@@ -15,7 +15,6 @@ def test_exactly_seven_methods_and_short_output_cap():
     assert len(set(method_ids())) == 7
     assert cfg["models"]["final_answer_max_tokens"] == 4096
     assert cfg["models"]["reasoning_policy"] == "vendor_default"
-    assert cfg["dataset"]["expected"]["stage3_items"] == 123
     assert comparison_contract() == {
         "embedding_model": "gemini-embedding-2",
         "embedding_dimensions": 768,

@@ -51,7 +51,6 @@ def _canonical_item_paths(paths: ExperimentPaths) -> list[Path]:
     return [
         root / "canonical_items" / "stage1_event_identification.jsonl",
         root / "canonical_items" / "stage2_memory_value.jsonl",
-        root / "canonical_items" / "stage3_multi_hop_mcq.jsonl",
     ]
 
 

@@ -18,5 +18,5 @@
   [docs/results_template.md](experiment/docs/results_template.md)
 
 핵심 범위는 Full Context 3개, retrieval 2개, memory 2개로 구성된 7방법 비교,
-Stage 1/Stage 2/Stage 3 분리 보고, main `top_k=10`, 5-arm masking
+Stage 1/Stage 2 분리 보고, main `top_k=10`, 5-arm masking
 ablation이다.

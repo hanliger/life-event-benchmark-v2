@@ -24,12 +24,6 @@ Mem0의 Stage 1 오답은 실행 실패가 아니라 검색 evidence에 S015가 
 출력이다. Letta는 두 문항 모두 `archival_memory_search`를 정확히 1회 호출했고
 `top_k=10`, S015 evidence attribution을 확인했다.
 
-Stage 3 통합 후에는 123문항을 7개 방법의 mock adapter에 통과시켰다. 총 861
-predictions가 동일 item set과 `COMPLETE` manifest로 집계됐고
-`stage3_by_derivation.csv`가 생성됐다. 이 mock 정확도는 성능 결과가 아니다.
-
-- Stage 3 upstream provenance audit: 123/123 PASS
-- Stage 3 offline report: `runs/offline_stage3_20260726/report/`
 
 ## 검증 산출물
 
@@ -72,6 +66,5 @@ plan SHA의 실행을 거부한다.
 - timeout이나 billing 귀속 불명 시 자동 재실행 금지
 - exact plan SHA와 `I_APPROVE_PAID_SMOKE` 필요
 
-다음 smoke 대상은 Stage 3의 state-sequence/expense-aggregation 각 한 문항과,
-같은 masking event family의 lifecycle/memory 각 한 문항이다. 두 plan은 분리해
-비용을 검토한다. 전체 full run은 이 standing approval에 포함되지 않는다.
+다음 smoke 대상은 같은 masking event family의 lifecycle/memory 각 한 문항이다.
+비용은 별도로 검토한다. 전체 full run은 이 standing approval에 포함되지 않는다.

@@ -1,8 +1,7 @@
 # Financial Memory Benchmark Experiment
 
-Stage 1 life-event 탐지, Stage 2 과거 상태 회상, Stage 3 two-checkpoint
-multi-hop 추론, 5-arm masking ablation을 7개 방법으로 평가하는 실험 전용
-패키지다. 데이터 생성 코드와 분리되어 있으며 모든 일반 작업은 Bash 진입점
+Stage 1 life-event 탐지, Stage 2 과거 상태 회상, 5-arm masking ablation을
+7개 방법으로 평가하는 실험 전용 패키지다. 데이터 생성 코드와 분리되어 있으며 모든 일반 작업은 Bash 진입점
 `scripts/pipeline.sh`를 사용한다.
 
 ## 현재 상태
@@ -11,10 +10,8 @@ multi-hop 추론, 5-arm masking ablation을 7개 방법으로 평가하는 실�
 |---|---|
 | HF 데이터 다운로드·전처리 | 완료 및 재실행 가능 |
 | canonical/masking 문항 검증 | 완료 |
-| Stage 3 upstream audit | 123/123 통과 |
-| 7방법 offline smoke | Stage 1/2/Stage 3/masking 통과 |
+| 7방법 offline smoke | Stage 1/2/masking 통과 |
 | 7방법 canonical paid smoke | Stage 1/2 각 1문항 통과 |
-| Stage 3 paid smoke | 본실험 전 실행 필요 |
 | masking paid smoke | 본실험 전 실행 필요 |
 | 논문용 full run | 미실행 |
 
@@ -119,7 +116,6 @@ data/raw/hf/hangyeul-lee--life-event-benchmark-v2-dialogues/<revision>/
 | session | 6,000 |
 | Stage 1 | 400 |
 | Stage 2 | 8,714 (MCQ 4,897 + free response 3,817) |
-| Stage 3 | 123 |
 | masking event | 451 |
 | masking arm | 5 |
 | masking case | 2,255 |
@@ -158,7 +154,6 @@ provider 호출을 만들 수 없다.
 - 데이터 기대 개수 일치
 - future leakage와 gold-field leakage 없음
 - canonical/masking mock 경로 완료
-- Stage 3 upstream provenance audit 통과
 - `runs/offline_dry_run.json` 생성
 
 Mock 정확도는 논문 결과로 사용하지 않는다.
@@ -184,17 +179,6 @@ Letta가 포함된 실행에서만 self-hosted Docker 서버가 필요하다.
 ```
 
 health check가 실패하면 유료 plan을 실행하지 않는다.
-
-## 6. 최소 Stage 3 paid smoke
-
-`stage3_multi_hop_mcq.jsonl`에서 `state_sequence` 1개와
-`expense_aggregation` 1개의 정확한 `item_id`를 선택한다. 모든 방법에 같은 두
-문항을 사용한다.
-
-```bash
-rg -n '"derivation_type": "(state_sequence|expense_aggregation)"' \
-  data/prepared/*/canonical_items/stage3_multi_hop_mcq.jsonl
-```
 
 계획 생성은 API를 호출하지 않는다.
 
@@ -275,7 +259,7 @@ first-error stop이다. timeout 또는 비용 귀속 불명 상태에서는 자�
 
 ## 8. 논문용 full plan과 실행
 
-Stage 3와 masking smoke, readiness checklist가 통과한 후 exact 전체 범위 plan을 만든다.
+masking smoke와 readiness checklist가 통과한 후 exact 전체 범위 plan을 만든다.
 계획에는 방법당 13,747문항, 전체 96,229 predictions가 고정된다.
 
 ```bash
@@ -343,15 +327,12 @@ report/
 ├── main_results.csv
 ├── main_results.md
 ├── masking_by_arm.csv
-├── stage3_by_derivation.csv
 ├── retention_lag.csv
 └── paired_method_deltas.csv
 ```
 
 `metrics.json`의 `completeness.reporting_ready`가 `true`인지 확인한다. `false`이면
 논문 표를 작성하지 않는다.
-`stage3_by_derivation.csv`는 유형별 trajectory-macro accuracy를 주 지표로,
-question-micro accuracy를 보조 지표로 함께 기록한다.
 
 ## 10. 결과 문서 작성
 
@@ -363,7 +344,7 @@ cp docs/results_template.md runs/paid_full/<PLAN_SHA>/RESULTS.md
 ```
 
 자동 생성된 CSV/JSON 값을 옮기고, 비용과 실패율은 provider usage 및 run manifest와
-대조한다. Stage 1, Stage 2, Stage 3, method family, masking lifecycle/memory를
+대조한다. Stage 1, Stage 2, method family, masking lifecycle/memory를
 분리해 보고한다.
 
 ## 11. 종료

@@ -113,7 +113,6 @@ def _expected_ids(paths: ExperimentPaths, scope: str) -> set[str]:
         "canonical": [
             root / "canonical_items" / "stage1_event_identification.jsonl",
             root / "canonical_items" / "stage2_memory_value.jsonl",
-            root / "canonical_items" / "stage3_multi_hop_mcq.jsonl",
         ],
         "masking": [root / "masking_items" / "masking_questions.jsonl"],
     }
@@ -256,34 +255,12 @@ def summarize_predictions(
                     "complete_evidence_recall_at_k": mean(complete_hits),
                     "items": len(retrieval_rows),
                 }
-                if stage == "stage3_multi_hop_mcq":
-                    stages[stage]["retrieval"]["both_hops_recall_at_k"] = mean(
-                        complete_hits
-                    )
             if stage.startswith("masking_"):
                 arm_groups: dict[str, list[dict[str, Any]]] = defaultdict(list)
                 for row in subset:
                     arm_groups[str((row.get("item_metadata") or {}).get("masking_level"))].append(row)
                 stages[stage]["accuracy_by_masking_arm"] = {
                     arm: _accuracy(group) for arm, group in sorted(arm_groups.items())
-                }
-            if stage == "stage3_multi_hop_mcq":
-                derivation_groups: dict[str, list[dict[str, Any]]] = defaultdict(list)
-                for row in subset:
-                    derivation_groups[
-                        str((row.get("item_metadata") or {}).get("derivation_type"))
-                    ].append(row)
-                stages[stage]["accuracy_by_derivation_type"] = {
-                    derivation: (
-                        mean(_trajectory_scores(stage, group).values())
-                        if group
-                        else None
-                    )
-                    for derivation, group in sorted(derivation_groups.items())
-                }
-                stages[stage]["question_micro_accuracy_by_derivation_type"] = {
-                    derivation: _accuracy(group)
-                    for derivation, group in sorted(derivation_groups.items())
                 }
         results[method_id] = stages
     paired: dict[str, Any] = {}
@@ -320,7 +297,6 @@ def write_tables(report: dict[str, Any], output_dir: Path) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     rows: list[dict[str, Any]] = []
     masking_rows: list[dict[str, Any]] = []
-    stage3_rows: list[dict[str, Any]] = []
     lag_rows: list[dict[str, Any]] = []
     for method_id, stages in report["methods"].items():
         family = (
@@ -352,23 +328,6 @@ def write_tables(report: dict[str, Any], output_dir: Path) -> None:
                         "stage": stage,
                         "masking_arm": arm,
                         "accuracy": accuracy,
-                    }
-                )
-            for derivation, accuracy in (
-                values.get("accuracy_by_derivation_type") or {}
-            ).items():
-                stage3_rows.append(
-                    {
-                        "method_family": family,
-                        "method_id": method_id,
-                        "derivation_type": derivation,
-                        "trajectory_macro_accuracy": accuracy,
-                        "question_micro_accuracy": (
-                            values.get(
-                                "question_micro_accuracy_by_derivation_type"
-                            )
-                            or {}
-                        ).get(derivation),
                     }
                 )
             for lag, accuracy in (
@@ -405,7 +364,6 @@ def write_tables(report: dict[str, Any], output_dir: Path) -> None:
     (output_dir / "main_results.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
     for filename, table_rows in (
         ("masking_by_arm.csv", masking_rows),
-        ("stage3_by_derivation.csv", stage3_rows),
         ("retention_lag.csv", lag_rows),
     ):
         with (output_dir / filename).open("w", encoding="utf-8", newline="") as handle:

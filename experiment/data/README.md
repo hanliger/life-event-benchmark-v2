@@ -23,7 +23,7 @@ data/
 - `sessions_joined`: gold/문항 생성 전용
 - `sessions_answer_free`: 모든 평가 방법의 ingest 전용
 - `initial_state_s000`: trajectory별 초기 금융 상태
-- `canonical_items`: Stage 1 400개, Stage 2 8,714개, Stage 3 123개
+- `canonical_items`: Stage 1 400개, Stage 2 8,714개
 - `masking_items`: 5 arms × 451 events × 2 questions = 4,510개
 
 Evaluator는 `sessions_answer_free`만 읽는다. Gold-only field가 발견되거나 evidence

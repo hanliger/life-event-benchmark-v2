@@ -57,7 +57,7 @@ models:
   embedding_dimensions: 768
   claude_full_context: claude-opus-5
   openai_full_context: gpt-5.6-sol
-  reasoning_policy: deployment_realistic_medium
+  reasoning_policy: deployment_realistic_low
   sampling_policy: provider_default
   generation_settings:
     anthropic:
@@ -65,14 +65,14 @@ models:
         type: adaptive
         display: omitted
       output_config:
-        effort: medium
+        effort: low
     google:
       thinking_config:
-        thinking_level: medium
+        thinking_level: low
         include_thoughts: false
     openai:
       reasoning:
-        effort: medium
+        effort: low
         mode: standard
         context: current_turn
       text:
@@ -80,20 +80,20 @@ models:
       store: false
       truncation: disabled
   generation_profiles:
-    deployment_realistic_low:
+    deployment_realistic_medium:
       anthropic:
         thinking:
           type: adaptive
           display: omitted
         output_config:
-          effort: low
+          effort: medium
       google:
         thinking_config:
-          thinking_level: low
+          thinking_level: medium
           include_thoughts: false
       openai:
         reasoning:
-          effort: low
+          effort: medium
           mode: standard
           context: current_turn
         text:

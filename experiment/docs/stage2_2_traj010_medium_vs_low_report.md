@@ -13,8 +13,10 @@
   profile별 단일 stochastic run만 비교했으므로 관측 차이는 sampling variation과
   trajectory 특이성의 영향을 함께 포함한다.
 
-논문에서는 Medium을 main deployment-realistic setting으로 유지하고, Low를
-reasoning-compute sensitivity arm으로 보고하는 것이 가장 방어 가능하다.
+후속 운영 결정으로 Low를 main deployment-realistic setting으로 고정하고,
+Medium을 reasoning-compute sensitivity arm과 과거 결과 재현용으로 보존한다.
+이 선택은 smoke의 작은 품질 차이를 통계적으로 확정한 결론이 아니라, 유사한
+관측 품질에서 output usage와 비용을 줄이려는 deployment trade-off다.
 
 ## Headline Metrics는 모델별로 다른 방향으로 움직였다
 
@@ -139,7 +141,7 @@ Reasoning effect의 통계적 검증은 전체 trajectory 실행 전에는 충�
 
 ## Recommended Next Steps
 
-1. Medium을 main experiment profile로, Low를 sensitivity profile로 사전 고정한다.
+1. Low를 main experiment profile로, Medium을 sensitivity profile로 사전 고정한다.
 2. 전체 20 trajectories에서 동일한 paired checkpoint set으로 두 profile을 실행한다.
 3. trajectory를 resampling unit으로 사용해 paired `Low − Medium` confidence
    intervals를 계산한다.

@@ -20,22 +20,22 @@ def test_exactly_eight_methods_and_short_output_cap():
     assert cfg["analysis_methods"] == ["oracle_rel_gpt_5_6_sol"]
     assert cfg["models"]["final_answer_max_tokens"] == 4096
     assert cfg["stage2_2_reconstruct"]["smoke"]["max_output_tokens"] == 20000
-    assert cfg["models"]["reasoning_policy"] == "deployment_realistic_medium"
+    assert cfg["models"]["reasoning_policy"] == "deployment_realistic_low"
     assert cfg["models"]["sampling_policy"] == "provider_default"
     assert cfg["models"]["generation_settings"] == {
         "anthropic": {
             "thinking": {"type": "adaptive", "display": "omitted"},
-            "output_config": {"effort": "medium"},
+            "output_config": {"effort": "low"},
         },
         "google": {
             "thinking_config": {
-                "thinking_level": "medium",
+                "thinking_level": "low",
                 "include_thoughts": False,
             },
         },
         "openai": {
             "reasoning": {
-                "effort": "medium",
+                "effort": "low",
                 "mode": "standard",
                 "context": "current_turn",
             },
@@ -44,7 +44,7 @@ def test_exactly_eight_methods_and_short_output_cap():
             "truncation": "disabled",
         },
     }
-    low = cfg["models"]["generation_profiles"]["deployment_realistic_low"]
+    low = cfg["models"]["generation_settings"]
     assert generation_settings_for_policy(
         cfg["models"], "deployment_realistic_low"
     ) == low
@@ -55,6 +55,12 @@ def test_exactly_eight_methods_and_short_output_cap():
         "temperature" not in provider_settings
         for provider_settings in low.values()
     )
+    medium = cfg["models"]["generation_profiles"][
+        "deployment_realistic_medium"
+    ]
+    assert medium["anthropic"]["output_config"]["effort"] == "medium"
+    assert medium["google"]["thinking_config"]["thinking_level"] == "medium"
+    assert medium["openai"]["reasoning"]["effort"] == "medium"
     assert cfg["dataset"]["expected"]["stage3_items"] == 123
     assert comparison_contract() == {
         "embedding_model": "gemini-embedding-2",

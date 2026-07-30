@@ -6,9 +6,11 @@ Stage 2.2 reconstruction은 금융 챗봇의 실제 배포 환경을 모사한�
 최대 test-time compute를 사용하는 `high`, `xhigh`, `max`, `pro` 설정 대신,
 세 provider가 지원하는 중간 수준 reasoning을 사용한다.
 
-정책 이름은 `deployment_realistic_medium`이다. 이 설정은 최종 답변을 생성하는
-Claude Opus 5, Gemini 3.1 Pro Preview, GPT-5.6 Sol reader에 적용된다. 검색이나
-메모리 저장에 사용되는 별도 embedding model의 설정은 이 문서의 범위가 아니다.
+기본 정책 이름은 `deployment_realistic_low`다. 이 설정은 최종 답변을 생성하는
+Claude Opus 5, Gemini 3.1 Pro Preview, GPT-5.6 Sol reader에 적용된다.
+`deployment_realistic_medium`은 sensitivity와 과거 실행 재현용 profile로
+보존한다. 검색이나 메모리 저장에 사용되는 별도 embedding model의 설정은 이
+문서의 범위가 아니다.
 
 기존 `traj_010` 3-model smoke 결과는 `vendor_default`에서 생성되었다. 이 문서의
 설정은 과거 결과를 소급해 변경하지 않으며, 변경 후 새로 생성한 paid plan과
@@ -146,11 +148,11 @@ truncation="disabled"
 ## 6. 재현성과 provenance
 
 선택값은 `experiment/configs/experiment.yaml`의
-`models.generation_settings`와 `models.generation_profiles`에 고정한다. Medium은
-기본 profile이고 low 실험은 paid plan의
-`reasoning_policy=deployment_realistic_low`로 동결한다. 각 provider request에
-실제로 적용한 설정은 실행 결과의 `response_metadata.generation_settings`에도
-기록한다.
+`models.generation_settings`와 `models.generation_profiles`에 고정한다. Low가
+기본 profile이고 Medium은
+`reasoning_policy=deployment_realistic_medium`으로 명시할 때만 사용한다. 각
+provider request에 실제로 적용한 설정은 실행 결과의
+`response_metadata.generation_settings`에도 기록한다.
 Temperature는 세 provider 모두 request에서 생략하고 provider default를 사용한다.
 
 Checkpoint 요청은 서로의 prediction을 보지 않는다. 각 요청마다 새 provider

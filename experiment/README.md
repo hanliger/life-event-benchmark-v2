@@ -258,11 +258,12 @@ sed -n '1,20p' data/prepared/*/masking_items/masking_questions.jsonl
   --execute-paid
 ```
 
-Reasoning sensitivity smoke는 plan 생성 시 profile을 명시한다.
+기본 reasoning policy는 `deployment_realistic_low`다. Medium sensitivity
+smoke가 필요할 때만 plan 생성 시 profile을 명시한다.
 
 ```bash
 ./scripts/pipeline.sh plan-paid-smoke \
-  --reasoning-policy deployment_realistic_low \
+  --reasoning-policy deployment_realistic_medium \
   ...
 ```
 

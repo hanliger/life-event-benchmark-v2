@@ -83,12 +83,28 @@ COMPLETE method × trajectory artifact는 건너뛴다. 실패 attempt는 덮어
 
 Report는 checkpoint, trajectory, path × trajectory, path trajectory-macro, parse reliability, semantic quality, retrieval recall, usage/cost/latency 표를 생성한다. 세 SVG figure는 Dynamic-path Final State Accuracy checkpoint curve, Correct-change F1 checkpoint curve, method × path Final State Accuracy heatmap이다.
 
+서로 겹치지 않는 completed run을 합칠 때는 source plan SHA와 재사용 범위를
+보존하는 `combine`을 사용한다.
+
+```bash
+./experiment/scripts/paid/run_stage2_2.sh combine \
+  --source-run-dir experiment/runs/stage2_2/<main-run> \
+  --source-run-dir experiment/runs/stage2_2/<smoke-run>
+```
+
+동일 method/trajectory/checkpoint가 중복되거나 inference payload fingerprint가
+다르면 결합은 실패한다.
+
 ## Selection syntax
 
 `--methods`와 `--trajectories`는 `all` 또는 comma-separated IDs를 받는다.
+`--methods all`은 기존 9-method grid를 뜻하며 이 의미는 direct-API
+실험을 추가해도 바뀌지 않는다. GPT-5.6 Sol과 Claude Opus 4.8 direct-API
+비교는 두 method ID를 명시해 독립적으로 계획한다.
 
 ```bash
 --methods fc_claude_opus_4_8,bm25_claude_opus_4_8
+--methods fc_gpt_5_6_sol,fc_claude_opus_4_8
 --trajectories traj_001,traj_010
 ```
 

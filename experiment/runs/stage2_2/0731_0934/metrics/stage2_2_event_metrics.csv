@@ -1,0 +1,3 @@
+method_id,event_count,trajectory_count,update_accuracy,exact_update_accuracy,mean_first_evaluation_lag_sessions,aggregation
+fc_claude_opus_4_8,18,1,0.788425925925926,0.6666666666666666,0.05555555555555555,event_then_trajectory_macro
+fc_gpt_5_6_sol,18,1,0.7245370370370371,0.5555555555555556,0.05555555555555555,event_then_trajectory_macro

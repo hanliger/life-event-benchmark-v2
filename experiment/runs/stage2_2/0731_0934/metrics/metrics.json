@@ -1,0 +1,3329 @@
+{
+  "bootstrap": {
+    "samples": 10000,
+    "seed": 20260725,
+    "unit": "trajectory"
+  },
+  "completeness": {
+    "expected_scope": null,
+    "identical_item_sets": true,
+    "item_count_per_method": 20,
+    "methods": [
+      "fc_claude_opus_4_8",
+      "fc_gpt_5_6_sol"
+    ],
+    "reporting_ready": false
+  },
+  "methods": {
+    "fc_claude_opus_4_8": {
+      "stage2_2_reconstruct": {
+        "accuracy_by_retention_lag_windows": {},
+        "aggregation": "checkpoint_then_trajectory_macro",
+        "ci95": [
+          0.7970588235294117,
+          0.7970588235294117
+        ],
+        "items": 20,
+        "parse_errors": 0,
+        "question_micro_accuracy": 0,
+        "retrieval": {
+          "aggregation": "checkpoint_then_trajectory_macro",
+          "complete_gold_evidence_recall_at_budget": 1.0,
+          "gold_evidence_recall_at_budget": 1.0,
+          "gold_evidence_support": 115,
+          "trajectory_recall": {
+            "traj_010": 1.0
+          }
+        },
+        "score": 0.7970588235294117,
+        "state_reconstruction": {
+          "aggregation": "checkpoint_then_trajectory_macro",
+          "change_confusion": {
+            "fn": 16,
+            "fp": 73,
+            "tn": 336,
+            "tp_correct": 206,
+            "tp_wrong_value": 49
+          },
+          "event_macro": {
+            "aggregation": "event_then_trajectory_macro",
+            "event_count": 18,
+            "exact_update_accuracy": 0.6666666666666666,
+            "mean_first_evaluation_lag_sessions": 0.05555555555555555,
+            "trajectory_count": 1,
+            "trajectory_exact_update_accuracy": {
+              "traj_010": 0.6666666666666666
+            },
+            "trajectory_update_accuracy": {
+              "traj_010": 0.788425925925926
+            },
+            "update_accuracy": 0.788425925925926
+          },
+          "items": 20,
+          "metrics": {
+            "change_detection_f1": 0.8569972181265665,
+            "change_detection_precision": 0.7880801441682113,
+            "change_detection_recall": 0.9499308208131737,
+            "changed_state_accuracy": 0.799633307868602,
+            "correct_change_f1": 0.720784319011028,
+            "correct_change_precision": 0.662087066763571,
+            "correct_change_recall": 0.799633307868602,
+            "dynamic_path_final_state_accuracy": 0.832,
+            "evidence_citation_precision": 0.5264868521057803,
+            "evidence_hit_rate": 0.7925617519735166,
+            "exact_state_match": 0.0,
+            "final_state_accuracy": 0.7970588235294117,
+            "status_accuracy": 0.8838235294117647,
+            "unchanged_state_accuracy": 0.8034233404736117,
+            "value_accuracy": 0.8529411764705882
+          },
+          "parse_errors": 0,
+          "path_macro": {
+            "aggregation": "checkpoint_then_trajectory_then_path_macro",
+            "correct_change_f1": 0.677208364164886,
+            "eligible_path_count": 23,
+            "path_metrics": {
+              "cashflow.recent_one_off_expense": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 9,
+                  "tp_correct": 8,
+                  "tp_wrong_value": 3
+                },
+                "correct_change_f1": 0.7272727272727273,
+                "correct_change_precision": 0.7272727272727273,
+                "correct_change_recall": 0.7272727272727273,
+                "eligible": true,
+                "eligible_trajectories": 1,
+                "event_macro_update_accuracy": 1.0,
+                "final_state_accuracy": 0.85,
+                "reported_trajectories": 1,
+                "retention_after_update": 0.8,
+                "update_events": 3
+              },
+              "education.child_education_stage": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 3,
+                  "tn": 14,
+                  "tp_correct": 2,
+                  "tp_wrong_value": 1
+                },
+                "correct_change_f1": 0.4444444444444444,
+                "correct_change_precision": 0.3333333333333333,
+                "correct_change_recall": 0.6666666666666666,
+                "eligible": true,
+                "eligible_trajectories": 1,
+                "event_macro_update_accuracy": 1.0,
+                "final_state_accuracy": 0.8,
+                "reported_trajectories": 1,
+                "retention_after_update": 0.6666666666666666,
+                "update_events": 1
+              },
+              "education.self_education_status": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 7,
+                  "tp_correct": 7,
+                  "tp_wrong_value": 6
+                },
+                "correct_change_f1": 0.5384615384615384,
+                "correct_change_precision": 0.5384615384615384,
+                "correct_change_recall": 0.5384615384615384,
+                "eligible": true,
+                "eligible_trajectories": 1,
+                "event_macro_update_accuracy": 1.0,
+                "final_state_accuracy": 0.7,
+                "reported_trajectories": 1,
+                "retention_after_update": 0.5384615384615384,
+                "update_events": 1
+              },
+              "employment.employer": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 12,
+                  "tp_correct": 1,
+                  "tp_wrong_value": 7
+                },
+                "correct_change_f1": 0.125,
+                "correct_change_precision": 0.125,
+                "correct_change_recall": 0.125,
+                "eligible": true,
+                "eligible_trajectories": 1,
+                "event_macro_update_accuracy": 0.5,
+                "final_state_accuracy": 0.65,
+                "reported_trajectories": 1,
+                "retention_after_update": 0.5,
+                "update_events": 2
+              },
+              "employment.employment_status": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 2,
+                  "fp": 0,
+                  "tn": 11,
+                  "tp_correct": 7,
+                  "tp_wrong_value": 0
+                },
+                "correct_change_f1": 0.8750000000000001,
+                "correct_change_precision": 1.0,
+                "correct_change_recall": 0.7777777777777778,
+                "eligible": true,
+                "eligible_trajectories": 1,
+                "event_macro_update_accuracy": 0.5,
+                "final_state_accuracy": 0.9,
+                "reported_trajectories": 1,
+                "retention_after_update": 0.5,
+                "update_events": 2
+              },
+              "employment.income_stability": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 11,
+                  "tp_correct": 5,
+                  "tp_wrong_value": 4
+                },
+                "correct_change_f1": 0.5555555555555556,
+                "correct_change_precision": 0.5555555555555556,
+                "correct_change_recall": 0.5555555555555556,
+                "eligible": true,
+                "eligible_trajectories": 1,
+                "event_macro_update_accuracy": 0.5,
+                "final_state_accuracy": 0.8,
+                "reported_trajectories": 1,
+                "retention_after_update": 0.35714285714285715,
+                "update_events": 2
+              },
+              "employment.occupation": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 8,
+                  "tn": 12,
+                  "tp_correct": 0,
+                  "tp_wrong_value": 0
+                },
+                "correct_change_f1": null,
+                "correct_change_precision": null,
+                "correct_change_recall": null,
+                "eligible": false,
+                "eligible_trajectories": 0,
+                "event_macro_update_accuracy": null,
+                "final_state_accuracy": 0.6,
+                "reported_trajectories": 1,
+                "retention_after_update": null,
+                "update_events": 0
+              },
+              "employment.salary_account": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 3,
+                  "fp": 0,
+                  "tn": 11,
+                  "tp_correct": 0,
+                  "tp_wrong_value": 6
+                },
+                "correct_change_f1": 0.0,
+                "correct_change_precision": 0.0,
+                "correct_change_recall": 0.0,
+                "eligible": true,
+                "eligible_trajectories": 1,
+                "event_macro_update_accuracy": 0.0,
+                "final_state_accuracy": 0.55,
+                "reported_trajectories": 1,
+                "retention_after_update": 0.0,
+                "update_events": 2
+              },
+              "employment.salary_day": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 2,
+                  "fp": 0,
+                  "tn": 10,
+                  "tp_correct": 2,
+                  "tp_wrong_value": 6
+                },
+                "correct_change_f1": 0.22222222222222224,
+                "correct_change_precision": 0.25,
+                "correct_change_recall": 0.2,
+                "eligible": true,
+                "eligible_trajectories": 1,
+                "event_macro_update_accuracy": 0.3333333333333333,
+                "final_state_accuracy": 0.6,
+                "reported_trajectories": 1,
+                "retention_after_update": 0.38095238095238093,
+                "update_events": 3
+              },
+              "financial_products.checking_accounts": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 20,
+                  "tp_correct": 0,
+                  "tp_wrong_value": 0
+                },
+                "correct_change_f1": null,
+                "correct_change_precision": null,
+                "correct_change_recall": null,
+                "eligible": false,
+                "eligible_trajectories": 0,
+                "event_macro_update_accuracy": null,
+                "final_state_accuracy": 1.0,
+                "reported_trajectories": 1,
+                "retention_after_update": null,
+                "update_events": 0
+              },
+              "financial_products.loans": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 7,
+                  "tn": 9,
+                  "tp_correct": 4,
+                  "tp_wrong_value": 0
+                },
+                "correct_change_f1": 0.5333333333333333,
+                "correct_change_precision": 0.36363636363636365,
+                "correct_change_recall": 1.0,
+                "eligible": true,
+                "eligible_trajectories": 1,
+                "event_macro_update_accuracy": 1.0,
+                "final_state_accuracy": 0.65,
+                "reported_trajectories": 1,
+                "retention_after_update": 1.0,
+                "update_events": 1
+              },
+              "financial_products.pension_or_irp": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 20,
+                  "tp_correct": 0,
+                  "tp_wrong_value": 0
+                },
+                "correct_change_f1": null,
+                "correct_change_precision": null,
+                "correct_change_recall": null,
+                "eligible": false,
+                "eligible_trajectories": 0,
+                "event_macro_update_accuracy": null,
+                "final_state_accuracy": 1.0,
+                "reported_trajectories": 1,
+                "retention_after_update": null,
+                "update_events": 0
+              },
+              "financial_products.savings_accounts": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 18,
+                  "tn": 2,
+                  "tp_correct": 0,
+                  "tp_wrong_value": 0
+                },
+                "correct_change_f1": null,
+                "correct_change_precision": null,
+                "correct_change_recall": null,
+                "eligible": false,
+                "eligible_trajectories": 0,
+                "event_macro_update_accuracy": null,
+                "final_state_accuracy": 0.1,
+                "reported_trajectories": 1,
+                "retention_after_update": null,
+                "update_events": 0
+              },
+              "goals.child_education_goal": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 2,
+                  "tp_correct": 18,
+                  "tp_wrong_value": 0
+                },
+                "correct_change_f1": 1.0,
+                "correct_change_precision": 1.0,
+                "correct_change_recall": 1.0,
+                "eligible": true,
+                "eligible_trajectories": 1,
+                "event_macro_update_accuracy": 1.0,
+                "final_state_accuracy": 1.0,
+                "reported_trajectories": 1,
+                "retention_after_update": 1.0,
+                "update_events": 2
+              },
+              "goals.emergency_fund": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 20,
+                  "tp_correct": 0,
+                  "tp_wrong_value": 0
+                },
+                "correct_change_f1": null,
+                "correct_change_precision": null,
+                "correct_change_recall": null,
+                "eligible": false,
+                "eligible_trajectories": 0,
+                "event_macro_update_accuracy": null,
+                "final_state_accuracy": 1.0,
+                "reported_trajectories": 1,
+                "retention_after_update": null,
+                "update_events": 0
+              },
+              "goals.housing_deposit_goal": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 4,
+                  "tn": 16,
+                  "tp_correct": 0,
+                  "tp_wrong_value": 0
+                },
+                "correct_change_f1": null,
+                "correct_change_precision": null,
+                "correct_change_recall": null,
+                "eligible": false,
+                "eligible_trajectories": 0,
+                "event_macro_update_accuracy": null,
+                "final_state_accuracy": 0.8,
+                "reported_trajectories": 1,
+                "retention_after_update": null,
+                "update_events": 0
+              },
+              "goals.retirement_goal": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 20,
+                  "tp_correct": 0,
+                  "tp_wrong_value": 0
+                },
+                "correct_change_f1": null,
+                "correct_change_precision": null,
+                "correct_change_recall": null,
+                "eligible": false,
+                "eligible_trajectories": 0,
+                "event_macro_update_accuracy": null,
+                "final_state_accuracy": 1.0,
+                "reported_trajectories": 1,
+                "retention_after_update": null,
+                "update_events": 0
+              },
+              "household.child_support_arrangement": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 20,
+                  "tp_correct": 0,
+                  "tp_wrong_value": 0
+                },
+                "correct_change_f1": null,
+                "correct_change_precision": null,
+                "correct_change_recall": null,
+                "eligible": false,
+                "eligible_trajectories": 0,
+                "event_macro_update_accuracy": null,
+                "final_state_accuracy": 1.0,
+                "reported_trajectories": 1,
+                "retention_after_update": null,
+                "update_events": 0
+              },
+              "household.children": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 2,
+                  "tp_correct": 13,
+                  "tp_wrong_value": 5
+                },
+                "correct_change_f1": 0.7222222222222222,
+                "correct_change_precision": 0.7222222222222222,
+                "correct_change_recall": 0.7222222222222222,
+                "eligible": true,
+                "eligible_trajectories": 1,
+                "event_macro_update_accuracy": 0.6666666666666666,
+                "final_state_accuracy": 0.75,
+                "reported_trajectories": 1,
+                "retention_after_update": 0.7555555555555555,
+                "update_events": 3
+              },
+              "household.dependents": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 2,
+                  "tp_correct": 17,
+                  "tp_wrong_value": 1
+                },
+                "correct_change_f1": 0.9444444444444444,
+                "correct_change_precision": 0.9444444444444444,
+                "correct_change_recall": 0.9444444444444444,
+                "eligible": true,
+                "eligible_trajectories": 1,
+                "event_macro_update_accuracy": 0.75,
+                "final_state_accuracy": 0.95,
+                "reported_trajectories": 1,
+                "retention_after_update": 0.9166666666666666,
+                "update_events": 4
+              },
+              "household.marital_status": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 1,
+                  "tp_correct": 19,
+                  "tp_wrong_value": 0
+                },
+                "correct_change_f1": 1.0,
+                "correct_change_precision": 1.0,
+                "correct_change_recall": 1.0,
+                "eligible": true,
+                "eligible_trajectories": 1,
+                "event_macro_update_accuracy": 1.0,
+                "final_state_accuracy": 1.0,
+                "reported_trajectories": 1,
+                "retention_after_update": 1.0,
+                "update_events": 3
+              },
+              "household.spouse_or_partner": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 1,
+                  "tn": 1,
+                  "tp_correct": 18,
+                  "tp_wrong_value": 0
+                },
+                "correct_change_f1": 0.972972972972973,
+                "correct_change_precision": 0.9473684210526315,
+                "correct_change_recall": 1.0,
+                "eligible": true,
+                "eligible_trajectories": 1,
+                "event_macro_update_accuracy": 1.0,
+                "final_state_accuracy": 0.95,
+                "reported_trajectories": 1,
+                "retention_after_update": 1.0,
+                "update_events": 2
+              },
+              "housing.address": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 2,
+                  "tp_correct": 16,
+                  "tp_wrong_value": 2
+                },
+                "correct_change_f1": 0.8888888888888888,
+                "correct_change_precision": 0.8888888888888888,
+                "correct_change_recall": 0.8888888888888888,
+                "eligible": true,
+                "eligible_trajectories": 1,
+                "event_macro_update_accuracy": 0.75,
+                "final_state_accuracy": 0.9,
+                "reported_trajectories": 1,
+                "retention_after_update": 0.8541666666666666,
+                "update_events": 4
+              },
+              "housing.contract_type": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 2,
+                  "tp_correct": 15,
+                  "tp_wrong_value": 3
+                },
+                "correct_change_f1": 0.8333333333333334,
+                "correct_change_precision": 0.8333333333333334,
+                "correct_change_recall": 0.8333333333333334,
+                "eligible": true,
+                "eligible_trajectories": 1,
+                "event_macro_update_accuracy": 0.75,
+                "final_state_accuracy": 0.85,
+                "reported_trajectories": 1,
+                "retention_after_update": 0.75,
+                "update_events": 4
+              },
+              "housing.maintenance_fee_payee": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 5,
+                  "tn": 10,
+                  "tp_correct": 5,
+                  "tp_wrong_value": 0
+                },
+                "correct_change_f1": 0.6666666666666666,
+                "correct_change_precision": 0.5,
+                "correct_change_recall": 1.0,
+                "eligible": true,
+                "eligible_trajectories": 1,
+                "event_macro_update_accuracy": 1.0,
+                "final_state_accuracy": 0.75,
+                "reported_trajectories": 1,
+                "retention_after_update": 1.0,
+                "update_events": 1
+              },
+              "housing.mortgage_status": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 1,
+                  "tn": 15,
+                  "tp_correct": 4,
+                  "tp_wrong_value": 0
+                },
+                "correct_change_f1": 0.888888888888889,
+                "correct_change_precision": 0.8,
+                "correct_change_recall": 1.0,
+                "eligible": true,
+                "eligible_trajectories": 1,
+                "event_macro_update_accuracy": 1.0,
+                "final_state_accuracy": 0.95,
+                "reported_trajectories": 1,
+                "retention_after_update": 1.0,
+                "update_events": 1
+              },
+              "housing.primary_residence_property_id": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 2,
+                  "fp": 1,
+                  "tn": 15,
+                  "tp_correct": 2,
+                  "tp_wrong_value": 0
+                },
+                "correct_change_f1": 0.5714285714285715,
+                "correct_change_precision": 0.6666666666666666,
+                "correct_change_recall": 0.5,
+                "eligible": true,
+                "eligible_trajectories": 1,
+                "event_macro_update_accuracy": 1.0,
+                "final_state_accuracy": 0.85,
+                "reported_trajectories": 1,
+                "retention_after_update": 0.5,
+                "update_events": 1
+              },
+              "housing.properties": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 1,
+                  "tn": 15,
+                  "tp_correct": 2,
+                  "tp_wrong_value": 2
+                },
+                "correct_change_f1": 0.4444444444444445,
+                "correct_change_precision": 0.4,
+                "correct_change_recall": 0.5,
+                "eligible": true,
+                "eligible_trajectories": 1,
+                "event_macro_update_accuracy": 1.0,
+                "final_state_accuracy": 0.85,
+                "reported_trajectories": 1,
+                "retention_after_update": 0.5,
+                "update_events": 1
+              },
+              "housing.rent_amount": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 7,
+                  "tp_correct": 13,
+                  "tp_wrong_value": 0
+                },
+                "correct_change_f1": 1.0,
+                "correct_change_precision": 1.0,
+                "correct_change_recall": 1.0,
+                "eligible": true,
+                "eligible_trajectories": 1,
+                "event_macro_update_accuracy": 1.0,
+                "final_state_accuracy": 1.0,
+                "reported_trajectories": 1,
+                "retention_after_update": 1.0,
+                "update_events": 2
+              },
+              "housing.rent_payee": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 7,
+                  "fp": 0,
+                  "tn": 0,
+                  "tp_correct": 13,
+                  "tp_wrong_value": 0
+                },
+                "correct_change_f1": 0.787878787878788,
+                "correct_change_precision": 1.0,
+                "correct_change_recall": 0.65,
+                "eligible": true,
+                "eligible_trajectories": 1,
+                "event_macro_update_accuracy": 0.5,
+                "final_state_accuracy": 0.65,
+                "reported_trajectories": 1,
+                "retention_after_update": 0.40625,
+                "update_events": 2
+              },
+              "housing.residence_status": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 2,
+                  "tp_correct": 15,
+                  "tp_wrong_value": 3
+                },
+                "correct_change_f1": 0.8333333333333334,
+                "correct_change_precision": 0.8333333333333334,
+                "correct_change_recall": 0.8333333333333334,
+                "eligible": true,
+                "eligible_trajectories": 1,
+                "event_macro_update_accuracy": 0.75,
+                "final_state_accuracy": 0.85,
+                "reported_trajectories": 1,
+                "retention_after_update": 0.75,
+                "update_events": 4
+              },
+              "profile.age": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 6,
+                  "tn": 14,
+                  "tp_correct": 0,
+                  "tp_wrong_value": 0
+                },
+                "correct_change_f1": null,
+                "correct_change_precision": null,
+                "correct_change_recall": null,
+                "eligible": false,
+                "eligible_trajectories": 0,
+                "event_macro_update_accuracy": null,
+                "final_state_accuracy": 0.7,
+                "reported_trajectories": 1,
+                "retention_after_update": null,
+                "update_events": 0
+              },
+              "profile.locale": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 20,
+                  "tp_correct": 0,
+                  "tp_wrong_value": 0
+                },
+                "correct_change_f1": null,
+                "correct_change_precision": null,
+                "correct_change_recall": null,
+                "eligible": false,
+                "eligible_trajectories": 0,
+                "event_macro_update_accuracy": null,
+                "final_state_accuracy": 1.0,
+                "reported_trajectories": 1,
+                "retention_after_update": null,
+                "update_events": 0
+              },
+              "profile.region": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 18,
+                  "tn": 2,
+                  "tp_correct": 0,
+                  "tp_wrong_value": 0
+                },
+                "correct_change_f1": null,
+                "correct_change_precision": null,
+                "correct_change_recall": null,
+                "eligible": false,
+                "eligible_trajectories": 0,
+                "event_macro_update_accuracy": null,
+                "final_state_accuracy": 0.1,
+                "reported_trajectories": 1,
+                "retention_after_update": null,
+                "update_events": 0
+              }
+            },
+            "path_trajectory_metrics": [
+              {
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 9,
+                  "tp_correct": 8,
+                  "tp_wrong_value": 3
+                },
+                "checkpoints": 20,
+                "correct_change_f1": 0.7272727272727273,
+                "correct_change_precision": 0.7272727272727273,
+                "correct_change_recall": 0.7272727272727273,
+                "eligible": true,
+                "event_macro_update_accuracy": 1.0,
+                "final_state_accuracy": 0.85,
+                "path": "cashflow.recent_one_off_expense",
+                "retention_after_update": 0.8,
+                "trajectory_id": "traj_010",
+                "update_event_support": 3
+              },
+              {
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 3,
+                  "tn": 14,
+                  "tp_correct": 2,
+                  "tp_wrong_value": 1
+                },
+                "checkpoints": 20,
+                "correct_change_f1": 0.4444444444444444,
+                "correct_change_precision": 0.3333333333333333,
+                "correct_change_recall": 0.6666666666666666,
+                "eligible": true,
+                "event_macro_update_accuracy": 1.0,
+                "final_state_accuracy": 0.8,
+                "path": "education.child_education_stage",
+                "retention_after_update": 0.6666666666666666,
+                "trajectory_id": "traj_010",
+                "update_event_support": 1
+              },
+              {
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 7,
+                  "tp_correct": 7,
+                  "tp_wrong_value": 6
+                },
+                "checkpoints": 20,
+                "correct_change_f1": 0.5384615384615384,
+                "correct_change_precision": 0.5384615384615384,
+                "correct_change_recall": 0.5384615384615384,
+                "eligible": true,
+                "event_macro_update_accuracy": 1.0,
+                "final_state_accuracy": 0.7,
+                "path": "education.self_education_status",
+                "retention_after_update": 0.5384615384615384,
+                "trajectory_id": "traj_010",
+                "update_event_support": 1
+              },
+              {
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 12,
+                  "tp_correct": 1,
+                  "tp_wrong_value": 7
+                },
+                "checkpoints": 20,
+                "correct_change_f1": 0.125,
+                "correct_change_precision": 0.125,
+                "correct_change_recall": 0.125,
+                "eligible": true,
+                "event_macro_update_accuracy": 0.5,
+                "final_state_accuracy": 0.65,
+                "path": "employment.employer",
+                "retention_after_update": 0.5,
+                "trajectory_id": "traj_010",
+                "update_event_support": 2
+              },
+              {
+                "change_confusion": {
+                  "fn": 2,
+                  "fp": 0,
+                  "tn": 11,
+                  "tp_correct": 7,
+                  "tp_wrong_value": 0
+                },
+                "checkpoints": 20,
+                "correct_change_f1": 0.8750000000000001,
+                "correct_change_precision": 1.0,
+                "correct_change_recall": 0.7777777777777778,
+                "eligible": true,
+                "event_macro_update_accuracy": 0.5,
+                "final_state_accuracy": 0.9,
+                "path": "employment.employment_status",
+                "retention_after_update": 0.5,
+                "trajectory_id": "traj_010",
+                "update_event_support": 2
+              },
+              {
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 11,
+                  "tp_correct": 5,
+                  "tp_wrong_value": 4
+                },
+                "checkpoints": 20,
+                "correct_change_f1": 0.5555555555555556,
+                "correct_change_precision": 0.5555555555555556,
+                "correct_change_recall": 0.5555555555555556,
+                "eligible": true,
+                "event_macro_update_accuracy": 0.5,
+                "final_state_accuracy": 0.8,
+                "path": "employment.income_stability",
+                "retention_after_update": 0.35714285714285715,
+                "trajectory_id": "traj_010",
+                "update_event_support": 2
+              },
+              {
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 8,
+                  "tn": 12,
+                  "tp_correct": 0,
+                  "tp_wrong_value": 0
+                },
+                "checkpoints": 20,
+                "correct_change_f1": null,
+                "correct_change_precision": 0.0,
+                "correct_change_recall": null,
+                "eligible": false,
+                "event_macro_update_accuracy": null,
+                "final_state_accuracy": 0.6,
+                "path": "employment.occupation",
+                "retention_after_update": null,
+                "trajectory_id": "traj_010",
+                "update_event_support": 0
+              },
+              {
+                "change_confusion": {
+                  "fn": 3,
+                  "fp": 0,
+                  "tn": 11,
+                  "tp_correct": 0,
+                  "tp_wrong_value": 6
+                },
+                "checkpoints": 20,
+                "correct_change_f1": 0.0,
+                "correct_change_precision": 0.0,
+                "correct_change_recall": 0.0,
+                "eligible": true,
+                "event_macro_update_accuracy": 0.0,
+                "final_state_accuracy": 0.55,
+                "path": "employment.salary_account",
+                "retention_after_update": 0.0,
+                "trajectory_id": "traj_010",
+                "update_event_support": 2
+              },
+              {
+                "change_confusion": {
+                  "fn": 2,
+                  "fp": 0,
+                  "tn": 10,
+                  "tp_correct": 2,
+                  "tp_wrong_value": 6
+                },
+                "checkpoints": 20,
+                "correct_change_f1": 0.22222222222222224,
+                "correct_change_precision": 0.25,
+                "correct_change_recall": 0.2,
+                "eligible": true,
+                "event_macro_update_accuracy": 0.3333333333333333,
+                "final_state_accuracy": 0.6,
+                "path": "employment.salary_day",
+                "retention_after_update": 0.38095238095238093,
+                "trajectory_id": "traj_010",
+                "update_event_support": 3
+              },
+              {
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 20,
+                  "tp_correct": 0,
+                  "tp_wrong_value": 0
+                },
+                "checkpoints": 20,
+                "correct_change_f1": null,
+                "correct_change_precision": 0.0,
+                "correct_change_recall": null,
+                "eligible": false,
+                "event_macro_update_accuracy": null,
+                "final_state_accuracy": 1.0,
+                "path": "financial_products.checking_accounts",
+                "retention_after_update": null,
+                "trajectory_id": "traj_010",
+                "update_event_support": 0
+              },
+              {
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 7,
+                  "tn": 9,
+                  "tp_correct": 4,
+                  "tp_wrong_value": 0
+                },
+                "checkpoints": 20,
+                "correct_change_f1": 0.5333333333333333,
+                "correct_change_precision": 0.36363636363636365,
+                "correct_change_recall": 1.0,
+                "eligible": true,
+                "event_macro_update_accuracy": 1.0,
+                "final_state_accuracy": 0.65,
+                "path": "financial_products.loans",
+                "retention_after_update": 1.0,
+                "trajectory_id": "traj_010",
+                "update_event_support": 1
+              },
+              {
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 20,
+                  "tp_correct": 0,
+                  "tp_wrong_value": 0
+                },
+                "checkpoints": 20,
+                "correct_change_f1": null,
+                "correct_change_precision": 0.0,
+                "correct_change_recall": null,
+                "eligible": false,
+                "event_macro_update_accuracy": null,
+                "final_state_accuracy": 1.0,
+                "path": "financial_products.pension_or_irp",
+                "retention_after_update": null,
+                "trajectory_id": "traj_010",
+                "update_event_support": 0
+              },
+              {
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 18,
+                  "tn": 2,
+                  "tp_correct": 0,
+                  "tp_wrong_value": 0
+                },
+                "checkpoints": 20,
+                "correct_change_f1": null,
+                "correct_change_precision": 0.0,
+                "correct_change_recall": null,
+                "eligible": false,
+                "event_macro_update_accuracy": null,
+                "final_state_accuracy": 0.1,
+                "path": "financial_products.savings_accounts",
+                "retention_after_update": null,
+                "trajectory_id": "traj_010",
+                "update_event_support": 0
+              },
+              {
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 2,
+                  "tp_correct": 18,
+                  "tp_wrong_value": 0
+                },
+                "checkpoints": 20,
+                "correct_change_f1": 1.0,
+                "correct_change_precision": 1.0,
+                "correct_change_recall": 1.0,
+                "eligible": true,
+                "event_macro_update_accuracy": 1.0,
+                "final_state_accuracy": 1.0,
+                "path": "goals.child_education_goal",
+                "retention_after_update": 1.0,
+                "trajectory_id": "traj_010",
+                "update_event_support": 2
+              },
+              {
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 20,
+                  "tp_correct": 0,
+                  "tp_wrong_value": 0
+                },
+                "checkpoints": 20,
+                "correct_change_f1": null,
+                "correct_change_precision": 0.0,
+                "correct_change_recall": null,
+                "eligible": false,
+                "event_macro_update_accuracy": null,
+                "final_state_accuracy": 1.0,
+                "path": "goals.emergency_fund",
+                "retention_after_update": null,
+                "trajectory_id": "traj_010",
+                "update_event_support": 0
+              },
+              {
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 4,
+                  "tn": 16,
+                  "tp_correct": 0,
+                  "tp_wrong_value": 0
+                },
+                "checkpoints": 20,
+                "correct_change_f1": null,
+                "correct_change_precision": 0.0,
+                "correct_change_recall": null,
+                "eligible": false,
+                "event_macro_update_accuracy": null,
+                "final_state_accuracy": 0.8,
+                "path": "goals.housing_deposit_goal",
+                "retention_after_update": null,
+                "trajectory_id": "traj_010",
+                "update_event_support": 0
+              },
+              {
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 20,
+                  "tp_correct": 0,
+                  "tp_wrong_value": 0
+                },
+                "checkpoints": 20,
+                "correct_change_f1": null,
+                "correct_change_precision": 0.0,
+                "correct_change_recall": null,
+                "eligible": false,
+                "event_macro_update_accuracy": null,
+                "final_state_accuracy": 1.0,
+                "path": "goals.retirement_goal",
+                "retention_after_update": null,
+                "trajectory_id": "traj_010",
+                "update_event_support": 0
+              },
+              {
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 20,
+                  "tp_correct": 0,
+                  "tp_wrong_value": 0
+                },
+                "checkpoints": 20,
+                "correct_change_f1": null,
+                "correct_change_precision": 0.0,
+                "correct_change_recall": null,
+                "eligible": false,
+                "event_macro_update_accuracy": null,
+                "final_state_accuracy": 1.0,
+                "path": "household.child_support_arrangement",
+                "retention_after_update": null,
+                "trajectory_id": "traj_010",
+                "update_event_support": 0
+              },
+              {
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 2,
+                  "tp_correct": 13,
+                  "tp_wrong_value": 5
+                },
+                "checkpoints": 20,
+                "correct_change_f1": 0.7222222222222222,
+                "correct_change_precision": 0.7222222222222222,
+                "correct_change_recall": 0.7222222222222222,
+                "eligible": true,
+                "event_macro_update_accuracy": 0.6666666666666666,
+                "final_state_accuracy": 0.75,
+                "path": "household.children",
+                "retention_after_update": 0.7555555555555555,
+                "trajectory_id": "traj_010",
+                "update_event_support": 3
+              },
+              {
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 2,
+                  "tp_correct": 17,
+                  "tp_wrong_value": 1
+                },
+                "checkpoints": 20,
+                "correct_change_f1": 0.9444444444444444,
+                "correct_change_precision": 0.9444444444444444,
+                "correct_change_recall": 0.9444444444444444,
+                "eligible": true,
+                "event_macro_update_accuracy": 0.75,
+                "final_state_accuracy": 0.95,
+                "path": "household.dependents",
+                "retention_after_update": 0.9166666666666666,
+                "trajectory_id": "traj_010",
+                "update_event_support": 4
+              },
+              {
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 1,
+                  "tp_correct": 19,
+                  "tp_wrong_value": 0
+                },
+                "checkpoints": 20,
+                "correct_change_f1": 1.0,
+                "correct_change_precision": 1.0,
+                "correct_change_recall": 1.0,
+                "eligible": true,
+                "event_macro_update_accuracy": 1.0,
+                "final_state_accuracy": 1.0,
+                "path": "household.marital_status",
+                "retention_after_update": 1.0,
+                "trajectory_id": "traj_010",
+                "update_event_support": 3
+              },
+              {
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 1,
+                  "tn": 1,
+                  "tp_correct": 18,
+                  "tp_wrong_value": 0
+                },
+                "checkpoints": 20,
+                "correct_change_f1": 0.972972972972973,
+                "correct_change_precision": 0.9473684210526315,
+                "correct_change_recall": 1.0,
+                "eligible": true,
+                "event_macro_update_accuracy": 1.0,
+                "final_state_accuracy": 0.95,
+                "path": "household.spouse_or_partner",
+                "retention_after_update": 1.0,
+                "trajectory_id": "traj_010",
+                "update_event_support": 2
+              },
+              {
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 2,
+                  "tp_correct": 16,
+                  "tp_wrong_value": 2
+                },
+                "checkpoints": 20,
+                "correct_change_f1": 0.8888888888888888,
+                "correct_change_precision": 0.8888888888888888,
+                "correct_change_recall": 0.8888888888888888,
+                "eligible": true,
+                "event_macro_update_accuracy": 0.75,
+                "final_state_accuracy": 0.9,
+                "path": "housing.address",
+                "retention_after_update": 0.8541666666666666,
+                "trajectory_id": "traj_010",
+                "update_event_support": 4
+              },
+              {
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 2,
+                  "tp_correct": 15,
+                  "tp_wrong_value": 3
+                },
+                "checkpoints": 20,
+                "correct_change_f1": 0.8333333333333334,
+                "correct_change_precision": 0.8333333333333334,
+                "correct_change_recall": 0.8333333333333334,
+                "eligible": true,
+                "event_macro_update_accuracy": 0.75,
+                "final_state_accuracy": 0.85,
+                "path": "housing.contract_type",
+                "retention_after_update": 0.75,
+                "trajectory_id": "traj_010",
+                "update_event_support": 4
+              },
+              {
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 5,
+                  "tn": 10,
+                  "tp_correct": 5,
+                  "tp_wrong_value": 0
+                },
+                "checkpoints": 20,
+                "correct_change_f1": 0.6666666666666666,
+                "correct_change_precision": 0.5,
+                "correct_change_recall": 1.0,
+                "eligible": true,
+                "event_macro_update_accuracy": 1.0,
+                "final_state_accuracy": 0.75,
+                "path": "housing.maintenance_fee_payee",
+                "retention_after_update": 1.0,
+                "trajectory_id": "traj_010",
+                "update_event_support": 1
+              },
+              {
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 1,
+                  "tn": 15,
+                  "tp_correct": 4,
+                  "tp_wrong_value": 0
+                },
+                "checkpoints": 20,
+                "correct_change_f1": 0.888888888888889,
+                "correct_change_precision": 0.8,
+                "correct_change_recall": 1.0,
+                "eligible": true,
+                "event_macro_update_accuracy": 1.0,
+                "final_state_accuracy": 0.95,
+                "path": "housing.mortgage_status",
+                "retention_after_update": 1.0,
+                "trajectory_id": "traj_010",
+                "update_event_support": 1
+              },
+              {
+                "change_confusion": {
+                  "fn": 2,
+                  "fp": 1,
+                  "tn": 15,
+                  "tp_correct": 2,
+                  "tp_wrong_value": 0
+                },
+                "checkpoints": 20,
+                "correct_change_f1": 0.5714285714285715,
+                "correct_change_precision": 0.6666666666666666,
+                "correct_change_recall": 0.5,
+                "eligible": true,
+                "event_macro_update_accuracy": 1.0,
+                "final_state_accuracy": 0.85,
+                "path": "housing.primary_residence_property_id",
+                "retention_after_update": 0.5,
+                "trajectory_id": "traj_010",
+                "update_event_support": 1
+              },
+              {
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 1,
+                  "tn": 15,
+                  "tp_correct": 2,
+                  "tp_wrong_value": 2
+                },
+                "checkpoints": 20,
+                "correct_change_f1": 0.4444444444444445,
+                "correct_change_precision": 0.4,
+                "correct_change_recall": 0.5,
+                "eligible": true,
+                "event_macro_update_accuracy": 1.0,
+                "final_state_accuracy": 0.85,
+                "path": "housing.properties",
+                "retention_after_update": 0.5,
+                "trajectory_id": "traj_010",
+                "update_event_support": 1
+              },
+              {
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 7,
+                  "tp_correct": 13,
+                  "tp_wrong_value": 0
+                },
+                "checkpoints": 20,
+                "correct_change_f1": 1.0,
+                "correct_change_precision": 1.0,
+                "correct_change_recall": 1.0,
+                "eligible": true,
+                "event_macro_update_accuracy": 1.0,
+                "final_state_accuracy": 1.0,
+                "path": "housing.rent_amount",
+                "retention_after_update": 1.0,
+                "trajectory_id": "traj_010",
+                "update_event_support": 2
+              },
+              {
+                "change_confusion": {
+                  "fn": 7,
+                  "fp": 0,
+                  "tn": 0,
+                  "tp_correct": 13,
+                  "tp_wrong_value": 0
+                },
+                "checkpoints": 20,
+                "correct_change_f1": 0.787878787878788,
+                "correct_change_precision": 1.0,
+                "correct_change_recall": 0.65,
+                "eligible": true,
+                "event_macro_update_accuracy": 0.5,
+                "final_state_accuracy": 0.65,
+                "path": "housing.rent_payee",
+                "retention_after_update": 0.40625,
+                "trajectory_id": "traj_010",
+                "update_event_support": 2
+              },
+              {
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 2,
+                  "tp_correct": 15,
+                  "tp_wrong_value": 3
+                },
+                "checkpoints": 20,
+                "correct_change_f1": 0.8333333333333334,
+                "correct_change_precision": 0.8333333333333334,
+                "correct_change_recall": 0.8333333333333334,
+                "eligible": true,
+                "event_macro_update_accuracy": 0.75,
+                "final_state_accuracy": 0.85,
+                "path": "housing.residence_status",
+                "retention_after_update": 0.75,
+                "trajectory_id": "traj_010",
+                "update_event_support": 4
+              },
+              {
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 6,
+                  "tn": 14,
+                  "tp_correct": 0,
+                  "tp_wrong_value": 0
+                },
+                "checkpoints": 20,
+                "correct_change_f1": null,
+                "correct_change_precision": 0.0,
+                "correct_change_recall": null,
+                "eligible": false,
+                "event_macro_update_accuracy": null,
+                "final_state_accuracy": 0.7,
+                "path": "profile.age",
+                "retention_after_update": null,
+                "trajectory_id": "traj_010",
+                "update_event_support": 0
+              },
+              {
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 20,
+                  "tp_correct": 0,
+                  "tp_wrong_value": 0
+                },
+                "checkpoints": 20,
+                "correct_change_f1": null,
+                "correct_change_precision": 0.0,
+                "correct_change_recall": null,
+                "eligible": false,
+                "event_macro_update_accuracy": null,
+                "final_state_accuracy": 1.0,
+                "path": "profile.locale",
+                "retention_after_update": null,
+                "trajectory_id": "traj_010",
+                "update_event_support": 0
+              },
+              {
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 18,
+                  "tn": 2,
+                  "tp_correct": 0,
+                  "tp_wrong_value": 0
+                },
+                "checkpoints": 20,
+                "correct_change_f1": null,
+                "correct_change_precision": 0.0,
+                "correct_change_recall": null,
+                "eligible": false,
+                "event_macro_update_accuracy": null,
+                "final_state_accuracy": 0.1,
+                "path": "profile.region",
+                "retention_after_update": null,
+                "trajectory_id": "traj_010",
+                "update_event_support": 0
+              }
+            ],
+            "reported_path_count": 34
+          },
+          "retention_after_update": {
+            "aggregation": "event_lag_then_trajectory_macro",
+            "by_lag_bucket": {
+              "0": 0.7759803921568628,
+              "1-15": 0.8808823529411764,
+              "121-180": 0.75,
+              "16-30": 0.7533333333333333,
+              "181-240": 0,
+              "31-60": 0.7,
+              "61-120": 0.8291666666666666
+            },
+            "by_lag_sessions": {
+              "0": 0.7759803921568628,
+              "1": 1,
+              "105": 0.9523809523809523,
+              "120": 0.7777777777777778,
+              "135": 0.6666666666666666,
+              "15": 0.8734375,
+              "150": 1,
+              "165": 0.5,
+              "180": 0.5,
+              "195": 0,
+              "210": 0,
+              "225": 0,
+              "30": 0.7533333333333333,
+              "45": 0.7230769230769231,
+              "60": 0.7,
+              "75": 0.8,
+              "90": 0.9
+            },
+            "event_count": 18,
+            "mean_over_observed_lags": 0.734422907339574,
+            "support_by_lag_bucket": {
+              "0": {
+                "events": 17,
+                "trajectories": 1
+              },
+              "1-15": {
+                "events": 17,
+                "trajectories": 1
+              },
+              "121-180": {
+                "events": 3,
+                "trajectories": 1
+              },
+              "16-30": {
+                "events": 15,
+                "trajectories": 1
+              },
+              "181-240": {
+                "events": 1,
+                "trajectories": 1
+              },
+              "31-60": {
+                "events": 13,
+                "trajectories": 1
+              },
+              "61-120": {
+                "events": 8,
+                "trajectories": 1
+              }
+            },
+            "support_by_lag_sessions": {
+              "0": {
+                "events": 17,
+                "trajectories": 1
+              },
+              "1": {
+                "events": 1,
+                "trajectories": 1
+              },
+              "105": {
+                "events": 7,
+                "trajectories": 1
+              },
+              "120": {
+                "events": 6,
+                "trajectories": 1
+              },
+              "135": {
+                "events": 3,
+                "trajectories": 1
+              },
+              "15": {
+                "events": 16,
+                "trajectories": 1
+              },
+              "150": {
+                "events": 2,
+                "trajectories": 1
+              },
+              "165": {
+                "events": 2,
+                "trajectories": 1
+              },
+              "180": {
+                "events": 2,
+                "trajectories": 1
+              },
+              "195": {
+                "events": 1,
+                "trajectories": 1
+              },
+              "210": {
+                "events": 1,
+                "trajectories": 1
+              },
+              "225": {
+                "events": 1,
+                "trajectories": 1
+              },
+              "30": {
+                "events": 15,
+                "trajectories": 1
+              },
+              "45": {
+                "events": 13,
+                "trajectories": 1
+              },
+              "60": {
+                "events": 12,
+                "trajectories": 1
+              },
+              "75": {
+                "events": 8,
+                "trajectories": 1
+              },
+              "90": {
+                "events": 8,
+                "trajectories": 1
+              }
+            },
+            "trajectory_mean_over_observed_lags": {
+              "traj_010": 0.734422907339574
+            }
+          },
+          "status_confusion": {
+            "current": {
+              "current": 467,
+              "historical": 0,
+              "invalid/missing": 0,
+              "needs_verification": 10,
+              "not_applicable": 11,
+              "stale": 25,
+              "unknown": 0
+            },
+            "historical": {
+              "current": 3,
+              "historical": 0,
+              "invalid/missing": 0,
+              "needs_verification": 0,
+              "not_applicable": 8,
+              "stale": 0,
+              "unknown": 0
+            },
+            "needs_verification": {
+              "current": 0,
+              "historical": 0,
+              "invalid/missing": 0,
+              "needs_verification": 0,
+              "not_applicable": 0,
+              "stale": 0,
+              "unknown": 0
+            },
+            "not_applicable": {
+              "current": 4,
+              "historical": 0,
+              "invalid/missing": 0,
+              "needs_verification": 0,
+              "not_applicable": 93,
+              "stale": 0,
+              "unknown": 1
+            },
+            "stale": {
+              "current": 5,
+              "historical": 0,
+              "invalid/missing": 0,
+              "needs_verification": 0,
+              "not_applicable": 12,
+              "stale": 1,
+              "unknown": 0
+            },
+            "unknown": {
+              "current": 0,
+              "historical": 0,
+              "invalid/missing": 0,
+              "needs_verification": 0,
+              "not_applicable": 0,
+              "stale": 0,
+              "unknown": 40
+            }
+          },
+          "trajectory_metrics": {
+            "traj_010": {
+              "change_detection_f1": 0.8569972181265665,
+              "change_detection_precision": 0.7880801441682113,
+              "change_detection_recall": 0.9499308208131737,
+              "changed_state_accuracy": 0.799633307868602,
+              "correct_change_f1": 0.720784319011028,
+              "correct_change_precision": 0.662087066763571,
+              "correct_change_recall": 0.799633307868602,
+              "dynamic_path_final_state_accuracy": 0.832,
+              "evidence_citation_precision": 0.5264868521057803,
+              "evidence_hit_rate": 0.7925617519735166,
+              "exact_state_match": 0.0,
+              "final_state_accuracy": 0.7970588235294117,
+              "status_accuracy": 0.8838235294117647,
+              "unchanged_state_accuracy": 0.8034233404736117,
+              "value_accuracy": 0.8529411764705882
+            }
+          },
+          "validation_error_count": 0
+        }
+      }
+    },
+    "fc_gpt_5_6_sol": {
+      "stage2_2_reconstruct": {
+        "accuracy_by_retention_lag_windows": {},
+        "aggregation": "checkpoint_then_trajectory_macro",
+        "ci95": [
+          0.7294117647058823,
+          0.7294117647058823
+        ],
+        "items": 20,
+        "parse_errors": 0,
+        "question_micro_accuracy": 0,
+        "retrieval": {
+          "aggregation": "checkpoint_then_trajectory_macro",
+          "complete_gold_evidence_recall_at_budget": 1.0,
+          "gold_evidence_recall_at_budget": 1.0,
+          "gold_evidence_support": 115,
+          "trajectory_recall": {
+            "traj_010": 1.0
+          }
+        },
+        "score": 0.7294117647058823,
+        "state_reconstruction": {
+          "aggregation": "checkpoint_then_trajectory_macro",
+          "change_confusion": {
+            "fn": 15,
+            "fp": 101,
+            "tn": 308,
+            "tp_correct": 188,
+            "tp_wrong_value": 68
+          },
+          "event_macro": {
+            "aggregation": "event_then_trajectory_macro",
+            "event_count": 18,
+            "exact_update_accuracy": 0.5555555555555556,
+            "mean_first_evaluation_lag_sessions": 0.05555555555555555,
+            "trajectory_count": 1,
+            "trajectory_exact_update_accuracy": {
+              "traj_010": 0.5555555555555556
+            },
+            "trajectory_update_accuracy": {
+              "traj_010": 0.7245370370370371
+            },
+            "update_accuracy": 0.7245370370370371
+          },
+          "items": 20,
+          "metrics": {
+            "change_detection_f1": 0.8140934658943038,
+            "change_detection_precision": 0.7162824201157423,
+            "change_detection_recall": 0.9506724811136575,
+            "changed_state_accuracy": 0.7457643663526017,
+            "correct_change_f1": 0.6340666284436687,
+            "correct_change_precision": 0.5549585205535703,
+            "correct_change_recall": 0.7457643663526017,
+            "dynamic_path_final_state_accuracy": 0.766,
+            "evidence_citation_precision": 0.382224800540955,
+            "evidence_hit_rate": 0.6104040404040404,
+            "exact_state_match": 0.0,
+            "final_state_accuracy": 0.7294117647058823,
+            "status_accuracy": 0.8411764705882353,
+            "unchanged_state_accuracy": 0.7335642634462584,
+            "value_accuracy": 0.7852941176470588
+          },
+          "parse_errors": 0,
+          "path_macro": {
+            "aggregation": "checkpoint_then_trajectory_then_path_macro",
+            "correct_change_f1": 0.5843395213969989,
+            "eligible_path_count": 23,
+            "path_metrics": {
+              "cashflow.recent_one_off_expense": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 2,
+                  "fp": 0,
+                  "tn": 9,
+                  "tp_correct": 2,
+                  "tp_wrong_value": 7
+                },
+                "correct_change_f1": 0.19999999999999998,
+                "correct_change_precision": 0.2222222222222222,
+                "correct_change_recall": 0.18181818181818182,
+                "eligible": true,
+                "eligible_trajectories": 1,
+                "event_macro_update_accuracy": 0.6666666666666666,
+                "final_state_accuracy": 0.55,
+                "reported_trajectories": 1,
+                "retention_after_update": 0.4,
+                "update_events": 3
+              },
+              "education.child_education_stage": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 15,
+                  "tn": 2,
+                  "tp_correct": 0,
+                  "tp_wrong_value": 3
+                },
+                "correct_change_f1": 0.0,
+                "correct_change_precision": 0.0,
+                "correct_change_recall": 0.0,
+                "eligible": true,
+                "eligible_trajectories": 1,
+                "event_macro_update_accuracy": 0.0,
+                "final_state_accuracy": 0.1,
+                "reported_trajectories": 1,
+                "retention_after_update": 0.0,
+                "update_events": 1
+              },
+              "education.self_education_status": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 7,
+                  "tp_correct": 6,
+                  "tp_wrong_value": 7
+                },
+                "correct_change_f1": 0.46153846153846156,
+                "correct_change_precision": 0.46153846153846156,
+                "correct_change_recall": 0.46153846153846156,
+                "eligible": true,
+                "eligible_trajectories": 1,
+                "event_macro_update_accuracy": 1.0,
+                "final_state_accuracy": 0.65,
+                "reported_trajectories": 1,
+                "retention_after_update": 0.46153846153846156,
+                "update_events": 1
+              },
+              "employment.employer": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 12,
+                  "tp_correct": 1,
+                  "tp_wrong_value": 7
+                },
+                "correct_change_f1": 0.125,
+                "correct_change_precision": 0.125,
+                "correct_change_recall": 0.125,
+                "eligible": true,
+                "eligible_trajectories": 1,
+                "event_macro_update_accuracy": 0.5,
+                "final_state_accuracy": 0.65,
+                "reported_trajectories": 1,
+                "retention_after_update": 0.5,
+                "update_events": 2
+              },
+              "employment.employment_status": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 2,
+                  "fp": 0,
+                  "tn": 11,
+                  "tp_correct": 7,
+                  "tp_wrong_value": 0
+                },
+                "correct_change_f1": 0.8750000000000001,
+                "correct_change_precision": 1.0,
+                "correct_change_recall": 0.7777777777777778,
+                "eligible": true,
+                "eligible_trajectories": 1,
+                "event_macro_update_accuracy": 0.5,
+                "final_state_accuracy": 0.9,
+                "reported_trajectories": 1,
+                "retention_after_update": 0.5,
+                "update_events": 2
+              },
+              "employment.income_stability": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 1,
+                  "tn": 10,
+                  "tp_correct": 8,
+                  "tp_wrong_value": 1
+                },
+                "correct_change_f1": 0.8421052631578948,
+                "correct_change_precision": 0.8,
+                "correct_change_recall": 0.8888888888888888,
+                "eligible": true,
+                "eligible_trajectories": 1,
+                "event_macro_update_accuracy": 0.5,
+                "final_state_accuracy": 0.9,
+                "reported_trajectories": 1,
+                "retention_after_update": 0.9285714285714286,
+                "update_events": 2
+              },
+              "employment.occupation": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 8,
+                  "tn": 12,
+                  "tp_correct": 0,
+                  "tp_wrong_value": 0
+                },
+                "correct_change_f1": null,
+                "correct_change_precision": null,
+                "correct_change_recall": null,
+                "eligible": false,
+                "eligible_trajectories": 0,
+                "event_macro_update_accuracy": null,
+                "final_state_accuracy": 0.6,
+                "reported_trajectories": 1,
+                "retention_after_update": null,
+                "update_events": 0
+              },
+              "employment.salary_account": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 2,
+                  "fp": 0,
+                  "tn": 11,
+                  "tp_correct": 0,
+                  "tp_wrong_value": 7
+                },
+                "correct_change_f1": 0.0,
+                "correct_change_precision": 0.0,
+                "correct_change_recall": 0.0,
+                "eligible": true,
+                "eligible_trajectories": 1,
+                "event_macro_update_accuracy": 0.0,
+                "final_state_accuracy": 0.55,
+                "reported_trajectories": 1,
+                "retention_after_update": 0.0,
+                "update_events": 2
+              },
+              "employment.salary_day": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 1,
+                  "fp": 0,
+                  "tn": 10,
+                  "tp_correct": 2,
+                  "tp_wrong_value": 7
+                },
+                "correct_change_f1": 0.2105263157894737,
+                "correct_change_precision": 0.2222222222222222,
+                "correct_change_recall": 0.2,
+                "eligible": true,
+                "eligible_trajectories": 1,
+                "event_macro_update_accuracy": 0.6666666666666666,
+                "final_state_accuracy": 0.6,
+                "reported_trajectories": 1,
+                "retention_after_update": 0.5,
+                "update_events": 3
+              },
+              "financial_products.checking_accounts": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 20,
+                  "tp_correct": 0,
+                  "tp_wrong_value": 0
+                },
+                "correct_change_f1": null,
+                "correct_change_precision": null,
+                "correct_change_recall": null,
+                "eligible": false,
+                "eligible_trajectories": 0,
+                "event_macro_update_accuracy": null,
+                "final_state_accuracy": 1.0,
+                "reported_trajectories": 1,
+                "retention_after_update": null,
+                "update_events": 0
+              },
+              "financial_products.loans": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 11,
+                  "tn": 5,
+                  "tp_correct": 2,
+                  "tp_wrong_value": 2
+                },
+                "correct_change_f1": 0.2105263157894737,
+                "correct_change_precision": 0.13333333333333333,
+                "correct_change_recall": 0.5,
+                "eligible": true,
+                "eligible_trajectories": 1,
+                "event_macro_update_accuracy": 0.0,
+                "final_state_accuracy": 0.35,
+                "reported_trajectories": 1,
+                "retention_after_update": 0.5,
+                "update_events": 1
+              },
+              "financial_products.pension_or_irp": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 20,
+                  "tp_correct": 0,
+                  "tp_wrong_value": 0
+                },
+                "correct_change_f1": null,
+                "correct_change_precision": null,
+                "correct_change_recall": null,
+                "eligible": false,
+                "eligible_trajectories": 0,
+                "event_macro_update_accuracy": null,
+                "final_state_accuracy": 1.0,
+                "reported_trajectories": 1,
+                "retention_after_update": null,
+                "update_events": 0
+              },
+              "financial_products.savings_accounts": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 18,
+                  "tn": 2,
+                  "tp_correct": 0,
+                  "tp_wrong_value": 0
+                },
+                "correct_change_f1": null,
+                "correct_change_precision": null,
+                "correct_change_recall": null,
+                "eligible": false,
+                "eligible_trajectories": 0,
+                "event_macro_update_accuracy": null,
+                "final_state_accuracy": 0.1,
+                "reported_trajectories": 1,
+                "retention_after_update": null,
+                "update_events": 0
+              },
+              "goals.child_education_goal": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 2,
+                  "tp_correct": 18,
+                  "tp_wrong_value": 0
+                },
+                "correct_change_f1": 1.0,
+                "correct_change_precision": 1.0,
+                "correct_change_recall": 1.0,
+                "eligible": true,
+                "eligible_trajectories": 1,
+                "event_macro_update_accuracy": 1.0,
+                "final_state_accuracy": 1.0,
+                "reported_trajectories": 1,
+                "retention_after_update": 1.0,
+                "update_events": 2
+              },
+              "goals.emergency_fund": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 20,
+                  "tp_correct": 0,
+                  "tp_wrong_value": 0
+                },
+                "correct_change_f1": null,
+                "correct_change_precision": null,
+                "correct_change_recall": null,
+                "eligible": false,
+                "eligible_trajectories": 0,
+                "event_macro_update_accuracy": null,
+                "final_state_accuracy": 1.0,
+                "reported_trajectories": 1,
+                "retention_after_update": null,
+                "update_events": 0
+              },
+              "goals.housing_deposit_goal": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 7,
+                  "tn": 13,
+                  "tp_correct": 0,
+                  "tp_wrong_value": 0
+                },
+                "correct_change_f1": null,
+                "correct_change_precision": null,
+                "correct_change_recall": null,
+                "eligible": false,
+                "eligible_trajectories": 0,
+                "event_macro_update_accuracy": null,
+                "final_state_accuracy": 0.65,
+                "reported_trajectories": 1,
+                "retention_after_update": null,
+                "update_events": 0
+              },
+              "goals.retirement_goal": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 20,
+                  "tp_correct": 0,
+                  "tp_wrong_value": 0
+                },
+                "correct_change_f1": null,
+                "correct_change_precision": null,
+                "correct_change_recall": null,
+                "eligible": false,
+                "eligible_trajectories": 0,
+                "event_macro_update_accuracy": null,
+                "final_state_accuracy": 1.0,
+                "reported_trajectories": 1,
+                "retention_after_update": null,
+                "update_events": 0
+              },
+              "household.child_support_arrangement": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 20,
+                  "tp_correct": 0,
+                  "tp_wrong_value": 0
+                },
+                "correct_change_f1": null,
+                "correct_change_precision": null,
+                "correct_change_recall": null,
+                "eligible": false,
+                "eligible_trajectories": 0,
+                "event_macro_update_accuracy": null,
+                "final_state_accuracy": 1.0,
+                "reported_trajectories": 1,
+                "retention_after_update": null,
+                "update_events": 0
+              },
+              "household.children": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 2,
+                  "tp_correct": 7,
+                  "tp_wrong_value": 11
+                },
+                "correct_change_f1": 0.3888888888888889,
+                "correct_change_precision": 0.3888888888888889,
+                "correct_change_recall": 0.3888888888888889,
+                "eligible": true,
+                "eligible_trajectories": 1,
+                "event_macro_update_accuracy": 0.6666666666666666,
+                "final_state_accuracy": 0.45,
+                "reported_trajectories": 1,
+                "retention_after_update": 0.5333333333333333,
+                "update_events": 3
+              },
+              "household.dependents": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 2,
+                  "tp_correct": 18,
+                  "tp_wrong_value": 0
+                },
+                "correct_change_f1": 1.0,
+                "correct_change_precision": 1.0,
+                "correct_change_recall": 1.0,
+                "eligible": true,
+                "eligible_trajectories": 1,
+                "event_macro_update_accuracy": 1.0,
+                "final_state_accuracy": 1.0,
+                "reported_trajectories": 1,
+                "retention_after_update": 1.0,
+                "update_events": 4
+              },
+              "household.marital_status": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 1,
+                  "tp_correct": 18,
+                  "tp_wrong_value": 1
+                },
+                "correct_change_f1": 0.9473684210526315,
+                "correct_change_precision": 0.9473684210526315,
+                "correct_change_recall": 0.9473684210526315,
+                "eligible": true,
+                "eligible_trajectories": 1,
+                "event_macro_update_accuracy": 0.6666666666666666,
+                "final_state_accuracy": 0.95,
+                "reported_trajectories": 1,
+                "retention_after_update": 0.6666666666666666,
+                "update_events": 3
+              },
+              "household.spouse_or_partner": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 1,
+                  "tn": 1,
+                  "tp_correct": 18,
+                  "tp_wrong_value": 0
+                },
+                "correct_change_f1": 0.972972972972973,
+                "correct_change_precision": 0.9473684210526315,
+                "correct_change_recall": 1.0,
+                "eligible": true,
+                "eligible_trajectories": 1,
+                "event_macro_update_accuracy": 1.0,
+                "final_state_accuracy": 0.95,
+                "reported_trajectories": 1,
+                "retention_after_update": 1.0,
+                "update_events": 2
+              },
+              "housing.address": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 2,
+                  "tp_correct": 17,
+                  "tp_wrong_value": 1
+                },
+                "correct_change_f1": 0.9444444444444444,
+                "correct_change_precision": 0.9444444444444444,
+                "correct_change_recall": 0.9444444444444444,
+                "eligible": true,
+                "eligible_trajectories": 1,
+                "event_macro_update_accuracy": 1.0,
+                "final_state_accuracy": 0.95,
+                "reported_trajectories": 1,
+                "retention_after_update": 0.9375,
+                "update_events": 4
+              },
+              "housing.contract_type": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 2,
+                  "tp_correct": 15,
+                  "tp_wrong_value": 3
+                },
+                "correct_change_f1": 0.8333333333333334,
+                "correct_change_precision": 0.8333333333333334,
+                "correct_change_recall": 0.8333333333333334,
+                "eligible": true,
+                "eligible_trajectories": 1,
+                "event_macro_update_accuracy": 0.75,
+                "final_state_accuracy": 0.85,
+                "reported_trajectories": 1,
+                "retention_after_update": 0.75,
+                "update_events": 4
+              },
+              "housing.maintenance_fee_payee": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 5,
+                  "tn": 10,
+                  "tp_correct": 5,
+                  "tp_wrong_value": 0
+                },
+                "correct_change_f1": 0.6666666666666666,
+                "correct_change_precision": 0.5,
+                "correct_change_recall": 1.0,
+                "eligible": true,
+                "eligible_trajectories": 1,
+                "event_macro_update_accuracy": 1.0,
+                "final_state_accuracy": 0.75,
+                "reported_trajectories": 1,
+                "retention_after_update": 1.0,
+                "update_events": 1
+              },
+              "housing.mortgage_status": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 16,
+                  "tp_correct": 3,
+                  "tp_wrong_value": 1
+                },
+                "correct_change_f1": 0.75,
+                "correct_change_precision": 0.75,
+                "correct_change_recall": 0.75,
+                "eligible": true,
+                "eligible_trajectories": 1,
+                "event_macro_update_accuracy": 0.0,
+                "final_state_accuracy": 0.95,
+                "reported_trajectories": 1,
+                "retention_after_update": 0.75,
+                "update_events": 1
+              },
+              "housing.primary_residence_property_id": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 2,
+                  "fp": 0,
+                  "tn": 16,
+                  "tp_correct": 1,
+                  "tp_wrong_value": 1
+                },
+                "correct_change_f1": 0.3333333333333333,
+                "correct_change_precision": 0.5,
+                "correct_change_recall": 0.25,
+                "eligible": true,
+                "eligible_trajectories": 1,
+                "event_macro_update_accuracy": 0.0,
+                "final_state_accuracy": 0.85,
+                "reported_trajectories": 1,
+                "retention_after_update": 0.25,
+                "update_events": 1
+              },
+              "housing.properties": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 16,
+                  "tp_correct": 1,
+                  "tp_wrong_value": 3
+                },
+                "correct_change_f1": 0.25,
+                "correct_change_precision": 0.25,
+                "correct_change_recall": 0.25,
+                "eligible": true,
+                "eligible_trajectories": 1,
+                "event_macro_update_accuracy": 0.0,
+                "final_state_accuracy": 0.85,
+                "reported_trajectories": 1,
+                "retention_after_update": 0.25,
+                "update_events": 1
+              },
+              "housing.rent_amount": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 1,
+                  "tn": 6,
+                  "tp_correct": 12,
+                  "tp_wrong_value": 1
+                },
+                "correct_change_f1": 0.888888888888889,
+                "correct_change_precision": 0.8571428571428571,
+                "correct_change_recall": 0.9230769230769231,
+                "eligible": true,
+                "eligible_trajectories": 1,
+                "event_macro_update_accuracy": 0.5,
+                "final_state_accuracy": 0.9,
+                "reported_trajectories": 1,
+                "retention_after_update": 0.875,
+                "update_events": 2
+              },
+              "housing.rent_payee": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 6,
+                  "fp": 0,
+                  "tn": 0,
+                  "tp_correct": 12,
+                  "tp_wrong_value": 2
+                },
+                "correct_change_f1": 0.7058823529411764,
+                "correct_change_precision": 0.8571428571428571,
+                "correct_change_recall": 0.6,
+                "eligible": true,
+                "eligible_trajectories": 1,
+                "event_macro_update_accuracy": 0.5,
+                "final_state_accuracy": 0.6,
+                "reported_trajectories": 1,
+                "retention_after_update": 0.375,
+                "update_events": 2
+              },
+              "housing.residence_status": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 2,
+                  "tp_correct": 15,
+                  "tp_wrong_value": 3
+                },
+                "correct_change_f1": 0.8333333333333334,
+                "correct_change_precision": 0.8333333333333334,
+                "correct_change_recall": 0.8333333333333334,
+                "eligible": true,
+                "eligible_trajectories": 1,
+                "event_macro_update_accuracy": 0.75,
+                "final_state_accuracy": 0.85,
+                "reported_trajectories": 1,
+                "retention_after_update": 0.75,
+                "update_events": 4
+              },
+              "profile.age": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 16,
+                  "tn": 4,
+                  "tp_correct": 0,
+                  "tp_wrong_value": 0
+                },
+                "correct_change_f1": null,
+                "correct_change_precision": null,
+                "correct_change_recall": null,
+                "eligible": false,
+                "eligible_trajectories": 0,
+                "event_macro_update_accuracy": null,
+                "final_state_accuracy": 0.2,
+                "reported_trajectories": 1,
+                "retention_after_update": null,
+                "update_events": 0
+              },
+              "profile.locale": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 20,
+                  "tp_correct": 0,
+                  "tp_wrong_value": 0
+                },
+                "correct_change_f1": null,
+                "correct_change_precision": null,
+                "correct_change_recall": null,
+                "eligible": false,
+                "eligible_trajectories": 0,
+                "event_macro_update_accuracy": null,
+                "final_state_accuracy": 1.0,
+                "reported_trajectories": 1,
+                "retention_after_update": null,
+                "update_events": 0
+              },
+              "profile.region": {
+                "aggregation": "checkpoint_then_trajectory_macro",
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 18,
+                  "tn": 2,
+                  "tp_correct": 0,
+                  "tp_wrong_value": 0
+                },
+                "correct_change_f1": null,
+                "correct_change_precision": null,
+                "correct_change_recall": null,
+                "eligible": false,
+                "eligible_trajectories": 0,
+                "event_macro_update_accuracy": null,
+                "final_state_accuracy": 0.1,
+                "reported_trajectories": 1,
+                "retention_after_update": null,
+                "update_events": 0
+              }
+            },
+            "path_trajectory_metrics": [
+              {
+                "change_confusion": {
+                  "fn": 2,
+                  "fp": 0,
+                  "tn": 9,
+                  "tp_correct": 2,
+                  "tp_wrong_value": 7
+                },
+                "checkpoints": 20,
+                "correct_change_f1": 0.19999999999999998,
+                "correct_change_precision": 0.2222222222222222,
+                "correct_change_recall": 0.18181818181818182,
+                "eligible": true,
+                "event_macro_update_accuracy": 0.6666666666666666,
+                "final_state_accuracy": 0.55,
+                "path": "cashflow.recent_one_off_expense",
+                "retention_after_update": 0.4,
+                "trajectory_id": "traj_010",
+                "update_event_support": 3
+              },
+              {
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 15,
+                  "tn": 2,
+                  "tp_correct": 0,
+                  "tp_wrong_value": 3
+                },
+                "checkpoints": 20,
+                "correct_change_f1": 0.0,
+                "correct_change_precision": 0.0,
+                "correct_change_recall": 0.0,
+                "eligible": true,
+                "event_macro_update_accuracy": 0.0,
+                "final_state_accuracy": 0.1,
+                "path": "education.child_education_stage",
+                "retention_after_update": 0.0,
+                "trajectory_id": "traj_010",
+                "update_event_support": 1
+              },
+              {
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 7,
+                  "tp_correct": 6,
+                  "tp_wrong_value": 7
+                },
+                "checkpoints": 20,
+                "correct_change_f1": 0.46153846153846156,
+                "correct_change_precision": 0.46153846153846156,
+                "correct_change_recall": 0.46153846153846156,
+                "eligible": true,
+                "event_macro_update_accuracy": 1.0,
+                "final_state_accuracy": 0.65,
+                "path": "education.self_education_status",
+                "retention_after_update": 0.46153846153846156,
+                "trajectory_id": "traj_010",
+                "update_event_support": 1
+              },
+              {
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 12,
+                  "tp_correct": 1,
+                  "tp_wrong_value": 7
+                },
+                "checkpoints": 20,
+                "correct_change_f1": 0.125,
+                "correct_change_precision": 0.125,
+                "correct_change_recall": 0.125,
+                "eligible": true,
+                "event_macro_update_accuracy": 0.5,
+                "final_state_accuracy": 0.65,
+                "path": "employment.employer",
+                "retention_after_update": 0.5,
+                "trajectory_id": "traj_010",
+                "update_event_support": 2
+              },
+              {
+                "change_confusion": {
+                  "fn": 2,
+                  "fp": 0,
+                  "tn": 11,
+                  "tp_correct": 7,
+                  "tp_wrong_value": 0
+                },
+                "checkpoints": 20,
+                "correct_change_f1": 0.8750000000000001,
+                "correct_change_precision": 1.0,
+                "correct_change_recall": 0.7777777777777778,
+                "eligible": true,
+                "event_macro_update_accuracy": 0.5,
+                "final_state_accuracy": 0.9,
+                "path": "employment.employment_status",
+                "retention_after_update": 0.5,
+                "trajectory_id": "traj_010",
+                "update_event_support": 2
+              },
+              {
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 1,
+                  "tn": 10,
+                  "tp_correct": 8,
+                  "tp_wrong_value": 1
+                },
+                "checkpoints": 20,
+                "correct_change_f1": 0.8421052631578948,
+                "correct_change_precision": 0.8,
+                "correct_change_recall": 0.8888888888888888,
+                "eligible": true,
+                "event_macro_update_accuracy": 0.5,
+                "final_state_accuracy": 0.9,
+                "path": "employment.income_stability",
+                "retention_after_update": 0.9285714285714286,
+                "trajectory_id": "traj_010",
+                "update_event_support": 2
+              },
+              {
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 8,
+                  "tn": 12,
+                  "tp_correct": 0,
+                  "tp_wrong_value": 0
+                },
+                "checkpoints": 20,
+                "correct_change_f1": null,
+                "correct_change_precision": 0.0,
+                "correct_change_recall": null,
+                "eligible": false,
+                "event_macro_update_accuracy": null,
+                "final_state_accuracy": 0.6,
+                "path": "employment.occupation",
+                "retention_after_update": null,
+                "trajectory_id": "traj_010",
+                "update_event_support": 0
+              },
+              {
+                "change_confusion": {
+                  "fn": 2,
+                  "fp": 0,
+                  "tn": 11,
+                  "tp_correct": 0,
+                  "tp_wrong_value": 7
+                },
+                "checkpoints": 20,
+                "correct_change_f1": 0.0,
+                "correct_change_precision": 0.0,
+                "correct_change_recall": 0.0,
+                "eligible": true,
+                "event_macro_update_accuracy": 0.0,
+                "final_state_accuracy": 0.55,
+                "path": "employment.salary_account",
+                "retention_after_update": 0.0,
+                "trajectory_id": "traj_010",
+                "update_event_support": 2
+              },
+              {
+                "change_confusion": {
+                  "fn": 1,
+                  "fp": 0,
+                  "tn": 10,
+                  "tp_correct": 2,
+                  "tp_wrong_value": 7
+                },
+                "checkpoints": 20,
+                "correct_change_f1": 0.2105263157894737,
+                "correct_change_precision": 0.2222222222222222,
+                "correct_change_recall": 0.2,
+                "eligible": true,
+                "event_macro_update_accuracy": 0.6666666666666666,
+                "final_state_accuracy": 0.6,
+                "path": "employment.salary_day",
+                "retention_after_update": 0.5,
+                "trajectory_id": "traj_010",
+                "update_event_support": 3
+              },
+              {
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 20,
+                  "tp_correct": 0,
+                  "tp_wrong_value": 0
+                },
+                "checkpoints": 20,
+                "correct_change_f1": null,
+                "correct_change_precision": 0.0,
+                "correct_change_recall": null,
+                "eligible": false,
+                "event_macro_update_accuracy": null,
+                "final_state_accuracy": 1.0,
+                "path": "financial_products.checking_accounts",
+                "retention_after_update": null,
+                "trajectory_id": "traj_010",
+                "update_event_support": 0
+              },
+              {
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 11,
+                  "tn": 5,
+                  "tp_correct": 2,
+                  "tp_wrong_value": 2
+                },
+                "checkpoints": 20,
+                "correct_change_f1": 0.2105263157894737,
+                "correct_change_precision": 0.13333333333333333,
+                "correct_change_recall": 0.5,
+                "eligible": true,
+                "event_macro_update_accuracy": 0.0,
+                "final_state_accuracy": 0.35,
+                "path": "financial_products.loans",
+                "retention_after_update": 0.5,
+                "trajectory_id": "traj_010",
+                "update_event_support": 1
+              },
+              {
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 20,
+                  "tp_correct": 0,
+                  "tp_wrong_value": 0
+                },
+                "checkpoints": 20,
+                "correct_change_f1": null,
+                "correct_change_precision": 0.0,
+                "correct_change_recall": null,
+                "eligible": false,
+                "event_macro_update_accuracy": null,
+                "final_state_accuracy": 1.0,
+                "path": "financial_products.pension_or_irp",
+                "retention_after_update": null,
+                "trajectory_id": "traj_010",
+                "update_event_support": 0
+              },
+              {
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 18,
+                  "tn": 2,
+                  "tp_correct": 0,
+                  "tp_wrong_value": 0
+                },
+                "checkpoints": 20,
+                "correct_change_f1": null,
+                "correct_change_precision": 0.0,
+                "correct_change_recall": null,
+                "eligible": false,
+                "event_macro_update_accuracy": null,
+                "final_state_accuracy": 0.1,
+                "path": "financial_products.savings_accounts",
+                "retention_after_update": null,
+                "trajectory_id": "traj_010",
+                "update_event_support": 0
+              },
+              {
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 2,
+                  "tp_correct": 18,
+                  "tp_wrong_value": 0
+                },
+                "checkpoints": 20,
+                "correct_change_f1": 1.0,
+                "correct_change_precision": 1.0,
+                "correct_change_recall": 1.0,
+                "eligible": true,
+                "event_macro_update_accuracy": 1.0,
+                "final_state_accuracy": 1.0,
+                "path": "goals.child_education_goal",
+                "retention_after_update": 1.0,
+                "trajectory_id": "traj_010",
+                "update_event_support": 2
+              },
+              {
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 20,
+                  "tp_correct": 0,
+                  "tp_wrong_value": 0
+                },
+                "checkpoints": 20,
+                "correct_change_f1": null,
+                "correct_change_precision": 0.0,
+                "correct_change_recall": null,
+                "eligible": false,
+                "event_macro_update_accuracy": null,
+                "final_state_accuracy": 1.0,
+                "path": "goals.emergency_fund",
+                "retention_after_update": null,
+                "trajectory_id": "traj_010",
+                "update_event_support": 0
+              },
+              {
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 7,
+                  "tn": 13,
+                  "tp_correct": 0,
+                  "tp_wrong_value": 0
+                },
+                "checkpoints": 20,
+                "correct_change_f1": null,
+                "correct_change_precision": 0.0,
+                "correct_change_recall": null,
+                "eligible": false,
+                "event_macro_update_accuracy": null,
+                "final_state_accuracy": 0.65,
+                "path": "goals.housing_deposit_goal",
+                "retention_after_update": null,
+                "trajectory_id": "traj_010",
+                "update_event_support": 0
+              },
+              {
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 20,
+                  "tp_correct": 0,
+                  "tp_wrong_value": 0
+                },
+                "checkpoints": 20,
+                "correct_change_f1": null,
+                "correct_change_precision": 0.0,
+                "correct_change_recall": null,
+                "eligible": false,
+                "event_macro_update_accuracy": null,
+                "final_state_accuracy": 1.0,
+                "path": "goals.retirement_goal",
+                "retention_after_update": null,
+                "trajectory_id": "traj_010",
+                "update_event_support": 0
+              },
+              {
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 20,
+                  "tp_correct": 0,
+                  "tp_wrong_value": 0
+                },
+                "checkpoints": 20,
+                "correct_change_f1": null,
+                "correct_change_precision": 0.0,
+                "correct_change_recall": null,
+                "eligible": false,
+                "event_macro_update_accuracy": null,
+                "final_state_accuracy": 1.0,
+                "path": "household.child_support_arrangement",
+                "retention_after_update": null,
+                "trajectory_id": "traj_010",
+                "update_event_support": 0
+              },
+              {
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 2,
+                  "tp_correct": 7,
+                  "tp_wrong_value": 11
+                },
+                "checkpoints": 20,
+                "correct_change_f1": 0.3888888888888889,
+                "correct_change_precision": 0.3888888888888889,
+                "correct_change_recall": 0.3888888888888889,
+                "eligible": true,
+                "event_macro_update_accuracy": 0.6666666666666666,
+                "final_state_accuracy": 0.45,
+                "path": "household.children",
+                "retention_after_update": 0.5333333333333333,
+                "trajectory_id": "traj_010",
+                "update_event_support": 3
+              },
+              {
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 2,
+                  "tp_correct": 18,
+                  "tp_wrong_value": 0
+                },
+                "checkpoints": 20,
+                "correct_change_f1": 1.0,
+                "correct_change_precision": 1.0,
+                "correct_change_recall": 1.0,
+                "eligible": true,
+                "event_macro_update_accuracy": 1.0,
+                "final_state_accuracy": 1.0,
+                "path": "household.dependents",
+                "retention_after_update": 1.0,
+                "trajectory_id": "traj_010",
+                "update_event_support": 4
+              },
+              {
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 1,
+                  "tp_correct": 18,
+                  "tp_wrong_value": 1
+                },
+                "checkpoints": 20,
+                "correct_change_f1": 0.9473684210526315,
+                "correct_change_precision": 0.9473684210526315,
+                "correct_change_recall": 0.9473684210526315,
+                "eligible": true,
+                "event_macro_update_accuracy": 0.6666666666666666,
+                "final_state_accuracy": 0.95,
+                "path": "household.marital_status",
+                "retention_after_update": 0.6666666666666666,
+                "trajectory_id": "traj_010",
+                "update_event_support": 3
+              },
+              {
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 1,
+                  "tn": 1,
+                  "tp_correct": 18,
+                  "tp_wrong_value": 0
+                },
+                "checkpoints": 20,
+                "correct_change_f1": 0.972972972972973,
+                "correct_change_precision": 0.9473684210526315,
+                "correct_change_recall": 1.0,
+                "eligible": true,
+                "event_macro_update_accuracy": 1.0,
+                "final_state_accuracy": 0.95,
+                "path": "household.spouse_or_partner",
+                "retention_after_update": 1.0,
+                "trajectory_id": "traj_010",
+                "update_event_support": 2
+              },
+              {
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 2,
+                  "tp_correct": 17,
+                  "tp_wrong_value": 1
+                },
+                "checkpoints": 20,
+                "correct_change_f1": 0.9444444444444444,
+                "correct_change_precision": 0.9444444444444444,
+                "correct_change_recall": 0.9444444444444444,
+                "eligible": true,
+                "event_macro_update_accuracy": 1.0,
+                "final_state_accuracy": 0.95,
+                "path": "housing.address",
+                "retention_after_update": 0.9375,
+                "trajectory_id": "traj_010",
+                "update_event_support": 4
+              },
+              {
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 2,
+                  "tp_correct": 15,
+                  "tp_wrong_value": 3
+                },
+                "checkpoints": 20,
+                "correct_change_f1": 0.8333333333333334,
+                "correct_change_precision": 0.8333333333333334,
+                "correct_change_recall": 0.8333333333333334,
+                "eligible": true,
+                "event_macro_update_accuracy": 0.75,
+                "final_state_accuracy": 0.85,
+                "path": "housing.contract_type",
+                "retention_after_update": 0.75,
+                "trajectory_id": "traj_010",
+                "update_event_support": 4
+              },
+              {
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 5,
+                  "tn": 10,
+                  "tp_correct": 5,
+                  "tp_wrong_value": 0
+                },
+                "checkpoints": 20,
+                "correct_change_f1": 0.6666666666666666,
+                "correct_change_precision": 0.5,
+                "correct_change_recall": 1.0,
+                "eligible": true,
+                "event_macro_update_accuracy": 1.0,
+                "final_state_accuracy": 0.75,
+                "path": "housing.maintenance_fee_payee",
+                "retention_after_update": 1.0,
+                "trajectory_id": "traj_010",
+                "update_event_support": 1
+              },
+              {
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 16,
+                  "tp_correct": 3,
+                  "tp_wrong_value": 1
+                },
+                "checkpoints": 20,
+                "correct_change_f1": 0.75,
+                "correct_change_precision": 0.75,
+                "correct_change_recall": 0.75,
+                "eligible": true,
+                "event_macro_update_accuracy": 0.0,
+                "final_state_accuracy": 0.95,
+                "path": "housing.mortgage_status",
+                "retention_after_update": 0.75,
+                "trajectory_id": "traj_010",
+                "update_event_support": 1
+              },
+              {
+                "change_confusion": {
+                  "fn": 2,
+                  "fp": 0,
+                  "tn": 16,
+                  "tp_correct": 1,
+                  "tp_wrong_value": 1
+                },
+                "checkpoints": 20,
+                "correct_change_f1": 0.3333333333333333,
+                "correct_change_precision": 0.5,
+                "correct_change_recall": 0.25,
+                "eligible": true,
+                "event_macro_update_accuracy": 0.0,
+                "final_state_accuracy": 0.85,
+                "path": "housing.primary_residence_property_id",
+                "retention_after_update": 0.25,
+                "trajectory_id": "traj_010",
+                "update_event_support": 1
+              },
+              {
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 16,
+                  "tp_correct": 1,
+                  "tp_wrong_value": 3
+                },
+                "checkpoints": 20,
+                "correct_change_f1": 0.25,
+                "correct_change_precision": 0.25,
+                "correct_change_recall": 0.25,
+                "eligible": true,
+                "event_macro_update_accuracy": 0.0,
+                "final_state_accuracy": 0.85,
+                "path": "housing.properties",
+                "retention_after_update": 0.25,
+                "trajectory_id": "traj_010",
+                "update_event_support": 1
+              },
+              {
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 1,
+                  "tn": 6,
+                  "tp_correct": 12,
+                  "tp_wrong_value": 1
+                },
+                "checkpoints": 20,
+                "correct_change_f1": 0.888888888888889,
+                "correct_change_precision": 0.8571428571428571,
+                "correct_change_recall": 0.9230769230769231,
+                "eligible": true,
+                "event_macro_update_accuracy": 0.5,
+                "final_state_accuracy": 0.9,
+                "path": "housing.rent_amount",
+                "retention_after_update": 0.875,
+                "trajectory_id": "traj_010",
+                "update_event_support": 2
+              },
+              {
+                "change_confusion": {
+                  "fn": 6,
+                  "fp": 0,
+                  "tn": 0,
+                  "tp_correct": 12,
+                  "tp_wrong_value": 2
+                },
+                "checkpoints": 20,
+                "correct_change_f1": 0.7058823529411764,
+                "correct_change_precision": 0.8571428571428571,
+                "correct_change_recall": 0.6,
+                "eligible": true,
+                "event_macro_update_accuracy": 0.5,
+                "final_state_accuracy": 0.6,
+                "path": "housing.rent_payee",
+                "retention_after_update": 0.375,
+                "trajectory_id": "traj_010",
+                "update_event_support": 2
+              },
+              {
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 2,
+                  "tp_correct": 15,
+                  "tp_wrong_value": 3
+                },
+                "checkpoints": 20,
+                "correct_change_f1": 0.8333333333333334,
+                "correct_change_precision": 0.8333333333333334,
+                "correct_change_recall": 0.8333333333333334,
+                "eligible": true,
+                "event_macro_update_accuracy": 0.75,
+                "final_state_accuracy": 0.85,
+                "path": "housing.residence_status",
+                "retention_after_update": 0.75,
+                "trajectory_id": "traj_010",
+                "update_event_support": 4
+              },
+              {
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 16,
+                  "tn": 4,
+                  "tp_correct": 0,
+                  "tp_wrong_value": 0
+                },
+                "checkpoints": 20,
+                "correct_change_f1": null,
+                "correct_change_precision": 0.0,
+                "correct_change_recall": null,
+                "eligible": false,
+                "event_macro_update_accuracy": null,
+                "final_state_accuracy": 0.2,
+                "path": "profile.age",
+                "retention_after_update": null,
+                "trajectory_id": "traj_010",
+                "update_event_support": 0
+              },
+              {
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 0,
+                  "tn": 20,
+                  "tp_correct": 0,
+                  "tp_wrong_value": 0
+                },
+                "checkpoints": 20,
+                "correct_change_f1": null,
+                "correct_change_precision": 0.0,
+                "correct_change_recall": null,
+                "eligible": false,
+                "event_macro_update_accuracy": null,
+                "final_state_accuracy": 1.0,
+                "path": "profile.locale",
+                "retention_after_update": null,
+                "trajectory_id": "traj_010",
+                "update_event_support": 0
+              },
+              {
+                "change_confusion": {
+                  "fn": 0,
+                  "fp": 18,
+                  "tn": 2,
+                  "tp_correct": 0,
+                  "tp_wrong_value": 0
+                },
+                "checkpoints": 20,
+                "correct_change_f1": null,
+                "correct_change_precision": 0.0,
+                "correct_change_recall": null,
+                "eligible": false,
+                "event_macro_update_accuracy": null,
+                "final_state_accuracy": 0.1,
+                "path": "profile.region",
+                "retention_after_update": null,
+                "trajectory_id": "traj_010",
+                "update_event_support": 0
+              }
+            ],
+            "reported_path_count": 34
+          },
+          "retention_after_update": {
+            "aggregation": "event_lag_then_trajectory_macro",
+            "by_lag_bucket": {
+              "0": 0.7083333333333334,
+              "1-15": 0.6803921568627451,
+              "121-180": 0.6666666666666666,
+              "16-30": 0.6644444444444444,
+              "181-240": 0,
+              "31-60": 0.6051282051282051,
+              "61-120": 0.7895833333333333
+            },
+            "by_lag_sessions": {
+              "0": 0.7083333333333334,
+              "1": 1,
+              "105": 0.8095238095238095,
+              "120": 0.9444444444444444,
+              "135": 0.6666666666666666,
+              "15": 0.6604166666666667,
+              "150": 0.5,
+              "165": 0.5,
+              "180": 0.5,
+              "195": 0,
+              "210": 0,
+              "225": 0,
+              "30": 0.6644444444444444,
+              "45": 0.6358974358974359,
+              "60": 0.5888888888888889,
+              "75": 0.7583333333333333,
+              "90": 0.7583333333333333
+            },
+            "event_count": 18,
+            "mean_over_observed_lags": 0.6433824277574277,
+            "support_by_lag_bucket": {
+              "0": {
+                "events": 17,
+                "trajectories": 1
+              },
+              "1-15": {
+                "events": 17,
+                "trajectories": 1
+              },
+              "121-180": {
+                "events": 3,
+                "trajectories": 1
+              },
+              "16-30": {
+                "events": 15,
+                "trajectories": 1
+              },
+              "181-240": {
+                "events": 1,
+                "trajectories": 1
+              },
+              "31-60": {
+                "events": 13,
+                "trajectories": 1
+              },
+              "61-120": {
+                "events": 8,
+                "trajectories": 1
+              }
+            },
+            "support_by_lag_sessions": {
+              "0": {
+                "events": 17,
+                "trajectories": 1
+              },
+              "1": {
+                "events": 1,
+                "trajectories": 1
+              },
+              "105": {
+                "events": 7,
+                "trajectories": 1
+              },
+              "120": {
+                "events": 6,
+                "trajectories": 1
+              },
+              "135": {
+                "events": 3,
+                "trajectories": 1
+              },
+              "15": {
+                "events": 16,
+                "trajectories": 1
+              },
+              "150": {
+                "events": 2,
+                "trajectories": 1
+              },
+              "165": {
+                "events": 2,
+                "trajectories": 1
+              },
+              "180": {
+                "events": 2,
+                "trajectories": 1
+              },
+              "195": {
+                "events": 1,
+                "trajectories": 1
+              },
+              "210": {
+                "events": 1,
+                "trajectories": 1
+              },
+              "225": {
+                "events": 1,
+                "trajectories": 1
+              },
+              "30": {
+                "events": 15,
+                "trajectories": 1
+              },
+              "45": {
+                "events": 13,
+                "trajectories": 1
+              },
+              "60": {
+                "events": 12,
+                "trajectories": 1
+              },
+              "75": {
+                "events": 8,
+                "trajectories": 1
+              },
+              "90": {
+                "events": 8,
+                "trajectories": 1
+              }
+            },
+            "trajectory_mean_over_observed_lags": {
+              "traj_010": 0.6433824277574277
+            }
+          },
+          "status_confusion": {
+            "current": {
+              "current": 450,
+              "historical": 5,
+              "invalid/missing": 0,
+              "needs_verification": 20,
+              "not_applicable": 10,
+              "stale": 23,
+              "unknown": 5
+            },
+            "historical": {
+              "current": 6,
+              "historical": 0,
+              "invalid/missing": 0,
+              "needs_verification": 0,
+              "not_applicable": 5,
+              "stale": 0,
+              "unknown": 0
+            },
+            "needs_verification": {
+              "current": 0,
+              "historical": 0,
+              "invalid/missing": 0,
+              "needs_verification": 0,
+              "not_applicable": 0,
+              "stale": 0,
+              "unknown": 0
+            },
+            "not_applicable": {
+              "current": 13,
+              "historical": 0,
+              "invalid/missing": 0,
+              "needs_verification": 3,
+              "not_applicable": 81,
+              "stale": 1,
+              "unknown": 0
+            },
+            "stale": {
+              "current": 13,
+              "historical": 0,
+              "invalid/missing": 0,
+              "needs_verification": 0,
+              "not_applicable": 4,
+              "stale": 1,
+              "unknown": 0
+            },
+            "unknown": {
+              "current": 0,
+              "historical": 0,
+              "invalid/missing": 0,
+              "needs_verification": 0,
+              "not_applicable": 0,
+              "stale": 0,
+              "unknown": 40
+            }
+          },
+          "trajectory_metrics": {
+            "traj_010": {
+              "change_detection_f1": 0.8140934658943038,
+              "change_detection_precision": 0.7162824201157423,
+              "change_detection_recall": 0.9506724811136575,
+              "changed_state_accuracy": 0.7457643663526017,
+              "correct_change_f1": 0.6340666284436687,
+              "correct_change_precision": 0.5549585205535703,
+              "correct_change_recall": 0.7457643663526017,
+              "dynamic_path_final_state_accuracy": 0.766,
+              "evidence_citation_precision": 0.382224800540955,
+              "evidence_hit_rate": 0.6104040404040404,
+              "exact_state_match": 0.0,
+              "final_state_accuracy": 0.7294117647058823,
+              "status_accuracy": 0.8411764705882353,
+              "unchanged_state_accuracy": 0.7335642634462584,
+              "value_accuracy": 0.7852941176470588
+            }
+          },
+          "validation_error_count": 0
+        }
+      }
+    }
+  },
+  "oracle_relevant_comparisons": {},
+  "paired_method_deltas": {
+    "stage2_2_reconstruct": {
+      "fc_claude_opus_4_8__minus__fc_gpt_5_6_sol": {
+        "ci95": [
+          0.0676470588235294,
+          0.0676470588235294
+        ],
+        "delta": 0.0676470588235294,
+        "units": 1
+      }
+    }
+  },
+  "schema_version": "financial-memory-metrics-v2"
+}

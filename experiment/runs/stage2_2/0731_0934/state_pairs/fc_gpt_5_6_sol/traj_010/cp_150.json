@@ -1,0 +1,1442 @@
+{
+  "attempts": [
+    {
+      "attempt": 1,
+      "parse_error": null,
+      "raw_answer": "{\"schema_version\":\"stage2_2_reconstruct-v3\",\"state\":{\"profile.age\":{\"value\":34,\"status\":\"current\",\"evidence_session_ids\":[\"D150\"]},\"profile.locale\":{\"value\":\"ko_KR\",\"status\":\"current\",\"evidence_session_ids\":[]},\"profile.region\":{\"value\":\"대구 수성구\",\"status\":\"current\",\"evidence_session_ids\":[\"D057\",\"D088\"]},\"household.marital_status\":{\"value\":\"married\",\"status\":\"current\",\"evidence_session_ids\":[\"D058\"]},\"household.spouse_or_partner\":{\"value\":\"spouse\",\"status\":\"current\",\"evidence_session_ids\":[\"D058\"]},\"household.children\":{\"value\":[2,1],\"status\":\"current\",\"evidence_session_ids\":[\"D045\",\"D105\"]},\"household.dependents\":{\"value\":3,\"status\":\"current\",\"evidence_session_ids\":[\"D144\"]},\"household.child_support_arrangement\":{\"value\":null,\"status\":\"not_applicable\",\"evidence_session_ids\":[]},\"employment.employment_status\":{\"value\":\"employed\",\"status\":\"current\",\"evidence_session_ids\":[]},\"employment.employer\":{\"value\":\"청람교육\",\"status\":\"current\",\"evidence_session_ids\":[]},\"employment.occupation\":{\"value\":\"일반 비서\",\"status\":\"current\",\"evidence_session_ids\":[]},\"employment.income_stability\":{\"value\":\"stable\",\"status\":\"current\",\"evidence_session_ids\":[]},\"employment.salary_day\":{\"value\":10,\"status\":\"current\",\"evidence_session_ids\":[]},\"employment.salary_account\":{\"value\":\"main_checking\",\"status\":\"current\",\"evidence_session_ids\":[]},\"housing.residence_status\":{\"value\":\"wolse\",\"status\":\"current\",\"evidence_session_ids\":[\"D010\",\"D071\"]},\"housing.address\":{\"value\":\"대구 수성구\",\"status\":\"current\",\"evidence_session_ids\":[\"D057\",\"D088\"]},\"housing.contract_type\":{\"value\":\"wolse\",\"status\":\"current\",\"evidence_session_ids\":[\"D071\",\"D099\"]},\"housing.rent_amount\":{\"value\":800000,\"status\":\"current\",\"evidence_session_ids\":[\"D075\"]},\"housing.rent_payee\":{\"value\":\"집주인\",\"status\":\"current\",\"evidence_session_ids\":[\"D075\"]},\"housing.maintenance_fee_payee\":{\"value\":\"관리사무소\",\"status\":\"current\",\"evidence_session_ids\":[]},\"housing.mortgage_status\":{\"value\":\"none\",\"status\":\"current\",\"evidence_session_ids\":[]},\"housing.properties\":{\"value\":[],\"status\":\"current\",\"evidence_session_ids\":[]},\"housing.primary_residence_property_id\":{\"value\":null,\"status\":\"not_applicable\",\"evidence_session_ids\":[]},\"education.self_education_status\":{\"value\":\"enrolled\",\"status\":\"current\",\"evidence_session_ids\":[\"D120\",\"D122\"]},\"education.child_education_stage\":{\"value\":\"preschool\",\"status\":\"current\",\"evidence_session_ids\":[\"D111\"]},\"financial_products.checking_accounts\":{\"value\":[\"main_checking\"],\"status\":\"current\",\"evidence_session_ids\":[]},\"financial_products.savings_accounts\":{\"value\":[\"savings_1\"],\"status\":\"current\",\"evidence_session_ids\":[\"D043\",\"D111\"]},\"financial_products.loans\":{\"value\":[\"jeonse_loan\",\"credit\"],\"status\":\"current\",\"evidence_session_ids\":[\"D129\"]},\"financial_products.pension_or_irp\":{\"value\":null,\"status\":\"not_applicable\",\"evidence_session_ids\":[]},\"goals.emergency_fund\":{\"value\":null,\"status\":\"unknown\",\"evidence_session_ids\":[]},\"goals.housing_deposit_goal\":{\"value\":\"active\",\"status\":\"current\",\"evidence_session_ids\":[]},\"goals.child_education_goal\":{\"value\":\"active\",\"status\":\"current\",\"evidence_session_ids\":[\"D043\",\"D111\"]},\"goals.retirement_goal\":{\"value\":null,\"status\":\"unknown\",\"evidence_session_ids\":[]},\"cashflow.recent_one_off_expense\":{\"value\":null,\"status\":\"not_applicable\",\"evidence_session_ids\":[]}}}",
+      "response_metadata": {
+        "api_surface": "responses",
+        "automatic_retries": 0,
+        "generation_settings": {
+          "reasoning": {
+            "context": "current_turn",
+            "effort": "low",
+            "mode": "standard"
+          },
+          "store": false,
+          "text": {
+            "verbosity": "medium"
+          },
+          "truncation": "disabled"
+        },
+        "latency_seconds": 20.927183,
+        "max_output_tokens": 20000,
+        "model": "gpt-5.6-sol",
+        "prompt_artifact_path": "/home/mikelee/life-event-benchmark-v2/experiment/runs/stage2_2/0731_0934/prompts/fc_gpt_5_6_sol/traj_010/cp_150.txt.gz",
+        "prompt_sha256": "67199919d929eb9e24a02a5251510c594e189679fb59cfe70f468185763fbc46",
+        "provider": "openai",
+        "request_timeout_seconds": 300.0,
+        "usage": {
+          "input_tokens": 36533,
+          "output_tokens": 1548,
+          "total_tokens": 38081
+        }
+      },
+      "schema_failure": false,
+      "validation_errors": []
+    }
+  ],
+  "checkpoint": 150,
+  "confusion_classification": {
+    "cashflow.recent_one_off_expense": "fn",
+    "education.child_education_stage": "fp",
+    "education.self_education_status": "tp_correct",
+    "employment.employer": "tn",
+    "employment.employment_status": "tn",
+    "employment.income_stability": "tn",
+    "employment.occupation": "tn",
+    "employment.salary_account": "tn",
+    "employment.salary_day": "tn",
+    "financial_products.checking_accounts": "tn",
+    "financial_products.loans": "fp",
+    "financial_products.pension_or_irp": "tn",
+    "financial_products.savings_accounts": "fp",
+    "goals.child_education_goal": "tp_correct",
+    "goals.emergency_fund": "tn",
+    "goals.housing_deposit_goal": "tn",
+    "goals.retirement_goal": "tn",
+    "household.child_support_arrangement": "tn",
+    "household.children": "tp_wrong_value",
+    "household.dependents": "tp_correct",
+    "household.marital_status": "tp_wrong_value",
+    "household.spouse_or_partner": "fp",
+    "housing.address": "tp_correct",
+    "housing.contract_type": "tp_correct",
+    "housing.maintenance_fee_payee": "tn",
+    "housing.mortgage_status": "tn",
+    "housing.primary_residence_property_id": "tn",
+    "housing.properties": "tn",
+    "housing.rent_amount": "tp_correct",
+    "housing.rent_payee": "tp_correct",
+    "housing.residence_status": "tp_correct",
+    "profile.age": "fp",
+    "profile.locale": "tn",
+    "profile.region": "fp"
+  },
+  "gold_state": {
+    "cashflow.recent_one_off_expense": {
+      "evidence_session_ids": [
+        "D150"
+      ],
+      "status": "current",
+      "value": {
+        "amount_krw": 7000000,
+        "category": "funeral"
+      }
+    },
+    "education.child_education_stage": {
+      "evidence_session_ids": [],
+      "status": "not_applicable",
+      "value": null
+    },
+    "education.self_education_status": {
+      "evidence_session_ids": [
+        "D120"
+      ],
+      "status": "current",
+      "value": "enrolled"
+    },
+    "employment.employer": {
+      "evidence_session_ids": [],
+      "status": "current",
+      "value": "청람교육"
+    },
+    "employment.employment_status": {
+      "evidence_session_ids": [],
+      "status": "current",
+      "value": "employed"
+    },
+    "employment.income_stability": {
+      "evidence_session_ids": [],
+      "status": "current",
+      "value": "stable"
+    },
+    "employment.occupation": {
+      "evidence_session_ids": [],
+      "status": "current",
+      "value": "일반 비서"
+    },
+    "employment.salary_account": {
+      "evidence_session_ids": [],
+      "status": "current",
+      "value": "main_checking"
+    },
+    "employment.salary_day": {
+      "evidence_session_ids": [],
+      "status": "current",
+      "value": 10
+    },
+    "financial_products.checking_accounts": {
+      "evidence_session_ids": [],
+      "status": "current",
+      "value": [
+        "main_checking"
+      ]
+    },
+    "financial_products.loans": {
+      "evidence_session_ids": [],
+      "status": "current",
+      "value": [
+        "jeonse_loan"
+      ]
+    },
+    "financial_products.pension_or_irp": {
+      "evidence_session_ids": [],
+      "status": "not_applicable",
+      "value": null
+    },
+    "financial_products.savings_accounts": {
+      "evidence_session_ids": [],
+      "status": "current",
+      "value": []
+    },
+    "goals.child_education_goal": {
+      "evidence_session_ids": [
+        "D045"
+      ],
+      "status": "current",
+      "value": "active"
+    },
+    "goals.emergency_fund": {
+      "evidence_session_ids": [],
+      "status": "unknown",
+      "value": null
+    },
+    "goals.housing_deposit_goal": {
+      "evidence_session_ids": [],
+      "status": "current",
+      "value": "active"
+    },
+    "goals.retirement_goal": {
+      "evidence_session_ids": [],
+      "status": "unknown",
+      "value": null
+    },
+    "household.child_support_arrangement": {
+      "evidence_session_ids": [],
+      "status": "not_applicable",
+      "value": null
+    },
+    "household.children": {
+      "evidence_session_ids": [
+        "D105"
+      ],
+      "status": "current",
+      "value": [
+        0,
+        1
+      ]
+    },
+    "household.dependents": {
+      "evidence_session_ids": [
+        "D135"
+      ],
+      "status": "current",
+      "value": 3
+    },
+    "household.marital_status": {
+      "evidence_session_ids": [
+        "D150"
+      ],
+      "status": "current",
+      "value": "widowed"
+    },
+    "household.spouse_or_partner": {
+      "evidence_session_ids": [],
+      "status": "not_applicable",
+      "value": null
+    },
+    "housing.address": {
+      "evidence_session_ids": [
+        "D075"
+      ],
+      "status": "current",
+      "value": "대구 수성구"
+    },
+    "housing.contract_type": {
+      "evidence_session_ids": [
+        "D075"
+      ],
+      "status": "current",
+      "value": "wolse"
+    },
+    "housing.maintenance_fee_payee": {
+      "evidence_session_ids": [],
+      "status": "current",
+      "value": "관리사무소"
+    },
+    "housing.mortgage_status": {
+      "evidence_session_ids": [],
+      "status": "current",
+      "value": "none"
+    },
+    "housing.primary_residence_property_id": {
+      "evidence_session_ids": [],
+      "status": "not_applicable",
+      "value": null
+    },
+    "housing.properties": {
+      "evidence_session_ids": [],
+      "status": "current",
+      "value": []
+    },
+    "housing.rent_amount": {
+      "evidence_session_ids": [
+        "D075"
+      ],
+      "status": "current",
+      "value": 800000
+    },
+    "housing.rent_payee": {
+      "evidence_session_ids": [
+        "D015"
+      ],
+      "status": "current",
+      "value": "집주인"
+    },
+    "housing.residence_status": {
+      "evidence_session_ids": [
+        "D075"
+      ],
+      "status": "current",
+      "value": "wolse"
+    },
+    "profile.age": {
+      "evidence_session_ids": [],
+      "status": "current",
+      "value": 30
+    },
+    "profile.locale": {
+      "evidence_session_ids": [],
+      "status": "current",
+      "value": "ko_KR"
+    },
+    "profile.region": {
+      "evidence_session_ids": [],
+      "status": "current",
+      "value": "서울 송파구"
+    }
+  },
+  "initial_state": {
+    "cashflow.recent_one_off_expense": {
+      "status": "not_applicable",
+      "value": null
+    },
+    "education.child_education_stage": {
+      "status": "not_applicable",
+      "value": null
+    },
+    "education.self_education_status": {
+      "status": "current",
+      "value": "none"
+    },
+    "employment.employer": {
+      "status": "current",
+      "value": "청람교육"
+    },
+    "employment.employment_status": {
+      "status": "current",
+      "value": "employed"
+    },
+    "employment.income_stability": {
+      "status": "current",
+      "value": "stable"
+    },
+    "employment.occupation": {
+      "status": "current",
+      "value": "일반 비서"
+    },
+    "employment.salary_account": {
+      "status": "current",
+      "value": "main_checking"
+    },
+    "employment.salary_day": {
+      "status": "current",
+      "value": 10
+    },
+    "financial_products.checking_accounts": {
+      "status": "current",
+      "value": [
+        "main_checking"
+      ]
+    },
+    "financial_products.loans": {
+      "status": "current",
+      "value": [
+        "jeonse_loan"
+      ]
+    },
+    "financial_products.pension_or_irp": {
+      "status": "not_applicable",
+      "value": null
+    },
+    "financial_products.savings_accounts": {
+      "status": "current",
+      "value": []
+    },
+    "goals.child_education_goal": {
+      "status": "not_applicable",
+      "value": null
+    },
+    "goals.emergency_fund": {
+      "status": "unknown",
+      "value": null
+    },
+    "goals.housing_deposit_goal": {
+      "status": "current",
+      "value": "active"
+    },
+    "goals.retirement_goal": {
+      "status": "unknown",
+      "value": null
+    },
+    "household.child_support_arrangement": {
+      "status": "not_applicable",
+      "value": null
+    },
+    "household.children": {
+      "status": "current",
+      "value": []
+    },
+    "household.dependents": {
+      "status": "current",
+      "value": 0
+    },
+    "household.marital_status": {
+      "status": "current",
+      "value": "single"
+    },
+    "household.spouse_or_partner": {
+      "status": "not_applicable",
+      "value": null
+    },
+    "housing.address": {
+      "status": "current",
+      "value": "서울 송파구"
+    },
+    "housing.contract_type": {
+      "status": "current",
+      "value": "jeonse"
+    },
+    "housing.maintenance_fee_payee": {
+      "status": "current",
+      "value": "관리사무소"
+    },
+    "housing.mortgage_status": {
+      "status": "current",
+      "value": "none"
+    },
+    "housing.primary_residence_property_id": {
+      "status": "not_applicable",
+      "value": null
+    },
+    "housing.properties": {
+      "status": "current",
+      "value": []
+    },
+    "housing.rent_amount": {
+      "status": "not_applicable",
+      "value": null
+    },
+    "housing.rent_payee": {
+      "status": "not_applicable",
+      "value": null
+    },
+    "housing.residence_status": {
+      "status": "current",
+      "value": "jeonse"
+    },
+    "profile.age": {
+      "status": "current",
+      "value": 30
+    },
+    "profile.locale": {
+      "status": "current",
+      "value": "ko_KR"
+    },
+    "profile.region": {
+      "status": "current",
+      "value": "서울 송파구"
+    }
+  },
+  "latency_seconds": 20.927183,
+  "method_id": "fc_gpt_5_6_sol",
+  "metrics": {
+    "change_confusion": {
+      "fn": 1,
+      "fp": 6,
+      "tn": 17,
+      "tp_correct": 8,
+      "tp_wrong_value": 2
+    },
+    "change_detection_f1": 0.7407407407407406,
+    "change_detection_precision": 0.625,
+    "change_detection_recall": 0.9090909090909091,
+    "changed_path_count": 11,
+    "changed_state_accuracy": 0.7272727272727273,
+    "correct_cell_count": 25,
+    "correct_change_f1": 0.5925925925925926,
+    "correct_change_precision": 0.5,
+    "correct_change_recall": 0.7272727272727273,
+    "dynamic_path_count": 25,
+    "dynamic_path_final_state_accuracy": 0.76,
+    "evidence_citation_precision": 0.1875,
+    "evidence_hit_rate": 0.2727272727272727,
+    "exact_state_match": false,
+    "final_state_accuracy": 0.7352941176470589,
+    "path_outcomes": {
+      "cashflow.recent_one_off_expense": {
+        "cell_correct": false,
+        "classification": "fn",
+        "gold_changed": true,
+        "gold_event_session_ids": [
+          "D150"
+        ],
+        "predicted_changed": false
+      },
+      "education.child_education_stage": {
+        "cell_correct": false,
+        "classification": "fp",
+        "gold_changed": false,
+        "gold_event_session_ids": [],
+        "predicted_changed": true
+      },
+      "education.self_education_status": {
+        "cell_correct": true,
+        "classification": "tp_correct",
+        "gold_changed": true,
+        "gold_event_session_ids": [
+          "D120"
+        ],
+        "predicted_changed": true
+      },
+      "employment.employer": {
+        "cell_correct": true,
+        "classification": "tn",
+        "gold_changed": false,
+        "gold_event_session_ids": [],
+        "predicted_changed": false
+      },
+      "employment.employment_status": {
+        "cell_correct": true,
+        "classification": "tn",
+        "gold_changed": false,
+        "gold_event_session_ids": [],
+        "predicted_changed": false
+      },
+      "employment.income_stability": {
+        "cell_correct": true,
+        "classification": "tn",
+        "gold_changed": false,
+        "gold_event_session_ids": [],
+        "predicted_changed": false
+      },
+      "employment.occupation": {
+        "cell_correct": true,
+        "classification": "tn",
+        "gold_changed": false,
+        "gold_event_session_ids": [],
+        "predicted_changed": false
+      },
+      "employment.salary_account": {
+        "cell_correct": true,
+        "classification": "tn",
+        "gold_changed": false,
+        "gold_event_session_ids": [],
+        "predicted_changed": false
+      },
+      "employment.salary_day": {
+        "cell_correct": true,
+        "classification": "tn",
+        "gold_changed": false,
+        "gold_event_session_ids": [],
+        "predicted_changed": false
+      },
+      "financial_products.checking_accounts": {
+        "cell_correct": true,
+        "classification": "tn",
+        "gold_changed": false,
+        "gold_event_session_ids": [],
+        "predicted_changed": false
+      },
+      "financial_products.loans": {
+        "cell_correct": false,
+        "classification": "fp",
+        "gold_changed": false,
+        "gold_event_session_ids": [],
+        "predicted_changed": true
+      },
+      "financial_products.pension_or_irp": {
+        "cell_correct": true,
+        "classification": "tn",
+        "gold_changed": false,
+        "gold_event_session_ids": [],
+        "predicted_changed": false
+      },
+      "financial_products.savings_accounts": {
+        "cell_correct": false,
+        "classification": "fp",
+        "gold_changed": false,
+        "gold_event_session_ids": [],
+        "predicted_changed": true
+      },
+      "goals.child_education_goal": {
+        "cell_correct": true,
+        "classification": "tp_correct",
+        "gold_changed": true,
+        "gold_event_session_ids": [
+          "D045"
+        ],
+        "predicted_changed": true
+      },
+      "goals.emergency_fund": {
+        "cell_correct": true,
+        "classification": "tn",
+        "gold_changed": false,
+        "gold_event_session_ids": [],
+        "predicted_changed": false
+      },
+      "goals.housing_deposit_goal": {
+        "cell_correct": true,
+        "classification": "tn",
+        "gold_changed": false,
+        "gold_event_session_ids": [],
+        "predicted_changed": false
+      },
+      "goals.retirement_goal": {
+        "cell_correct": true,
+        "classification": "tn",
+        "gold_changed": false,
+        "gold_event_session_ids": [],
+        "predicted_changed": false
+      },
+      "household.child_support_arrangement": {
+        "cell_correct": true,
+        "classification": "tn",
+        "gold_changed": false,
+        "gold_event_session_ids": [],
+        "predicted_changed": false
+      },
+      "household.children": {
+        "cell_correct": false,
+        "classification": "tp_wrong_value",
+        "gold_changed": true,
+        "gold_event_session_ids": [
+          "D105"
+        ],
+        "predicted_changed": true
+      },
+      "household.dependents": {
+        "cell_correct": true,
+        "classification": "tp_correct",
+        "gold_changed": true,
+        "gold_event_session_ids": [
+          "D135"
+        ],
+        "predicted_changed": true
+      },
+      "household.marital_status": {
+        "cell_correct": false,
+        "classification": "tp_wrong_value",
+        "gold_changed": true,
+        "gold_event_session_ids": [
+          "D150"
+        ],
+        "predicted_changed": true
+      },
+      "household.spouse_or_partner": {
+        "cell_correct": false,
+        "classification": "fp",
+        "gold_changed": false,
+        "gold_event_session_ids": [],
+        "predicted_changed": true
+      },
+      "housing.address": {
+        "cell_correct": true,
+        "classification": "tp_correct",
+        "gold_changed": true,
+        "gold_event_session_ids": [
+          "D075"
+        ],
+        "predicted_changed": true
+      },
+      "housing.contract_type": {
+        "cell_correct": true,
+        "classification": "tp_correct",
+        "gold_changed": true,
+        "gold_event_session_ids": [
+          "D075"
+        ],
+        "predicted_changed": true
+      },
+      "housing.maintenance_fee_payee": {
+        "cell_correct": true,
+        "classification": "tn",
+        "gold_changed": false,
+        "gold_event_session_ids": [],
+        "predicted_changed": false
+      },
+      "housing.mortgage_status": {
+        "cell_correct": true,
+        "classification": "tn",
+        "gold_changed": false,
+        "gold_event_session_ids": [],
+        "predicted_changed": false
+      },
+      "housing.primary_residence_property_id": {
+        "cell_correct": true,
+        "classification": "tn",
+        "gold_changed": false,
+        "gold_event_session_ids": [],
+        "predicted_changed": false
+      },
+      "housing.properties": {
+        "cell_correct": true,
+        "classification": "tn",
+        "gold_changed": false,
+        "gold_event_session_ids": [],
+        "predicted_changed": false
+      },
+      "housing.rent_amount": {
+        "cell_correct": true,
+        "classification": "tp_correct",
+        "gold_changed": true,
+        "gold_event_session_ids": [
+          "D075"
+        ],
+        "predicted_changed": true
+      },
+      "housing.rent_payee": {
+        "cell_correct": true,
+        "classification": "tp_correct",
+        "gold_changed": true,
+        "gold_event_session_ids": [
+          "D015"
+        ],
+        "predicted_changed": true
+      },
+      "housing.residence_status": {
+        "cell_correct": true,
+        "classification": "tp_correct",
+        "gold_changed": true,
+        "gold_event_session_ids": [
+          "D075"
+        ],
+        "predicted_changed": true
+      },
+      "profile.age": {
+        "cell_correct": false,
+        "classification": "fp",
+        "gold_changed": false,
+        "gold_event_session_ids": [],
+        "predicted_changed": true
+      },
+      "profile.locale": {
+        "cell_correct": true,
+        "classification": "tn",
+        "gold_changed": false,
+        "gold_event_session_ids": [],
+        "predicted_changed": false
+      },
+      "profile.region": {
+        "cell_correct": false,
+        "classification": "fp",
+        "gold_changed": false,
+        "gold_event_session_ids": [],
+        "predicted_changed": true
+      }
+    },
+    "status_accuracy": 0.9117647058823529,
+    "status_confusion": {
+      "current": {
+        "current": 26,
+        "historical": 0,
+        "invalid/missing": 0,
+        "needs_verification": 0,
+        "not_applicable": 1,
+        "stale": 0,
+        "unknown": 0
+      },
+      "historical": {
+        "current": 0,
+        "historical": 0,
+        "invalid/missing": 0,
+        "needs_verification": 0,
+        "not_applicable": 0,
+        "stale": 0,
+        "unknown": 0
+      },
+      "needs_verification": {
+        "current": 0,
+        "historical": 0,
+        "invalid/missing": 0,
+        "needs_verification": 0,
+        "not_applicable": 0,
+        "stale": 0,
+        "unknown": 0
+      },
+      "not_applicable": {
+        "current": 2,
+        "historical": 0,
+        "invalid/missing": 0,
+        "needs_verification": 0,
+        "not_applicable": 3,
+        "stale": 0,
+        "unknown": 0
+      },
+      "stale": {
+        "current": 0,
+        "historical": 0,
+        "invalid/missing": 0,
+        "needs_verification": 0,
+        "not_applicable": 0,
+        "stale": 0,
+        "unknown": 0
+      },
+      "unknown": {
+        "current": 0,
+        "historical": 0,
+        "invalid/missing": 0,
+        "needs_verification": 0,
+        "not_applicable": 0,
+        "stale": 0,
+        "unknown": 2
+      }
+    },
+    "unchanged_path_count": 23,
+    "unchanged_state_accuracy": 0.7391304347826086,
+    "value_accuracy": 0.7352941176470589
+  },
+  "prediction_gold_diff": [
+    {
+      "gold": {
+        "evidence_session_ids": [
+          "D150"
+        ],
+        "status": "current",
+        "value": {
+          "amount_krw": 7000000,
+          "category": "funeral"
+        }
+      },
+      "path": "cashflow.recent_one_off_expense",
+      "prediction": {
+        "evidence_session_ids": [],
+        "status": "not_applicable",
+        "value": null
+      }
+    },
+    {
+      "gold": {
+        "evidence_session_ids": [],
+        "status": "not_applicable",
+        "value": null
+      },
+      "path": "education.child_education_stage",
+      "prediction": {
+        "evidence_session_ids": [
+          "D111"
+        ],
+        "status": "current",
+        "value": "preschool"
+      }
+    },
+    {
+      "gold": {
+        "evidence_session_ids": [
+          "D120"
+        ],
+        "status": "current",
+        "value": "enrolled"
+      },
+      "path": "education.self_education_status",
+      "prediction": {
+        "evidence_session_ids": [
+          "D120",
+          "D122"
+        ],
+        "status": "current",
+        "value": "enrolled"
+      }
+    },
+    {
+      "gold": {
+        "evidence_session_ids": [],
+        "status": "current",
+        "value": [
+          "jeonse_loan"
+        ]
+      },
+      "path": "financial_products.loans",
+      "prediction": {
+        "evidence_session_ids": [
+          "D129"
+        ],
+        "status": "current",
+        "value": [
+          "jeonse_loan",
+          "credit"
+        ]
+      }
+    },
+    {
+      "gold": {
+        "evidence_session_ids": [],
+        "status": "current",
+        "value": []
+      },
+      "path": "financial_products.savings_accounts",
+      "prediction": {
+        "evidence_session_ids": [
+          "D043",
+          "D111"
+        ],
+        "status": "current",
+        "value": [
+          "savings_1"
+        ]
+      }
+    },
+    {
+      "gold": {
+        "evidence_session_ids": [
+          "D045"
+        ],
+        "status": "current",
+        "value": "active"
+      },
+      "path": "goals.child_education_goal",
+      "prediction": {
+        "evidence_session_ids": [
+          "D043",
+          "D111"
+        ],
+        "status": "current",
+        "value": "active"
+      }
+    },
+    {
+      "gold": {
+        "evidence_session_ids": [
+          "D105"
+        ],
+        "status": "current",
+        "value": [
+          0,
+          1
+        ]
+      },
+      "path": "household.children",
+      "prediction": {
+        "evidence_session_ids": [
+          "D045",
+          "D105"
+        ],
+        "status": "current",
+        "value": [
+          2,
+          1
+        ]
+      }
+    },
+    {
+      "gold": {
+        "evidence_session_ids": [
+          "D135"
+        ],
+        "status": "current",
+        "value": 3
+      },
+      "path": "household.dependents",
+      "prediction": {
+        "evidence_session_ids": [
+          "D144"
+        ],
+        "status": "current",
+        "value": 3
+      }
+    },
+    {
+      "gold": {
+        "evidence_session_ids": [
+          "D150"
+        ],
+        "status": "current",
+        "value": "widowed"
+      },
+      "path": "household.marital_status",
+      "prediction": {
+        "evidence_session_ids": [
+          "D058"
+        ],
+        "status": "current",
+        "value": "married"
+      }
+    },
+    {
+      "gold": {
+        "evidence_session_ids": [],
+        "status": "not_applicable",
+        "value": null
+      },
+      "path": "household.spouse_or_partner",
+      "prediction": {
+        "evidence_session_ids": [
+          "D058"
+        ],
+        "status": "current",
+        "value": "spouse"
+      }
+    },
+    {
+      "gold": {
+        "evidence_session_ids": [
+          "D075"
+        ],
+        "status": "current",
+        "value": "대구 수성구"
+      },
+      "path": "housing.address",
+      "prediction": {
+        "evidence_session_ids": [
+          "D057",
+          "D088"
+        ],
+        "status": "current",
+        "value": "대구 수성구"
+      }
+    },
+    {
+      "gold": {
+        "evidence_session_ids": [
+          "D075"
+        ],
+        "status": "current",
+        "value": "wolse"
+      },
+      "path": "housing.contract_type",
+      "prediction": {
+        "evidence_session_ids": [
+          "D071",
+          "D099"
+        ],
+        "status": "current",
+        "value": "wolse"
+      }
+    },
+    {
+      "gold": {
+        "evidence_session_ids": [
+          "D015"
+        ],
+        "status": "current",
+        "value": "집주인"
+      },
+      "path": "housing.rent_payee",
+      "prediction": {
+        "evidence_session_ids": [
+          "D075"
+        ],
+        "status": "current",
+        "value": "집주인"
+      }
+    },
+    {
+      "gold": {
+        "evidence_session_ids": [
+          "D075"
+        ],
+        "status": "current",
+        "value": "wolse"
+      },
+      "path": "housing.residence_status",
+      "prediction": {
+        "evidence_session_ids": [
+          "D010",
+          "D071"
+        ],
+        "status": "current",
+        "value": "wolse"
+      }
+    },
+    {
+      "gold": {
+        "evidence_session_ids": [],
+        "status": "current",
+        "value": 30
+      },
+      "path": "profile.age",
+      "prediction": {
+        "evidence_session_ids": [
+          "D150"
+        ],
+        "status": "current",
+        "value": 34
+      }
+    },
+    {
+      "gold": {
+        "evidence_session_ids": [],
+        "status": "current",
+        "value": "서울 송파구"
+      },
+      "path": "profile.region",
+      "prediction": {
+        "evidence_session_ids": [
+          "D057",
+          "D088"
+        ],
+        "status": "current",
+        "value": "대구 수성구"
+      }
+    }
+  ],
+  "prediction_state": {
+    "cashflow.recent_one_off_expense": {
+      "evidence_session_ids": [],
+      "status": "not_applicable",
+      "value": null
+    },
+    "education.child_education_stage": {
+      "evidence_session_ids": [
+        "D111"
+      ],
+      "status": "current",
+      "value": "preschool"
+    },
+    "education.self_education_status": {
+      "evidence_session_ids": [
+        "D120",
+        "D122"
+      ],
+      "status": "current",
+      "value": "enrolled"
+    },
+    "employment.employer": {
+      "evidence_session_ids": [],
+      "status": "current",
+      "value": "청람교육"
+    },
+    "employment.employment_status": {
+      "evidence_session_ids": [],
+      "status": "current",
+      "value": "employed"
+    },
+    "employment.income_stability": {
+      "evidence_session_ids": [],
+      "status": "current",
+      "value": "stable"
+    },
+    "employment.occupation": {
+      "evidence_session_ids": [],
+      "status": "current",
+      "value": "일반 비서"
+    },
+    "employment.salary_account": {
+      "evidence_session_ids": [],
+      "status": "current",
+      "value": "main_checking"
+    },
+    "employment.salary_day": {
+      "evidence_session_ids": [],
+      "status": "current",
+      "value": 10
+    },
+    "financial_products.checking_accounts": {
+      "evidence_session_ids": [],
+      "status": "current",
+      "value": [
+        "main_checking"
+      ]
+    },
+    "financial_products.loans": {
+      "evidence_session_ids": [
+        "D129"
+      ],
+      "status": "current",
+      "value": [
+        "jeonse_loan",
+        "credit"
+      ]
+    },
+    "financial_products.pension_or_irp": {
+      "evidence_session_ids": [],
+      "status": "not_applicable",
+      "value": null
+    },
+    "financial_products.savings_accounts": {
+      "evidence_session_ids": [
+        "D043",
+        "D111"
+      ],
+      "status": "current",
+      "value": [
+        "savings_1"
+      ]
+    },
+    "goals.child_education_goal": {
+      "evidence_session_ids": [
+        "D043",
+        "D111"
+      ],
+      "status": "current",
+      "value": "active"
+    },
+    "goals.emergency_fund": {
+      "evidence_session_ids": [],
+      "status": "unknown",
+      "value": null
+    },
+    "goals.housing_deposit_goal": {
+      "evidence_session_ids": [],
+      "status": "current",
+      "value": "active"
+    },
+    "goals.retirement_goal": {
+      "evidence_session_ids": [],
+      "status": "unknown",
+      "value": null
+    },
+    "household.child_support_arrangement": {
+      "evidence_session_ids": [],
+      "status": "not_applicable",
+      "value": null
+    },
+    "household.children": {
+      "evidence_session_ids": [
+        "D045",
+        "D105"
+      ],
+      "status": "current",
+      "value": [
+        2,
+        1
+      ]
+    },
+    "household.dependents": {
+      "evidence_session_ids": [
+        "D144"
+      ],
+      "status": "current",
+      "value": 3
+    },
+    "household.marital_status": {
+      "evidence_session_ids": [
+        "D058"
+      ],
+      "status": "current",
+      "value": "married"
+    },
+    "household.spouse_or_partner": {
+      "evidence_session_ids": [
+        "D058"
+      ],
+      "status": "current",
+      "value": "spouse"
+    },
+    "housing.address": {
+      "evidence_session_ids": [
+        "D057",
+        "D088"
+      ],
+      "status": "current",
+      "value": "대구 수성구"
+    },
+    "housing.contract_type": {
+      "evidence_session_ids": [
+        "D071",
+        "D099"
+      ],
+      "status": "current",
+      "value": "wolse"
+    },
+    "housing.maintenance_fee_payee": {
+      "evidence_session_ids": [],
+      "status": "current",
+      "value": "관리사무소"
+    },
+    "housing.mortgage_status": {
+      "evidence_session_ids": [],
+      "status": "current",
+      "value": "none"
+    },
+    "housing.primary_residence_property_id": {
+      "evidence_session_ids": [],
+      "status": "not_applicable",
+      "value": null
+    },
+    "housing.properties": {
+      "evidence_session_ids": [],
+      "status": "current",
+      "value": []
+    },
+    "housing.rent_amount": {
+      "evidence_session_ids": [
+        "D075"
+      ],
+      "status": "current",
+      "value": 800000
+    },
+    "housing.rent_payee": {
+      "evidence_session_ids": [
+        "D075"
+      ],
+      "status": "current",
+      "value": "집주인"
+    },
+    "housing.residence_status": {
+      "evidence_session_ids": [
+        "D010",
+        "D071"
+      ],
+      "status": "current",
+      "value": "wolse"
+    },
+    "profile.age": {
+      "evidence_session_ids": [
+        "D150"
+      ],
+      "status": "current",
+      "value": 34
+    },
+    "profile.locale": {
+      "evidence_session_ids": [],
+      "status": "current",
+      "value": "ko_KR"
+    },
+    "profile.region": {
+      "evidence_session_ids": [
+        "D057",
+        "D088"
+      ],
+      "status": "current",
+      "value": "대구 수성구"
+    }
+  },
+  "prompt_sha256": "67199919d929eb9e24a02a5251510c594e189679fb59cfe70f468185763fbc46",
+  "provider_usage": {
+    "input_tokens": 36533,
+    "output_tokens": 1548,
+    "total_tokens": 38081
+  },
+  "raw_answer": "{\"schema_version\":\"stage2_2_reconstruct-v3\",\"state\":{\"profile.age\":{\"value\":34,\"status\":\"current\",\"evidence_session_ids\":[\"D150\"]},\"profile.locale\":{\"value\":\"ko_KR\",\"status\":\"current\",\"evidence_session_ids\":[]},\"profile.region\":{\"value\":\"대구 수성구\",\"status\":\"current\",\"evidence_session_ids\":[\"D057\",\"D088\"]},\"household.marital_status\":{\"value\":\"married\",\"status\":\"current\",\"evidence_session_ids\":[\"D058\"]},\"household.spouse_or_partner\":{\"value\":\"spouse\",\"status\":\"current\",\"evidence_session_ids\":[\"D058\"]},\"household.children\":{\"value\":[2,1],\"status\":\"current\",\"evidence_session_ids\":[\"D045\",\"D105\"]},\"household.dependents\":{\"value\":3,\"status\":\"current\",\"evidence_session_ids\":[\"D144\"]},\"household.child_support_arrangement\":{\"value\":null,\"status\":\"not_applicable\",\"evidence_session_ids\":[]},\"employment.employment_status\":{\"value\":\"employed\",\"status\":\"current\",\"evidence_session_ids\":[]},\"employment.employer\":{\"value\":\"청람교육\",\"status\":\"current\",\"evidence_session_ids\":[]},\"employment.occupation\":{\"value\":\"일반 비서\",\"status\":\"current\",\"evidence_session_ids\":[]},\"employment.income_stability\":{\"value\":\"stable\",\"status\":\"current\",\"evidence_session_ids\":[]},\"employment.salary_day\":{\"value\":10,\"status\":\"current\",\"evidence_session_ids\":[]},\"employment.salary_account\":{\"value\":\"main_checking\",\"status\":\"current\",\"evidence_session_ids\":[]},\"housing.residence_status\":{\"value\":\"wolse\",\"status\":\"current\",\"evidence_session_ids\":[\"D010\",\"D071\"]},\"housing.address\":{\"value\":\"대구 수성구\",\"status\":\"current\",\"evidence_session_ids\":[\"D057\",\"D088\"]},\"housing.contract_type\":{\"value\":\"wolse\",\"status\":\"current\",\"evidence_session_ids\":[\"D071\",\"D099\"]},\"housing.rent_amount\":{\"value\":800000,\"status\":\"current\",\"evidence_session_ids\":[\"D075\"]},\"housing.rent_payee\":{\"value\":\"집주인\",\"status\":\"current\",\"evidence_session_ids\":[\"D075\"]},\"housing.maintenance_fee_payee\":{\"value\":\"관리사무소\",\"status\":\"current\",\"evidence_session_ids\":[]},\"housing.mortgage_status\":{\"value\":\"none\",\"status\":\"current\",\"evidence_session_ids\":[]},\"housing.properties\":{\"value\":[],\"status\":\"current\",\"evidence_session_ids\":[]},\"housing.primary_residence_property_id\":{\"value\":null,\"status\":\"not_applicable\",\"evidence_session_ids\":[]},\"education.self_education_status\":{\"value\":\"enrolled\",\"status\":\"current\",\"evidence_session_ids\":[\"D120\",\"D122\"]},\"education.child_education_stage\":{\"value\":\"preschool\",\"status\":\"current\",\"evidence_session_ids\":[\"D111\"]},\"financial_products.checking_accounts\":{\"value\":[\"main_checking\"],\"status\":\"current\",\"evidence_session_ids\":[]},\"financial_products.savings_accounts\":{\"value\":[\"savings_1\"],\"status\":\"current\",\"evidence_session_ids\":[\"D043\",\"D111\"]},\"financial_products.loans\":{\"value\":[\"jeonse_loan\",\"credit\"],\"status\":\"current\",\"evidence_session_ids\":[\"D129\"]},\"financial_products.pension_or_irp\":{\"value\":null,\"status\":\"not_applicable\",\"evidence_session_ids\":[]},\"goals.emergency_fund\":{\"value\":null,\"status\":\"unknown\",\"evidence_session_ids\":[]},\"goals.housing_deposit_goal\":{\"value\":\"active\",\"status\":\"current\",\"evidence_session_ids\":[]},\"goals.child_education_goal\":{\"value\":\"active\",\"status\":\"current\",\"evidence_session_ids\":[\"D043\",\"D111\"]},\"goals.retirement_goal\":{\"value\":null,\"status\":\"unknown\",\"evidence_session_ids\":[]},\"cashflow.recent_one_off_expense\":{\"value\":null,\"status\":\"not_applicable\",\"evidence_session_ids\":[]}}}",
+  "raw_response_sha256": "4f3992ad07fdc3a48067b4976e7ea0a87782868bcceab1b36e0fb7ffa6a2d019",
+  "retrieval_evidence": {
+    "groups": [],
+    "session_ids": [
+      "S000",
+      "S001",
+      "S002",
+      "S003",
+      "S004",
+      "S005",
+      "S006",
+      "S007",
+      "S008",
+      "S009",
+      "S010",
+      "S011",
+      "S012",
+      "S013",
+      "S014",
+      "S015",
+      "S016",
+      "S017",
+      "S018",
+      "S019",
+      "S020",
+      "S021",
+      "S022",
+      "S023",
+      "S024",
+      "S025",
+      "S026",
+      "S027",
+      "S028",
+      "S029",
+      "S030",
+      "S031",
+      "S032",
+      "S033",
+      "S034",
+      "S035",
+      "S036",
+      "S037",
+      "S038",
+      "S039",
+      "S040",
+      "S041",
+      "S042",
+      "S043",
+      "S044",
+      "S045",
+      "S046",
+      "S047",
+      "S048",
+      "S049",
+      "S050",
+      "S051",
+      "S052",
+      "S053",
+      "S054",
+      "S055",
+      "S056",
+      "S057",
+      "S058",
+      "S059",
+      "S060",
+      "S061",
+      "S062",
+      "S063",
+      "S064",
+      "S065",
+      "S066",
+      "S067",
+      "S068",
+      "S069",
+      "S070",
+      "S071",
+      "S072",
+      "S073",
+      "S074",
+      "S075",
+      "S076",
+      "S077",
+      "S078",
+      "S079",
+      "S080",
+      "S081",
+      "S082",
+      "S083",
+      "S084",
+      "S085",
+      "S086",
+      "S087",
+      "S088",
+      "S089",
+      "S090",
+      "S091",
+      "S092",
+      "S093",
+      "S094",
+      "S095",
+      "S096",
+      "S097",
+      "S098",
+      "S099",
+      "S100",
+      "S101",
+      "S102",
+      "S103",
+      "S104",
+      "S105",
+      "S106",
+      "S107",
+      "S108",
+      "S109",
+      "S110",
+      "S111",
+      "S112",
+      "S113",
+      "S114",
+      "S115",
+      "S116",
+      "S117",
+      "S118",
+      "S119",
+      "S120",
+      "S121",
+      "S122",
+      "S123",
+      "S124",
+      "S125",
+      "S126",
+      "S127",
+      "S128",
+      "S129",
+      "S130",
+      "S131",
+      "S132",
+      "S133",
+      "S134",
+      "S135",
+      "S136",
+      "S137",
+      "S138",
+      "S139",
+      "S140",
+      "S141",
+      "S142",
+      "S143",
+      "S144",
+      "S145",
+      "S146",
+      "S147",
+      "S148",
+      "S149",
+      "S150"
+    ]
+  },
+  "schema_version": "stage2_2_state_pair-v1",
+  "trajectory_id": "traj_010"
+}

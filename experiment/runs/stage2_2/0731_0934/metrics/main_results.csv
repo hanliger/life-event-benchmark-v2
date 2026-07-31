@@ -1,0 +1,3 @@
+method_family,method_id,stage,items,score,ci95_low,ci95_high,parse_errors,aggregation,dynamic_path_final_state_accuracy,correct_change_f1,path_macro_correct_change_f1,event_macro_update_accuracy,event_exact_update_accuracy,retention_mean_over_observed_lags
+Full Context,fc_claude_opus_4_8,stage2_2_reconstruct,20,0.7970588235294117,0.7970588235294117,0.7970588235294117,0,checkpoint_then_trajectory_macro,0.832,0.720784319011028,0.677208364164886,0.788425925925926,0.6666666666666666,0.734422907339574
+Full Context,fc_gpt_5_6_sol,stage2_2_reconstruct,20,0.7294117647058823,0.7294117647058823,0.7294117647058823,0,checkpoint_then_trajectory_macro,0.766,0.6340666284436687,0.5843395213969989,0.7245370370370371,0.5555555555555556,0.6433824277574277

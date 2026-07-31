@@ -1,0 +1,85 @@
+{
+  "budget_cap_usd": 19.0,
+  "checkpoints": [
+    15,
+    30,
+    45,
+    60,
+    75,
+    90,
+    105,
+    120,
+    135,
+    150,
+    165,
+    180,
+    195,
+    210,
+    225,
+    240,
+    255,
+    270,
+    285,
+    300
+  ],
+  "concurrency": {
+    "anthropic_max_in_flight": 5,
+    "checkpoint_workers": 5,
+    "max_in_flight": 10,
+    "model_workers": 2,
+    "openrouter_max_in_flight": 1,
+    "trajectory_workers": 1
+  },
+  "context_precheck": {
+    "estimator": "ceil(rendered_unicode_characters/2)+max_output_tokens",
+    "max_estimated_total_tokens": null,
+    "passed": null
+  },
+  "created_at_kst": "2026-07-31T09:34:19.344491+09:00",
+  "estimated_usd": 16.5,
+  "execution_tree_sha256": "a56f3a7b342bce332fe77501529075b87272e58c7f37f335583d3c5ff672fcfb",
+  "item_grid_sha256": "4ccd474177b9cc824d4c5988f29757df97dd49cad91f2140dedb17e827693940",
+  "item_ids": [
+    "traj_010_pfx015_s2_2_reconstruct",
+    "traj_010_pfx030_s2_2_reconstruct",
+    "traj_010_pfx045_s2_2_reconstruct",
+    "traj_010_pfx060_s2_2_reconstruct",
+    "traj_010_pfx075_s2_2_reconstruct",
+    "traj_010_pfx090_s2_2_reconstruct",
+    "traj_010_pfx105_s2_2_reconstruct",
+    "traj_010_pfx120_s2_2_reconstruct",
+    "traj_010_pfx135_s2_2_reconstruct",
+    "traj_010_pfx150_s2_2_reconstruct",
+    "traj_010_pfx165_s2_2_reconstruct",
+    "traj_010_pfx180_s2_2_reconstruct",
+    "traj_010_pfx195_s2_2_reconstruct",
+    "traj_010_pfx210_s2_2_reconstruct",
+    "traj_010_pfx225_s2_2_reconstruct",
+    "traj_010_pfx240_s2_2_reconstruct",
+    "traj_010_pfx255_s2_2_reconstruct",
+    "traj_010_pfx270_s2_2_reconstruct",
+    "traj_010_pfx285_s2_2_reconstruct",
+    "traj_010_pfx300_s2_2_reconstruct"
+  ],
+  "max_output_tokens": 20000,
+  "methods": [
+    "fc_gpt_5_6_sol",
+    "fc_claude_opus_4_8"
+  ],
+  "parse_retries": 1,
+  "plan_sha256": "18b340e14bac0e471c11406211f9e2f66492556ac8529f3919e147022fd2e3d9",
+  "prediction_count": 40,
+  "prompt_audit_required": true,
+  "provider_lock_status": "NOT_APPLICABLE",
+  "provider_retries": 0,
+  "request_timeout_seconds": 300,
+  "retrieval": {
+    "max_evidence": 20,
+    "top_k_per_group": 5
+  },
+  "run_id": "0731_0934",
+  "schema_version": "stage2_2_nine_method_plan-v1",
+  "trajectories": [
+    "traj_010"
+  ]
+}

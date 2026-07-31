@@ -1,0 +1,2 @@
+stage,comparison,delta,ci95_low,ci95_high,trajectory_units
+stage2_2_reconstruct,fc_claude_opus_4_8__minus__fc_gpt_5_6_sol,0.0676470588235294,0.0676470588235294,0.0676470588235294,1

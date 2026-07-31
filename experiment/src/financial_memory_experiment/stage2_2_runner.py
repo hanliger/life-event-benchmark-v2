@@ -52,10 +52,18 @@ from .util import (
     sha256_file,
     sha256_json,
     write_json,
+    write_jsonl,
 )
 
 
 DEFAULT_METHODS = NINE_METHODS
+DIRECT_API_METHODS = (
+    "fc_gpt_5_6_sol",
+    "fc_claude_opus_4_8",
+)
+SELECTABLE_METHODS = tuple(
+    dict.fromkeys((*DEFAULT_METHODS, *DIRECT_API_METHODS))
+)
 TASK = "stage2_2"
 APPROVAL_PHRASE = "I_APPROVE_STAGE2_2_PAID"
 PROVIDER_LOCK_SCHEMA = "stage2_2_openrouter_provider_lock-v1"
@@ -63,6 +71,16 @@ PROVIDER_LOCK_SCHEMA = "stage2_2_openrouter_provider_lock-v1"
 
 def _checkpoint(item: dict[str, Any]) -> int:
     return int((item.get("metadata") or {})["query_checkpoint"])
+
+
+def _selected_methods(value: str) -> list[str]:
+    # Preserve `all` as the independently runnable nine-method comparison.
+    # Direct-API experiments must name their methods explicitly.
+    if value == "all":
+        return list(DEFAULT_METHODS)
+    return _parse_selection(
+        value, all_values=SELECTABLE_METHODS, label="methods"
+    )
 
 
 def _all_items(paths: ExperimentPaths) -> list[dict[str, Any]]:
@@ -230,10 +248,9 @@ def _audit_rendered_prompt(rendered: dict[str, Any]) -> dict[str, Any]:
 def command_plan(args: argparse.Namespace) -> None:
     paths = ExperimentPaths.discover()
     configured = method_ids(paths)
-    methods = _parse_selection(
-        args.methods, all_values=DEFAULT_METHODS, label="methods"
-    )
-    if not set(methods) <= set(configured):
+    methods = _selected_methods(args.methods)
+    allowed = set(configured) | set(DIRECT_API_METHODS)
+    if not set(methods) <= allowed:
         raise ValueError("selected methods are not in the frozen config")
     trajectories = _parse_selection(
         args.trajectories,
@@ -906,6 +923,183 @@ def command_report(args: argparse.Namespace) -> None:
     print(json.dumps({"run_dir": str(run_dir), "report": str(report_path)}))
 
 
+def command_combine(args: argparse.Namespace) -> None:
+    """Combine disjoint completed runs without hiding reused smoke cells."""
+
+    paths = ExperimentPaths.discover()
+    source_dirs = [Path(value).resolve() for value in args.source_run_dir]
+    if len(source_dirs) < 2:
+        raise ValueError("combine requires at least two --source-run-dir values")
+
+    source_plans = []
+    source_rows: list[dict[str, Any]] = []
+    source_records = []
+    for source_dir in source_dirs:
+        plan_path = source_dir / "immutable_plan.json"
+        manifest_path = source_dir / "run_manifest.json"
+        if not plan_path.exists() or not manifest_path.exists():
+            raise FileNotFoundError(f"incomplete source run metadata: {source_dir}")
+        plan = json.loads(plan_path.read_text(encoding="utf-8"))
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        if manifest.get("status") != "GENERATED":
+            raise RuntimeError(f"source run is not GENERATED: {source_dir}")
+        prediction_paths = _complete_prediction_paths(source_dir)
+        rows = [row for path in prediction_paths for row in read_jsonl(path)]
+        if len(rows) != int(plan["prediction_count"]):
+            raise RuntimeError(
+                f"source grid incomplete for {source_dir}: "
+                f"{len(rows)} != {plan['prediction_count']}"
+            )
+        source_plans.append(plan)
+        source_rows.extend(rows)
+        source_records.append(
+            {
+                "run_dir": str(source_dir),
+                "run_id": plan["run_id"],
+                "plan_sha256": plan["plan_sha256"],
+                "trajectories": plan["trajectories"],
+                "prediction_count": plan["prediction_count"],
+            }
+        )
+
+    methods = list(source_plans[0]["methods"])
+    checkpoints = list(source_plans[0]["checkpoints"])
+    for plan in source_plans[1:]:
+        if list(plan["methods"]) != methods:
+            raise RuntimeError("source method grids differ")
+        if list(plan["checkpoints"]) != checkpoints:
+            raise RuntimeError("source checkpoint grids differ")
+        for field in (
+            "max_output_tokens",
+            "provider_retries",
+            "parse_retries",
+        ):
+            if plan.get(field) != source_plans[0].get(field):
+                raise RuntimeError(f"source plans differ on {field}")
+
+    keys = [
+        (
+            str(row["method_id"]),
+            str(row["trajectory_id"]),
+            int(row["query_checkpoint"]),
+        )
+        for row in source_rows
+    ]
+    if len(keys) != len(set(keys)):
+        raise RuntimeError("source runs overlap on method/trajectory/checkpoint")
+    trajectories = sorted({trajectory for _, trajectory, _ in keys})
+    expected = {
+        (method, trajectory, int(checkpoint))
+        for method in methods
+        for trajectory in trajectories
+        for checkpoint in checkpoints
+    }
+    if set(keys) != expected:
+        missing = sorted(expected - set(keys))
+        extra = sorted(set(keys) - expected)
+        raise RuntimeError(
+            f"combined grid is not rectangular: missing={missing[:5]}, "
+            f"extra={extra[:5]}"
+        )
+
+    fingerprints: dict[str, set[str]] = {}
+    for row in source_rows:
+        metadata = row.get("response_metadata") or {}
+        fingerprint = sha256_json(
+            {
+                "model": metadata.get("model"),
+                "provider": metadata.get("provider"),
+                "api_surface": metadata.get("api_surface"),
+                "max_output_tokens": metadata.get("max_output_tokens"),
+                "generation_settings": metadata.get("generation_settings"),
+            }
+        )
+        fingerprints.setdefault(str(row["method_id"]), set()).add(fingerprint)
+    drift = {
+        method: sorted(values)
+        for method, values in fingerprints.items()
+        if len(values) != 1
+    }
+    if drift:
+        raise RuntimeError(f"source inference payloads differ: {drift}")
+
+    run_dir = new_run_dir(paths, "stage2_2_combined")
+    plan_body = {
+        "schema_version": "stage2_2_combined_plan-v1",
+        "run_id": run_dir.name,
+        "created_at_kst": datetime.now(
+            ZoneInfo("Asia/Seoul")
+        ).isoformat(),
+        "methods": methods,
+        "trajectories": trajectories,
+        "checkpoints": checkpoints,
+        "prediction_count": len(source_rows),
+        "sources": source_records,
+        "reuse_disclosure": (
+            "traj_010 cells come from the inspected smoke and were not rerun"
+        ),
+    }
+    plan = {**plan_body, "plan_sha256": sha256_json(plan_body)}
+    write_json(run_dir / "immutable_plan.json", plan)
+    write_json(
+        run_dir / "provider_lock.json",
+        {"status": "NOT_APPLICABLE", "methods": {}},
+    )
+
+    grouped: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    for row in source_rows:
+        grouped.setdefault(
+            (str(row["method_id"]), str(row["trajectory_id"])), []
+        ).append(row)
+    for (method, trajectory), rows in sorted(grouped.items()):
+        rows.sort(key=lambda row: int(row["query_checkpoint"]))
+        output = (
+            run_dir / "raw" / method / trajectory / "attempt_01.jsonl"
+        )
+        write_jsonl(output, rows)
+        write_json(
+            output.with_suffix(".manifest.json"),
+            {
+                "schema_version": "stage2_2_combined_attempt_manifest-v1",
+                "status": "COMPLETE",
+                "method_id": method,
+                "trajectory_id": trajectory,
+                "input_item_ids": [str(row["item_id"]) for row in rows],
+                "completed_items": len(rows),
+                "source_plan_sha256": next(
+                    record["plan_sha256"]
+                    for record in source_records
+                    if trajectory in record["trajectories"]
+                ),
+            },
+        )
+
+    write_json(
+        run_dir / "run_manifest.json",
+        {
+            "schema_version": "stage2_2_combined_run_manifest-v1",
+            "status": "GENERATED",
+            "run_id": run_dir.name,
+            "plan_sha256": plan["plan_sha256"],
+            "source_runs": source_records,
+            "complete_prediction_files": len(grouped),
+        },
+    )
+    _validate_complete_grid(run_dir, plan)
+    command_report(argparse.Namespace(run_dir=str(run_dir)))
+    print(
+        json.dumps(
+            {
+                "run_dir": str(run_dir),
+                "plan_sha256": plan["plan_sha256"],
+                "prediction_count": len(source_rows),
+                "sources": source_records,
+            },
+            ensure_ascii=False,
+        )
+    )
+
+
 def command_execute(args: argparse.Namespace) -> None:
     paths = ExperimentPaths.discover()
     run_dir = resolve_run_dir(paths, TASK, args.run_dir)
@@ -980,7 +1174,7 @@ def build_parser() -> argparse.ArgumentParser:
     plan.set_defaults(handler=command_plan)
 
     show = commands.add_parser("show-prompt")
-    show.add_argument("--method", required=True, choices=DEFAULT_METHODS)
+    show.add_argument("--method", required=True, choices=SELECTABLE_METHODS)
     show.add_argument("--trajectory", required=True)
     show.add_argument("--checkpoint", type=int, required=True)
     show.set_defaults(handler=command_show_prompt)
@@ -999,6 +1193,15 @@ def build_parser() -> argparse.ArgumentParser:
     report = commands.add_parser("report")
     report.add_argument("--run-dir")
     report.set_defaults(handler=command_report)
+
+    combine = commands.add_parser("combine")
+    combine.add_argument(
+        "--source-run-dir",
+        action="append",
+        required=True,
+        help="Completed Stage 2.2 source run; pass once per disjoint run.",
+    )
+    combine.set_defaults(handler=command_combine)
     return parser
 
 

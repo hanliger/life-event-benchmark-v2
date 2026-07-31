@@ -1,5 +1,5 @@
 {
-  "conservative_spent_usd": 0.383,
+  "conservative_spent_usd": 0.0,
   "entries": [
     {
       "amount_usd": 1.98,
@@ -277,8 +277,52 @@
           "output_tokens": 1788
         }
       }
+    },
+    {
+      "amount_usd": 15.412,
+      "kind": "plan_reservation",
+      "note": "Reconciled to a rounded-up usage-based estimate for the successful Stage 2.2 traj_010 20-checkpoint direct-API smoke: GPT-5.6 Sol $4.854365 and Claude Opus 4.8 $10.557540; $15.411905 total rounded up to $15.412. All 40 persisted responses completed without parse/schema retry. Provider billing remains the final authority.",
+      "plan_sha256": "18b340e14bac0e471c11406211f9e2f66492556ac8529f3919e147022fd2e3d9",
+      "reconciled_amount_usd": 15.412,
+      "status": "reconciled_usage_upper_bound",
+      "usage": {
+        "fc_claude_opus_4_8": {
+          "input_tokens": 1307683,
+          "output_tokens": 160765
+        },
+        "fc_gpt_5_6_sol": {
+          "input_tokens": 761539,
+          "output_tokens": 34889
+        }
+      }
+    },
+    {
+      "amount_usd": 6.348,
+      "kind": "plan_reservation",
+      "note": "The initial background shell was reaped after requests started but before any response row was persisted. The first five checkpoints for each model are conservatively treated as sent and billed at their known input sizes plus the full 20,000-token output cap: GPT-5.6 Sol $3.313350 and Claude Opus 4.8 $3.034540; $6.347890 rounded up to $6.348. This is an unknown-billing upper bound, not confirmed invoice usage.",
+      "plan_sha256": "18b340e14bac0e471c11406211f9e2f66492556ac8529f3919e147022fd2e3d9",
+      "status": "unknown_billing_upper_bound",
+      "usage": {
+        "fc_claude_opus_4_8": {
+          "unknown_request_input_tokens": 106908,
+          "unknown_request_max_output_tokens": 100000
+        },
+        "fc_gpt_5_6_sol": {
+          "unknown_request_input_tokens": 62670,
+          "unknown_request_max_output_tokens": 100000
+        }
+      }
+    },
+    {
+      "amount_usd": 0.0,
+      "kind": "allowance_reset",
+      "new_allowance_usd": 350.0,
+      "note": "After being shown the approximately $293 incremental estimate, the user explicitly directed execution of the remaining 19 Stage 2.2 trajectories and reuse of the completed traj_010 smoke. Prior entries remain immutable audit history and are excluded from conservative_spent_usd after this marker.",
+      "prior_conservative_spent_usd": 22.143,
+      "recorded_at": "2026-07-31",
+      "status": "active"
     }
   ],
   "schema_version": "paid-smoke-ledger-v1",
-  "standing_limit_usd": 20.0
+  "standing_limit_usd": 350.0
 }

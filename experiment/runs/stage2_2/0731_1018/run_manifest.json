@@ -1,0 +1,18 @@
+{
+  "plan_sha256": "c3b4ddc026e3012ff530a50e21ed44fa6f5610169fe9129072c02d77550ac2c6",
+  "prepared_manifest_sha256": "0c3e1e32c334c29eeaf5d3398765c4482b313fc21ed2462d0160c104344c10fc",
+  "provider_lock_sha256": "eda8c7414bb33b3610151e5c48d1f67f84c4ae651bfc16dfd283dbcd148c2aab",
+  "run_id": "0731_1018",
+  "schema_version": "stage2_2_run_manifest-v1",
+  "started_at_kst": "2026-07-31T10:18:57.087894+09:00",
+  "status": "INTERRUPTED",
+  "interrupted_at_kst": "2026-07-31T10:26:25+09:00",
+  "interruption": {
+    "reason": "Stopped at user request",
+    "cached_predictions": 60,
+    "cached_predictions_by_method": {
+      "fc_claude_opus_4_8": 7,
+      "fc_gpt_5_6_sol": 53
+    }
+  }
+}

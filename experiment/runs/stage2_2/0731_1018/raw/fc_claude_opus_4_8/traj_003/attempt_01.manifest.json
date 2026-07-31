@@ -1,0 +1,394 @@
+{
+  "completed_items": 0,
+  "config_sha256": {
+    "experiment": "b6e719bab3bb057fba0638248a9d19db79d03d77f3f2410c920572dc2fefe62b",
+    "methods": "a97aa10f8e8773c496a25a71d11d7b6a2ec17eccb5e286639c06599c45cda9f0",
+    "paid_safety": "791d09d165ba01b77f9b2284dcee651ffe0c2f887aac087531aac3a04b569c2b",
+    "system_prompt": "a82b7656e8ebaae87aaf87043f8a265240fd775a3037a433b47a8c581dedb5e9"
+  },
+  "expected_items": 20,
+  "git": {
+    "commit": "d609132fef6dbb681b78e19bf1427b18658821fb",
+    "dirty": true
+  },
+  "input_item_ids": [
+    "traj_003_pfx015_s2_2_reconstruct",
+    "traj_003_pfx030_s2_2_reconstruct",
+    "traj_003_pfx045_s2_2_reconstruct",
+    "traj_003_pfx060_s2_2_reconstruct",
+    "traj_003_pfx075_s2_2_reconstruct",
+    "traj_003_pfx090_s2_2_reconstruct",
+    "traj_003_pfx105_s2_2_reconstruct",
+    "traj_003_pfx120_s2_2_reconstruct",
+    "traj_003_pfx135_s2_2_reconstruct",
+    "traj_003_pfx150_s2_2_reconstruct",
+    "traj_003_pfx165_s2_2_reconstruct",
+    "traj_003_pfx180_s2_2_reconstruct",
+    "traj_003_pfx195_s2_2_reconstruct",
+    "traj_003_pfx210_s2_2_reconstruct",
+    "traj_003_pfx225_s2_2_reconstruct",
+    "traj_003_pfx240_s2_2_reconstruct",
+    "traj_003_pfx255_s2_2_reconstruct",
+    "traj_003_pfx270_s2_2_reconstruct",
+    "traj_003_pfx285_s2_2_reconstruct",
+    "traj_003_pfx300_s2_2_reconstruct"
+  ],
+  "input_item_ids_sha256": "7b30a754e31637c1f1a54f3f0d9c0efc7477de1eaf895f10d72cce9a55eed9c9",
+  "method_id": "fc_claude_opus_4_8",
+  "mock": false,
+  "package_versions": {
+    "anthropic": "0.120.2",
+    "financial-memory-benchmark-experiment": null,
+    "google-genai": "2.15.0",
+    "letta-client": "1.12.1",
+    "mem0ai": "2.0.12",
+    "openai": "2.50.0",
+    "qdrant-client": "1.18.0"
+  },
+  "prepared_manifest": {
+    "allowed_statuses": [
+      "current",
+      "historical",
+      "stale",
+      "needs_verification",
+      "unknown",
+      "not_applicable"
+    ],
+    "closed_value_definitions": {
+      "education.self_education_status": [
+        "enrolled=domestic program currently attended",
+        "study_abroad=overseas program currently attended",
+        "on_leave=enrollment retained but attendance paused",
+        "completed=program finished"
+      ],
+      "financial_products.loans": [
+        "credit=general unsecured credit without a designated purpose",
+        "auto_loan=vehicle-purchase loan",
+        "student_loan=education-purpose loan",
+        "business_loan=business-purpose loan"
+      ],
+      "household.spouse_or_partner": [
+        "spouse=legal spouse",
+        "partner=non-married committed partner"
+      ],
+      "housing.contract_type": [
+        "jeonse/wolse=private-market lease contract",
+        "public_rental=public-rental contract",
+        "company_housing=employer housing allocation",
+        "dormitory=dormitory occupancy"
+      ],
+      "housing.residence_status": [
+        "jeonse/wolse=private-market lease",
+        "public_rental=public-entity rental",
+        "company_housing=employer-provided housing",
+        "dormitory=school or institution dormitory"
+      ]
+    },
+    "dynamic_path_count": 25,
+    "dynamic_paths": [
+      "household.marital_status",
+      "household.spouse_or_partner",
+      "household.children",
+      "household.dependents",
+      "household.child_support_arrangement",
+      "employment.employment_status",
+      "employment.employer",
+      "employment.income_stability",
+      "employment.salary_day",
+      "employment.salary_account",
+      "housing.residence_status",
+      "housing.address",
+      "housing.contract_type",
+      "housing.rent_amount",
+      "housing.rent_payee",
+      "housing.maintenance_fee_payee",
+      "housing.mortgage_status",
+      "housing.properties",
+      "housing.primary_residence_property_id",
+      "education.self_education_status",
+      "education.child_education_stage",
+      "financial_products.loans",
+      "financial_products.pension_or_irp",
+      "goals.child_education_goal",
+      "cashflow.recent_one_off_expense"
+    ],
+    "item_count": 400,
+    "item_sha256": "1cdce0e3ea2490af8010900269df373b52f51a6fbcb38670dcba77d4837f775f",
+    "list_element_closed_values": {
+      "financial_products.checking_accounts": [
+        "main_checking"
+      ],
+      "financial_products.loans": [
+        "mortgage",
+        "jeonse_loan",
+        "credit",
+        "auto_loan",
+        "student_loan",
+        "business_loan"
+      ],
+      "financial_products.savings_accounts": [
+        "savings_1"
+      ]
+    },
+    "manifest_hash": "d2292271d2b413855c71289dffb971199b34c4eec71e51b20fd90672b487fc51",
+    "max_output_tokens": 20000,
+    "metric_protocol_version": "stage2_2_metrics-v2",
+    "object_field_closed_values": {
+      "cashflow.recent_one_off_expense": {
+        "category": [
+          "medical",
+          "accident_or_disaster",
+          "fraud_loss",
+          "funeral"
+        ]
+      },
+      "housing.primary_residence_property_id": {
+        "mortgage_status": [
+          "none",
+          "active",
+          "closed"
+        ],
+        "ownership_status": [
+          "owned"
+        ],
+        "role": [
+          "primary_residence"
+        ]
+      },
+      "housing.properties": {
+        "mortgage_status": [
+          "none",
+          "active",
+          "closed"
+        ],
+        "ownership_status": [
+          "owned",
+          "sold"
+        ],
+        "role": [
+          "primary_residence",
+          "secondary_property"
+        ]
+      }
+    },
+    "projector_version": "stage2_2_observable_state-v2",
+    "raw_manifest": {
+      "files": {
+        "dialogues_no_prospective/substitution_manifest.json": "30499ecae2348bc2fba8b5b0d8cdffc9afe0dedd4aa0be2a4db79ae98123e3d2",
+        "dialogues_no_prospective/traj_001.jsonl": "f42ac47b6dfe59bac03743d5c1e69506d5ba183bae298bec6b17fd37d1579017",
+        "dialogues_no_prospective/traj_002.jsonl": "aa5c8e361dee599c9e385d26fe7731f67c923731a6b5c7eb77468a9232f081e3",
+        "dialogues_no_prospective/traj_003.jsonl": "f5816aab676fef4fcca846ab29bb5651c41f6a48d97f7fc4cad545cb4ce76552",
+        "dialogues_no_prospective/traj_004.jsonl": "53c773de23debd0b607251246269b4dc0a2ec25626a359f94328b347d07671e1",
+        "dialogues_no_prospective/traj_005.jsonl": "15ccf643bd5b4554c603cde550a8615fc592215f379d24f617c4fcb6a1bca398",
+        "dialogues_no_prospective/traj_006.jsonl": "024d2a90d23f2a8bbb89370094783dd5485c26ad35b5b4fcd5ec39eeb9ed3e26",
+        "dialogues_no_prospective/traj_007.jsonl": "e8cc657b26f62c82eb4041e95db977b53054f38cc43d1ce786aa4f9ec9fc9073",
+        "dialogues_no_prospective/traj_008.jsonl": "6b192c8dbfe3058c2dad658d2526b321feda5108ce126cd641ffda3662f37959",
+        "dialogues_no_prospective/traj_009.jsonl": "7d280bb5ffa91b30ca7cc8f3f180b31bf98eefa89ebd98b23b38bd3893732a18",
+        "dialogues_no_prospective/traj_010.jsonl": "66f2aa3884164363a85a16440aa0b3f89a468d6992dfa1b493346ef8aea7a8d5",
+        "dialogues_no_prospective/traj_011.jsonl": "a6a1cc37899ef94792c5a9e87cf7b87e83bb50e8f0e0061fd07710ce1317d2fe",
+        "dialogues_no_prospective/traj_012.jsonl": "e2de9d9390b5e205015df93be4838cb2800dfde17659e71427623dd5daf500b9",
+        "dialogues_no_prospective/traj_013.jsonl": "8c7bb2cd9caf3b9cd581986b531151feb79e3e8ca5f15e7ce35ffb526be5e4a8",
+        "dialogues_no_prospective/traj_014.jsonl": "0f699c15b334bcdf139ed6a22c9bc2895a87b425ef5550854028ca348333ce6d",
+        "dialogues_no_prospective/traj_015.jsonl": "c80be095d669e60816001eedf867055953996121e7b92e191e27aa5c4ea3bdad",
+        "dialogues_no_prospective/traj_016.jsonl": "cbdb09a2f6f22eebfda798a36ce544899ef5ce29ca73e13059108624e666bf3f",
+        "dialogues_no_prospective/traj_017.jsonl": "e75c8a1be6ba1542c591eef03e4ae93b2625e79e0950096e76bdf17006d10594",
+        "dialogues_no_prospective/traj_018.jsonl": "217b2b661cd10fff00f0a295c5ede833db1ecba89fa5dc2ae906d2a6a3d43632",
+        "dialogues_no_prospective/traj_019.jsonl": "1ee545252ab29dadc2d953d277b177c576c6344a811e4c3cabba0b8a69fcc715",
+        "dialogues_no_prospective/traj_020.jsonl": "e3e02adece68d97f2129e9687230474c281a45de40a9502c90617860960f8c1e",
+        "gold/traj_001.jsonl": "a40436b43b2b83b19fbcfbf6509a30deb3436ae7e4a8c097a56065a5f20a7a5d",
+        "gold/traj_002.jsonl": "e443f0fe8a7383923dd552b58c7279904e1012adaf70e60a8746bf3a3afe148c",
+        "gold/traj_003.jsonl": "0ae1a10ae9dd2e88093d4490a306be09ba8fb049828f125a4b399a8fe0032fcf",
+        "gold/traj_004.jsonl": "6345ee6a300d4d724e25216622d84b4aa7579bc94565b9d6a2f132bb37b9b38c",
+        "gold/traj_005.jsonl": "999f40864e28a50e964f3ac9a37e27c6e0ab12eaddfba14e0ba90972ef4f4df8",
+        "gold/traj_006.jsonl": "dfda236be9e1351de519ecc590acda7b0c9e545ebd94c7c6b8bcc457b9ae8465",
+        "gold/traj_007.jsonl": "c00e2a41600e9c9a4545bbbc67f555f746bee9dcad8c85c55293c5ea0bbc65f6",
+        "gold/traj_008.jsonl": "f3a6eca6067190a4e9fe6a7982864bb4db7eb50c0c4f3a3c2b9b1648a437510b",
+        "gold/traj_009.jsonl": "1dcf95aabafe53e8aff3b3e2024808c17c0a3e6be2ebb253c286c9168c9d30ed",
+        "gold/traj_010.jsonl": "67ebb38f5224eb7ff258ee621efa79cd725aa4e30cc6f388a2effac0f31e1eda",
+        "gold/traj_011.jsonl": "5c0231d6bc8d75d67ad5c0479ab4c78e1e630efba36ca22bf1350d1bf3880126",
+        "gold/traj_012.jsonl": "e2942559e03c0ea4fc0fa51e17c04399e15b96e9127b3bcb34073d0d60db6d7e",
+        "gold/traj_013.jsonl": "4b1d0abefebd4009699c6ed7125c77348bfb600b5d7ba5fe299aa13a5f952846",
+        "gold/traj_014.jsonl": "dc2d6d6f1a3f73186884f271602615a829b606272f173c67ec2ad05859cd02b8",
+        "gold/traj_015.jsonl": "7c1a2009c7dff570acb2d755e15407cc0dedf14c6a0f436bb11cee2604c3f0e8",
+        "gold/traj_016.jsonl": "2a8e9d32db009c7856671b1e02fa51f376f7677dc89a627efb4cc4a95c0abe2c",
+        "gold/traj_017.jsonl": "85e598680b4d4c49edad72986f6a60d2f26e05362c02831b58950d72ed3892dd",
+        "gold/traj_018.jsonl": "ee57748d399229ac53286a6b751ff8ba0398a43312e151d98b52eb7d1b6dee0e",
+        "gold/traj_019.jsonl": "d79fe5b1696045d795e3763163046b9bf76af1d4dcdf4aad4911913905a25093",
+        "gold/traj_020.jsonl": "135ee4077b72402de41991d60f03964bba112bf29583b9f45e7338ad40e4449d",
+        "gold_no_prospective/traj_001.jsonl": "6556ad8d92f9d25fabe2e925627548275e187a59304d84be4998837f72249e73",
+        "gold_no_prospective/traj_002.jsonl": "a295454793dd5439148bfb4c5f625d902fbc9c2af7b81377ae65d64d8da26148",
+        "gold_no_prospective/traj_003.jsonl": "11f339a77811b5156049aefa87a191f6192ef3b65f96202c201f447f29872ace",
+        "gold_no_prospective/traj_004.jsonl": "09ad561d19a3d64f63de2749e483efeb0966ad8f6af6c2331425b6773172fd99",
+        "gold_no_prospective/traj_005.jsonl": "647d92351fbbc6cee693827cf9b512badc010701d3ad2a2c05c5c2edd767f415",
+        "gold_no_prospective/traj_006.jsonl": "932007451595c3dfed01679fe367cdddfd2ff34b505a8640f5628ca0ae1517e6",
+        "gold_no_prospective/traj_007.jsonl": "d391b9f2df8afb219c24260e603d5d55260878f3724c047cb859916a85d628ae",
+        "gold_no_prospective/traj_008.jsonl": "6eb1b1d70a2cb5c27ebe958382d996aa06d9a8774b01f9bf326f104e7798a518",
+        "gold_no_prospective/traj_009.jsonl": "8014aa9d2a9e2a133a6cc7c3fab6b1bfb3a32df5191862cdac68278166588dda",
+        "gold_no_prospective/traj_010.jsonl": "e8f1f9635c0909c63d8cf06f53a89c39f595b170f50d06a83fe51a8e4118ba91",
+        "gold_no_prospective/traj_011.jsonl": "09372051ce77f9afd2ad7e170ddf03ed206cea274771c99486d476f67933e1a3",
+        "gold_no_prospective/traj_012.jsonl": "37589600be3f69eb3f1df3e726a3d89e5e84f6915e3ac632e67ab91748c281e4",
+        "gold_no_prospective/traj_013.jsonl": "8edbab6f288d3bdb5c88ad4d6d783daa24874c58020c52572a74d73b6673a082",
+        "gold_no_prospective/traj_014.jsonl": "2aff4e07628f2465d2ef4e5229e0a2ccb62bfaacc0a000eed77b646a05b5c0a5",
+        "gold_no_prospective/traj_015.jsonl": "aefea231bf72be306b809e04ecbc67c01622404b87c2553e6cc543757bb45ef1",
+        "gold_no_prospective/traj_016.jsonl": "730a055fdb33762f9543bf81e27f38aa9e8be38d47bbe3ca1ad181496d74e3b0",
+        "gold_no_prospective/traj_017.jsonl": "e0c8b35c81e5fdc45966d9f92b345d396646b0001536fbf43b9554b8dddf42e3",
+        "gold_no_prospective/traj_018.jsonl": "26b83a1e8550d71f5678c8d684effae4602fe840ad22cc798f3bb264d95dd83a",
+        "gold_no_prospective/traj_019.jsonl": "6505da9c6bdbbc21c42b917a5b01ddbfc05ed2024b2c47f833784904afb3bdeb",
+        "gold_no_prospective/traj_020.jsonl": "c2f7e00f611449e03c2d8b9f3da3b064420ed4a447ba761047e56355d870dc6e"
+      },
+      "repo_id": "hangyeul-lee/life-event-benchmark-v2-dialogues",
+      "requested_revision": "716a1ae9cddcfeeb2638ab61b5a3c25cd724b3bf",
+      "resolved_revision": "716a1ae9cddcfeeb2638ab61b5a3c25cd724b3bf",
+      "root": "/home/mikelee/life-event-benchmark-v2/experiment/data/stage2_2_reconstruct/raw/hf/hangyeul-lee--life-event-benchmark-v2-dialogues/716a1ae9cddcfeeb2638ab61b5a3c25cd724b3bf",
+      "schema_version": "stage2_2_raw_manifest-v1",
+      "tree_hash": "db2c24cbd9f02e295c53a1bf42617587f3337ca1b88314b43f15cdceee606edc"
+    },
+    "root": "/home/mikelee/life-event-benchmark-v2/experiment/data/stage2_2_reconstruct/prepared/db2c24cbd9f02e295c53a1bf42617587f3337ca1b88314b43f15cdceee606edc--stage2_2_observable_state-v2--stage2_2_reconstruct-v3--stage2_2_metrics-v2--maxout20000",
+    "scalar_closed_values": {
+      "education.child_education_stage": [
+        "preschool",
+        "primary",
+        "middle",
+        "high",
+        "adult",
+        null
+      ],
+      "education.self_education_status": [
+        "none",
+        "enrolled",
+        "study_abroad",
+        "on_leave",
+        "completed"
+      ],
+      "employment.employment_status": [
+        "employed",
+        "self_employed",
+        "unemployed",
+        "on_leave",
+        "retired",
+        "student",
+        "homemaker"
+      ],
+      "employment.income_stability": [
+        "stable",
+        "variable",
+        "reduced",
+        "unstable",
+        "retired",
+        null
+      ],
+      "employment.salary_account": [
+        "main_checking",
+        null
+      ],
+      "employment.salary_day": [
+        10,
+        15,
+        21,
+        25,
+        null
+      ],
+      "financial_products.pension_or_irp": [
+        "irp",
+        "receiving",
+        null
+      ],
+      "goals.child_education_goal": [
+        "active",
+        null
+      ],
+      "goals.emergency_fund": [
+        "building",
+        null
+      ],
+      "goals.housing_deposit_goal": [
+        "active",
+        null
+      ],
+      "goals.retirement_goal": [
+        "active",
+        null
+      ],
+      "household.marital_status": [
+        "single",
+        "married",
+        "separated",
+        "divorced",
+        "widowed"
+      ],
+      "household.spouse_or_partner": [
+        "spouse",
+        "partner",
+        null
+      ],
+      "housing.contract_type": [
+        "owner",
+        "jeonse",
+        "wolse",
+        "public_rental",
+        "company_housing",
+        "dormitory",
+        "family_home",
+        "other",
+        null
+      ],
+      "housing.mortgage_status": [
+        "none",
+        "active",
+        "closed"
+      ],
+      "housing.residence_status": [
+        "owner",
+        "jeonse",
+        "wolse",
+        "public_rental",
+        "company_housing",
+        "dormitory",
+        "family_home",
+        "other"
+      ]
+    },
+    "schema_version": "stage2_2_prepared_manifest-v1",
+    "value_kinds": {
+      "cashflow.recent_one_off_expense": "object {category:string, amount_krw:integer} or null",
+      "education.child_education_stage": "closed enum or null",
+      "education.self_education_status": "closed enum",
+      "employment.employer": "open string or null",
+      "employment.employment_status": "closed enum",
+      "employment.income_stability": "closed enum or null",
+      "employment.occupation": "open string or null",
+      "employment.salary_account": "closed enum or null",
+      "employment.salary_day": "closed integer enum or null",
+      "financial_products.checking_accounts": "array of closed enum strings",
+      "financial_products.loans": "array of closed enum strings",
+      "financial_products.pension_or_irp": "closed enum or null",
+      "financial_products.savings_accounts": "array of closed enum strings",
+      "goals.child_education_goal": "closed enum or null",
+      "goals.emergency_fund": "closed enum or null",
+      "goals.housing_deposit_goal": "closed enum or null",
+      "goals.retirement_goal": "closed enum or null",
+      "household.child_support_arrangement": "integer KRW or null",
+      "household.children": "array of integer ages",
+      "household.dependents": "integer",
+      "household.marital_status": "closed enum",
+      "household.spouse_or_partner": "closed enum or null",
+      "housing.address": "open string or null",
+      "housing.contract_type": "closed enum or null",
+      "housing.maintenance_fee_payee": "string or null",
+      "housing.mortgage_status": "closed enum",
+      "housing.primary_residence_property_id": "observable primary property object {address:open string, role:closed enum, mortgage_status:closed enum, ownership_status:closed enum} or null",
+      "housing.properties": "array of {address:open string, role:closed enum, mortgage_status:closed enum, ownership_status:closed enum}",
+      "housing.rent_amount": "integer KRW or null",
+      "housing.rent_payee": "string or null",
+      "housing.residence_status": "closed enum",
+      "profile.age": "integer",
+      "profile.locale": "string",
+      "profile.region": "string"
+    }
+  },
+  "reasoning_policy": "deployment_realistic_low",
+  "schema_version": "evaluation-output-manifest-v2",
+  "started_at": "2026-07-31T01:18:57.234093+00:00",
+  "status": "RUNNING",
+  "top_k": null
+}

@@ -182,6 +182,7 @@ def create_method(
             stage2_2_retrieval.get("max_evidence_sessions", 20),
         )
     )
+
     def gemini_reader() -> Reader:
         return _reader(
             "google",
@@ -201,6 +202,39 @@ def create_method(
             opus_timeout_seconds,
             dict(generation_settings["anthropic"]),
         )
+
+    def direct_full_context(
+        method: str,
+        provider: str,
+        model: str,
+    ) -> FullContextMethod:
+        settings = dict(generation_settings[provider])
+        api_surface = None
+        if (
+            provider == "openai"
+            and stage == "stage1_occurred_event_evidence_pairs"
+        ):
+            settings = {
+                "reasoning_effort": settings["reasoning"]["effort"],
+                "verbosity": settings["text"]["verbosity"],
+                "store": settings["store"],
+            }
+            api_surface = "chat_completions"
+        return FullContextMethod(
+            method,
+            _reader(
+                provider,
+                model,
+                mock,
+                max_tokens,
+                timeout_seconds,
+                settings,
+                api_surface=api_surface,
+            ),
+            system,
+            stage1_system=stage1_system,
+        )
+
     if method_id == "fc_claude_opus_5":
         return FullContextMethod(
             method_id,
@@ -221,6 +255,12 @@ def create_method(
             opus_4_8_reader(),
             system,
             stage1_system=stage1_system,
+        )
+    if method_id == "fc_claude_sonnet_4_6":
+        return direct_full_context(
+            method_id,
+            "anthropic",
+            str(models["claude_sonnet_4_6"]),
         )
     openrouter_models = models.get("openrouter") or {}
     openrouter_timeout_seconds = float(
@@ -280,6 +320,12 @@ def create_method(
             system,
             stage1_system=stage1_system,
         )
+    if method_id == "fc_gemini_3_5_flash":
+        return direct_full_context(
+            method_id,
+            "google",
+            str(models["gemini_3_5_flash"]),
+        )
     if method_id == "fc_gpt_5_6_sol":
         return FullContextMethod(
             method_id,
@@ -310,6 +356,17 @@ def create_method(
             ),
             system,
             stage1_system=stage1_system,
+        )
+    if method_id in {"fc_gpt_5_6_terra", "fc_gpt_5_6_luna"}:
+        model_key = (
+            "openai_terra"
+            if method_id == "fc_gpt_5_6_terra"
+            else "openai_luna"
+        )
+        return direct_full_context(
+            method_id,
+            "openai",
+            str(models[model_key]),
         )
     if method_id == "oracle_rel_gpt_5_6_sol":
         return OracleRelevantContextMethod(

@@ -52,6 +52,15 @@ OPENROUTER_METHODS = tuple(
 )
 ANTHROPIC_METHODS = tuple(
     method for method in NINE_METHODS if method not in OPENROUTER_METHODS
+) + ("fc_claude_sonnet_4_6",)
+OPENAI_METHODS = (
+    "fc_gpt_5_6_sol",
+    "fc_gpt_5_6_terra",
+    "fc_gpt_5_6_luna",
+)
+GOOGLE_METHODS = (
+    "fc_gemini_3_1_pro",
+    "fc_gemini_3_5_flash",
 )
 SNAPSHOT_METHODS = (
     "bm25_claude_opus_4_8",
@@ -444,9 +453,9 @@ def preflight_paid(plan: dict[str, Any]) -> None:
         "OPENROUTER_API_KEY"
     ):
         missing_keys.append("OPENROUTER_API_KEY")
-    if "fc_gpt_5_6_sol" in methods and not os.environ.get("OPENAI_API_KEY"):
+    if methods & set(OPENAI_METHODS) and not os.environ.get("OPENAI_API_KEY"):
         missing_keys.append("OPENAI_API_KEY")
-    if "fc_gemini_3_1_pro" in methods and not (
+    if methods & set(GOOGLE_METHODS) and not (
         os.environ.get("GOOGLE_API_KEY")
         or os.environ.get("GEMINI_API_KEY")
     ):
@@ -471,7 +480,11 @@ def preflight_paid(plan: dict[str, Any]) -> None:
         "mem0_claude_opus_4_8": "mem0",
         "letta_claude_opus_4_8": "letta_client",
         "fc_gpt_5_6_sol": "openai",
+        "fc_gpt_5_6_terra": "openai",
+        "fc_gpt_5_6_luna": "openai",
         "fc_gemini_3_1_pro": "google.genai",
+        "fc_claude_sonnet_4_6": "anthropic",
+        "fc_gemini_3_5_flash": "google.genai",
         **{method: "openai" for method in OPENROUTER_METHODS},
     }
     missing_modules = sorted(
@@ -805,8 +818,21 @@ def cost_latency_row(
 ) -> dict[str, Any]:
     metadata = row.get("response_metadata") or {}
     usage = metadata.get("usage") or {}
-    input_tokens = usage.get("input_tokens", usage.get("prompt_tokens"))
-    output_tokens = usage.get("output_tokens", usage.get("completion_tokens"))
+    input_tokens = usage.get(
+        "input_tokens",
+        usage.get("prompt_tokens", usage.get("prompt_token_count")),
+    )
+    output_tokens = usage.get(
+        "output_tokens",
+        usage.get("completion_tokens", usage.get("candidates_token_count")),
+    )
+    # Gemini bills reasoning/thinking tokens as output tokens, but reports
+    # them separately from visible candidate tokens.
+    if (
+        output_tokens is not None
+        and usage.get("thoughts_token_count") is not None
+    ):
+        output_tokens = int(output_tokens) + int(usage["thoughts_token_count"])
     memory_usage = metadata.get("memory_inference_usage") or []
     price = (
         (provider_lock.get("methods") or {})
@@ -824,6 +850,22 @@ def cost_latency_row(
         "fc_gemini_3_1_pro": {
             "prompt_usd_per_token": 2 / 1_000_000,
             "completion_usd_per_token": 12 / 1_000_000,
+        },
+        "fc_gpt_5_6_terra": {
+            "prompt_usd_per_token": 2.5 / 1_000_000,
+            "completion_usd_per_token": 15 / 1_000_000,
+        },
+        "fc_gpt_5_6_luna": {
+            "prompt_usd_per_token": 1 / 1_000_000,
+            "completion_usd_per_token": 6 / 1_000_000,
+        },
+        "fc_claude_sonnet_4_6": {
+            "prompt_usd_per_token": 3 / 1_000_000,
+            "completion_usd_per_token": 15 / 1_000_000,
+        },
+        "fc_gemini_3_5_flash": {
+            "prompt_usd_per_token": 1.5 / 1_000_000,
+            "completion_usd_per_token": 9 / 1_000_000,
         },
     }.get(str(row["method_id"]), {})
     estimated_cost = None

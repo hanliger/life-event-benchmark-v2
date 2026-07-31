@@ -13,6 +13,7 @@ from financial_memory_experiment.stage2_2 import stage2_2_item_path
 from financial_memory_experiment.stage2_2_runner import (
     DEFAULT_METHODS,
     DIRECT_API_METHODS,
+    build_parser,
     _load_approved_environment,
     _materialize_state_pairs,
     _selected_methods,
@@ -44,9 +45,30 @@ def test_stage2_2_paid_environment_loads_repo_root_fallback(
 
 def test_direct_api_methods_are_explicit_without_changing_method9_all():
     assert _selected_methods("all") == list(DEFAULT_METHODS)
+    assert _selected_methods("direct3") == list(DIRECT_API_METHODS)
     assert _selected_methods(
-        "fc_gpt_5_6_sol,fc_claude_opus_4_8"
+        "fc_gpt_5_6_sol,fc_claude_opus_4_8,fc_gemini_3_5_flash"
     ) == list(DIRECT_API_METHODS)
+    assert _selected_methods("fc_gemini_3_1_pro") == [
+        "fc_gemini_3_1_pro"
+    ]
+    assert _selected_methods(
+        "fc_gpt_5_6_terra,fc_gpt_5_6_luna,fc_claude_sonnet_4_6"
+    ) == [
+        "fc_gpt_5_6_terra",
+        "fc_gpt_5_6_luna",
+        "fc_claude_sonnet_4_6",
+    ]
+
+
+def test_stage2_direct_plan_defaults_to_low_reasoning():
+    args = build_parser().parse_args(
+        ["plan", "--budget-cap-usd", "1", "--methods", "direct3"]
+    )
+
+    assert args.reasoning_policy == "deployment_realistic_low"
+    assert args.openai_max_in_flight == 20
+    assert args.google_max_in_flight == 20
 
 
 def test_nine_methods_share_stage2_2_contract_on_mock_grid(tmp_path):

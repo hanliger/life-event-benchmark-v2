@@ -817,13 +817,32 @@ def summarize_predictions(
     stages = sorted({stage for method in results.values() for stage in method})
     for stage in stages:
         stage_rows = [row for row in rows if str(row["stage"]) == stage]
-        stage_scores = {
-            method: _trajectory_scores(
-                stage,
-                [row for row in stage_rows if str(row["method_id"]) == method],
-            )
-            for method in methods
-        }
+        if stage == STAGE1:
+            stage_scores = {}
+            for method in methods:
+                by_trajectory: dict[str, list[float]] = defaultdict(list)
+                for row in stage_rows:
+                    if str(row["method_id"]) != method:
+                        continue
+                    by_trajectory[str(row["trajectory_id"])].append(
+                        float((row.get("metrics") or {})[HEADLINE_METRIC])
+                    )
+                stage_scores[method] = {
+                    trajectory: mean(values)
+                    for trajectory, values in by_trajectory.items()
+                }
+        else:
+            stage_scores = {
+                method: _trajectory_scores(
+                    stage,
+                    [
+                        row
+                        for row in stage_rows
+                        if str(row["method_id"]) == method
+                    ],
+                )
+                for method in methods
+            }
         paired[stage] = {
             f"{left}__minus__{right}": _paired_bootstrap_delta(
                 stage_scores[left],

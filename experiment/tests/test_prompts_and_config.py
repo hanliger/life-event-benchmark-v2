@@ -13,7 +13,7 @@ from financial_memory_experiment.paths import ExperimentPaths
 from financial_memory_experiment.prompts import build_query, gold_answer, parse_answer
 
 
-def test_nine_stage2_methods_and_three_stage1_models():
+def test_nine_stage2_methods_and_direct_stage1_profiles():
     cfg = load_experiment_config()
     assert len(method_ids()) == 9
     assert len(set(method_ids())) == 9
@@ -41,11 +41,25 @@ def test_nine_stage2_methods_and_three_stage1_models():
         "request_timeout_seconds": 600,
         "parse_retries": 0,
     }
+    assert profiles["small4"] == {
+        "methods": [
+            "fc_gpt_5_6_terra",
+            "fc_gpt_5_6_luna",
+            "fc_claude_sonnet_4_6",
+            "fc_gemini_3_5_flash",
+        ],
+        "request_timeout_seconds": 600,
+        "parse_retries": 0,
+    }
     assert profiles["method9"]["methods"] == method_ids()
     assert profiles["method9"]["request_timeout_seconds"] == 300
     assert profiles["method9"]["parse_retries"] == 1
     assert cfg["models"]["claude_opus_4_8"] == "claude-opus-4-8"
     assert cfg["models"]["claude_opus_4_8_request_timeout_seconds"] == 300
+    assert cfg["models"]["claude_sonnet_4_6"] == "claude-sonnet-4-6"
+    assert cfg["models"]["openai_terra"] == "gpt-5.6-terra"
+    assert cfg["models"]["openai_luna"] == "gpt-5.6-luna"
+    assert cfg["models"]["gemini_3_5_flash"] == "gemini-3.5-flash"
     assert cfg["models"]["final_answer_max_tokens"] == 4096
     assert cfg["stage2_2_reconstruct"]["smoke"]["max_output_tokens"] == 20000
     assert cfg["models"]["reasoning_policy"] == "deployment_realistic_low"

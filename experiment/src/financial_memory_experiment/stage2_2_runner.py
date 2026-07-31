@@ -60,9 +60,19 @@ DEFAULT_METHODS = NINE_METHODS
 DIRECT_API_METHODS = (
     "fc_gpt_5_6_sol",
     "fc_claude_opus_4_8",
+    "fc_gemini_3_5_flash",
+)
+ADDITIONAL_DIRECT_API_METHODS = (
+    "fc_gemini_3_1_pro",
+    "fc_gpt_5_6_terra",
+    "fc_gpt_5_6_luna",
+    "fc_claude_sonnet_4_6",
+)
+ALL_DIRECT_API_METHODS = tuple(
+    dict.fromkeys((*DIRECT_API_METHODS, *ADDITIONAL_DIRECT_API_METHODS))
 )
 SELECTABLE_METHODS = tuple(
-    dict.fromkeys((*DEFAULT_METHODS, *DIRECT_API_METHODS))
+    dict.fromkeys((*DEFAULT_METHODS, *ALL_DIRECT_API_METHODS))
 )
 TASK = "stage2_2"
 APPROVAL_PHRASE = "I_APPROVE_STAGE2_2_PAID"
@@ -75,9 +85,11 @@ def _checkpoint(item: dict[str, Any]) -> int:
 
 def _selected_methods(value: str) -> list[str]:
     # Preserve `all` as the independently runnable nine-method comparison.
-    # Direct-API experiments must name their methods explicitly.
+    # The three direct-API models remain independently runnable.
     if value == "all":
         return list(DEFAULT_METHODS)
+    if value == "direct3":
+        return list(DIRECT_API_METHODS)
     return _parse_selection(
         value, all_values=SELECTABLE_METHODS, label="methods"
     )
@@ -249,7 +261,7 @@ def command_plan(args: argparse.Namespace) -> None:
     paths = ExperimentPaths.discover()
     configured = method_ids(paths)
     methods = _selected_methods(args.methods)
-    allowed = set(configured) | set(DIRECT_API_METHODS)
+    allowed = set(configured) | set(ALL_DIRECT_API_METHODS)
     if not set(methods) <= allowed:
         raise ValueError("selected methods are not in the frozen config")
     trajectories = _parse_selection(
@@ -318,8 +330,13 @@ def command_plan(args: argparse.Namespace) -> None:
                 f"{sorted(failures)}: estimated total={estimated_total}"
             )
     run_dir = new_run_dir(paths, TASK)
+    direct_api_plan = set(methods) <= set(ALL_DIRECT_API_METHODS)
     plan_body = {
-        "schema_version": "stage2_2_nine_method_plan-v1",
+        "schema_version": (
+            "stage2_2_direct_api_plan-v1"
+            if direct_api_plan
+            else "stage2_2_nine_method_plan-v1"
+        ),
         "run_id": run_dir.name,
         "created_at_kst": datetime.now(
             ZoneInfo("Asia/Seoul")
@@ -340,6 +357,8 @@ def command_plan(args: argparse.Namespace) -> None:
             "checkpoint_workers": args.checkpoint_workers,
             "max_in_flight": args.max_in_flight,
             "anthropic_max_in_flight": args.anthropic_max_in_flight,
+            "openai_max_in_flight": args.openai_max_in_flight,
+            "google_max_in_flight": args.google_max_in_flight,
             "openrouter_max_in_flight": args.openrouter_max_in_flight,
         },
         "retrieval": {
@@ -349,6 +368,7 @@ def command_plan(args: argparse.Namespace) -> None:
         "request_timeout_seconds": args.request_timeout_seconds,
         "provider_retries": args.provider_retries,
         "parse_retries": args.parse_retries,
+        "reasoning_policy": args.reasoning_policy,
         "provider_lock_status": provider_lock["status"],
         "context_precheck": context_precheck,
         "prompt_audit_required": True,
@@ -465,6 +485,9 @@ def _run_grid(
                 plan["retrieval"]["max_evidence"]
             ),
         },
+        reasoning_policy=str(
+            plan.get("reasoning_policy", "deployment_realistic_low")
+        ),
     )
 
 
@@ -896,8 +919,20 @@ def command_report(args: argparse.Namespace) -> None:
     _write_auxiliary_metrics(run_dir, prediction_paths, report)
     _materialize_state_pairs(paths, run_dir, prediction_paths)
     (run_dir / "report" / "figures").mkdir(parents=True, exist_ok=True)
+    plan_path = run_dir / "immutable_plan.json"
+    plan = (
+        json.loads(plan_path.read_text(encoding="utf-8"))
+        if plan_path.exists()
+        else {}
+    )
+    plan_methods = set(plan.get("methods") or [])
+    title = (
+        "Direct-API Low-Reasoning Models"
+        if plan_methods and plan_methods <= set(ALL_DIRECT_API_METHODS)
+        else "9-Method Comparison"
+    )
     lines = [
-        "# Stage 2.2 Reconstruction — 9-Method Comparison",
+        f"# Stage 2.2 Reconstruction — {title}",
         "",
         "This report uses checkpoint-then-trajectory macro aggregation. "
         "Path metrics first aggregate 20 checkpoints within each "
@@ -957,25 +992,62 @@ def command_combine(args: argparse.Namespace) -> None:
                 "run_dir": str(source_dir),
                 "run_id": plan["run_id"],
                 "plan_sha256": plan["plan_sha256"],
+                "methods": plan["methods"],
                 "trajectories": plan["trajectories"],
                 "prediction_count": plan["prediction_count"],
             }
         )
 
-    methods = list(source_plans[0]["methods"])
+    methods = list(
+        dict.fromkeys(
+            method
+            for plan in source_plans
+            for method in plan["methods"]
+        )
+    )
     checkpoints = list(source_plans[0]["checkpoints"])
     for plan in source_plans[1:]:
-        if list(plan["methods"]) != methods:
-            raise RuntimeError("source method grids differ")
         if list(plan["checkpoints"]) != checkpoints:
             raise RuntimeError("source checkpoint grids differ")
         for field in (
             "max_output_tokens",
             "provider_retries",
-            "parse_retries",
         ):
             if plan.get(field) != source_plans[0].get(field):
                 raise RuntimeError(f"source plans differ on {field}")
+        if (
+            plan.get("reasoning_policy") or "deployment_realistic_low"
+        ) != (
+            source_plans[0].get("reasoning_policy")
+            or "deployment_realistic_low"
+        ):
+            raise RuntimeError("source plans differ on reasoning_policy")
+
+    parse_retry_policies = sorted(
+        {int(plan.get("parse_retries", 0)) for plan in source_plans}
+    )
+    parse_retry_disclosure = None
+    if len(parse_retry_policies) > 1:
+        retried_rows = [
+            (
+                str(row["method_id"]),
+                str(row["trajectory_id"]),
+                int(row["query_checkpoint"]),
+                int(row.get("retry_count", 0)),
+            )
+            for row in source_rows
+            if int(row.get("retry_count", 0)) != 0
+        ]
+        if retried_rows:
+            raise RuntimeError(
+                "source plans differ on parse_retries and some source rows "
+                f"used retries: {retried_rows[:5]}"
+            )
+        parse_retry_disclosure = (
+            "Source plans declared different parse-retry limits "
+            f"({parse_retry_policies}), but every combined row has "
+            "retry_count=0."
+        )
 
     keys = [
         (
@@ -1034,9 +1106,16 @@ def command_combine(args: argparse.Namespace) -> None:
         "trajectories": trajectories,
         "checkpoints": checkpoints,
         "prediction_count": len(source_rows),
+        "reasoning_policy": (
+            source_plans[0].get("reasoning_policy")
+            or "deployment_realistic_low"
+        ),
+        "parse_retry_policies": parse_retry_policies,
+        "parse_retry_disclosure": parse_retry_disclosure,
         "sources": source_records,
         "reuse_disclosure": (
-            "traj_010 cells come from the inspected smoke and were not rerun"
+            "Rows come from completed source runs and were not rerun during "
+            "combination."
         ),
     }
     plan = {**plan_body, "plan_sha256": sha256_json(plan_body)}
@@ -1066,27 +1145,31 @@ def command_combine(args: argparse.Namespace) -> None:
                 "trajectory_id": trajectory,
                 "input_item_ids": [str(row["item_id"]) for row in rows],
                 "completed_items": len(rows),
+                "output_sha256": sha256_file(output),
                 "source_plan_sha256": next(
                     record["plan_sha256"]
                     for record in source_records
-                    if trajectory in record["trajectories"]
+                    if method in record["methods"]
+                    and trajectory in record["trajectories"]
                 ),
             },
         )
 
-    write_json(
-        run_dir / "run_manifest.json",
-        {
-            "schema_version": "stage2_2_combined_run_manifest-v1",
-            "status": "GENERATED",
-            "run_id": run_dir.name,
-            "plan_sha256": plan["plan_sha256"],
-            "source_runs": source_records,
-            "complete_prediction_files": len(grouped),
-        },
-    )
+    combined_manifest = {
+        "schema_version": "stage2_2_combined_run_manifest-v1",
+        "status": "COMBINING",
+        "run_id": run_dir.name,
+        "plan_sha256": plan["plan_sha256"],
+        "source_runs": source_records,
+        "complete_prediction_files": len(grouped),
+    }
+    write_json(run_dir / "run_manifest.json", combined_manifest)
     _validate_complete_grid(run_dir, plan)
     command_report(argparse.Namespace(run_dir=str(run_dir)))
+    write_json(
+        run_dir / "run_manifest.json",
+        {**combined_manifest, "status": "GENERATED"},
+    )
     print(
         json.dumps(
             {
@@ -1162,12 +1245,22 @@ def build_parser() -> argparse.ArgumentParser:
     plan.add_argument("--checkpoint-workers", type=int, default=20)
     plan.add_argument("--max-in-flight", type=int, default=60)
     plan.add_argument("--anthropic-max-in-flight", type=int, default=20)
+    plan.add_argument("--openai-max-in-flight", type=int, default=20)
+    plan.add_argument("--google-max-in-flight", type=int, default=20)
     plan.add_argument("--openrouter-max-in-flight", type=int, default=40)
     plan.add_argument("--retrieval-top-k-per-group", type=int, default=5)
     plan.add_argument("--retrieval-max-evidence", type=int, default=20)
     plan.add_argument("--request-timeout-seconds", type=int, default=300)
     plan.add_argument("--provider-retries", type=int, default=0)
     plan.add_argument("--parse-retries", type=int, default=1)
+    plan.add_argument(
+        "--reasoning-policy",
+        choices=(
+            "deployment_realistic_low",
+            "deployment_realistic_medium",
+        ),
+        default="deployment_realistic_low",
+    )
     plan.add_argument("--budget-cap-usd", type=float, required=True)
     plan.add_argument("--estimated-usd", type=float)
     plan.add_argument("--provider-lock-file")

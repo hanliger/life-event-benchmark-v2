@@ -20,12 +20,13 @@ from financial_memory_experiment.metrics import (
     write_tables,
 )
 from financial_memory_experiment.paths import ExperimentPaths
-from financial_memory_experiment.run_harness import attempt_state
+from financial_memory_experiment.run_harness import attempt_state, cost_latency_row
 from financial_memory_experiment.stage1 import (
     STAGE1,
     STAGE1_API3_METHODS,
     STAGE1_MAX_OUTPUT_TOKENS,
     STAGE1_METHOD9_METHODS,
+    STAGE1_SMALL4_METHODS,
     audit_rendered_prompt,
 )
 from financial_memory_experiment.util import read_jsonl, write_json
@@ -44,6 +45,28 @@ _TEXT = {
     3: "전세 계약을 갱신했습니다.",
     4: "서울로 이사를 완료했습니다.",
 }
+
+
+def test_cost_latency_row_counts_gemini_thinking_as_billed_output():
+    result = cost_latency_row(
+        {
+            "method_id": "fc_gemini_3_5_flash",
+            "trajectory_id": "traj_001",
+            "query_checkpoint": 15,
+            "response_metadata": {
+                "usage": {
+                    "prompt_token_count": 1000,
+                    "candidates_token_count": 40,
+                    "thoughts_token_count": 60,
+                }
+            },
+        },
+        {},
+    )
+
+    assert result["input_tokens"] == 1000
+    assert result["output_tokens"] == 100
+    assert result["estimated_cost_usd"] == pytest.approx(0.0024)
 
 
 @pytest.fixture()
@@ -162,8 +185,8 @@ def stage1_paths(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
 
 @pytest.mark.parametrize(
     "profile_methods",
-    [STAGE1_API3_METHODS, STAGE1_METHOD9_METHODS],
-    ids=["api3", "method9"],
+    [STAGE1_API3_METHODS, STAGE1_SMALL4_METHODS, STAGE1_METHOD9_METHODS],
+    ids=["api3", "small4", "method9"],
 )
 def test_stage1_profiles_run_independently_and_report(
     stage1_paths, tmp_path, profile_methods
@@ -270,7 +293,7 @@ def test_stage1_profiles_run_independently_and_report(
         (
             run_dir
             / "answer_pairs"
-            / "fc_claude_opus_4_8"
+            / profile_methods[0]
             / "traj_001"
             / "cp_004.json"
         ).read_text(encoding="utf-8")
@@ -287,7 +310,11 @@ def test_stage1_offline_prompt_render_passes_audit_for_all_methods(
     stage1_paths,
 ):
     all_profile_methods = tuple(
-        dict.fromkeys(STAGE1_API3_METHODS + STAGE1_METHOD9_METHODS)
+        dict.fromkeys(
+            STAGE1_API3_METHODS
+            + STAGE1_SMALL4_METHODS
+            + STAGE1_METHOD9_METHODS
+        )
     )
     for method_id in all_profile_methods:
         for checkpoint in CHECKPOINTS:
@@ -370,6 +397,12 @@ def test_stage1_checkpoint_cache_resumes_only_missing_items(stage1_paths):
             0,
         ),
         (
+            "small4",
+            "fc_gpt_5_6_terra,fc_gemini_3_5_flash",
+            600,
+            0,
+        ),
+        (
             "method9",
             "fc_claude_opus_4_8,bm25_claude_opus_4_8",
             300,
@@ -421,7 +454,7 @@ def test_stage1_plan_audit_report_commands(
     assert plan["execution_profile"] == profile
     assert plan["schema_version"] == stage1_runner.PROFILE_PLAN_SCHEMAS[profile]
     assert Path(plan["run_dir"]).parent.name == stage1_runner.PROFILE_TASKS[profile]
-    assert plan["concurrency"]["model_workers"] in (3, 9)
+    assert plan["concurrency"]["model_workers"] in (3, 4, 9)
     assert plan["request_timeout_seconds"] == timeout_seconds
     assert plan["parse_retries"] == parse_retries
     assert plan["provider_lock_status"] == "NOT_APPLICABLE"
@@ -448,7 +481,7 @@ def test_stage1_plan_audit_report_commands(
         finally:
             flock(lock.fileno(), LOCK_UN)
 
-    other_profile = "method9" if profile == "api3" else "api3"
+    other_profile = "method9" if profile != "method9" else "api3"
     with pytest.raises(ValueError, match="run plan belongs"):
         stage1_runner.command_audit_prompt(
             argparse.Namespace(
@@ -504,4 +537,6 @@ def test_stage1_plan_audit_report_commands(
     )
     assert sorted(metrics["methods"]) == sorted(plan["methods"])
     # Stable per-trajectory copies are published next to the attempt files.
-    assert (run_dir / "raw" / "fc_claude_opus_4_8" / "traj_001.jsonl").exists()
+    assert (
+        run_dir / "raw" / plan["methods"][0] / "traj_001.jsonl"
+    ).exists()

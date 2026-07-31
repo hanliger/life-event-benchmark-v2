@@ -33,6 +33,12 @@ STAGE1_API3_METHODS = (
     "fc_claude_opus_4_8",
     "fc_gemini_3_1_pro",
 )
+STAGE1_SMALL4_METHODS = (
+    "fc_gpt_5_6_terra",
+    "fc_gpt_5_6_luna",
+    "fc_claude_sonnet_4_6",
+    "fc_gemini_3_5_flash",
+)
 STAGE1_METHOD9_METHODS = (
     "fc_claude_opus_4_8",
     "bm25_claude_opus_4_8",
@@ -47,6 +53,11 @@ STAGE1_METHOD9_METHODS = (
 STAGE1_EXECUTION_PROFILES = {
     "api3": {
         "methods": STAGE1_API3_METHODS,
+        "request_timeout_seconds": 600,
+        "parse_retries": 0,
+    },
+    "small4": {
+        "methods": STAGE1_SMALL4_METHODS,
         "request_timeout_seconds": 600,
         "parse_retries": 0,
     },

@@ -321,8 +321,141 @@
       "prior_conservative_spent_usd": 22.143,
       "recorded_at": "2026-07-31",
       "status": "active"
+    },
+    {
+      "amount_usd": 220.0,
+      "kind": "plan_reservation",
+      "note": "Reconciled Stage 1 small-model family grid across 20 trajectories and 20 checkpoints. All 1,600 predictions completed. Persisted usage is $180.022498. Three first-attempt Claude Sonnet 4.6 requests returned no usable row; their successful continuation inputs (326,128 tokens) plus the full 60,000-token combined output cap add a conservative $1.878384 unknown-billing upper bound, for $181.900882 total rounded up to $181.901. Gemini 3.5 Flash rate-limit/service errors had no usage metadata; 355 successful cells were reused and only 45 missing cells were continued at one request in flight. Provider billing remains the final authority.",
+      "plan_sha256": "c589ddaecc1ae1800b8414784f6ef95b09dd0c6c2acc1a16c8debeb9ec3cd1ff",
+      "source_plan_sha256": "a452627e7fba7489af21abb80144624102b766742758f2986989c4572c473d2b",
+      "reconciled_amount_usd": 181.901,
+      "status": "reconciled_usage_plus_unknown_upper_bound",
+      "usage": {
+        "fc_claude_sonnet_4_6": {
+          "input_tokens": 24883854,
+          "output_tokens": 1726019,
+          "unknown_request_input_tokens": 326128,
+          "unknown_request_max_output_tokens": 60000
+        },
+        "fc_gemini_3_5_flash": {
+          "input_tokens": 13604739,
+          "output_tokens_including_thoughts": 109228
+        },
+        "fc_gpt_5_6_luna": {
+          "input_tokens": 14210116,
+          "output_tokens": 300064
+        },
+        "fc_gpt_5_6_terra": {
+          "input_tokens": 14210116,
+          "output_tokens": 436980
+        }
+      }
+    },
+    {
+      "amount_usd": 0.0,
+      "kind": "allowance_reset",
+      "new_allowance_usd": 450.0,
+      "note": "The user explicitly directed the Stage 2.2 direct-API main experiment with GPT-5.6 Sol, Claude Opus 4.8, and Gemini 3.5 Flash. The run reuses the completed low-reasoning traj_010 Sol/Opus smoke, resumes 60 verified cells from the interrupted run, and executes Gemini traj_010. The approximately $333-$363 incremental estimate requires a fresh allowance above the remaining prior $350 allowance.",
+      "prior_conservative_spent_usd": 181.901,
+      "recorded_at": "2026-07-31",
+      "status": "active"
+    },
+    {
+      "amount_usd": 330.0,
+      "kind": "plan_reservation",
+      "note": "Reconciled to the persisted usage-based estimate for the completed Stage 2.2 GPT-5.6 Sol and Claude Opus 4.8 main run over the 19 non-smoke trajectories: GPT-5.6 Sol $93.563305 and Claude Opus 4.8 $197.995985; $291.559290 total rounded up to $291.560. This includes 60 successful cells recovered from the earlier interrupted run but excludes the separately reconciled traj_010 smoke. Provider billing remains the final authority and may include unpersisted requests from the earlier interruption.",
+      "plan_sha256": "7ee5edb1ac1696fae3a13f5dde08a93157c2b163929d453919e6c8c640e1d8a0",
+      "reconciled_amount_usd": 291.56,
+      "status": "reconciled_persisted_usage_estimate",
+      "usage": {
+        "fc_claude_opus_4_8": {
+          "input_tokens": 25069877,
+          "output_tokens": 2905864
+        },
+        "fc_gpt_5_6_sol": {
+          "input_tokens": 14557457,
+          "output_tokens": 692534
+        }
+      }
+    },
+    {
+      "amount_usd": 80.0,
+      "kind": "plan_reservation",
+      "note": "Reconciled to the persisted usage-based estimate for the completed Stage 2.2 Gemini 3.5 Flash run over all 20 trajectories: $28.676412 rounded up to $28.677. All 400 cells completed with no provider or parse retry. Provider billing remains the final authority.",
+      "plan_sha256": "5b327f0bb241d02ebfc55770e98cc05eb5872a880e402c0018b3018c6ef9f009",
+      "reconciled_amount_usd": 28.677,
+      "status": "reconciled_usage_upper_bound",
+      "usage": {
+        "fc_gemini_3_5_flash": {
+          "input_tokens": 15031482,
+          "output_tokens_including_thoughts": 681021
+        }
+      }
+    },
+    {
+      "amount_usd": 30.0,
+      "kind": "plan_reservation",
+      "note": "Reconciled to the persisted usage-based estimate for the 207 newly executed Stage 1 Gemini 3.1 Pro cells: $19.990822 rounded up to $19.991. The other 193 cells were verified cache from the prior quota-interrupted run and are not charged again in this allowance period. The completed 400-cell Gemini result has $38.431338 of persisted usage across both executions. Provider billing remains the final authority.",
+      "plan_sha256": "c245e0e528eb1775b4dee8632ddcdde08f6d900f997d23184098d87ce269adf9",
+      "reconciled_amount_usd": 19.991,
+      "status": "reconciled_usage_upper_bound",
+      "usage": {
+        "fc_gemini_3_1_pro": {
+          "input_tokens": 7080347,
+          "output_tokens_including_thoughts": 485844
+        }
+      }
+    },
+    {
+      "amount_usd": 60.0,
+      "kind": "plan_reservation",
+      "note": "Reconciled to the persisted usage-based estimate for the completed 400-cell Stage 2.2 Gemini 3.1 Pro run: $43.036608 rounded up to $43.037. No provider retry was used; one final parse error and five final schema failures remain in the scored grid. Provider billing remains the final authority.",
+      "plan_sha256": "d9836e05113eb2befa80d94aca1278e5f80d519312f639c16098df4b67a3e57c",
+      "reconciled_amount_usd": 43.037,
+      "status": "reconciled_usage_upper_bound",
+      "usage": {
+        "fc_gemini_3_1_pro": {
+          "input_tokens": 15031482,
+          "output_tokens_including_thoughts": 1081137
+        }
+      }
+    },
+    {
+      "amount_usd": 0.0,
+      "kind": "allowance_reset",
+      "new_allowance_usd": 250.0,
+      "note": "The user explicitly directed completion of the Stage 2.2 smaller-model experiment with GPT-5.6 Terra, GPT-5.6 Luna, and Claude Sonnet 4.6, reusing the already completed Gemini 3.5 Flash result. Stage 1 usage and observed Stage 2 output expansion imply an approximately $170-$195 incremental estimate. Prior entries remain immutable audit history and are excluded from conservative_spent_usd after this marker.",
+      "prior_conservative_spent_usd": 383.265,
+      "recorded_at": "2026-07-31",
+      "status": "active"
+    },
+    {
+      "amount_usd": 230.0,
+      "kind": "plan_reservation",
+      "note": "Reconciled the completed Stage 2.2 smaller-model run over GPT-5.6 Terra, GPT-5.6 Luna, and Claude Sonnet 4.6. Persisted successful-row usage is $197.512701. Claude returned 22 completed empty responses and one final request was aborted in flight; treating all 23 unknown-usage requests as billed at their matching input size (using the maximum observed 124,288-token Sonnet input for the terminal traj_009/cp300 requests) plus the full 20,000-token output cap adds a conservative $15.128097 upper bound. The combined $212.640798 is rounded up to $212.641. The terminal traj_009/cp300 cell is explicitly scored incorrect. Provider billing remains the final authority.",
+      "plan_sha256": "a5c8d960a6e54ed091ef9437c10387a6604603a15eec876dfc317a0e838368d2",
+      "reconciled_amount_usd": 212.641,
+      "status": "reconciled_usage_plus_unknown_upper_bound",
+      "usage": {
+        "fc_claude_sonnet_4_6": {
+          "input_tokens": 26019434,
+          "output_tokens": 3504642,
+          "unknown_completed_empty_responses": 22,
+          "unknown_aborted_in_flight_requests": 1,
+          "unknown_request_input_tokens_upper_bound": 2742699,
+          "unknown_request_max_output_tokens": 460000
+        },
+        "fc_gpt_5_6_luna": {
+          "input_tokens": 15318996,
+          "output_tokens": 499233
+        },
+        "fc_gpt_5_6_terra": {
+          "input_tokens": 15318996,
+          "output_tokens": 684859
+        }
+      }
     }
   ],
   "schema_version": "paid-smoke-ledger-v1",
-  "standing_limit_usd": 350.0
+  "standing_limit_usd": 250.0
 }

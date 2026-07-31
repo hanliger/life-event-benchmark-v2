@@ -55,6 +55,7 @@ from .stage1 import (
     STAGE1_EXECUTION_PROFILES,
     STAGE1_METHOD9_METHODS,
     STAGE1_MAX_OUTPUT_TOKENS,
+    STAGE1_SMALL4_METHODS,
     STAGE1_TOP_K,
     audit_rendered_prompt,
     generation_item,
@@ -64,16 +65,24 @@ from .stage1 import (
     visible_prefix_recall,
 )
 from .stage1_pairs import HEADLINE_METRIC
-from .util import read_jsonl, sha256_json, write_json
+from .util import (
+    read_jsonl,
+    sha256_file,
+    sha256_json,
+    write_json,
+    write_jsonl,
+)
 
 
 DEFAULT_PROFILE = "method9"
 PROFILE_TASKS = {
     "api3": "stage1_api3",
+    "small4": "stage1_small4",
     "method9": "stage1",
 }
 PROFILE_PLAN_SCHEMAS = {
     "api3": "stage1_api3_plan-v1",
+    "small4": "stage1_small4_plan-v1",
     "method9": "stage1_nine_method_plan-v1",
 }
 APPROVAL_PHRASE = "I_APPROVE_STAGE1_PAID"
@@ -674,6 +683,13 @@ def command_report(args: argparse.Namespace) -> None:
             "GPT-5.6 Sol, Claude Opus 4.8, and Gemini 3.1 Pro each receive "
             "the same Full Context prefix up to the checkpoint."
         )
+    elif _profile_id(args) == "small4":
+        title = "4 Small Direct-API Full-Context Models"
+        comparison = (
+            "GPT-5.6 Terra, GPT-5.6 Luna, Claude Sonnet 4.6, and Gemini "
+            "3.5 Flash each receive the same Full Context prefix up to the "
+            "checkpoint with low reasoning effort."
+        )
     else:
         title = "9-Method Comparison"
         comparison = (
@@ -712,6 +728,177 @@ def command_report(args: argparse.Namespace) -> None:
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     print(json.dumps({"run_dir": str(run_dir), "report": str(report_path)}))
+
+
+def command_combine(args: argparse.Namespace) -> None:
+    """Combine complete, disjoint Stage 1 API3 artifacts."""
+
+    paths = ExperimentPaths.discover()
+    source_dirs = [Path(value).resolve() for value in args.source_run_dir]
+    if len(source_dirs) < 2:
+        raise ValueError("combine requires at least two source runs")
+
+    source_rows: list[dict[str, Any]] = []
+    source_records: list[dict[str, Any]] = []
+    for source_dir in source_dirs:
+        plan_path = source_dir / "immutable_plan.json"
+        manifest_path = source_dir / "run_manifest.json"
+        if not plan_path.exists() or not manifest_path.exists():
+            raise FileNotFoundError(
+                f"incomplete source run metadata: {source_dir}"
+            )
+        plan = json.loads(plan_path.read_text(encoding="utf-8"))
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        if str(plan.get("execution_profile")) != "api3":
+            raise RuntimeError(
+                f"source is not a Stage 1 API3 run: {source_dir}"
+            )
+        prediction_paths = complete_prediction_paths(source_dir)
+        rows = [
+            row for path in prediction_paths for row in read_jsonl(path)
+        ]
+        if not rows:
+            raise RuntimeError(
+                f"source has no COMPLETE prediction files: {source_dir}"
+            )
+        source_rows.extend(rows)
+        source_records.append(
+            {
+                "run_dir": str(source_dir),
+                "run_id": plan["run_id"],
+                "plan_sha256": plan["plan_sha256"],
+                "source_run_status": manifest.get("status"),
+                "methods": sorted(
+                    {str(row["method_id"]) for row in rows}
+                ),
+                "prediction_count": len(rows),
+            }
+        )
+
+    keys = [
+        (
+            str(row["method_id"]),
+            str(row["trajectory_id"]),
+            int(row["query_checkpoint"]),
+        )
+        for row in source_rows
+    ]
+    if len(keys) != len(set(keys)):
+        raise RuntimeError("source runs overlap on Stage 1 prediction keys")
+    if any(str(row.get("stage")) != STAGE1 for row in source_rows):
+        raise RuntimeError("a source row does not belong to Stage 1")
+
+    methods = list(
+        dict.fromkeys(str(row["method_id"]) for row in source_rows)
+    )
+    trajectories = sorted(
+        {str(row["trajectory_id"]) for row in source_rows}
+    )
+    checkpoints = sorted(
+        {int(row["query_checkpoint"]) for row in source_rows}
+    )
+    if set(methods) != set(STAGE1_API3_METHODS):
+        raise RuntimeError(
+            f"combined API3 methods differ: {sorted(methods)}"
+        )
+    expected = {
+        (method, trajectory, checkpoint)
+        for method in methods
+        for trajectory in trajectories
+        for checkpoint in checkpoints
+    }
+    if set(keys) != expected:
+        missing = sorted(expected - set(keys))
+        extra = sorted(set(keys) - expected)
+        raise RuntimeError(
+            f"combined Stage 1 grid is not rectangular: "
+            f"missing={missing[:5]}, extra={extra[:5]}"
+        )
+
+    run_dir = new_run_dir(paths, "stage1_api3_combined")
+    item_ids = list(
+        dict.fromkeys(str(row["item_id"]) for row in source_rows)
+    )
+    plan_body = {
+        "schema_version": "stage1_api3_combined_plan-v1",
+        "task_id": STAGE1,
+        "execution_profile": "api3",
+        "run_id": run_dir.name,
+        "created_at_kst": datetime.now(
+            ZoneInfo("Asia/Seoul")
+        ).isoformat(),
+        "methods": methods,
+        "trajectories": trajectories,
+        "checkpoints": checkpoints,
+        "item_ids": item_ids,
+        "prediction_count": len(source_rows),
+        "sources": source_records,
+        "reuse_disclosure": (
+            "Only COMPLETE source prediction files were combined. Partial "
+            "rows from the quota-interrupted Gemini source were excluded."
+        ),
+    }
+    plan = {**plan_body, "plan_sha256": sha256_json(plan_body)}
+    write_json(run_dir / "immutable_plan.json", plan)
+    write_json(
+        run_dir / "provider_lock.json",
+        {"status": "NOT_APPLICABLE", "methods": {}},
+    )
+
+    grouped: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    for row in source_rows:
+        grouped.setdefault(
+            (str(row["method_id"]), str(row["trajectory_id"])), []
+        ).append(row)
+    for (method, trajectory), rows in sorted(grouped.items()):
+        rows.sort(key=lambda row: int(row["query_checkpoint"]))
+        output = (
+            run_dir / "raw" / method / trajectory / "attempt_01.jsonl"
+        )
+        write_jsonl(output, rows)
+        write_json(
+            output.with_suffix(".manifest.json"),
+            {
+                "schema_version": "stage1_combined_attempt_manifest-v1",
+                "status": "COMPLETE",
+                "method_id": method,
+                "trajectory_id": trajectory,
+                "input_item_ids": [
+                    str(row["item_id"]) for row in rows
+                ],
+                "completed_items": len(rows),
+                "output_sha256": sha256_file(output),
+            },
+        )
+
+    combined_manifest = {
+        "schema_version": "stage1_combined_run_manifest-v1",
+        "status": "COMBINING",
+        "run_id": run_dir.name,
+        "plan_sha256": plan["plan_sha256"],
+        "source_runs": source_records,
+        "complete_prediction_files": len(grouped),
+    }
+    write_json(run_dir / "run_manifest.json", combined_manifest)
+    _validate_complete_grid(run_dir, plan)
+    command_report(
+        argparse.Namespace(run_dir=str(run_dir), profile="api3")
+    )
+    write_json(
+        run_dir / "run_manifest.json",
+        {**combined_manifest, "status": "GENERATED"},
+    )
+    print(
+        json.dumps(
+            {
+                "run_dir": str(run_dir),
+                "plan_sha256": plan["plan_sha256"],
+                "prediction_count": len(source_rows),
+                "sources": source_records,
+            },
+            ensure_ascii=False,
+        )
+    )
 
 
 def _command_execute(
@@ -796,8 +983,9 @@ def build_parser() -> argparse.ArgumentParser:
         choices=tuple(STAGE1_EXECUTION_PROFILES),
         default=DEFAULT_PROFILE,
         help=(
-            "api3 runs the three direct-API full-context models; method9 "
-            "runs the independently resumable nine-method grid"
+            "api3 runs the three primary direct-API full-context models; "
+            "small4 runs the four lower-cost direct-API models; method9 runs "
+            "the independently resumable nine-method grid"
         ),
     )
     commands = parser.add_subparsers(dest="command", required=True)
@@ -827,7 +1015,11 @@ def build_parser() -> argparse.ArgumentParser:
     show.add_argument(
         "--method",
         required=True,
-        choices=tuple(dict.fromkeys(STAGE1_API3_METHODS + NINE_METHODS)),
+        choices=tuple(
+            dict.fromkeys(
+                STAGE1_API3_METHODS + STAGE1_SMALL4_METHODS + NINE_METHODS
+            )
+        ),
     )
     show.add_argument("--trajectory", required=True)
     show.add_argument("--checkpoint", type=int, required=True)
@@ -847,6 +1039,14 @@ def build_parser() -> argparse.ArgumentParser:
     report = commands.add_parser("report")
     report.add_argument("--run-dir")
     report.set_defaults(handler=command_report)
+    combine = commands.add_parser("combine")
+    combine.add_argument(
+        "--source-run-dir",
+        action="append",
+        required=True,
+        help="Stage 1 API3 source run; pass once per disjoint source.",
+    )
+    combine.set_defaults(handler=command_combine)
     return parser
 
 

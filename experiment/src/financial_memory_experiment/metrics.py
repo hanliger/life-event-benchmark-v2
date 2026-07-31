@@ -14,7 +14,13 @@ from .methods import method_ids as configured_method_ids
 from .paths import ExperimentPaths
 from .stage1 import STAGE1
 from .stage1_pairs import HEADLINE_METRIC
-from .stage2_2 import STAGE2_2
+from .stage2_2 import (
+    STAGE2_2,
+    VALUE_KINDS,
+    _cell_equal,
+    initial_copy_score,
+    stage2_2_item_path,
+)
 from .util import read_jsonl, sha256_file, write_json
 
 
@@ -35,6 +41,196 @@ _STAGE2_2_SCALAR_METRICS = (
     "evidence_hit_rate",
     "evidence_citation_precision",
 )
+
+GCA15_SCHEMA_VERSION = "stage2_2_gca15-v1"
+_GCA_COUNT_KEYS = ("correct", "wrong", "overshot", "missed")
+_GCA_VALUE_WEIGHT = 10 / 11
+
+
+def _empty_gca_counts() -> dict[str, int]:
+    return {key: 0 for key in _GCA_COUNT_KEYS}
+
+
+def _sum_gca_counts(
+    counts: Iterable[dict[str, int]],
+) -> dict[str, int]:
+    counts = list(counts)
+    return {
+        key: sum(int(row.get(key, 0)) for row in counts)
+        for key in _GCA_COUNT_KEYS
+    }
+
+
+def _gca_components(counts: dict[str, int]) -> dict[str, Any]:
+    """Apply the official GCA weighted-harmonic formula to C/W/O/M."""
+
+    correct = int(counts["correct"])
+    wrong = int(counts["wrong"])
+    overshot = int(counts["overshot"])
+    missed = int(counts["missed"])
+    prediction_support = correct + wrong + overshot
+    gold_support = correct + wrong + missed
+    value_precision = _ratio(correct, prediction_support) or 0.0
+    value_recall = _ratio(correct, gold_support) or 0.0
+    label_precision = _ratio(correct + wrong, prediction_support) or 0.0
+    label_recall = _ratio(correct + wrong, gold_support) or 0.0
+    values = (
+        value_precision,
+        value_recall,
+        label_precision,
+        label_recall,
+    )
+    if not all(value > 0 for value in values):
+        score = 0.0
+    else:
+        label_weight = 1 - _GCA_VALUE_WEIGHT
+        weights = (
+            _GCA_VALUE_WEIGHT * prediction_support,
+            _GCA_VALUE_WEIGHT * gold_support,
+            label_weight * prediction_support,
+            label_weight * gold_support,
+        )
+        score = sum(weights) / sum(
+            weight / value for weight, value in zip(weights, values)
+        )
+    return {
+        "score": score,
+        "value_precision": value_precision,
+        "value_recall": value_recall,
+        "label_precision": label_precision,
+        "label_recall": label_recall,
+        "prediction_support": prediction_support,
+        "gold_support": gold_support,
+        "counts": {key: int(counts[key]) for key in _GCA_COUNT_KEYS},
+    }
+
+
+def _gca_cell_equal(
+    path: str,
+    left: dict[str, Any] | None,
+    right: dict[str, Any] | None,
+) -> bool:
+    if left is None or right is None:
+        return left is None and right is None
+    return _cell_equal(path, left, right)
+
+
+def _stage2_2_gca15(
+    rows: list[dict[str, Any]],
+    initial_states: dict[str, dict[str, dict[str, Any]]],
+) -> dict[str, Any]:
+    """Compute checkpoint-level GCA over strict `(value, status)` cells.
+
+    The published GCA Algorithm 1 C/W/O/M classification and weighted
+    harmonic mean are retained.  The unavoidable benchmark adapter treats a
+    trajectory as a dialogue, each 15-session checkpoint as a turn, and the
+    supplied S000 state as an unscored seed.  A correction to the current Gold
+    state counts as correct even when Gold did not change at that checkpoint;
+    a premature but currently correct prediction is handled symmetrically.
+    """
+
+    by_trajectory: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for row in rows:
+        by_trajectory[str(row["trajectory_id"])].append(row)
+    missing_initial = set(by_trajectory) - set(initial_states)
+    if missing_initial:
+        raise ValueError(
+            f"GCA@15 initial state missing for trajectories: "
+            f"{sorted(missing_initial)}"
+        )
+
+    trajectory_results: dict[str, dict[str, Any]] = {}
+    checkpoint_counts: dict[int, list[dict[str, int]]] = defaultdict(list)
+    for trajectory_id, trajectory_rows in sorted(by_trajectory.items()):
+        previous_gold = initial_states[trajectory_id]
+        previous_prediction = initial_states[trajectory_id]
+        trajectory_counts = _empty_gca_counts()
+        seen_checkpoints: set[int] = set()
+        for row in sorted(
+            trajectory_rows, key=lambda value: int(value["query_checkpoint"])
+        ):
+            checkpoint = int(row["query_checkpoint"])
+            if checkpoint in seen_checkpoints:
+                raise ValueError(
+                    f"duplicate GCA@15 checkpoint: {trajectory_id}/{checkpoint}"
+                )
+            seen_checkpoints.add(checkpoint)
+            gold = row.get("gold") or {}
+            prediction = row.get("prediction") or {}
+            gold_delta = {
+                path
+                for path in VALUE_KINDS
+                if not _gca_cell_equal(
+                    path, previous_gold.get(path), gold.get(path)
+                )
+            }
+            prediction_delta = {
+                path
+                for path in VALUE_KINDS
+                if not _gca_cell_equal(
+                    path,
+                    previous_prediction.get(path),
+                    prediction.get(path),
+                )
+            }
+            counts = _empty_gca_counts()
+            classified: set[str] = set()
+            for path in sorted(gold_delta):
+                if path not in prediction:
+                    key = "missed"
+                elif _gca_cell_equal(
+                    path, prediction.get(path), gold.get(path)
+                ):
+                    key = "correct"
+                else:
+                    key = "wrong"
+                counts[key] += 1
+                trajectory_counts[key] += 1
+                classified.add(path)
+            for path in sorted(prediction_delta - classified):
+                if path not in gold:
+                    key = "overshot"
+                elif path not in prediction:
+                    key = "missed"
+                elif _gca_cell_equal(
+                    path, prediction.get(path), gold.get(path)
+                ):
+                    key = "correct"
+                else:
+                    key = "wrong"
+                counts[key] += 1
+                trajectory_counts[key] += 1
+            checkpoint_counts[checkpoint].append(counts)
+            previous_gold = gold
+            previous_prediction = prediction
+        trajectory_results[trajectory_id] = _gca_components(
+            trajectory_counts
+        )
+
+    pooled_counts = _sum_gca_counts(
+        result["counts"] for result in trajectory_results.values()
+    )
+    pooled = _gca_components(pooled_counts)
+    by_checkpoint = {
+        str(checkpoint): _gca_components(_sum_gca_counts(counts))
+        for checkpoint, counts in sorted(checkpoint_counts.items())
+    }
+    return {
+        "schema_version": GCA15_SCHEMA_VERSION,
+        "metric": "GCA@15",
+        "aggregation": "pooled_checkpoint_transitions",
+        "state_mapping": (
+            "trajectory=dialogue; checkpoint=turn; S000=unscored_seed; "
+            "slot_value=(normalized_value,status)"
+        ),
+        "official_formula": (
+            "support-weighted_harmonic_mean(VP,VR,LP,LR); "
+            "value_weight=10/11"
+        ),
+        **pooled,
+        "by_trajectory": trajectory_results,
+        "by_checkpoint": by_checkpoint,
+    }
 
 
 def _ratio(numerator: int, denominator: int) -> float | None:
@@ -371,7 +567,11 @@ def _stage2_2_event_and_retention(rows: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
-def summarize_stage2_2_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
+def summarize_stage2_2_rows(
+    rows: list[dict[str, Any]],
+    *,
+    initial_states: dict[str, dict[str, dict[str, Any]]] | None = None,
+) -> dict[str, Any]:
     required_metric_fields = {
         "dynamic_path_final_state_accuracy",
         "path_outcomes",
@@ -422,7 +622,7 @@ def summarize_stage2_2_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
                 status_confusion[gold][predicted] += int(value)
     path_macro = _stage2_2_path_macro(rows)
     event_and_retention = _stage2_2_event_and_retention(rows)
-    return {
+    result = {
         "items": len(rows),
         "aggregation": "checkpoint_then_trajectory_macro",
         "metrics": aggregate,
@@ -439,6 +639,51 @@ def summarize_stage2_2_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
             len(row.get("validation_errors") or []) for row in rows
         ),
     }
+    if initial_states is not None:
+        result["gca15"] = _stage2_2_gca15(rows, initial_states)
+    return result
+
+
+def _stage2_2_initial_states(
+    paths: ExperimentPaths,
+) -> dict[str, dict[str, dict[str, Any]]]:
+    states: dict[str, dict[str, dict[str, Any]]] = {}
+    for item in read_jsonl(stage2_2_item_path(paths)):
+        trajectory_id = str(item["trajectory_id"])
+        initial = (item.get("gold") or {}).get("initial_state") or {}
+        if trajectory_id in states and states[trajectory_id] != initial:
+            raise ValueError(
+                f"inconsistent Stage 2.2 initial state: {trajectory_id}"
+            )
+        states[trajectory_id] = initial
+    return states
+
+
+def _stage2_2_initial_copy_summary(
+    paths: ExperimentPaths,
+    initial_states: dict[str, dict[str, dict[str, Any]]],
+) -> dict[str, Any]:
+    rows = []
+    for item in read_jsonl(stage2_2_item_path(paths)):
+        initial = (item.get("gold") or {})["initial_state"]
+        gold = (item.get("gold") or {})["state"]
+        rows.append(
+            {
+                "trajectory_id": item["trajectory_id"],
+                "item_id": item["item_id"],
+                "query_checkpoint": int(
+                    (item.get("metadata") or {})["query_checkpoint"]
+                ),
+                "gold": gold,
+                "prediction": initial,
+                "metrics": initial_copy_score(item),
+                "parse_error": None,
+                "validation_errors": [],
+            }
+        )
+    return summarize_stage2_2_rows(
+        rows, initial_states=initial_states
+    )
 
 
 def _accuracy(rows: list[dict[str, Any]]) -> float | None:
@@ -490,6 +735,29 @@ def _bootstrap_ci(
         mean(values[rng.choice(keys)] for _ in keys)
         for _ in range(samples)
     )
+    return (
+        estimates[int(0.025 * (samples - 1))],
+        estimates[int(0.975 * (samples - 1))],
+    )
+
+
+def _bootstrap_gca15_ci(
+    by_trajectory: dict[str, dict[str, Any]],
+    *,
+    samples: int,
+    seed: int,
+) -> tuple[float | None, float | None]:
+    if not by_trajectory:
+        return None, None
+    keys = sorted(by_trajectory)
+    rng = random.Random(seed)
+    estimates = []
+    for _ in range(samples):
+        sampled_counts = _sum_gca_counts(
+            by_trajectory[rng.choice(keys)]["counts"] for _ in keys
+        )
+        estimates.append(float(_gca_components(sampled_counts)["score"]))
+    estimates.sort()
     return (
         estimates[int(0.025 * (samples - 1))],
         estimates[int(0.975 * (samples - 1))],
@@ -667,37 +935,62 @@ def summarize_predictions(
         allow_partial=allow_partial,
         expected_scope=expected_scope,
     )
+    initial_states: dict[str, dict[str, dict[str, Any]]] | None = None
     results: dict[str, Any] = {}
     for method_id in sorted({str(row["method_id"]) for row in rows}):
         method_rows = [row for row in rows if row["method_id"] == method_id]
         stages: dict[str, Any] = {}
         for stage in sorted({str(row["stage"]) for row in method_rows}):
             subset = [row for row in method_rows if row["stage"] == stage]
+            stage1_exact_scores: dict[str, float] | None = None
+            stage1_exact_by_checkpoint: dict[str, float] | None = None
             if stage == STAGE2_2:
-                stage2_2 = summarize_stage2_2_rows(subset)
+                if initial_states is None:
+                    initial_states = _stage2_2_initial_states(paths)
+                stage2_2 = summarize_stage2_2_rows(
+                    subset, initial_states=initial_states
+                )
+                gca15 = stage2_2["gca15"]
                 trajectory_scores = {
-                    trajectory_id: float(
-                        values["final_state_accuracy"] or 0.0
-                    )
-                    for trajectory_id, values in stage2_2[
-                        "trajectory_metrics"
+                    trajectory_id: float(values["score"])
+                    for trajectory_id, values in gca15[
+                        "by_trajectory"
                     ].items()
                 }
-                score = stage2_2["metrics"]["final_state_accuracy"]
-                aggregation = stage2_2["aggregation"]
+                score = gca15["score"]
+                aggregation = gca15["aggregation"]
             elif stage == "stage2_memory_value":
                 score, trajectory_scores = hierarchical_stage2(subset)
                 aggregation = "trajectory_target_checkpoint_macro"
             elif stage == STAGE1:
                 by_trajectory: dict[str, list[float]] = defaultdict(list)
                 by_checkpoint: dict[int, list[float]] = defaultdict(list)
+                exact_by_trajectory: dict[str, list[float]] = defaultdict(list)
+                exact_by_checkpoint: dict[int, list[float]] = defaultdict(list)
                 for row in subset:
                     value = float((row.get("metrics") or {})[HEADLINE_METRIC])
-                    by_trajectory[str(row["trajectory_id"])].append(value)
-                    by_checkpoint[int(row["query_checkpoint"])].append(value)
+                    exact = float(
+                        (row.get("metrics") or {})[
+                            "exact_pair_multiset_match"
+                        ]
+                    )
+                    trajectory_id = str(row["trajectory_id"])
+                    checkpoint = int(row["query_checkpoint"])
+                    by_trajectory[trajectory_id].append(value)
+                    by_checkpoint[checkpoint].append(value)
+                    exact_by_trajectory[trajectory_id].append(exact)
+                    exact_by_checkpoint[checkpoint].append(exact)
                 trajectory_scores = {
                     trajectory: mean(values)
                     for trajectory, values in by_trajectory.items()
+                }
+                stage1_exact_scores = {
+                    trajectory: mean(values)
+                    for trajectory, values in exact_by_trajectory.items()
+                }
+                stage1_exact_by_checkpoint = {
+                    str(checkpoint): mean(values)
+                    for checkpoint, values in sorted(exact_by_checkpoint.items())
                 }
                 score = (
                     mean(mean(values) for values in by_checkpoint.values())
@@ -709,7 +1002,16 @@ def summarize_predictions(
                 trajectory_scores = _trajectory_scores(stage, subset)
                 score = mean(trajectory_scores.values()) if trajectory_scores else None
                 aggregation = "trajectory_macro"
-            low, high = _bootstrap_ci(trajectory_scores, samples=samples, seed=seed)
+            if stage == STAGE2_2:
+                low, high = _bootstrap_gca15_ci(
+                    stage2_2["gca15"]["by_trajectory"],
+                    samples=samples,
+                    seed=seed,
+                )
+            else:
+                low, high = _bootstrap_ci(
+                    trajectory_scores, samples=samples, seed=seed
+                )
             lag_groups: dict[int, list[dict[str, Any]]] = defaultdict(list)
             for row in subset:
                 metadata = row.get("item_metadata") or {}
@@ -722,6 +1024,9 @@ def summarize_predictions(
                 "ci95": [low, high],
                 "aggregation": aggregation,
                 "parse_errors": sum(bool(row.get("parse_error")) for row in subset),
+                "final_schema_failures": sum(
+                    bool(row.get("final_schema_failure")) for row in subset
+                ),
                 "accuracy_by_retention_lag_windows": {
                     str(lag): _accuracy(group) for lag, group in sorted(lag_groups.items())
                 },
@@ -729,7 +1034,24 @@ def summarize_predictions(
             if stage == STAGE1:
                 stages[stage]["headline_metric"] = HEADLINE_METRIC
                 stages[stage][HEADLINE_METRIC] = score
+                exact_low, exact_high = _bootstrap_ci(
+                    stage1_exact_scores or {}, samples=samples, seed=seed
+                )
+                stages[stage]["exact_pair_set_match"] = (
+                    mean((stage1_exact_scores or {}).values())
+                    if stage1_exact_scores
+                    else None
+                )
+                stages[stage]["exact_pair_set_ci95"] = [
+                    exact_low,
+                    exact_high,
+                ]
+                stages[stage]["exact_pair_set_by_checkpoint"] = (
+                    stage1_exact_by_checkpoint or {}
+                )
             if stage == STAGE2_2:
+                stages[stage]["headline_metric"] = "GCA@15"
+                stages[stage]["gca15"] = score
                 stages[stage]["state_reconstruction"] = stage2_2
             retrieval_rows = [
                 row
@@ -811,6 +1133,11 @@ def summarize_predictions(
                     arm: _accuracy(group) for arm, group in sorted(arm_groups.items())
                 }
         results[method_id] = stages
+    stage2_2_initial_copy = (
+        _stage2_2_initial_copy_summary(paths, initial_states)
+        if initial_states is not None
+        else None
+    )
     paired: dict[str, Any] = {}
     oracle_relevant_comparisons: dict[str, Any] = {}
     methods = sorted(results)
@@ -831,6 +1158,21 @@ def summarize_predictions(
                     trajectory: mean(values)
                     for trajectory, values in by_trajectory.items()
                 }
+        elif stage == STAGE2_2:
+            stage_scores = {
+                method: {
+                    trajectory_id: float(values["score"])
+                    for trajectory_id, values in (
+                        results.get(method, {})
+                        .get(stage, {})
+                        .get("state_reconstruction", {})
+                        .get("gca15", {})
+                        .get("by_trajectory", {})
+                        .items()
+                    )
+                }
+                for method in methods
+            }
         else:
             stage_scores = {
                 method: _trajectory_scores(
@@ -857,10 +1199,6 @@ def summarize_predictions(
     )
     comparison_metrics = (
         "final_state_accuracy",
-        "dynamic_path_final_state_accuracy",
-        "correct_change_f1",
-        "path_macro_correct_change_f1",
-        "event_macro_update_accuracy",
         "retention_mean_over_observed_lags",
     )
     for oracle_method, full_method in oracle_pairs:
@@ -882,27 +1220,42 @@ def summarize_predictions(
         if not oracle_rows or not full_rows:
             continue
         comparison_id = f"{oracle_method}__minus__{full_method}"
+        gca15_delta = _paired_bootstrap_delta(
+            {
+                trajectory_id: float(values["score"])
+                for trajectory_id, values in results[oracle_method][STAGE2_2][
+                    "state_reconstruction"
+                ]["gca15"]["by_trajectory"].items()
+            },
+            {
+                trajectory_id: float(values["score"])
+                for trajectory_id, values in results[full_method][STAGE2_2][
+                    "state_reconstruction"
+                ]["gca15"]["by_trajectory"].items()
+            },
+            samples=samples,
+            seed=seed,
+        )
+        comparison_values = {
+            metric: _paired_bootstrap_delta(
+                _stage2_2_metric_trajectory_scores(oracle_rows, metric),
+                _stage2_2_metric_trajectory_scores(full_rows, metric),
+                samples=samples,
+                seed=seed,
+            )
+            for metric in comparison_metrics
+        }
+        comparison_values["gca15"] = gca15_delta
         oracle_relevant_comparisons[comparison_id] = {
             "direction": "oracle_relevant_minus_full_context",
-            "metrics": {
-                metric: _paired_bootstrap_delta(
-                    _stage2_2_metric_trajectory_scores(
-                        oracle_rows, metric
-                    ),
-                    _stage2_2_metric_trajectory_scores(
-                        full_rows, metric
-                    ),
-                    samples=samples,
-                    seed=seed,
-                )
-                for metric in comparison_metrics
-            },
+            "metrics": comparison_values,
         }
     return {
-        "schema_version": "financial-memory-metrics-v2",
+        "schema_version": "financial-memory-metrics-v3",
         "bootstrap": {"samples": samples, "seed": seed, "unit": "trajectory"},
         "completeness": completeness,
         "methods": results,
+        "stage2_2_initial_copy_baseline": stage2_2_initial_copy,
         "paired_method_deltas": paired,
         "oracle_relevant_comparisons": oracle_relevant_comparisons,
     }
@@ -910,6 +1263,11 @@ def summarize_predictions(
 
 def write_tables(report: dict[str, Any], output_dir: Path) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
+    baseline = report.get("stage2_2_initial_copy_baseline") or {}
+    baseline_final_state_accuracy = (
+        (baseline.get("metrics") or {}).get("final_state_accuracy")
+    )
+    baseline_gca15 = (baseline.get("gca15") or {}).get("score")
     rows: list[dict[str, Any]] = []
     masking_rows: list[dict[str, Any]] = []
     lag_rows: list[dict[str, Any]] = []
@@ -942,24 +1300,55 @@ def write_tables(report: dict[str, Any], output_dir: Path) -> None:
                     "stage": stage,
                     "items": values["items"],
                     "score": values["score"],
+                    "headline_metric": values.get("headline_metric"),
                     "ci95_low": values["ci95"][0],
                     "ci95_high": values["ci95"][1],
                     "parse_errors": values["parse_errors"],
+                    "parse_success_rate": (
+                        1 - values["parse_errors"] / values["items"]
+                        if values["items"]
+                        else None
+                    ),
+                    "schema_success_rate": (
+                        1
+                        - values.get("final_schema_failures", 0)
+                        / values["items"]
+                        if values["items"]
+                        else None
+                    ),
                     "aggregation": values["aggregation"],
-                    "dynamic_path_final_state_accuracy": state_metrics.get(
-                        "dynamic_path_final_state_accuracy"
+                    "gca15_initial_copy_lift": (
+                        values["score"] - baseline_gca15
+                        if stage == STAGE2_2
+                        and values["score"] is not None
+                        and baseline_gca15 is not None
+                        else None
                     ),
-                    "correct_change_f1": state_metrics.get(
-                        "correct_change_f1"
+                    "exact_pair_set_match": values.get(
+                        "exact_pair_set_match"
                     ),
-                    "path_macro_correct_change_f1": path_macro.get(
-                        "correct_change_f1"
+                    "exact_pair_set_ci95_low": (
+                        (values.get("exact_pair_set_ci95") or [None, None])[0]
                     ),
-                    "event_macro_update_accuracy": event_macro.get(
-                        "update_accuracy"
+                    "exact_pair_set_ci95_high": (
+                        (values.get("exact_pair_set_ci95") or [None, None])[1]
                     ),
-                    "event_exact_update_accuracy": event_macro.get(
-                        "exact_update_accuracy"
+                    "final_state_accuracy": state_metrics.get(
+                        "final_state_accuracy"
+                    ),
+                    "final_state_initial_copy_lift": (
+                        state_metrics.get("final_state_accuracy")
+                        - baseline_final_state_accuracy
+                        if state_metrics.get("final_state_accuracy")
+                        is not None
+                        and baseline_final_state_accuracy is not None
+                        else None
+                    ),
+                    "exact_state_match": state_metrics.get(
+                        "exact_state_match"
+                    ),
+                    "evidence_hit_rate": state_metrics.get(
+                        "evidence_hit_rate"
                     ),
                     "retention_mean_over_observed_lags": retention.get(
                         "mean_over_observed_lags"
@@ -1086,27 +1475,35 @@ def write_tables(report: dict[str, Any], output_dir: Path) -> None:
         writer.writeheader()
         writer.writerows(rows)
     lines = [
-        "| Family | Method | Stage | Score | Dynamic Final | "
-        "Correct-change F1 | Path-macro F1 | Event Update | Retention | "
-        "95% CI | N | Aggregation |",
-        "|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---|",
+        "| Family | Method | Stage | Headline | Score | vs copy | Retention | "
+        "Final State | Final lift | Evidence Hit | Strict Exact | "
+        "Schema Valid | 95% CI | N |",
+        "|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for row in rows:
         score = "—" if row["score"] is None else f"{100 * row['score']:.2f}"
-        stage2_values = [
-            (
-                "—"
-                if row[key] is None
-                else f"{100 * float(row[key]):.2f}"
+        strict_exact = (
+            row["exact_pair_set_match"]
+            if row["exact_pair_set_match"] is not None
+            else row["exact_state_match"]
+        )
+        stage2_values = []
+        for key in (
+            "gca15_initial_copy_lift",
+            "retention_mean_over_observed_lags",
+            "final_state_accuracy",
+            "final_state_initial_copy_lift",
+            "evidence_hit_rate",
+            "schema_success_rate",
+        ):
+            value = row[key]
+            stage2_values.append(
+                "—" if value is None else f"{100 * float(value):.2f}"
             )
-            for key in (
-                "dynamic_path_final_state_accuracy",
-                "correct_change_f1",
-                "path_macro_correct_change_f1",
-                "event_macro_update_accuracy",
-                "retention_mean_over_observed_lags",
-            )
-        ]
+        stage2_values.insert(
+            -1,
+            "—" if strict_exact is None else f"{100 * float(strict_exact):.2f}",
+        )
         ci = (
             "—"
             if row["ci95_low"] is None
@@ -1114,8 +1511,9 @@ def write_tables(report: dict[str, Any], output_dir: Path) -> None:
         )
         lines.append(
             f"| {row['method_family']} | {row['method_id']} | "
-            f"{row['stage']} | {score} | {' | '.join(stage2_values)} | "
-            f"{ci} | {row['items']} | {row['aggregation']} |"
+            f"{row['stage']} | {row['headline_metric'] or 'accuracy'} | "
+            f"{score} | {' | '.join(stage2_values)} | {ci} | "
+            f"{row['items']} |"
         )
     (output_dir / "main_results.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
     for filename, table_rows in (

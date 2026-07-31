@@ -38,30 +38,31 @@
 
 ## 3. Main results
 
-Family별로 표를 분리하고 Stage 1, Stage 2를 별도 열로 보고한다. 값은
-`report/main_results.csv`에서 가져온다.
+Family별로 표를 분리한다. Stage 1은 Pair F1과 Exact Pair-Set Match, Stage 2는
+GCA@15와 Retention-after-update를 보고한다. 각 값은 trajectory-bootstrap 95% CI와
+함께 기록한다.
 
 ### Full Context
 
-| Method | Stage 1 [95% CI] | Stage 2 hierarchical [95% CI] |
-|---|---:|---:|
-| Claude Opus 5 | `TBD` | `TBD` |
-| Gemini 3.1 Pro Preview | `TBD` | `TBD` |
-| GPT-5.6 Sol | `TBD` | `TBD` |
+| Method | Stage 1 Pair F1 [95% CI] | Stage 1 Exact [95% CI] | Stage 2 GCA@15 [95% CI] | Stage 2 Retention |
+|---|---:|---:|---:|---:|
+| Claude Opus 4.8 | `TBD` | `TBD` | `TBD` | `TBD` |
+| Gemini 3.1 Pro | `TBD` | `TBD` | `TBD` | `TBD` |
+| GPT-5.6 Sol | `TBD` | `TBD` | `TBD` | `TBD` |
 
 ### Retrieval
 
-| Method | Stage 1 [95% CI] | Stage 2 hierarchical [95% CI] |
-|---|---:|---:|
-| BM25 + Gemini | `TBD` | `TBD` |
-| Dense GE2 + Gemini | `TBD` | `TBD` |
+| Method | Stage 1 Pair F1 [95% CI] | Stage 1 Exact [95% CI] | Stage 2 GCA@15 [95% CI] | Stage 2 Retention |
+|---|---:|---:|---:|---:|
+| BM25 + Gemini | `TBD` | `TBD` | `TBD` | `TBD` |
+| Dense GE2 + Gemini | `TBD` | `TBD` | `TBD` | `TBD` |
 
 ### Memory
 
-| Method | Stage 1 [95% CI] | Stage 2 hierarchical [95% CI] |
-|---|---:|---:|
-| Mem0 + Gemini | `TBD` | `TBD` |
-| Letta + Gemini | `TBD` | `TBD` |
+| Method | Stage 1 Pair F1 [95% CI] | Stage 1 Exact [95% CI] | Stage 2 GCA@15 [95% CI] | Stage 2 Retention |
+|---|---:|---:|---:|---:|
+| Mem0 + Gemini | `TBD` | `TBD` | `TBD` | `TBD` |
+| Letta + Gemini | `TBD` | `TBD` | `TBD` | `TBD` |
 
 ## 5. Retrieval quality
 

@@ -1208,6 +1208,10 @@ def write_stage2_2_initial_copy_report(
     from .metrics import summarize_stage2_2_rows
 
     items = list(read_jsonl(stage2_2_item_path(paths)))
+    initial_states = {
+        str(item["trajectory_id"]): item["gold"]["initial_state"]
+        for item in items
+    }
     rows = [
         {
             "trajectory_id": item["trajectory_id"],
@@ -1215,6 +1219,8 @@ def write_stage2_2_initial_copy_report(
             "query_checkpoint": int(
                 (item.get("metadata") or {})["query_checkpoint"]
             ),
+            "gold": item["gold"]["state"],
+            "prediction": item["gold"]["initial_state"],
             "metrics": initial_copy_score(item),
             "parse_error": None,
             "validation_errors": [],
@@ -1222,9 +1228,9 @@ def write_stage2_2_initial_copy_report(
         for item in items
     ]
     report = {
-        "schema_version": "stage2_2_initial_copy_report-v2",
+        "schema_version": "stage2_2_initial_copy_report-v3",
         "baseline": "initial_copy",
-        **summarize_stage2_2_rows(rows),
+        **summarize_stage2_2_rows(rows, initial_states=initial_states),
     }
     root = Path(active_stage2_2_prepared_manifest(paths)["root"])
     write_json(root / "baselines" / "initial_copy.json", report)

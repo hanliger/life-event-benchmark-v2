@@ -150,6 +150,8 @@ def one_stage_row(
     runs_root: Path,
     spec: ModelSpec,
     stage: str,
+    stage1_pair: dict[str, str] | None = None,
+    stage2_gca: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     relative_run = spec.stage1_run if stage == "stage1" else spec.stage2_run
     root = metric_root(runs_root, relative_run)
@@ -164,6 +166,10 @@ def one_stage_row(
             f"found {len(main_rows)}"
         )
     main = main_rows[0]
+    if stage == "stage1" and stage1_pair is None:
+        raise ValueError(
+            f"missing focused Stage 1 pair result for {spec.method_id}"
+        )
     checkpoint_rows = [
         row
         for row in read_csv(root / "checkpoint_metrics.csv")
@@ -174,24 +180,29 @@ def one_stage_row(
             f"expected 400 checkpoints for {stage}/{spec.method_id}, "
             f"found {len(checkpoint_rows)}"
         )
+    if stage == "stage2" and stage2_gca is None:
+        raise ValueError(f"missing focused GCA@15 result for {spec.method_id}")
     checkpoint_metric = (
-        "strict_occurred_event_evidence_f1"
-        if stage == "stage1"
-        else "final_state_accuracy"
+        "strict_occurred_event_evidence_f1" if stage == "stage1" else None
     )
     checkpoint_means: dict[int, float] = {}
     for checkpoint in CHECKPOINTS:
-        values = [
-            float(row[checkpoint_metric])
-            for row in checkpoint_rows
-            if int(row["checkpoint"]) == checkpoint
-        ]
-        if len(values) != 20:
-            raise ValueError(
-                f"expected 20 trajectories at {stage}/{spec.method_id}/"
-                f"cp{checkpoint}, found {len(values)}"
+        if stage == "stage1":
+            values = [
+                float(row[checkpoint_metric])
+                for row in checkpoint_rows
+                if int(row["checkpoint"]) == checkpoint
+            ]
+            if len(values) != 20:
+                raise ValueError(
+                    f"expected 20 trajectories at {stage}/{spec.method_id}/"
+                    f"cp{checkpoint}, found {len(values)}"
+                )
+            checkpoint_means[checkpoint] = mean(values)
+        else:
+            checkpoint_means[checkpoint] = float(
+                stage2_gca[f"gca15_cp{checkpoint:03d}"]
             )
-        checkpoint_means[checkpoint] = mean(values)
 
     reliability = [
         row
@@ -235,8 +246,37 @@ def one_stage_row(
         if row.get("estimated_cost_usd") not in (None, "")
     )
 
+    if stage == "stage1":
+        headline_score = float(main["score"])
+        ci95_low = float(main["ci95_low"])
+        ci95_high = float(main["ci95_high"])
+        aggregation = main["aggregation"]
+        early_score = mean(
+            score
+            for checkpoint, score in checkpoint_means.items()
+            if BANDS["early"][0] <= checkpoint <= BANDS["early"][1]
+        )
+        middle_score = mean(
+            score
+            for checkpoint, score in checkpoint_means.items()
+            if BANDS["middle"][0] <= checkpoint <= BANDS["middle"][1]
+        )
+        late_score = mean(
+            score
+            for checkpoint, score in checkpoint_means.items()
+            if BANDS["late"][0] <= checkpoint <= BANDS["late"][1]
+        )
+    else:
+        headline_score = float(stage2_gca["gca15"])
+        ci95_low = float(stage2_gca["gca15_ci95_low"])
+        ci95_high = float(stage2_gca["gca15_ci95_high"])
+        aggregation = "pooled_checkpoint_transitions"
+        early_score = float(stage2_gca["gca15_early"])
+        middle_score = float(stage2_gca["gca15_middle"])
+        late_score = float(stage2_gca["gca15_late"])
+
     row: dict[str, Any] = {
-        "report_schema_version": "cross-stage-model-summary-v1",
+        "report_schema_version": "cross-stage-model-summary-v2",
         "stage": stage,
         "stage_label": (
             "Stage 1 occurred-event/evidence pairs"
@@ -249,11 +289,11 @@ def one_stage_row(
         "method_id": spec.method_id,
         "source_run_dir": f"experiment/runs/{relative_run}",
         "items": int(main["items"]),
-        "headline_metric": checkpoint_metric,
-        "headline_score": float(main["score"]),
-        "ci95_low": float(main["ci95_low"]),
-        "ci95_high": float(main["ci95_high"]),
-        "aggregation": main["aggregation"],
+        "headline_metric": checkpoint_metric or "GCA@15",
+        "headline_score": headline_score,
+        "ci95_low": ci95_low,
+        "ci95_high": ci95_high,
+        "aggregation": aggregation,
         "parse_errors": int(main["parse_errors"]),
         "parse_error_rate": int(main["parse_errors"]) / int(main["items"]),
         "first_attempt_parse_errors": sum(
@@ -275,47 +315,53 @@ def one_stage_row(
             for value in (item["final_schema_failure"] for item in reliability)
         ),
         "total_retry_count": sum(int(item["retry_count"]) for item in reliability),
-        "early_score_cp015_090": mean(
-            [
-                score
-                for checkpoint, score in checkpoint_means.items()
-                if BANDS["early"][0] <= checkpoint <= BANDS["early"][1]
-            ]
-        ),
-        "middle_score_cp105_195": mean(
-            [
-                score
-                for checkpoint, score in checkpoint_means.items()
-                if BANDS["middle"][0] <= checkpoint <= BANDS["middle"][1]
-            ]
-        ),
-        "late_score_cp210_300": mean(
-            [
-                score
-                for checkpoint, score in checkpoint_means.items()
-                if BANDS["late"][0] <= checkpoint <= BANDS["late"][1]
-            ]
-        ),
+        "early_score_cp015_090": early_score,
+        "middle_score_cp105_195": middle_score,
+        "late_score_cp210_300": late_score,
         "cp300_minus_cp015": checkpoint_means[300] - checkpoint_means[15],
         "checkpoint_pearson_r": pearson_r(
             [float(checkpoint) for checkpoint in CHECKPOINTS],
             [checkpoint_means[checkpoint] for checkpoint in CHECKPOINTS],
         ),
-        "dynamic_path_final_state_accuracy": as_float(
-            main.get("dynamic_path_final_state_accuracy")
+        "gca15_initial_copy_lift": as_float(
+            stage2_gca.get("gca15_initial_copy_lift") if stage2_gca else None
         ),
-        "correct_change_f1": as_float(main.get("correct_change_f1")),
-        "path_macro_correct_change_f1": as_float(
-            main.get("path_macro_correct_change_f1")
+        "exact_pair_set_match": as_float(
+            stage1_pair.get("exact_pair_set_match") if stage1_pair else None
         ),
-        "event_macro_update_accuracy": as_float(
-            main.get("event_macro_update_accuracy")
+        "exact_pair_set_ci95_low": as_float(
+            stage1_pair.get("exact_pair_set_ci95_low")
+            if stage1_pair
+            else None
         ),
-        "event_exact_update_accuracy": as_float(
-            main.get("event_exact_update_accuracy")
+        "exact_pair_set_ci95_high": as_float(
+            stage1_pair.get("exact_pair_set_ci95_high")
+            if stage1_pair
+            else None
         ),
-        "retention_mean_over_observed_lags": as_float(
-            main.get("retention_mean_over_observed_lags")
+        "final_state_accuracy": as_float(
+            stage2_gca.get("final_state_accuracy") if stage2_gca else None
+        ),
+        "final_state_initial_copy_lift": as_float(
+            stage2_gca.get("final_state_initial_copy_lift")
+            if stage2_gca
+            else None
+        ),
+        "retention_after_update": as_float(
+            stage2_gca.get("retention_after_update") if stage2_gca else None
+        ),
+        "evidence_hit_rate": as_float(
+            stage2_gca.get("evidence_hit_rate") if stage2_gca else None
+        ),
+        "exact_state_match": as_float(
+            stage2_gca.get("exact_state_match") if stage2_gca else None
+        ),
+        "schema_success_rate": as_float(
+            stage2_gca.get("schema_success_rate")
+            if stage2_gca
+            else stage1_pair.get("schema_success_rate")
+            if stage1_pair
+            else None
         ),
         "recorded_cost_usd": recorded_cost,
         "recorded_cost_per_item_usd": recorded_cost / int(main["items"]),
@@ -355,6 +401,15 @@ def build_markdown(rows: list[dict[str, Any]]) -> str:
         stage: [row for row in rows if row["stage"] == stage]
         for stage in ("stage1", "stage2")
     }
+    stage2_reference = by_stage["stage2"][0]
+    initial_copy_gca = (
+        stage2_reference["headline_score"]
+        - stage2_reference["gca15_initial_copy_lift"]
+    )
+    initial_copy_final = (
+        stage2_reference["final_state_accuracy"]
+        - stage2_reference["final_state_initial_copy_lift"]
+    )
     lines = [
         "# Stage 1/2 대형·소형 모델 통합 결과",
         "",
@@ -365,9 +420,11 @@ def build_markdown(rows: list[dict[str, Any]]) -> str:
         "구성된다. 대형 모델은 GPT 5.6 Sol, Claude Opus 4.8, Gemini 3.1 Pro이고, "
         "소형 모델은 GPT 5.6 Terra/Luna, Claude Sonnet 4.6, Gemini 3.5 Flash이다.",
         "",
-        "Stage 1 headline은 strict occurred-event/evidence-pair F1, Stage 2 "
-        "headline은 final-state accuracy이다. 초반·중반·후반 구간은 각각 "
-        "cp15-90, cp105-195, cp210-300이다.",
+        "Stage 1은 strict occurred-event/evidence-pair F1을 대표 지표로, 전체 "
+        "누적 pair 복원 성공률인 Exact Pair-Set Match를 엄격한 보조 지표로 "
+        "보고한다. Stage 2는 GCA@15를 대표 지표로, update의 장기 보존은 "
+        "Retention으로 따로 보고한다. 초반·중반·후반 구간은 각각 cp15-90, "
+        "cp105-195, cp210-300이다.",
         "",
         "## Canonical 원본",
         "",
@@ -429,6 +486,33 @@ def build_markdown(rows: list[dict[str, Any]]) -> str:
         )
     )
 
+    lines.extend(["", "## Stage 1 세부 지표", ""])
+    stage1_rows = []
+    for row in sorted(
+        by_stage["stage1"], key=lambda item: item["headline_score"], reverse=True
+    ):
+        stage1_rows.append(
+            [
+                row["model_scale"],
+                row["model_display_name"],
+                format_float(row["headline_score"]),
+                format_float(row["exact_pair_set_match"]),
+                format_float(row["schema_success_rate"]),
+            ]
+        )
+    lines.extend(
+        markdown_table(
+            [
+                "크기",
+                "모델",
+                "Strict Pair F1",
+                "Exact Pair-Set",
+                "Schema Valid",
+            ],
+            stage1_rows,
+        )
+    )
+
     lines.extend(["", "## Stage 2 세부 지표", ""])
     stage2_rows = []
     for row in sorted(
@@ -439,12 +523,13 @@ def build_markdown(rows: list[dict[str, Any]]) -> str:
                 row["model_scale"],
                 row["model_display_name"],
                 format_float(row["headline_score"]),
-                format_float(row["dynamic_path_final_state_accuracy"]),
-                format_float(row["correct_change_f1"]),
-                format_float(row["path_macro_correct_change_f1"]),
-                format_float(row["event_macro_update_accuracy"]),
-                format_float(row["event_exact_update_accuracy"]),
-                format_float(row["retention_mean_over_observed_lags"]),
+                format_float(row["gca15_initial_copy_lift"]),
+                format_float(row["retention_after_update"]),
+                format_float(row["final_state_accuracy"]),
+                format_float(row["final_state_initial_copy_lift"]),
+                format_float(row["evidence_hit_rate"]),
+                format_float(row["exact_state_match"]),
+                format_float(row["schema_success_rate"]),
             ]
         )
     lines.extend(
@@ -452,13 +537,14 @@ def build_markdown(rows: list[dict[str, Any]]) -> str:
             [
                 "크기",
                 "모델",
-                "상태 정확도",
-                "동적 경로 정확도",
-                "변화 F1",
-                "경로-macro 변화 F1",
-                "이벤트 update",
-                "정확 update",
-                "유지율",
+                "GCA@15",
+                "Initial-copy 대비",
+                "Retention",
+                "Final State",
+                "Final lift",
+                "Evidence Hit",
+                "Exact Snapshot",
+                "Schema Valid",
             ],
             stage2_rows,
         )
@@ -565,6 +651,10 @@ def build_markdown(rows: list[dict[str, Any]]) -> str:
             "높다. Gemini Pro의 Flash 대비 우위는 Stage 2에서 크게 좁아진다.",
             "6. GPT 5.6 Luna는 Stage 1에서 Sol과 Terra보다 낮지만 Stage 2에서는 "
             "최고 소형 모델이자 전체 2위다.",
+            f"7. Initial-copy baseline의 Stage 2 Final State Accuracy는 "
+            f"{initial_copy_final:.3f}이지만 GCA@15는 {initial_copy_gca:.3f}이다. "
+            "따라서 unchanged path의 비중으로 부풀 수 있는 "
+            "snapshot accuracy 대신 GCA@15를 대표 순위에 사용했다.",
             "",
             "## 신뢰성 및 비용 주의사항",
             "",
@@ -577,6 +667,9 @@ def build_markdown(rows: list[dict[str, Any]]) -> str:
             "usage metadata가 없는 provider 실패 호출은 빠져 있으므로 실제 지출은 더 높다.",
             "- Stage 1과 Stage 2 headline은 서로 다른 과업을 측정하므로 같은 척도처럼 "
             "직접 차감해서는 안 된다.",
+            "- Dynamic-path accuracy, Correct-change F1, path-macro F1과 event exact "
+            "지표는 중복되거나 희소 support에 민감해 headline에서 제외했으며 원본 "
+            "metrics artifact에는 보존했다.",
             "- 정확한 checkpoint 값, token 합계, latency percentile, retry 횟수 및 "
             "source-run provenance는 동반 CSV에 포함했다.",
         ]
@@ -590,8 +683,43 @@ def main() -> None:
     runs_root = experiment_root / "runs"
     output_dir = experiment_root / "docs" / "results"
     output_dir.mkdir(parents=True, exist_ok=True)
+    focused_stage1_rows = read_csv(output_dir / "stage1_pair_results.csv")
+    stage1_pair_by_method = {
+        row["method_id"]: row for row in focused_stage1_rows
+    }
+    focused_stage2_rows = read_csv(output_dir / "stage2_gca15_results.csv")
+    stage2_gca_by_method = {
+        row["method_id"]: row for row in focused_stage2_rows
+    }
+    expected_methods = {spec.method_id for spec in MODEL_SPECS}
+    if set(stage1_pair_by_method) != expected_methods:
+        raise ValueError(
+            "focused Stage 1 method set mismatch: "
+            f"expected={sorted(expected_methods)}, "
+            f"actual={sorted(stage1_pair_by_method)}"
+        )
+    if set(stage2_gca_by_method) != expected_methods:
+        raise ValueError(
+            "focused Stage 2 method set mismatch: "
+            f"expected={sorted(expected_methods)}, "
+            f"actual={sorted(stage2_gca_by_method)}"
+        )
     rows = [
-        one_stage_row(runs_root=runs_root, spec=spec, stage=stage)
+        one_stage_row(
+            runs_root=runs_root,
+            spec=spec,
+            stage=stage,
+            stage1_pair=(
+                stage1_pair_by_method[spec.method_id]
+                if stage == "stage1"
+                else None
+            ),
+            stage2_gca=(
+                stage2_gca_by_method[spec.method_id]
+                if stage == "stage2"
+                else None
+            ),
+        )
         for stage in ("stage1", "stage2")
         for spec in MODEL_SPECS
     ]

@@ -118,19 +118,22 @@ row도 새 attempt에 복사하고, 완료되지 않은 checkpoint만 다시 호
 
 Primary metric은 `strict_occurred_event_evidence_f1`이다. 각 checkpoint에서
 exact multiset F1을 계산하고 checkpoint를 동일 가중한다. 불확실성은 trajectory
-bootstrap 95% CI이며 모든 method pair의 paired delta도 함께 계산된다.
+bootstrap 95% CI이며 모든 method pair의 paired delta도 함께 계산된다. 엄격한
+보조 지표 `exact_pair_multiset_match`는 누적 pair 전체가 완전히 일치한 checkpoint
+비율이며 동일한 trajectory-bootstrap CI와 checkpoint curve를 보고한다.
 
 | 산출물 | 내용 |
 |---|---|
 | `metrics/main_results.csv` | method × stage score, CI, parse error |
 | `metrics/paired_method_deltas.csv` | 모든 method pair의 paired trajectory bootstrap delta |
-| `metrics/checkpoint_metrics.csv` | checkpoint별 strict pair metric |
-| `metrics/trajectory_metrics.csv` | method × trajectory strict pair F1 |
+| `metrics/checkpoint_metrics.csv` | checkpoint별 strict pair F1과 Exact Pair-Set |
+| `metrics/trajectory_metrics.csv` | method × trajectory F1과 Exact Pair-Set |
 | `metrics/parse_reliability.csv` | first-attempt parse/schema failure, retry count |
 | `metrics/retrieval_recall.csv` | visible-prefix context coverage |
 | `metrics/cost_latency.csv` | token, latency, estimated cost, routed provider |
 | `answer_pairs/<method>/<traj>/cp_XXX.json` | 문항별 prediction/gold/evidence/attempt |
 | `report/figures/checkpoint_strict_pair_f1.svg` | checkpoint strict pair F1 |
+| `report/figures/checkpoint_exact_pair_set_match.svg` | checkpoint 전체 pair 복원율 |
 | `report/figures/method_trajectory_strict_pair_f1_heatmap.svg` | method × trajectory heatmap |
 
 `retrieval_recall.csv`는 Gold-independent context coverage audit이다. 세 모델

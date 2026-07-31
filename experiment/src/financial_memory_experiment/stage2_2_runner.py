@@ -19,6 +19,7 @@ from .metrics import summarize_predictions, write_tables
 from .paths import ExperimentPaths
 from .corpus import corpus_manifest_path, corpus_root
 from .prompts import build_query, s000_as_session
+from .stage2_2 import write_stage2_2_initial_copy_report
 from .run_harness import (
     ALL_TRAJECTORIES,
     ANTHROPIC_METHODS,
@@ -910,11 +911,12 @@ def command_report(args: argparse.Namespace) -> None:
         if baseline_path.exists()
         else None
     )
-    if baseline is not None:
-        write_json(
-            run_dir / "metrics" / "initial_copy_baseline.json",
-            baseline,
-        )
+    if not baseline or not baseline.get("gca15"):
+        baseline = write_stage2_2_initial_copy_report(paths)
+    write_json(
+        run_dir / "metrics" / "initial_copy_baseline.json",
+        baseline,
+    )
     write_tables(report, run_dir / "metrics")
     _write_auxiliary_metrics(run_dir, prediction_paths, report)
     _materialize_state_pairs(paths, run_dir, prediction_paths)
@@ -934,9 +936,10 @@ def command_report(args: argparse.Namespace) -> None:
     lines = [
         f"# Stage 2.2 Reconstruction — {title}",
         "",
-        "This report uses checkpoint-then-trajectory macro aggregation. "
-        "Path metrics first aggregate 20 checkpoints within each "
-        "path × trajectory unit, then average trajectories with equal weight.",
+        "The Stage 2 headline is GCA@15: the published GCA C/W/O/M and "
+        "weighted-harmonic formula applied to 15-session checkpoint "
+        "transitions, with S000 as an unscored seed. Confidence intervals "
+        "use a trajectory-cluster bootstrap.",
         "",
         "## Result artifacts",
         "",

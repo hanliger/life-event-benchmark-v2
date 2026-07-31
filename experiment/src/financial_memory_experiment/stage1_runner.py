@@ -564,6 +564,9 @@ def _write_auxiliary_metrics(
                 "trajectory_id": row["trajectory_id"],
                 "checkpoint": row["query_checkpoint"],
                 HEADLINE_METRIC: metrics.get(HEADLINE_METRIC),
+                "exact_pair_set_match": metrics.get(
+                    "exact_pair_multiset_match"
+                ),
                 "correct": int(bool(row["correct"])),
                 "predicted_pair_count": metrics.get("predicted_pair_count"),
                 "gold_pair_count": metrics.get("gold_pair_count"),
@@ -594,18 +597,32 @@ def _write_auxiliary_metrics(
             }
         )
     trajectory_rows = []
-    grouped: dict[tuple[str, str], list[float]] = {}
+    grouped: dict[tuple[str, str], list[dict[str, float]]] = {}
     for row in raw_rows:
         grouped.setdefault(
             (str(row["method_id"]), str(row["trajectory_id"])), []
-        ).append(float((row.get("metrics") or {})[HEADLINE_METRIC]))
+        ).append(
+            {
+                "f1": float((row.get("metrics") or {})[HEADLINE_METRIC]),
+                "exact": float(
+                    (row.get("metrics") or {})[
+                        "exact_pair_multiset_match"
+                    ]
+                ),
+            }
+        )
     for (method, trajectory), values in sorted(grouped.items()):
         trajectory_rows.append(
             {
                 "method_id": method,
                 "trajectory_id": trajectory,
                 "items": len(values),
-                HEADLINE_METRIC: sum(values) / len(values),
+                HEADLINE_METRIC: sum(value["f1"] for value in values)
+                / len(values),
+                "exact_pair_set_match": sum(
+                    value["exact"] for value in values
+                )
+                / len(values),
             }
         )
     write_csv(run_dir / "metrics" / "checkpoint_metrics.csv", checkpoint_rows)
@@ -626,11 +643,14 @@ def _write_figures(
     figure_dir.mkdir(parents=True, exist_ok=True)
     checkpoints = sorted({int(row["checkpoint"]) for row in checkpoint_rows})
     series: dict[str, dict[int, float]] = {}
-    counts: dict[tuple[str, int], list[int]] = {}
+    counts: dict[tuple[str, int], list[float]] = {}
+    exact_counts: dict[tuple[str, int], list[float]] = {}
     for row in checkpoint_rows:
-        counts.setdefault(
-            (str(row["method_id"]), int(row["checkpoint"])), []
-        ).append(float(row[HEADLINE_METRIC]))
+        key = (str(row["method_id"]), int(row["checkpoint"]))
+        counts.setdefault(key, []).append(float(row[HEADLINE_METRIC]))
+        exact_counts.setdefault(key, []).append(
+            float(row["exact_pair_set_match"])
+        )
     for (method, checkpoint), values in counts.items():
         series.setdefault(method, {})[checkpoint] = sum(values) / len(values)
     (figure_dir / "checkpoint_strict_pair_f1.svg").write_text(
@@ -638,6 +658,19 @@ def _write_figures(
             title="Stage 1 strict occurred-event/evidence F1 by checkpoint",
             x_values=checkpoints,
             series=series,
+        ),
+        encoding="utf-8",
+    )
+    exact_series: dict[str, dict[int, float]] = {}
+    for (method, checkpoint), values in exact_counts.items():
+        exact_series.setdefault(method, {})[checkpoint] = sum(values) / len(
+            values
+        )
+    (figure_dir / "checkpoint_exact_pair_set_match.svg").write_text(
+        line_chart_svg(
+            title="Stage 1 exact pair-set match by checkpoint",
+            x_values=checkpoints,
+            series=exact_series,
         ),
         encoding="utf-8",
     )
@@ -701,7 +734,9 @@ def command_report(args: argparse.Namespace) -> None:
         "",
         f"Primary metric is `{HEADLINE_METRIC}`: each cumulative 15-session "
         "checkpoint scores the exact multiset of all occurred-event/evidence "
-        f"pairs, then checkpoints are equally weighted. {comparison}",
+        "pairs, then checkpoints are equally weighted. Exact Pair-Set Match "
+        "is the strict whole-checkpoint success rate. "
+        f"{comparison}",
         "",
         "## Result artifacts",
         "",

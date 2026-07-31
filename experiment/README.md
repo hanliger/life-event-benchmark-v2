@@ -37,6 +37,15 @@ Stage 1은 direct-API 3-model profile을 먼저 실행하고 독립적인 9-meth
 - [docs/stage1_traj010_gpt_5_6_sol_cp300_smoke.md](docs/stage1_traj010_gpt_5_6_sol_cp300_smoke.md)
 - [docs/stage2_2_9_method_runbook.md](docs/stage2_2_9_method_runbook.md) /
   [docs/stage2_2_prompt_leakage_audit.md](docs/stage2_2_prompt_leakage_audit.md)
+- [docs/results/stage1_pair_results.md](docs/results/stage1_pair_results.md) /
+  [docs/results/stage2_gca15_results.md](docs/results/stage2_gca15_results.md) /
+  [docs/results/stage1_stage2_all_models.md](docs/results/stage1_stage2_all_models.md)
+
+논문용 대표 지표는 Stage 1 `Strict Pair F1`, Stage 2 `GCA@15`다. Stage 1은
+`Exact Pair-Set Match`를 전체 누적 event/evidence history의 엄격한 성공률로 함께
+보고한다. Stage 2는 `Retention-after-update`를 장기 보존 지표로 함께 보고하며,
+Final State Accuracy와 initial-copy lift, Evidence Hit, Exact Snapshot, Schema
+Validity를 보조 지표로 사용한다.
 
 아래 순서가 실험의 유일한 실행 runbook이다.
 

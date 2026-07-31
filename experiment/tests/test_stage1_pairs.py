@@ -57,6 +57,7 @@ def test_public_id_map_is_a_deterministic_rename():
 def test_scoring_is_strict_with_no_partial_credit():
     exact = _score(EXACT, [("E001", "D002")])
     assert exact["metrics"][sp.HEADLINE_METRIC] == 1.0
+    assert exact["metrics"]["exact_pair_multiset_match"] == 1.0
     assert exact["prediction"] == [
         {"event_id": "E001", "evidence_session_id": "D002"}
     ]
@@ -72,6 +73,7 @@ def test_scoring_is_strict_with_no_partial_credit():
 
     partial = _score(EXACT, [("E001", "D002"), ("E002", "D003")])
     assert partial["metrics"][sp.HEADLINE_METRIC] == pytest.approx(2 / 3)
+    assert partial["metrics"]["exact_pair_multiset_match"] == 0.0
 
 
 def test_unparsable_answer_scores_zero_and_is_recorded():

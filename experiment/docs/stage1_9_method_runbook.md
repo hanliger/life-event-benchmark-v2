@@ -96,14 +96,16 @@ method × trajectory artifact는 건너뛰고 실패 attempt는 다음
 
 Primary metric은 `strict_occurred_event_evidence_f1`이다. 각 checkpoint의 exact
 multiset F1을 동일 가중하고 trajectory bootstrap 95% CI와 모든 method pair의
-paired delta를 함께 계산한다.
+paired delta를 함께 계산한다. `exact_pair_multiset_match`는 누적 pair multiset
+전체가 완전히 일치한 checkpoint 비율이며 trajectory-bootstrap CI와 checkpoint
+curve를 함께 보고한다.
 
 | 산출물 | 내용 |
 |---|---|
 | `metrics/main_results.csv` | method × stage score, CI, parse error |
 | `metrics/paired_method_deltas.csv` | paired trajectory bootstrap delta |
-| `metrics/checkpoint_metrics.csv` | checkpoint별 pair metric |
-| `metrics/trajectory_metrics.csv` | method × trajectory metric |
+| `metrics/checkpoint_metrics.csv` | checkpoint별 Pair F1과 Exact Pair-Set |
+| `metrics/trajectory_metrics.csv` | method × trajectory Pair F1과 Exact Pair-Set |
 | `metrics/parse_reliability.csv` | parse/schema failure와 retry |
 | `metrics/retrieval_recall.csv` | visible-prefix context coverage |
 | `metrics/cost_latency.csv` | token, latency, estimated cost, provider |

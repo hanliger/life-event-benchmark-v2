@@ -52,7 +52,7 @@ occurrences of the same event type.
 
 ## 4. Scoring
 
-The headline metric is `strict_occurred_event_evidence_f1`.
+The primary metric is `strict_occurred_event_evidence_f1`.
 
 ```text
 G = Counter(gold_pairs)
@@ -64,9 +64,23 @@ Invalid records each add one false positive. A wrong label at the correct
 session, a correct label at the wrong session, duplicate predictions, and
 unsupported extra pairs receive no partial credit.
 
+The strict whole-checkpoint metric is `exact_pair_multiset_match`:
+
+```text
+Exact Pair-Set Match = 1 if P == G and parsing/validation succeeds, else 0
+```
+
+Strict Pair F1 measures partial pair-level reconstruction. Exact Pair-Set
+Match measures whether the complete cumulative event/evidence history was
+reconstructed without an omission, addition, duplicate, or anchor error.
+
 Metrics are computed per trajectory/checkpoint. Trajectories are
 macro-averaged within each checkpoint, then the 20 checkpoints are equally
 weighted. Pair atoms are never pooled across checkpoints.
+
+Both metrics use trajectory-cluster bootstrap confidence intervals. The main
+result table reports Strict Pair F1, Exact Pair-Set Match, and schema validity.
+Checkpoint curves are reported for both accuracy metrics.
 
 ## 5. Corpus conditions
 

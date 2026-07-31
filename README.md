@@ -26,9 +26,9 @@ persona ─▶ 초기 금융 상태 ─▶ 생애사건 trajectory ─▶ 상담
 
 두 stage 모두 **전체 trajectory를 누적으로 복원**하는 과제입니다. 한 window나 한 항목만 묻지 않습니다. Stage 1은 사건 수를 알려주지 않은 채 prefix 전체의 occurred 사건 집합과 각 사건의 확정 근거 세션을 전부 복원하게 하고, 15세션 checkpoint(15, 30, …, 300)마다 이를 반복해 **사다리**로 읽습니다.
 
-Stage 1 채점은 `strict_occurred_event_evidence_f1` 하나입니다. `Counter` 기반 exact multiset P/R/F1이라 부분점수가 없고, 형제 라벨·잘못된 근거 세션·중복 예측·무효 레코드는 모두 precision을 깎고 놓친 짝은 recall을 깎습니다. checkpoint별 trajectory macro를 낸 뒤 checkpoint를 동일 가중으로 평균하며, checkpoint를 가로질러 짝을 pooling하지 않습니다. 설계·지표·**알려진 한계**는 [`docs/rq1_pair_protocol.md`](docs/rq1_pair_protocol.md)에 있습니다.
+Stage 1의 대표 지표는 `strict_occurred_event_evidence_f1`입니다. `Counter` 기반 exact multiset P/R/F1으로, 형제 라벨·잘못된 근거 세션·중복 예측·무효 레코드는 precision을 깎고 놓친 짝은 recall을 깎습니다. 엄격한 보조 지표 `exact_pair_multiset_match`는 checkpoint까지의 전체 pair multiset이 완전히 같을 때만 1입니다. 두 지표 모두 checkpoint별 trajectory macro를 낸 뒤 checkpoint를 동일 가중하며, checkpoint를 가로질러 pair atom을 pooling하지 않습니다. 설계와 집계는 [`docs/rq1_pair_protocol.md`](docs/rq1_pair_protocol.md)에 있습니다.
 
-Stage 2는 값 후보를 주지 않고 대화에서 직접 복원하게 하며, 채점은 path별 값·status 비교입니다. 출력 문법(34개 path 이름·타입·허용 status)은 정답이 아니므로 모델에 공개하지만, 회사명·주소·금액 같은 open value의 후보는 주지 않습니다. 설계와 공개 정책은 [`experiment/docs/stage2_2_reconstruct.md`](experiment/docs/stage2_2_reconstruct.md)에 있습니다.
+Stage 2는 값 후보를 주지 않고 대화에서 직접 복원하게 합니다. 대표 지표 `GCA@15`는 checkpoint 사이의 state delta를 Granular Change Accuracy로 평가하고, `Retention-after-update`는 적용된 update의 장기 보존을 측정합니다. Final State Accuracy와 initial-copy lift, Evidence Hit, Exact Snapshot, Schema Validity를 보조 지표로 보고합니다. 출력 문법(34개 path 이름·타입·허용 status)은 모델에 공개하지만 회사명·주소·금액 같은 open value 후보는 주지 않습니다. 설계와 집계는 [`experiment/docs/stage2_2_reconstruct.md`](experiment/docs/stage2_2_reconstruct.md)에 있습니다.
 
 두 stage는 **같은 코퍼스**를 씁니다: HuggingFace의 `dialogues_no_prospective` + `gold_no_prospective`. 전망 근거(`weak_signal_evidence`, `upcoming_evidence`)를 중립 filler로 치환해 세션 수·공개 id·위치·날짜를 보존한 코퍼스이며, 다른 코퍼스로 돌리는 경로는 없습니다.
 
@@ -550,9 +550,11 @@ data/runs/<RUN_ID>/rq1/
   cancelled / weak_signal / upcoming 인스턴스는 gold를 만들지 않습니다.
 - 출력은 `{"pairs": [{"event_id", "evidence_session_id"}]}` 뿐입니다. status·
   confidence·설명은 받지 않습니다.
-- headline은 `strict_occurred_event_evidence_f1` 하나. `collections.Counter`
+- 대표 지표는 `strict_occurred_event_evidence_f1`. `collections.Counter`
   기반 exact multiset P/R/F1이므로 sibling 라벨·잘못된 근거 세션·중복 예측·무효
-  레코드는 전부 precision을 깎고, 놓친 짝은 recall을 깎습니다. 부분점수 없음.
+  레코드는 전부 precision을 깎고, 놓친 짝은 recall을 깎습니다.
+- 엄격한 보조 지표는 `exact_pair_multiset_match`. 누적 pair multiset 전체가
+  완전히 같고 parse/validation 오류가 없을 때만 1입니다.
 - 15..300 checkpoint별로 trajectory macro 평균을 낸 뒤 20개 checkpoint를 동일
   가중으로 평균(AUC)합니다. checkpoint를 가로질러 atom을 pooling하지 않습니다.
 
@@ -838,6 +840,9 @@ python scripts/audit_session_dates.py \
 | `experiment/docs/stage2_2_prompt_leakage_audit.md` | Stage 2 prompt 노출·누출 감사 기록 |
 | `experiment/docs/architecture.md` | 하네스 데이터·실행 흐름 |
 | `experiment/docs/model_inference_settings.md` | provider별 추론 설정 |
+| `experiment/docs/results/stage1_pair_results.md` | Stage 1 Pair F1·Exact Pair-Set 결과 |
+| `experiment/docs/results/stage2_gca15_results.md` | Stage 2 GCA@15·Retention 결과 |
+| `experiment/docs/results/stage1_stage2_all_models.md` | Stage 1/2 7-model 통합 결과 |
 
 ---
 

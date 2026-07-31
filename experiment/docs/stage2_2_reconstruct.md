@@ -480,9 +480,7 @@ path를 동일 가중 평균한다. support가 없는 path는 0점으로 간주�
 - path별 change confusion counts
 
 Gold positive가 있지만 predicted positive가 하나도 없으면 precision과 F1은
-0이다. 이전 protocol에서 이런 checkpoint의 F1이 `null`이 되어 macro에서
-제외될 수 있던 동작을 v2에서 수정했다. 따라서 v1 smoke의 Correct-change F1과
-v2 결과를 직접 비교하지 않는다.
+0이다. support가 없는 path는 macro 분모에서 제외한다.
 
 #### Event-macro Update Accuracy
 
@@ -551,9 +549,59 @@ dialogue에서 관련 근거를 찾아 유지하는 부담을 분리하는 분�
 
 권장 메인 결과 표는 다음과 같다.
 
-| Method | Final State Acc. | Dynamic-path Final Acc. | Correct-Change F1 | Path-macro F1 | Event Update Acc. | Retention | Exact Match | Parse Success |
+### 9.2 GCA@15 reporting protocol
+
+최종 논문용 Stage 2 대표 지표는 Aksu & Chen (2024)의 Granular Change
+Accuracy를 이 benchmark의 15-session checkpoint stream에 대응한 `GCA@15`로
+한다.
+
+- trajectory = dialogue
+- cp15, ..., cp300 = 순차 turn
+- 34개 memory path = slot label
+- 정규화된 `(value, status)` = strict slot value
+- 모델에 입력되는 `S000` = 채점하지 않는 초기 seed
+
+인접 checkpoint에서 Gold와 prediction의 cell delta를 각각 계산하고 논문의
+Algorithm 1 순서대로 `C`(correct), `W`(wrong value), `M`(missed),
+`O`(overshot)로 센다. 따라서 동일한 오류가 이후 checkpoint에서 그대로 유지될 때
+반복해서 벌점을 주지 않으며, 현재 Gold로 수정한 prediction은 `C`로 보상한다.
+Gold가 과거의 premature prediction과 일치하게 된 경우도 대칭적으로 `C`로
+처리한다.
+
+VP/VR/LP/LR과 value weight `10/11`의 support-weighted harmonic mean은 논문의
+공식 구현을 그대로 사용한다. 다만 원 논문의 DST turn stream을 이 benchmark의
+checkpoint stream으로 바꾼 것이므로 결과 이름은 단순 `GCA`가 아니라
+`GCA@15`로 명시한다. 전체 score는 checkpoint transition의 C/W/M/O를 pooled
+집계하고, 95% CI는 trajectory-cluster bootstrap으로 계산한다.
+
+이 과업은 34개 path를 항상 출력하도록 요구하는 fixed-schema reconstruction이다.
+따라서 정상 schema 출력에서는 slot label 자체를 빠뜨리거나 추가하는 `M/O`가 거의
+발생하지 않고, GCA의 변별력은 주로 `C/W` value 판정에서 나온다. 이는 구현상의
+변형이 아니라 과업 출력 구조의 귀결이며, VP/VR/LP/LR과 C/W/M/O 원수를 동반
+CSV에 공개한다.
+
+GCA는 같은 변화에 대한 반복 보상과 벌점을 피하는 대신 장기간 같은 상태를 유지하는
+능력 자체는 측정하지 않는다. 따라서 `Retention-after-update`를 독립적인 핵심
+지표로 함께 보고한다. 전체 34-path `Final State Accuracy`와 initial-copy 대비
+lift는 일반적인 slot accuracy sanity check로, `Exact Snapshot`은 Joint Goal
+Accuracy에 대응하는 엄격한 보조 지표로 둔다. evidence는 GCA value에 포함하지
+않고 `Evidence Hit`으로 별도 보고한다.
+
+권장 메인 결과 표는 다음과 같다.
+
+| Method | GCA@15 [95% CI] | vs Initial Copy | Retention | Final State Acc. | Final lift | Evidence Hit | Exact Snapshot | Schema Valid |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
 | GPT-5.6-sol |  |  |  |  |  |  |  |  |
+
+Dynamic-path Final Accuracy, checkpoint Correct-change F1, path-macro F1,
+Event Update/Exact Update, Value/Status Accuracy는 오류 분석 artifact에는 유지하지만
+메인 결과 표와 모델 순위에는 사용하지 않는다. 서로 강하게 중복되거나 고정
+schema·희소 support에 민감해 독립적인 대표 결론을 추가하지 못하기 때문이다.
+
+- 논문: <https://aclanthology.org/2024.lrec-main.699/>
+- 공식 구현: <https://github.com/cuthalionn/Granular_Change_Accuracy>
+- canonical 결과: `docs/results/stage2_gca15_results.md`와 동반 CSV
+- 재생성: `scripts/build_stage2_gca15_report.py`
 
 Change confusion matrix, status confusion matrix, evidence 점수와 path/domain별 결과는
 보조 표로 제공한다.
@@ -911,17 +959,16 @@ Gold가 자동 replay로 생성됐다는 사실만으로 대화에서 실제 복
 
 ## 14. 논문 보고 지표의 역할
 
-많은 지표를 출력하되 사후에 유리한 점수만 선택하지 않도록 역할을 미리 고정한다.
+결과 표에는 서로 다른 평가 역할을 갖는 지표만 남긴다.
 
 | 역할 | 지표 |
 |---|---|
-| 대표 전체-state 지표 | Final State Accuracy |
-| 엄격한 전체 snapshot 지표 | Exact State Match |
-| 실제 dialogue update 반영 | Changed State Accuracy, Correct-Change F1 |
-| 과잉 변경 방지 | Unchanged State Accuracy, FP rate |
-| 오류 분석 | Value/Status Accuracy, confusion matrices |
-| 근거성 | Evidence Hit Rate, Citation Precision |
-| 신뢰성 | Parse success, schema validation, failed requests |
+| 대표 state-transition 지표 | GCA@15 [trajectory-bootstrap 95% CI] |
+| update 장기 보존 | Retention-after-update와 lag curve |
+| 일반 slot-accuracy 확인 | Final State Accuracy와 initial-copy lift |
+| 엄격한 전체 snapshot | Exact State Match |
+| 근거성 | Evidence Hit Rate |
+| 신뢰성 | Schema validity, parse success, failed requests |
 
 Evidence 오류는 state cell의 정답 여부와 분리한다. 이벤트 복원 개수는
 `stage2_2_reconstruct`의 핵심 지표로 사용하지 않는다. 이미 덮어써져 current
@@ -930,12 +977,15 @@ state에 남지 않은 과거 이벤트를 평가하려면 별도의 event-histo
 
 ## 15. 관련 평가 관행과의 정합성
 
+- GCA@15는 dialogue의 turn을 15-session checkpoint로 대응하여 state delta를
+  평가한다. fixed 34-path schema에서는 label 누락·초과보다 value/status의 C/W
+  판정이 주된 변별력을 제공한다.
 - Full-state exact match는 Dialogue State Tracking의 Joint Goal Accuracy와 같은
   역할을 한다.
-- path별 Final State Accuracy는 slot accuracy에 대응하며 exact match의 엄격함을
-  보완한다.
-- Changed State Accuracy와 change confusion matrix는 unchanged slot의 다수성으로
-  전체 정확도가 부풀려지는 문제를 진단한다.
+- path별 Final State Accuracy는 slot accuracy에 대응하며 initial-copy lift와 함께
+  해석한다.
+- Retention-after-update는 GCA가 반복 계수하지 않는 update의 장기 유지 여부를
+  lag별로 측정한다.
 - 공개 schema와 open value 생성은 schema-guided/open-vocabulary DST 설정과
   일치한다.
 - deterministic parser와 schema validation은 state 의미 평가와 출력 형식 실패를

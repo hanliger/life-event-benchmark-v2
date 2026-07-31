@@ -100,10 +100,10 @@ Lifecycle 질문과 memory 질문은 별도 stage로 보고한다.
 
 ## 지표와 집계
 
-| 대상 | Primary |
+| 대상 | 보고 지표 |
 |---|---|
-| Stage 1 | checkpoint 균등가중 `strict_occurred_event_evidence_f1` |
-| Stage 2 | checkpoint → target → trajectory 계층 macro accuracy |
+| Stage 1 | 대표: checkpoint 균등가중 `strict_occurred_event_evidence_f1`; 엄격 보조: `exact_pair_multiset_match` |
+| Stage 2 | 대표: `GCA@15`; 장기 보존: `Retention-after-update` |
 | Masking | stage × arm accuracy |
 | Retrieval | latest-state recall@k, complete-evidence recall@k |
 | 불확실성 | trajectory bootstrap 95% CI, 10,000 samples |
@@ -111,8 +111,15 @@ Lifecycle 질문과 memory 질문은 별도 stage로 보고한다.
 | 신뢰성 | parse error, failed request, COMPLETE 비율 |
 | 효율 | build/query token, operation, latency, estimated cost |
 
-Stage 2는 같은 target이 여러 checkpoint에서 반복되어도 먼저 target 내부를 평균한 뒤
-trajectory를 동일 가중한다. 이 방식은 일찍 등장한 target의 과대 가중을 막는다.
+Stage 1의 두 지표는 checkpoint별 trajectory macro를 계산한 뒤 checkpoint를 동일
+가중한다. Pair F1은 부분 복원 능력을, Exact Pair-Set Match는 해당 checkpoint까지의
+누적 pair multiset을 빠짐없이 정확히 복원한 비율을 나타낸다.
+
+Stage 2의 GCA@15는 연속한 15-session checkpoint 사이의 state delta를 path별
+`C/W/M/O` 판정으로 평가한다. Retention-after-update는 반영된 update가 이후
+checkpoint에서도 유지되는지를 별도로 측정한다. 전체 34-path Final State Accuracy와
+initial-copy lift, Evidence Hit, Exact Snapshot, Schema Validity는 해석용 보조 지표로
+둔다.
 
 ## 논문 보고 조건
 

@@ -1,6 +1,6 @@
 # Stage 2.2 Reconstruction — 9-Method Comparison
 
-This report uses checkpoint-then-trajectory macro aggregation. Path metrics first aggregate 20 checkpoints within each path × trajectory unit, then average trajectories with equal weight.
+The Stage 2 headline is GCA@15: the published GCA C/W/O/M and weighted-harmonic formula applied to 15-session checkpoint transitions, with S000 as an unscored seed. Confidence intervals use a trajectory-cluster bootstrap.
 
 ## Result artifacts
 

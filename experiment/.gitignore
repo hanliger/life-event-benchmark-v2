@@ -4,6 +4,7 @@
 data/raw/
 data/prepared/
 data/stage2_2_reconstruct/
+data/openrouter_runs.zip
 runs/
 __pycache__/
 *.py[cod]

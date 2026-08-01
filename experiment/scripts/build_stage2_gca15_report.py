@@ -99,6 +99,34 @@ MODEL_SPECS = (
         "small",
         "stage2_2_combined/0731_1914",
     ),
+    ModelSpec(
+        "fc_openrouter_llama_4_maverick",
+        "Llama 4 Maverick",
+        "Llama",
+        "open-weight",
+        "stage2_2/0801_0514",
+    ),
+    ModelSpec(
+        "fc_openrouter_gpt_oss_120b",
+        "GPT-OSS 120B",
+        "OpenAI",
+        "open-weight",
+        "stage2_2/0801_0514_02",
+    ),
+    ModelSpec(
+        "fc_openrouter_qwen_3_5_122b_a10b",
+        "Qwen 3.5 122B A10B",
+        "Qwen",
+        "open-weight",
+        "stage2_2/0801_0514_03",
+    ),
+    ModelSpec(
+        "fc_openrouter_qwen_3_6_35b_a3b_fp8",
+        "Qwen 3.6 35B A3B",
+        "Qwen",
+        "open-weight",
+        "stage2_2/0801_0514_04",
+    ),
 )
 
 
@@ -130,7 +158,7 @@ def _base_row(
     metrics = state["metrics"]
     retention = state["retention_after_update"]
     row: dict[str, Any] = {
-        "report_schema_version": "stage2_gca15_report-v1",
+        "report_schema_version": "stage2_gca15_report-v2",
         "model_scale": model_scale,
         "provider_family": provider_family,
         "model_display_name": display_name,
@@ -331,6 +359,17 @@ def build_markdown(
 
     top = ranked[0]
     second = ranked[1]
+    top_ci_overlaps = [
+        row["model_display_name"]
+        for row in ranked[1:]
+        if float(row["gca15_ci95_low"])
+        <= float(top["gca15_ci95_high"])
+        and float(row["gca15_ci95_high"])
+        >= float(top["gca15_ci95_low"])
+    ]
+    late_early_deltas = [
+        float(row["gca15_late_minus_early"]) for row in rows
+    ]
     lines.extend(
         [
             "",
@@ -338,14 +377,17 @@ def build_markdown(
             "",
             f"1. `{top['model_display_name']}`가 GCA@15 {_pct(top['gca15'])}로 "
             f"1위이고, `{second['model_display_name']}`가 "
-            f"{_pct(second['gca15'])}로 뒤를 잇는다. 두 모델의 95% CI는 겹치므로 "
-            "순위 차이를 통계적으로 확정하지 않는다.",
-            "2. GPT 5.6 Sol, Gemini 3.5 Flash, GPT 5.6 Terra도 0.16 pp 안의 "
-            "사실상 동률권이며 CI가 크게 겹친다.",
+            f"{_pct(second['gca15'])}로 뒤를 잇는다.",
+            "2. 1위 모델과 95% CI가 겹치는 모델은 "
+            + (", ".join(top_ci_overlaps) if top_ci_overlaps else "없다")
+            + ". CI가 겹치는 모델 간 순위 차이는 통계적으로 확정하지 않는다.",
             f"3. Initial-copy는 Final State Accuracy가 {_pct(baseline_final)}지만 "
             f"GCA@15는 {_pct(baseline_gca)}다. 전체-state slot accuracy의 "
             "unchanged-path 부풀림이 GCA에서 크게 줄어든다.",
-            "4. 일곱 모델 모두 late 구간 GCA가 early보다 4.94–9.49 pp 낮다. "
+            f"4. {sum(delta < 0 for delta in late_early_deltas)}/{len(rows)}개 "
+            "모델에서 late 구간 GCA가 early보다 낮고, Late-Early 변화 범위는 "
+            f"{100 * min(late_early_deltas):+.2f}~"
+            f"{100 * max(late_early_deltas):+.2f} pp다. "
             "checkpoint별 event 구성 차이가 섞이므로, 이를 context-length 효과로만 "
             "해석하지 않고 lag별 Retention과 함께 본다.",
             "5. GCA@15는 transition 적용 능력, Retention은 적용된 update의 장기 "

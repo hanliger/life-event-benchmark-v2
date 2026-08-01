@@ -1,58 +1,56 @@
-# OpenRouter Stage 1/2 results
+# OpenRouter Stage 1/2 결과
 
-## Scope
+## 범위
 
-- Four OpenRouter models
-- 20 trajectories and 20 checkpoints per model-stage run
-- 400 predictions per run, 3,200 predictions across eight completed runs
-- Full-context Stage 1 occurred-event/evidence-pair task and Stage 2 memory reconstruction task
+- OpenRouter open-weight 모델 4종
+- 모델·stage별 20 trajectories × 20 checkpoints = 400 predictions
+- Stage 1/2 합계 3,200 predictions
+- Stage 1 `Strict Pair F1`·`Exact Pair-Set Match`, Stage 2 `GCA@15`·`Retention-after-update` 적용
 
-## Canonical runs
+## Canonical run과 provider lock
 
-| Model | Provider | Quantization | Stage 1 run | Stage 2 run |
-|---|---|---|---|---|
-| Llama 4 Maverick | Parasail | FP8 | `stage1/0801_0514` | `stage2_2/0801_0514` |
-| GPT OSS 120B | Cerebras | FP16 | `stage1/0801_0514_02` | `stage2_2/0801_0514_02` |
-| Qwen 3.5 122B A10B | Novita | BF16 | `stage1/0801_0514_03` | `stage2_2/0801_0514_03` |
-| Qwen 3.6 35B A3B | CoreWeave | FP8 | `stage1/0801_0514_04` | `stage2_2/0801_0514_04` |
+| Model | Locked provider | Quantization | Reasoning | Stage 1 run | Stage 2 run |
+|---|---|---|---|---|---|
+| Llama 4 Maverick | Parasail | FP8 | none | `stage1/0801_0514` | `stage2_2/0801_0514` |
+| GPT-OSS 120B | Cerebras | FP16 | low | `stage1/0801_0514_02` | `stage2_2/0801_0514_02` |
+| Qwen 3.5 122B A10B | Novita | BF16 | low | `stage1/0801_0514_03` | `stage2_2/0801_0514_03` |
+| Qwen 3.6 35B A3B | CoreWeave | FP8 | low | `stage1/0801_0514_04` | `stage2_2/0801_0514_04` |
+
+Provider fallback은 각 run의 `provider_lock.json`으로 비활성화되어 있다.
 
 ## Stage 1
 
-The primary score is strict occurred-event/evidence-pair F1.
-
-| Model | Strict pair F1 | Parse errors |
-|---|---:|---:|
-| Qwen 3.5 122B A10B | 0.6413 | 0 |
-| Qwen 3.6 35B A3B | 0.4735 | 0 |
-| Llama 4 Maverick | 0.3574 | 1 |
-| GPT OSS 120B | 0.1241 | 0 |
+| Model | Strict Pair F1 [95% CI] | Exact Pair-Set | Early → Middle → Late | Schema Valid |
+|---|---:|---:|---:|---:|
+| Qwen 3.5 122B A10B | 64.13 [57.97, 69.71] | 9.25 | 67.85 → 66.60 → 58.46 | 100.00 |
+| Qwen 3.6 35B A3B | 47.35 [42.48, 51.85] | 6.50 | 56.32 → 47.81 → 39.18 | 100.00 |
+| Llama 4 Maverick | 35.74 [30.94, 40.25] | 5.00 | 50.05 → 32.50 → 26.70 | 44.50 |
+| GPT-OSS 120B | 12.41 [8.38, 16.74] | 1.75 | 18.49 → 10.94 → 8.66 | 100.00 |
 
 ## Stage 2
 
-Update-sensitive metrics should be interpreted ahead of the broad snapshot score.
+| Model | GCA@15 [95% CI] | Retention | Early → Middle → Late | Final State | Evidence Hit | Schema Valid |
+|---|---:|---:|---:|---:|---:|---:|
+| Qwen 3.5 122B A10B | 45.19 [43.60, 46.86] | 65.14 | 44.41 → 46.56 → 44.39 | 68.14 | 55.20 | 99.00 |
+| Qwen 3.6 35B A3B | 43.53 [42.16, 44.92] | 55.85 | 44.46 → 44.36 → 42.28 | 69.93 | 48.45 | 99.75 |
+| Llama 4 Maverick | 32.11 [29.83, 34.38] | 39.66 | 36.10 → 33.37 → 28.92 | 67.15 | 37.61 | 96.25 |
+| GPT-OSS 120B | 24.87 [22.31, 27.31] | 6.80 | 21.57 → 24.86 → 26.61 | 67.40 | 3.49 | 100.00 |
 
-| Model | Correct-change F1 | Path-macro F1 | Event-macro update accuracy | Event-exact update accuracy | Retention |
-|---|---:|---:|---:|---:|---:|
-| Qwen 3.5 122B A10B | 0.4857 | 0.5629 | 0.6363 | 0.5230 | 0.6514 |
-| Qwen 3.6 35B A3B | 0.4632 | 0.5047 | 0.5328 | 0.4181 | 0.5585 |
-| Llama 4 Maverick | 0.3541 | 0.3995 | 0.3847 | 0.2912 | 0.3966 |
-| GPT OSS 120B | 0.1073 | 0.0456 | 0.0628 | 0.0337 | 0.0680 |
+Qwen 3.5 122B A10B가 두 stage에서 OpenRouter 그룹 최고 성능을 기록했다. Stage 2에서는 GCA@15 45.19로 전체 11개 모델 중 3위다. GPT-OSS 120B의 Final State Accuracy는 67.40이지만 GCA@15 24.87, Retention 6.80, Evidence Hit 3.49로 update 반영과 근거 회상이 제한적이다.
 
-## Validation
+## Artifact 배치
 
-- All eight run manifests finished in `GENERATED` state.
-- All 3,200 expected model-stage-trajectory-checkpoint cells are present.
-- There are no missing or duplicate canonical cells.
-- Provider locks disabled fallback routing and preserve provider and quantization metadata.
-- Prompt audits passed for every run.
-- The selected artifacts contain no API keys.
+Git에 보존하는 canonical run artifact:
 
-## Caveats
+- `experiment/runs/<stage>/<run-id>/immutable_plan.json`
+- `provider_lock.json`, `run_manifest.json`, prompt audit
+- `metrics/`, `report/`
 
-- These numbers are the metrics frozen with the canonical `0801_0514*` run artifacts. Later reporting-code changes must not silently overwrite them; any recalculation should be published as a separate report with its own policy and source hash.
-- Parse and schema failures remain model failures in the reported scores.
-- Historical provider failures can remain in a manifest failure field after successful resume; the final manifest status and canonical-cell completeness determine completion.
-- Llama 4 Maverick was configured as non-reasoning. The other three OpenRouter methods used low reasoning effort.
-- Full raw responses, rendered prompts, retrieval snapshots, and execution logs are retained outside this Git result bundle to avoid expanding repository history. They are required only for response-level forensic audit or future parser-based rescoring.
+로컬 raw artifact:
 
-Each run directory in this branch contains the immutable plan, provider lock, final manifest, prompt audits, metrics, and generated report. Those files are the authoritative source for detailed checkpoint, cost, latency, and reliability values.
+- canonical answer와 manifest: `experiment/runs/<stage>/<run-id>/raw/<method-id>/`
+- 문항별 해석 artifact: Stage 1 `answer_pairs/`, Stage 2 `state_pairs/`
+- rendered prompt, retry/attempt 이력, supervisor log는 각 run 디렉터리 내부
+- smoke·중단·retry run도 `experiment/runs/stage2_2/` 아래에 보존하지만 결과 집계 입력에는 포함하지 않음
+
+모든 canonical run은 trajectory JSONL 20개와 각 파일당 checkpoint row 20개를 갖는다. 결과 재생성은 `build_stage1_pair_report.py`, `build_stage2_gca15_report.py`, `build_all_model_cross_stage_report.py` 순서로 수행한다. 전체 11-model 결과와 checkpoint 값은 `stage1_pair_results.csv`, `stage2_gca15_results.csv`, `stage1_stage2_all_models.csv`에 있다.

@@ -1,3 +1,3 @@
-| Family | Method | Stage | Score | Dynamic Final | Correct-change F1 | Path-macro F1 | Event Update | Retention | 95% CI | N | Aggregation |
-|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---|
-| Full Context | fc_openrouter_gpt_oss_120b | stage2_2_reconstruct | 67.40 | 56.54 | 10.73 | 4.56 | 6.28 | 6.80 | [65.12, 69.88] | 400 | checkpoint_then_trajectory_macro |
+| Family | Method | Stage | Headline | Score | vs copy | Retention | Final State | Final lift | Evidence Hit | Strict Exact | Schema Valid | 95% CI | N |
+|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Full Context | fc_openrouter_gpt_oss_120b | stage2_2_reconstruct | GCA@15 | 24.87 | 7.18 | 6.80 | 67.40 | 0.54 | 3.49 | 1.25 | 100.00 | [22.31, 27.31] | 400 |

@@ -1,3 +1,3 @@
-| Family | Method | Stage | Score | Dynamic Final | Correct-change F1 | Path-macro F1 | Event Update | Retention | 95% CI | N | Aggregation |
-|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---|
-| Full Context | fc_openrouter_llama_4_maverick | stage1_occurred_event_evidence_pairs | 35.74 | — | — | — | — | — | [30.94, 40.25] | 400 | checkpoint_macro_then_equal_checkpoint_average |
+| Family | Method | Stage | Headline | Score | vs copy | Retention | Final State | Final lift | Evidence Hit | Strict Exact | Schema Valid | 95% CI | N |
+|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Full Context | fc_openrouter_llama_4_maverick | stage1_occurred_event_evidence_pairs | strict_occurred_event_evidence_f1 | 35.74 | — | — | — | — | — | 5.00 | 44.50 | [30.94, 40.25] | 400 |

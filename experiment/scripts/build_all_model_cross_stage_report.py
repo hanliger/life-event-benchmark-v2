@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the canonical Stage 1/2 large+small model comparison."""
+"""Build the canonical Stage 1/2 comparison across all evaluated models."""
 
 from __future__ import annotations
 
@@ -85,6 +85,38 @@ MODEL_SPECS = (
         "small",
         "stage1_small4/0731_1101",
         "stage2_2_combined/0731_1914",
+    ),
+    ModelSpec(
+        "fc_openrouter_llama_4_maverick",
+        "Llama 4 Maverick",
+        "Llama",
+        "open-weight",
+        "stage1/0801_0514",
+        "stage2_2/0801_0514",
+    ),
+    ModelSpec(
+        "fc_openrouter_gpt_oss_120b",
+        "GPT-OSS 120B",
+        "OpenAI",
+        "open-weight",
+        "stage1/0801_0514_02",
+        "stage2_2/0801_0514_02",
+    ),
+    ModelSpec(
+        "fc_openrouter_qwen_3_5_122b_a10b",
+        "Qwen 3.5 122B A10B",
+        "Qwen",
+        "open-weight",
+        "stage1/0801_0514_03",
+        "stage2_2/0801_0514_03",
+    ),
+    ModelSpec(
+        "fc_openrouter_qwen_3_6_35b_a3b_fp8",
+        "Qwen 3.6 35B A3B",
+        "Qwen",
+        "open-weight",
+        "stage1/0801_0514_04",
+        "stage2_2/0801_0514_04",
     ),
 )
 
@@ -276,7 +308,7 @@ def one_stage_row(
         late_score = float(stage2_gca["gca15_late"])
 
     row: dict[str, Any] = {
-        "report_schema_version": "cross-stage-model-summary-v2",
+        "report_schema_version": "cross-stage-model-summary-v3",
         "stage": stage,
         "stage_label": (
             "Stage 1 occurred-event/evidence pairs"
@@ -410,15 +442,36 @@ def build_markdown(rows: list[dict[str, Any]]) -> str:
         stage2_reference["final_state_accuracy"]
         - stage2_reference["final_state_initial_copy_lift"]
     )
+    stage1_deltas = [
+        row["late_score_cp210_300"] - row["early_score_cp015_090"]
+        for row in by_stage["stage1"]
+    ]
+    stage2_deltas = [
+        row["late_score_cp210_300"] - row["early_score_cp015_090"]
+        for row in by_stage["stage2"]
+    ]
+    open_weight_best = {
+        stage: max(
+            (
+                row
+                for row in by_stage[stage]
+                if row["model_scale"] == "open-weight"
+            ),
+            key=lambda row: row["headline_score"],
+        )
+        for stage in by_stage
+    }
     lines = [
-        "# Stage 1/2 대형·소형 모델 통합 결과",
+        "# Stage 1/2 전체 모델 통합 결과",
         "",
         "## 범위",
         "",
-        "이 보고서는 API 모델 7종의 canonical 완료 run을 통합한다. 각 "
+        f"이 보고서는 API 모델 {len(MODEL_SPECS)}종의 canonical 완료 run을 통합한다. 각 "
         "model-stage 조합은 20 trajectories x 20 checkpoints = 400 predictions로 "
         "구성된다. 대형 모델은 GPT 5.6 Sol, Claude Opus 4.8, Gemini 3.1 Pro이고, "
-        "소형 모델은 GPT 5.6 Terra/Luna, Claude Sonnet 4.6, Gemini 3.5 Flash이다.",
+        "소형 모델은 GPT 5.6 Terra/Luna, Claude Sonnet 4.6, Gemini 3.5 Flash이다. "
+        "OpenRouter open-weight 그룹은 Llama 4 Maverick, GPT-OSS 120B, "
+        "Qwen 3.5 122B A10B, Qwen 3.6 35B A3B이다.",
         "",
         "Stage 1은 strict occurred-event/evidence-pair F1을 대표 지표로, 전체 "
         "누적 pair 복원 성공률인 Exact Pair-Set Match를 엄격한 보조 지표로 "
@@ -473,7 +526,7 @@ def build_markdown(rows: list[dict[str, Any]]) -> str:
         markdown_table(
             [
                 "Stage",
-                "크기",
+                "그룹",
                 "모델",
                 "Headline [95% CI]",
                 "초반 -> 중반 -> 후반",
@@ -503,7 +556,7 @@ def build_markdown(rows: list[dict[str, Any]]) -> str:
     lines.extend(
         markdown_table(
             [
-                "크기",
+                "그룹",
                 "모델",
                 "Strict Pair F1",
                 "Exact Pair-Set",
@@ -535,7 +588,7 @@ def build_markdown(rows: list[dict[str, Any]]) -> str:
     lines.extend(
         markdown_table(
             [
-                "크기",
+                "그룹",
                 "모델",
                 "GCA@15",
                 "Initial-copy 대비",
@@ -550,46 +603,48 @@ def build_markdown(rows: list[dict[str, Any]]) -> str:
         )
     )
 
-    large_means = {
-        stage: mean(
-            [
-                row["headline_score"]
-                for row in by_stage[stage]
-                if row["model_scale"] == "large"
-            ]
-        )
-        for stage in by_stage
+    group_labels = {
+        "large": "대형 API",
+        "small": "소형 API",
+        "open-weight": "OpenRouter open-weight",
     }
-    small_means = {
-        stage: mean(
+    group_means = {
+        (stage, group): mean(
             [
                 row["headline_score"]
                 for row in by_stage[stage]
-                if row["model_scale"] == "small"
+                if row["model_scale"] == group
             ]
         )
         for stage in by_stage
+        for group in group_labels
     }
     lines.extend(
         [
             "",
-            "## 모델 크기별 비교",
+            "## 모델 그룹별 기술통계",
             "",
             *markdown_table(
-                ["Stage", "대형 평균", "소형 평균", "대형-소형"],
+                ["Stage", "그룹", "모델 수", "Headline 평균"],
                 [
                     [
                         stage.title(),
-                        format_float(large_means[stage]),
-                        format_float(small_means[stage]),
-                        format_float(large_means[stage] - small_means[stage]),
+                        group_labels[group],
+                        str(
+                            sum(
+                                row["model_scale"] == group
+                                for row in by_stage[stage]
+                            )
+                        ),
+                        format_float(group_means[(stage, group)]),
                     ]
                     for stage in ("stage1", "stage2")
+                    for group in group_labels
                 ],
             ),
             "",
-            "이는 서로 다른 모델 수(대형 3종, 소형 4종)의 기술통계 평균이며, "
-            "모델 크기 효과에 대한 paired 추정치는 아니다.",
+            "그룹 평균은 모델 구성이 다른 단순 기술통계이며, 모델 규모나 공개 방식의 "
+            "인과 효과에 대한 paired 추정치는 아니다.",
         ]
     )
 
@@ -620,10 +675,6 @@ def build_markdown(rows: list[dict[str, Any]]) -> str:
         )
         for stage in by_stage
     }
-    lookup = {
-        (row["stage"], row["method_id"]): row
-        for row in rows
-    }
     lines.extend(
         [
             "## 주요 관찰",
@@ -640,17 +691,20 @@ def build_markdown(rows: list[dict[str, Any]]) -> str:
                 for row in rankings["stage2"]
             )
             + ".",
-            "3. Stage 2는 7개 모델 모두 초반에서 후반으로 갈수록 하락한다. "
-            "전체 곡선에는 국소 변동이 있지만 checkpoint 상관계수는 모두 음수다.",
-            "4. Stage 1에는 보편적인 길이 추세가 없다. Gemini 3.5 Flash와 "
-            "GPT 5.6 Luna는 약화되지만, Claude Sonnet 4.6과 GPT 5.6 Terra는 "
-            "이벤트가 누적될수록 개선된다.",
-            "5. 모델 family의 상대 성능은 과업 의존적이다. Stage 1에서는 "
-            "Claude Sonnet이 Opus보다 높지만 Stage 2에서는 Opus가 Sonnet보다 "
-            f"{lookup[('stage2', 'fc_claude_opus_4_8')]['headline_score'] - lookup[('stage2', 'fc_claude_sonnet_4_6')]['headline_score']:.3f} "
-            "높다. Gemini Pro의 Flash 대비 우위는 Stage 2에서 크게 좁아진다.",
-            "6. GPT 5.6 Luna는 Stage 1에서 Sol과 Terra보다 낮지만 Stage 2에서는 "
-            "최고 소형 모델이자 전체 2위다.",
+            f"3. Stage 2는 {sum(delta < 0 for delta in stage2_deltas)}/{len(stage2_deltas)}개 "
+            "모델에서 후반 GCA가 초반보다 낮다. Late-Early 변화 범위는 "
+            f"{100 * min(stage2_deltas):+.2f}~{100 * max(stage2_deltas):+.2f} pp다.",
+            f"4. Stage 1은 {sum(delta < 0 for delta in stage1_deltas)}/{len(stage1_deltas)}개 "
+            "모델에서 후반 Pair F1이 초반보다 낮다. Late-Early 변화 범위는 "
+            f"{100 * min(stage1_deltas):+.2f}~{100 * max(stage1_deltas):+.2f} pp로, "
+            "공통적인 단조 추세는 없다.",
+            f"5. OpenRouter open-weight 그룹의 최고 모델은 Stage 1에서 "
+            f"{open_weight_best['stage1']['model_display_name']} "
+            f"({open_weight_best['stage1']['headline_score']:.3f}), Stage 2에서 "
+            f"{open_weight_best['stage2']['model_display_name']} "
+            f"({open_weight_best['stage2']['headline_score']:.3f})다.",
+            "6. 모델 family의 상대 성능은 과업 의존적이므로 Stage 1 Pair F1과 "
+            "Stage 2 GCA@15를 같은 척도처럼 비교하지 않는다.",
             f"7. Initial-copy baseline의 Stage 2 Final State Accuracy는 "
             f"{initial_copy_final:.3f}이지만 GCA@15는 {initial_copy_gca:.3f}이다. "
             "따라서 unchanged path의 비중으로 부풀 수 있는 "

@@ -842,7 +842,8 @@ python scripts/audit_session_dates.py \
 | `experiment/docs/model_inference_settings.md` | provider별 추론 설정 |
 | `experiment/docs/results/stage1_pair_results.md` | Stage 1 Pair F1·Exact Pair-Set 결과 |
 | `experiment/docs/results/stage2_gca15_results.md` | Stage 2 GCA@15·Retention 결과 |
-| `experiment/docs/results/stage1_stage2_all_models.md` | Stage 1/2 7-model 통합 결과 |
+| `experiment/docs/results/openrouter_stage1_stage2_results.md` | OpenRouter 4-model 실행·결과 provenance |
+| `experiment/docs/results/stage1_stage2_all_models.md` | Stage 1/2 11-model 통합 결과 |
 
 ---
 

@@ -39,6 +39,7 @@ Stage 1은 direct-API 3-model profile을 먼저 실행하고 독립적인 9-meth
   [docs/stage2_2_prompt_leakage_audit.md](docs/stage2_2_prompt_leakage_audit.md)
 - [docs/results/stage1_pair_results.md](docs/results/stage1_pair_results.md) /
   [docs/results/stage2_gca15_results.md](docs/results/stage2_gca15_results.md) /
+  [docs/results/openrouter_stage1_stage2_results.md](docs/results/openrouter_stage1_stage2_results.md) /
   [docs/results/stage1_stage2_all_models.md](docs/results/stage1_stage2_all_models.md)
 
 논문용 대표 지표는 Stage 1 `Strict Pair F1`, Stage 2 `GCA@15`다. Stage 1은

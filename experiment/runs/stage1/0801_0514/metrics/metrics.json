@@ -22,6 +22,34 @@
           0.3093645193152691,
           0.40246347447056474
         ],
+        "exact_pair_set_by_checkpoint": {
+          "105": 0.0,
+          "120": 0.0,
+          "135": 0.0,
+          "15": 0.65,
+          "150": 0.0,
+          "165": 0.0,
+          "180": 0.0,
+          "195": 0.0,
+          "210": 0.0,
+          "225": 0.0,
+          "240": 0.0,
+          "255": 0.0,
+          "270": 0.0,
+          "285": 0.0,
+          "30": 0.35,
+          "300": 0.0,
+          "45": 0.0,
+          "60": 0.0,
+          "75": 0.0,
+          "90": 0.0
+        },
+        "exact_pair_set_ci95": [
+          0.0325,
+          0.0675
+        ],
+        "exact_pair_set_match": 0.05,
+        "final_schema_failures": 222,
         "headline_metric": "strict_occurred_event_evidence_f1",
         "items": 400,
         "parse_errors": 1,
@@ -35,5 +63,6 @@
   "paired_method_deltas": {
     "stage1_occurred_event_evidence_pairs": {}
   },
-  "schema_version": "financial-memory-metrics-v2"
+  "schema_version": "financial-memory-metrics-v3",
+  "stage2_2_initial_copy_baseline": null
 }

@@ -1,3 +1,3 @@
-| Family | Method | Stage | Score | Dynamic Final | Correct-change F1 | Path-macro F1 | Event Update | Retention | 95% CI | N | Aggregation |
-|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---|
-| Full Context | fc_openrouter_qwen_3_6_35b_a3b_fp8 | stage2_2_reconstruct | 69.93 | 68.64 | 46.32 | 50.47 | 53.28 | 55.85 | [67.96, 71.79] | 400 | checkpoint_then_trajectory_macro |
+| Family | Method | Stage | Headline | Score | vs copy | Retention | Final State | Final lift | Evidence Hit | Strict Exact | Schema Valid | 95% CI | N |
+|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Full Context | fc_openrouter_qwen_3_6_35b_a3b_fp8 | stage2_2_reconstruct | GCA@15 | 43.53 | 25.84 | 55.85 | 69.93 | 3.08 | 48.45 | 1.75 | 99.75 | [42.16, 44.92] | 400 |

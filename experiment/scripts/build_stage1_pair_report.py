@@ -91,6 +91,34 @@ MODEL_SPECS = (
         "small",
         "stage1_small4/0731_1101",
     ),
+    ModelSpec(
+        "fc_openrouter_llama_4_maverick",
+        "Llama 4 Maverick",
+        "Llama",
+        "open-weight",
+        "stage1/0801_0514",
+    ),
+    ModelSpec(
+        "fc_openrouter_gpt_oss_120b",
+        "GPT-OSS 120B",
+        "OpenAI",
+        "open-weight",
+        "stage1/0801_0514_02",
+    ),
+    ModelSpec(
+        "fc_openrouter_qwen_3_5_122b_a10b",
+        "Qwen 3.5 122B A10B",
+        "Qwen",
+        "open-weight",
+        "stage1/0801_0514_03",
+    ),
+    ModelSpec(
+        "fc_openrouter_qwen_3_6_35b_a3b_fp8",
+        "Qwen 3.6 35B A3B",
+        "Qwen",
+        "open-weight",
+        "stage1/0801_0514_04",
+    ),
 )
 
 
@@ -153,7 +181,7 @@ def build_rows() -> list[dict[str, Any]]:
             for checkpoint in CHECKPOINTS
         }
         row: dict[str, Any] = {
-            "report_schema_version": "stage1_pair_report-v1",
+            "report_schema_version": "stage1_pair_report-v2",
             "model_scale": spec.model_scale,
             "provider_family": spec.provider_family,
             "model_display_name": spec.display_name,
@@ -218,6 +246,11 @@ def build_markdown(rows: list[dict[str, Any]]) -> str:
     ranked = sorted(
         rows, key=lambda row: float(row["strict_pair_f1"]), reverse=True
     )
+    top_f1 = ranked[0]
+    top_exact = max(rows, key=lambda row: float(row["exact_pair_set_match"]))
+    cp300_zero_count = sum(
+        float(row["exact_pair_set_cp300"]) == 0 for row in rows
+    )
     lines = [
         "# Stage 1 결과 — 누적 event/evidence pair 복원",
         "",
@@ -278,10 +311,12 @@ def build_markdown(rows: list[dict[str, Any]]) -> str:
             "",
             "## 해석",
             "",
-            "1. Gemini 3.1 Pro가 Strict Pair F1 74.82와 Exact Pair-Set "
-            "11.25로 두 지표 모두 가장 높다.",
+            f"1. Strict Pair F1 최고 모델은 {top_f1['model_display_name']} "
+            f"({_pct(top_f1['strict_pair_f1'])}), Exact Pair-Set 최고 모델은 "
+            f"{top_exact['model_display_name']} "
+            f"({_pct(top_exact['exact_pair_set_match'])})다.",
             "2. Exact Pair-Set은 누적 pair 중 하나만 틀려도 0이므로 F1보다 훨씬 "
-            "엄격하다. cp300에서는 일곱 모델 모두 0이다.",
+            f"엄격하다. cp300에서는 {cp300_zero_count}/{len(rows)}개 모델이 0이다.",
             "3. F1은 event/session pair 단위의 부분 복원 능력을, Exact Pair-Set은 "
             "checkpoint 전체의 무결한 복원 성공률을 보여준다. 모델 순위의 대표값은 "
             "F1으로 두고 Exact를 엄격한 성공 기준으로 함께 보고한다.",

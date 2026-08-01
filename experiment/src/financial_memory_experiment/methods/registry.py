@@ -312,6 +312,7 @@ def create_method(
                 settings,
             ),
             system,
+            stage1_system=stage1_system,
         )
     if method_id == "fc_gemini_3_1_pro":
         return FullContextMethod(

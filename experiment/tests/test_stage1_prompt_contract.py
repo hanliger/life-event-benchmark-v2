@@ -5,6 +5,7 @@ import json
 import pytest
 
 from financial_memory_experiment.methods.full_context import FullContextMethod
+from financial_memory_experiment.methods.registry import create_method
 from financial_memory_experiment.methods.letta_adapter import (
     LettaContractDouble,
 )
@@ -298,3 +299,30 @@ def test_stage1_retrieval_query_is_the_question_itself():
     assert "retrieval_groups" not in reader.user
     assert len(ranked) <= STAGE1_TOP_K
     assert all(row["session_id"].startswith("S") for row in ranked)
+
+
+def test_stage1_openrouter_methods_use_the_stage1_system_prompt():
+    paths = ExperimentPaths.discover()
+    expected = (paths.prompts / "stage1_system_ko.txt").read_text(
+        encoding="utf-8"
+    ).strip()
+    openrouter_methods = [
+        method_id
+        for method_id in STAGE1_METHOD9_METHODS
+        if method_id.startswith("fc_openrouter_")
+    ]
+
+    assert len(openrouter_methods) == 4
+    for method_id in openrouter_methods:
+        method = create_method(
+            method_id,
+            trajectory_id="traj_test",
+            paths=paths,
+            mock=True,
+            stage=STAGE1,
+        )
+        try:
+            answer = _ingested(method).answer(generation_item(STAGE1_ITEM))
+            assert answer.metadata["rendered_system_prompt"] == expected
+        finally:
+            method.close()

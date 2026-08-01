@@ -1,0 +1,32 @@
+{
+  "checks": [
+    {
+      "candidate_values_exposed_by_task_prompt": true,
+      "checkpoint": 15,
+      "dynamic_paths_field_name_in_prompt": false,
+      "future_session_ids": [],
+      "gold_field_name_in_prompt": false,
+      "max_visible_dialogue_id": 15,
+      "method_id": "fc_openrouter_qwen_3_5_122b_a10b",
+      "passed": true,
+      "retrieval_query_contains_dynamic_paths_field": false,
+      "retrieval_query_contains_gold_field": false,
+      "s000_present": true,
+      "trajectory_id": "traj_001"
+    },
+    {
+      "candidate_values_exposed_by_task_prompt": true,
+      "checkpoint": 300,
+      "dynamic_paths_field_name_in_prompt": false,
+      "future_session_ids": [],
+      "gold_field_name_in_prompt": false,
+      "max_visible_dialogue_id": 300,
+      "method_id": "fc_openrouter_qwen_3_5_122b_a10b",
+      "passed": true,
+      "retrieval_query_contains_dynamic_paths_field": false,
+      "retrieval_query_contains_gold_field": false,
+      "s000_present": true,
+      "trajectory_id": "traj_001"
+    }
+  ]
+}

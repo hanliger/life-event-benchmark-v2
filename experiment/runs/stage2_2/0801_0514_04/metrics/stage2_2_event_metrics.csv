@@ -1,0 +1,2 @@
+method_id,event_count,trajectory_count,update_accuracy,exact_update_accuracy,mean_first_evaluation_lag_sessions,aggregation
+fc_openrouter_qwen_3_6_35b_a3b_fp8,391,20,0.5327911801141879,0.4180702613893487,0.46035805626598464,event_then_trajectory_macro

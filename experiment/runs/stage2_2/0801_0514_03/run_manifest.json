@@ -1,0 +1,15 @@
+{
+  "complete_prediction_files": 20,
+  "completed_at_kst": "2026-08-01T10:28:06.178061+09:00",
+  "failure": {
+    "message": "'NoneType' object is not subscriptable",
+    "type": "TypeError"
+  },
+  "plan_sha256": "eba4e0c984febdc7cee5e7ddcca0beef7e7a98af434502a49d4c685a33903e60",
+  "prepared_manifest_sha256": "a3fcf11ce976bdad2332ba33584aaef57b1aa0777a64aebe8f71bc5e470ee362",
+  "provider_lock_sha256": "cc6d199b7e33b8cd058ed7843e850b31f10784d89544e1e7fcb969f617c5c6c4",
+  "run_id": "0801_0514_03",
+  "schema_version": "stage2_2_run_manifest-v1",
+  "started_at_kst": "2026-08-01T09:59:01.196324+09:00",
+  "status": "GENERATED"
+}

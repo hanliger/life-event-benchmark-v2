@@ -1,0 +1,28 @@
+{
+  "methods": {
+    "fc_openrouter_gpt_oss_120b": {
+      "context_window": 131072,
+      "endpoint_id": null,
+      "endpoint_status": 0,
+      "price": {
+        "completion_usd_per_token": "0.00000075",
+        "prompt_usd_per_token": "0.00000035"
+      },
+      "provider": "Cerebras",
+      "quantizations": [
+        "fp16"
+      ],
+      "throughput_percentile": "p50",
+      "throughput_tokens_per_second": 688.0,
+      "uptime_last_30m": 99.91367616228881
+    }
+  },
+  "resolved_at_kst": "2026-08-01T05:02:49.847457+09:00",
+  "schema_version": "stage2_2_openrouter_provider_lock-v1",
+  "selection_policy": "highest reported throughput among ZDR-compatible endpoints, ranked on throughput_last_30m.p50; Qwen3.6 additionally requires FP8",
+  "source_response_sha256": {
+    "fc_openrouter_gpt_oss_120b": "34074052a4dd0596cb6a148e19fc3f7adfc1aa8ed5a7d315106a98c7d8f9bd41",
+    "zdr_endpoints": "7c8d21f6ad62bd415e2344c7d3d1c6a67d8fed463833bc1a7045cd7f5aa564d6"
+  },
+  "status": "LOCKED"
+}

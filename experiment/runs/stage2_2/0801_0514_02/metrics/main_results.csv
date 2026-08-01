@@ -1,0 +1,2 @@
+method_family,method_id,stage,items,score,ci95_low,ci95_high,parse_errors,aggregation,dynamic_path_final_state_accuracy,correct_change_f1,path_macro_correct_change_f1,event_macro_update_accuracy,event_exact_update_accuracy,retention_mean_over_observed_lags
+Full Context,fc_openrouter_gpt_oss_120b,stage2_2_reconstruct,400,0.6739705882352941,0.6511764705882352,0.69875,0,checkpoint_then_trajectory_macro,0.5654,0.10731673596499983,0.045646944515917,0.06282898815860856,0.033706458660019034,0.06801959985421431

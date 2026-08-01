@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="520" viewBox="0 0 920 520">
+<rect width="100%" height="100%" fill="white"/>
+<text x="75" y="24" font-family="sans-serif" font-size="16">dynamic_path_final_state_accuracy</text>
+<line x1="75" y1="440.0" x2="675" y2="440.0" stroke="#dddddd"/>
+<text x="67" y="444.0" text-anchor="end" font-family="sans-serif" font-size="11">0.0</text>
+<line x1="75" y1="360.0" x2="675" y2="360.0" stroke="#dddddd"/>
+<text x="67" y="364.0" text-anchor="end" font-family="sans-serif" font-size="11">0.2</text>
+<line x1="75" y1="280.0" x2="675" y2="280.0" stroke="#dddddd"/>
+<text x="67" y="284.0" text-anchor="end" font-family="sans-serif" font-size="11">0.4</text>
+<line x1="75" y1="200.0" x2="675" y2="200.0" stroke="#dddddd"/>
+<text x="67" y="204.0" text-anchor="end" font-family="sans-serif" font-size="11">0.6</text>
+<line x1="75" y1="120.0" x2="675" y2="120.0" stroke="#dddddd"/>
+<text x="67" y="124.0" text-anchor="end" font-family="sans-serif" font-size="11">0.8</text>
+<line x1="75" y1="40.0" x2="675" y2="40.0" stroke="#dddddd"/>
+<text x="67" y="44.0" text-anchor="end" font-family="sans-serif" font-size="11">1.0</text>
+<text x="75.0" y="460" text-anchor="middle" font-family="sans-serif" font-size="10">15</text>
+<text x="106.6" y="460" text-anchor="middle" font-family="sans-serif" font-size="10">30</text>
+<text x="138.2" y="460" text-anchor="middle" font-family="sans-serif" font-size="10">45</text>
+<text x="169.7" y="460" text-anchor="middle" font-family="sans-serif" font-size="10">60</text>
+<text x="201.3" y="460" text-anchor="middle" font-family="sans-serif" font-size="10">75</text>
+<text x="232.9" y="460" text-anchor="middle" font-family="sans-serif" font-size="10">90</text>
+<text x="264.5" y="460" text-anchor="middle" font-family="sans-serif" font-size="10">105</text>
+<text x="296.1" y="460" text-anchor="middle" font-family="sans-serif" font-size="10">120</text>
+<text x="327.6" y="460" text-anchor="middle" font-family="sans-serif" font-size="10">135</text>
+<text x="359.2" y="460" text-anchor="middle" font-family="sans-serif" font-size="10">150</text>
+<text x="390.8" y="460" text-anchor="middle" font-family="sans-serif" font-size="10">165</text>
+<text x="422.4" y="460" text-anchor="middle" font-family="sans-serif" font-size="10">180</text>
+<text x="453.9" y="460" text-anchor="middle" font-family="sans-serif" font-size="10">195</text>
+<text x="485.5" y="460" text-anchor="middle" font-family="sans-serif" font-size="10">210</text>
+<text x="517.1" y="460" text-anchor="middle" font-family="sans-serif" font-size="10">225</text>
+<text x="548.7" y="460" text-anchor="middle" font-family="sans-serif" font-size="10">240</text>
+<text x="580.3" y="460" text-anchor="middle" font-family="sans-serif" font-size="10">255</text>
+<text x="611.8" y="460" text-anchor="middle" font-family="sans-serif" font-size="10">270</text>
+<text x="643.4" y="460" text-anchor="middle" font-family="sans-serif" font-size="10">285</text>
+<text x="675.0" y="460" text-anchor="middle" font-family="sans-serif" font-size="10">300</text>
+<polyline fill="none" stroke="#0072B2" stroke-width="2" points="75.0,88.0 106.6,93.6 138.2,116.0 169.7,121.6 201.3,127.2 232.9,143.2 264.5,152.8 296.1,158.4 327.6,152.8 359.2,180.0 390.8,199.2 422.4,188.0 453.9,192.8 485.5,176.8 517.1,194.4 548.7,204.0 580.3,205.6 611.8,201.6 643.4,212.0 675.0,200.8"/>
+<line x1="700" y1="55" x2="724" y2="55" stroke="#0072B2" stroke-width="3"/>
+<text x="732" y="59" font-family="sans-serif" font-size="10">fc_openrouter_qwen_3_6_35b_a3b_fp8</text>
+</svg>

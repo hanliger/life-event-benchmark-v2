@@ -1,0 +1,15 @@
+{
+  "complete_prediction_files": 20,
+  "completed_at_kst": "2026-08-01T08:18:17.461791+09:00",
+  "failure": {
+    "message": "Error code: 429 - {'error': {'message': 'Provider returned error', 'code': 429, 'metadata': {'raw': 'qwen/qwen3.6-35b-a3b is temporarily rate-limited upstream. Please retry shortly, or add your own key to accumulate your rate limits: https://openrouter.ai/settings/integrations', 'provider_name': 'CoreWeave', 'is_byok': False, 'provider_error_code': 'rate_limit_exceeded', 'limit_source': 'upstream_provider_shared_pool', 'remedy_hint': 'Retry shortly, add your own provider key (https://openrouter.ai/settings/integrations), or route to another provider with provider routing: https://openrouter.ai/docs/features/provider-routing'}}, 'user_id': 'user_2kEJJKBFulY202RfjVAqUBZSaP1'}",
+    "type": "RateLimitError"
+  },
+  "plan_sha256": "456fcb7e24cc31f672643e966420618a1d80dd16a2afb498a73d052ce510be00",
+  "prepared_manifest_sha256": "a3fcf11ce976bdad2332ba33584aaef57b1aa0777a64aebe8f71bc5e470ee362",
+  "provider_lock_sha256": "ab0d7cb63192cc31ca8737c7ab0d7ca96f066913c8932293eff332d7e0999ae4",
+  "run_id": "0801_0514_04",
+  "schema_version": "stage2_2_run_manifest-v1",
+  "started_at_kst": "2026-08-01T07:57:26.853859+09:00",
+  "status": "GENERATED"
+}

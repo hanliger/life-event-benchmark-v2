@@ -1,0 +1,71 @@
+{
+  "methods": {
+    "fc_openrouter_gpt_oss_120b": {
+      "context_window": 131072,
+      "endpoint_id": null,
+      "endpoint_status": 0,
+      "price": {
+        "completion_usd_per_token": "0.0000006",
+        "prompt_usd_per_token": "0.00000015"
+      },
+      "provider": "Groq",
+      "quantizations": [
+        "unknown"
+      ],
+      "throughput_percentile": "p50",
+      "throughput_tokens_per_second": 373,
+      "uptime_last_30m": 99.99694842844065
+    },
+    "fc_openrouter_llama_4_maverick": {
+      "context_window": 524288,
+      "endpoint_id": null,
+      "endpoint_status": 0,
+      "price": {
+        "completion_usd_per_token": "0.000001",
+        "prompt_usd_per_token": "0.00000035"
+      },
+      "provider": "Parasail",
+      "quantizations": [
+        "fp8"
+      ],
+      "throughput_percentile": "p50",
+      "throughput_tokens_per_second": 90,
+      "uptime_last_30m": 99.25619834710744
+    },
+    "fc_openrouter_qwen_3_5_122b_a10b": {
+      "context_window": 262144,
+      "endpoint_id": null,
+      "endpoint_status": 0,
+      "price": {
+        "completion_usd_per_token": "0.0000032",
+        "prompt_usd_per_token": "0.0000004"
+      },
+      "provider": "Novita",
+      "quantizations": [
+        "bf16"
+      ],
+      "throughput_percentile": "p50",
+      "throughput_tokens_per_second": 27,
+      "uptime_last_30m": 99.1907514450867
+    },
+    "fc_openrouter_qwen_3_6_35b_a3b_fp8": {
+      "context_window": 262144,
+      "endpoint_id": null,
+      "endpoint_status": 0,
+      "price": {
+        "completion_usd_per_token": "0.00000125",
+        "prompt_usd_per_token": "0.00000025"
+      },
+      "provider": "CoreWeave",
+      "quantizations": [
+        "fp8"
+      ],
+      "throughput_percentile": "p50",
+      "throughput_tokens_per_second": 174,
+      "uptime_last_30m": 100
+    }
+  },
+  "schema_version": "stage2_2_openrouter_provider_lock-v1",
+  "selection_policy": "manual concurrency stress lock: latest healthy ZDR endpoint plus successful long-context smoke evidence as of 2026-07-31",
+  "status": "LOCKED"
+}

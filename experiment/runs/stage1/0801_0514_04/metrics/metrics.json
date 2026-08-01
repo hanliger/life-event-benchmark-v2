@@ -1,0 +1,39 @@
+{
+  "bootstrap": {
+    "samples": 10000,
+    "seed": 20260725,
+    "unit": "trajectory"
+  },
+  "completeness": {
+    "expected_scope": null,
+    "identical_item_sets": true,
+    "item_count_per_method": 400,
+    "methods": [
+      "fc_openrouter_qwen_3_6_35b_a3b_fp8"
+    ],
+    "reporting_ready": false
+  },
+  "methods": {
+    "fc_openrouter_qwen_3_6_35b_a3b_fp8": {
+      "stage1_occurred_event_evidence_pairs": {
+        "accuracy_by_retention_lag_windows": {},
+        "aggregation": "checkpoint_macro_then_equal_checkpoint_average",
+        "ci95": [
+          0.4248075161142916,
+          0.5184727372943808
+        ],
+        "headline_metric": "strict_occurred_event_evidence_f1",
+        "items": 400,
+        "parse_errors": 0,
+        "question_micro_accuracy": 0.065,
+        "score": 0.4734529790450205,
+        "strict_occurred_event_evidence_f1": 0.4734529790450205
+      }
+    }
+  },
+  "oracle_relevant_comparisons": {},
+  "paired_method_deltas": {
+    "stage1_occurred_event_evidence_pairs": {}
+  },
+  "schema_version": "financial-memory-metrics-v2"
+}

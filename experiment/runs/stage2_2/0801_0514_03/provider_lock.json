@@ -1,0 +1,23 @@
+{
+  "methods": {
+    "fc_openrouter_qwen_3_5_122b_a10b": {
+      "context_window": 262144,
+      "endpoint_id": null,
+      "endpoint_status": 0,
+      "price": {
+        "completion_usd_per_token": "0.0000032",
+        "prompt_usd_per_token": "0.0000004"
+      },
+      "provider": "Novita",
+      "quantizations": [
+        "bf16"
+      ],
+      "throughput_percentile": "p50",
+      "throughput_tokens_per_second": 24.0,
+      "uptime_last_30m": 98.64864864864865
+    }
+  },
+  "schema_version": "stage2_2_openrouter_provider_lock-v1",
+  "selection_policy": "manual smoke lock: healthy ZDR endpoint with recorded BF16 quantization",
+  "status": "LOCKED"
+}

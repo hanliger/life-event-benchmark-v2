@@ -1,0 +1,15 @@
+{
+  "complete_prediction_files": 20,
+  "completed_at_kst": "2026-08-01T09:32:37.683344+09:00",
+  "failure": {
+    "message": "Expecting value: line 369 column 1 (char 2024)",
+    "type": "JSONDecodeError"
+  },
+  "plan_sha256": "d7497c34a2ccbeb9dab1304493e9054750d94d73907e7faab7c46e42c0e85a0a",
+  "prepared_manifest_sha256": "a3fcf11ce976bdad2332ba33584aaef57b1aa0777a64aebe8f71bc5e470ee362",
+  "provider_lock_sha256": "cc6d199b7e33b8cd058ed7843e850b31f10784d89544e1e7fcb969f617c5c6c4",
+  "run_id": "0801_0514_03",
+  "schema_version": "stage1_run_manifest-v1",
+  "started_at_kst": "2026-08-01T08:08:16.793507+09:00",
+  "status": "GENERATED"
+}

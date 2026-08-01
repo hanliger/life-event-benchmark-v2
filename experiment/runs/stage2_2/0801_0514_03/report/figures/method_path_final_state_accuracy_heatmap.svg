@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="414" height="948" viewBox="0 0 414 948">
+<rect width="100%" height="100%" fill="white"/>
+<text x="20" y="28" font-family="sans-serif" font-size="16">Method × path Final State Accuracy</text>
+<text x="347.0" y="162" text-anchor="end" transform="rotate(-55 347.0 162)" font-family="sans-serif" font-size="9">fc_openrouter_qwen_3_5_122b_a10b</text>
+<text x="302" y="185" text-anchor="end" font-family="sans-serif" font-size="10">cashflow.recent_one_off_expense</text>
+<rect x="310" y="170" width="74" height="22" fill="rgb(102,102,255)" stroke="white"/>
+<text x="347.0" y="185" text-anchor="middle" font-family="sans-serif" font-size="9">77</text>
+<text x="302" y="207" text-anchor="end" font-family="sans-serif" font-size="10">education.child_education_stage</text>
+<rect x="310" y="192" width="74" height="22" fill="rgb(135,135,255)" stroke="white"/>
+<text x="347.0" y="207" text-anchor="middle" font-family="sans-serif" font-size="9">59</text>
+<text x="302" y="229" text-anchor="end" font-family="sans-serif" font-size="10">education.self_education_status</text>
+<rect x="310" y="214" width="74" height="22" fill="rgb(94,94,255)" stroke="white"/>
+<text x="347.0" y="229" text-anchor="middle" font-family="sans-serif" font-size="9">82</text>
+<text x="302" y="251" text-anchor="end" font-family="sans-serif" font-size="10">employment.employer</text>
+<rect x="310" y="236" width="74" height="22" fill="rgb(152,152,255)" stroke="white"/>
+<text x="347.0" y="251" text-anchor="middle" font-family="sans-serif" font-size="9">50</text>
+<text x="302" y="273" text-anchor="end" font-family="sans-serif" font-size="10">employment.employment_status</text>
+<rect x="310" y="258" width="74" height="22" fill="rgb(87,87,255)" stroke="white"/>
+<text x="347.0" y="273" text-anchor="middle" font-family="sans-serif" font-size="9">85</text>
+<text x="302" y="295" text-anchor="end" font-family="sans-serif" font-size="10">employment.income_stability</text>
+<rect x="310" y="280" width="74" height="22" fill="rgb(97,97,255)" stroke="white"/>
+<text x="347.0" y="295" text-anchor="middle" font-family="sans-serif" font-size="9">80</text>
+<text x="302" y="317" text-anchor="end" font-family="sans-serif" font-size="10">employment.occupation</text>
+<rect x="310" y="302" width="74" height="22" fill="rgb(157,157,255)" stroke="white"/>
+<text x="347.0" y="317" text-anchor="middle" font-family="sans-serif" font-size="9">47</text>
+<text x="302" y="339" text-anchor="end" font-family="sans-serif" font-size="10">employment.salary_account</text>
+<rect x="310" y="324" width="74" height="22" fill="rgb(152,152,255)" stroke="white"/>
+<text x="347.0" y="339" text-anchor="middle" font-family="sans-serif" font-size="9">50</text>
+<text x="302" y="361" text-anchor="end" font-family="sans-serif" font-size="10">employment.salary_day</text>
+<rect x="310" y="346" width="74" height="22" fill="rgb(165,165,255)" stroke="white"/>
+<text x="347.0" y="361" text-anchor="middle" font-family="sans-serif" font-size="9">43</text>
+<text x="302" y="383" text-anchor="end" font-family="sans-serif" font-size="10">financial_products.checking_accounts</text>
+<rect x="310" y="368" width="74" height="22" fill="rgb(60,60,255)" stroke="white"/>
+<text x="347.0" y="383" text-anchor="middle" font-family="sans-serif" font-size="9">100</text>
+<text x="302" y="405" text-anchor="end" font-family="sans-serif" font-size="10">financial_products.loans</text>
+<rect x="310" y="390" width="74" height="22" fill="rgb(72,72,255)" stroke="white"/>
+<text x="347.0" y="405" text-anchor="middle" font-family="sans-serif" font-size="9">93</text>
+<text x="302" y="427" text-anchor="end" font-family="sans-serif" font-size="10">financial_products.pension_or_irp</text>
+<rect x="310" y="412" width="74" height="22" fill="rgb(118,118,255)" stroke="white"/>
+<text x="347.0" y="427" text-anchor="middle" font-family="sans-serif" font-size="9">68</text>
+<text x="302" y="449" text-anchor="end" font-family="sans-serif" font-size="10">financial_products.savings_accounts</text>
+<rect x="310" y="434" width="74" height="22" fill="rgb(81,81,255)" stroke="white"/>
+<text x="347.0" y="449" text-anchor="middle" font-family="sans-serif" font-size="9">88</text>
+<text x="302" y="471" text-anchor="end" font-family="sans-serif" font-size="10">goals.child_education_goal</text>
+<rect x="310" y="456" width="74" height="22" fill="rgb(103,103,255)" stroke="white"/>
+<text x="347.0" y="471" text-anchor="middle" font-family="sans-serif" font-size="9">77</text>
+<text x="302" y="493" text-anchor="end" font-family="sans-serif" font-size="10">goals.emergency_fund</text>
+<rect x="310" y="478" width="74" height="22" fill="rgb(145,145,255)" stroke="white"/>
+<text x="347.0" y="493" text-anchor="middle" font-family="sans-serif" font-size="9">54</text>
+<text x="302" y="515" text-anchor="end" font-family="sans-serif" font-size="10">goals.housing_deposit_goal</text>
+<rect x="310" y="500" width="74" height="22" fill="rgb(133,133,255)" stroke="white"/>
+<text x="347.0" y="515" text-anchor="middle" font-family="sans-serif" font-size="9">60</text>
+<text x="302" y="537" text-anchor="end" font-family="sans-serif" font-size="10">goals.retirement_goal</text>
+<rect x="310" y="522" width="74" height="22" fill="rgb(147,147,255)" stroke="white"/>
+<text x="347.0" y="537" text-anchor="middle" font-family="sans-serif" font-size="9">52</text>
+<text x="302" y="559" text-anchor="end" font-family="sans-serif" font-size="10">household.child_support_arrangement</text>
+<rect x="310" y="544" width="74" height="22" fill="rgb(170,170,255)" stroke="white"/>
+<text x="347.0" y="559" text-anchor="middle" font-family="sans-serif" font-size="9">40</text>
+<text x="302" y="581" text-anchor="end" font-family="sans-serif" font-size="10">household.children</text>
+<rect x="310" y="566" width="74" height="22" fill="rgb(131,131,255)" stroke="white"/>
+<text x="347.0" y="581" text-anchor="middle" font-family="sans-serif" font-size="9">62</text>
+<text x="302" y="603" text-anchor="end" font-family="sans-serif" font-size="10">household.dependents</text>
+<rect x="310" y="588" width="74" height="22" fill="rgb(107,107,255)" stroke="white"/>
+<text x="347.0" y="603" text-anchor="middle" font-family="sans-serif" font-size="9">74</text>
+<text x="302" y="625" text-anchor="end" font-family="sans-serif" font-size="10">household.marital_status</text>
+<rect x="310" y="610" width="74" height="22" fill="rgb(89,89,255)" stroke="white"/>
+<text x="347.0" y="625" text-anchor="middle" font-family="sans-serif" font-size="9">84</text>
+<text x="302" y="647" text-anchor="end" font-family="sans-serif" font-size="10">household.spouse_or_partner</text>
+<rect x="310" y="632" width="74" height="22" fill="rgb(127,127,255)" stroke="white"/>
+<text x="347.0" y="647" text-anchor="middle" font-family="sans-serif" font-size="9">64</text>
+<text x="302" y="669" text-anchor="end" font-family="sans-serif" font-size="10">housing.address</text>
+<rect x="310" y="654" width="74" height="22" fill="rgb(79,79,255)" stroke="white"/>
+<text x="347.0" y="669" text-anchor="middle" font-family="sans-serif" font-size="9">89</text>
+<text x="302" y="691" text-anchor="end" font-family="sans-serif" font-size="10">housing.contract_type</text>
+<rect x="310" y="676" width="74" height="22" fill="rgb(91,91,255)" stroke="white"/>
+<text x="347.0" y="691" text-anchor="middle" font-family="sans-serif" font-size="9">83</text>
+<text x="302" y="713" text-anchor="end" font-family="sans-serif" font-size="10">housing.maintenance_fee_payee</text>
+<rect x="310" y="698" width="74" height="22" fill="rgb(121,121,255)" stroke="white"/>
+<text x="347.0" y="713" text-anchor="middle" font-family="sans-serif" font-size="9">67</text>
+<text x="302" y="735" text-anchor="end" font-family="sans-serif" font-size="10">housing.mortgage_status</text>
+<rect x="310" y="720" width="74" height="22" fill="rgb(81,81,255)" stroke="white"/>
+<text x="347.0" y="735" text-anchor="middle" font-family="sans-serif" font-size="9">88</text>
+<text x="302" y="757" text-anchor="end" font-family="sans-serif" font-size="10">housing.primary_residence_property_id</text>
+<rect x="310" y="742" width="74" height="22" fill="rgb(146,146,255)" stroke="white"/>
+<text x="347.0" y="757" text-anchor="middle" font-family="sans-serif" font-size="9">53</text>
+<text x="302" y="779" text-anchor="end" font-family="sans-serif" font-size="10">housing.properties</text>
+<rect x="310" y="764" width="74" height="22" fill="rgb(108,108,255)" stroke="white"/>
+<text x="347.0" y="779" text-anchor="middle" font-family="sans-serif" font-size="9">74</text>
+<text x="302" y="801" text-anchor="end" font-family="sans-serif" font-size="10">housing.rent_amount</text>
+<rect x="310" y="786" width="74" height="22" fill="rgb(152,152,255)" stroke="white"/>
+<text x="347.0" y="801" text-anchor="middle" font-family="sans-serif" font-size="9">50</text>
+<text x="302" y="823" text-anchor="end" font-family="sans-serif" font-size="10">housing.rent_payee</text>
+<rect x="310" y="808" width="74" height="22" fill="rgb(160,160,255)" stroke="white"/>
+<text x="347.0" y="823" text-anchor="middle" font-family="sans-serif" font-size="9">46</text>
+<text x="302" y="845" text-anchor="end" font-family="sans-serif" font-size="10">housing.residence_status</text>
+<rect x="310" y="830" width="74" height="22" fill="rgb(91,91,255)" stroke="white"/>
+<text x="347.0" y="845" text-anchor="middle" font-family="sans-serif" font-size="9">83</text>
+<text x="302" y="867" text-anchor="end" font-family="sans-serif" font-size="10">profile.age</text>
+<rect x="310" y="852" width="74" height="22" fill="rgb(118,118,255)" stroke="white"/>
+<text x="347.0" y="867" text-anchor="middle" font-family="sans-serif" font-size="9">68</text>
+<text x="302" y="889" text-anchor="end" font-family="sans-serif" font-size="10">profile.locale</text>
+<rect x="310" y="874" width="74" height="22" fill="rgb(60,60,255)" stroke="white"/>
+<text x="347.0" y="889" text-anchor="middle" font-family="sans-serif" font-size="9">100</text>
+<text x="302" y="911" text-anchor="end" font-family="sans-serif" font-size="10">profile.region</text>
+<rect x="310" y="896" width="74" height="22" fill="rgb(195,195,255)" stroke="white"/>
+<text x="347.0" y="911" text-anchor="middle" font-family="sans-serif" font-size="9">26</text>
+</svg>

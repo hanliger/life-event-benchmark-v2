@@ -1,0 +1,2 @@
+method_id,event_count,trajectory_count,update_accuracy,exact_update_accuracy,mean_first_evaluation_lag_sessions,aggregation
+fc_openrouter_llama_4_maverick,391,20,0.3846599857923892,0.29118794817004534,0.46035805626598464,event_then_trajectory_macro

@@ -1,0 +1,15 @@
+{
+  "complete_prediction_files": 20,
+  "completed_at_kst": "2026-08-01T06:28:12.755049+09:00",
+  "failure": {
+    "message": "empty response from openrouter/qwen/qwen3.6-35b-a3b",
+    "type": "RuntimeError"
+  },
+  "plan_sha256": "63a66da2484ce4432d72b6cced6933c32aac7672007848488725ac9a657101e2",
+  "prepared_manifest_sha256": "a3fcf11ce976bdad2332ba33584aaef57b1aa0777a64aebe8f71bc5e470ee362",
+  "provider_lock_sha256": "ab0d7cb63192cc31ca8737c7ab0d7ca96f066913c8932293eff332d7e0999ae4",
+  "run_id": "0801_0514_04",
+  "schema_version": "stage1_run_manifest-v1",
+  "started_at_kst": "2026-08-01T06:24:01.172360+09:00",
+  "status": "GENERATED"
+}

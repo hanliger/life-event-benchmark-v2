@@ -1,0 +1,28 @@
+{
+  "methods": {
+    "fc_openrouter_qwen_3_6_35b_a3b_fp8": {
+      "context_window": 262144,
+      "endpoint_id": null,
+      "endpoint_status": 0,
+      "price": {
+        "completion_usd_per_token": "0.00000125",
+        "prompt_usd_per_token": "0.00000025"
+      },
+      "provider": "CoreWeave",
+      "quantizations": [
+        "fp8"
+      ],
+      "throughput_percentile": "p50",
+      "throughput_tokens_per_second": 194.0,
+      "uptime_last_30m": 100
+    }
+  },
+  "resolved_at_kst": "2026-08-01T05:02:52.312069+09:00",
+  "schema_version": "stage2_2_openrouter_provider_lock-v1",
+  "selection_policy": "highest reported throughput among ZDR-compatible endpoints, ranked on throughput_last_30m.p50; Qwen3.6 additionally requires FP8",
+  "source_response_sha256": {
+    "fc_openrouter_qwen_3_6_35b_a3b_fp8": "7e2a3cecb976d753fa76527d7dcfa5d7c4b61624952b505a9d1939338d9bc72e",
+    "zdr_endpoints": "7c8d21f6ad62bd415e2344c7d3d1c6a67d8fed463833bc1a7045cd7f5aa564d6"
+  },
+  "status": "LOCKED"
+}
